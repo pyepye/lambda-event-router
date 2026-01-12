@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "scripts": {
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src"
+  },
   "dependencies": {
     "@lambda-event-router/base": "workspace:*",
     "@lambda-event-router/api": "workspace:*"

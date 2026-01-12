@@ -1,3 +1,3 @@
 export function eventLog(): void {
-  console.log("Event");
+  console.log('Event');
 }

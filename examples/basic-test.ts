@@ -1,3 +1,3 @@
-import { apiLog } from "@lambda-event-router/api";
+import { apiLog } from '@lambda-event-router/api';
 
 apiLog();

@@ -1,4 +1,4 @@
-import type { Context, Handler } from "aws-lambda";
+import type { Context, Handler } from 'aws-lambda';
 
 export interface EventTypeRouter<TEvent = unknown, TResult = unknown> {
   canHandle(event: unknown): event is TEvent;
@@ -19,7 +19,7 @@ export class EventRouter {
           return router.handleEvent(event, context);
         }
       }
-      throw new Error("No router found for event");
+      throw new Error('No router found for event');
     };
   }
 }
