@@ -1,0 +1,34 @@
+{
+  "name": "@lambda-event-router/base",
+  "version": "0.1.0",
+  "description": "Dispatches AWS Lambda events to source-specific routers",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json --noEmit && tsup",
+    "dev": "tsup --watch",
+    "test": "vitest",
+    "test:run": "vitest run",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "clean": "rm -rf dist"
+  },
+  "keywords": ["aws", "lambda", "serverless"],
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "vitest": "catalog:"
+  }
+}

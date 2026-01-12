@@ -1,0 +1,14 @@
+{
+  "name": "@lambda-event-router/examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/api": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:"
+  }
+}
