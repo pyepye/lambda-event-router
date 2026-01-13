@@ -4,12 +4,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "tsc --noEmit",
     "lint": "biome check src",
     "lint:fix": "biome check --write src"
   },
   "dependencies": {
     "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/api": "workspace:*"
+    "@lambda-event-router/api": "workspace:*",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

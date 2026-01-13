@@ -1,3 +1,2 @@
-export function eventLog(): void {
-  console.log('Event');
-}
+export { createEventRouter, EventRouter } from './EventRouter.js';
+export type { EventTypeRouter } from './EventRouter.js';
