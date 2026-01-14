@@ -1,0 +1,16 @@
+import type { Handler } from 'aws-lambda';
+
+import { EventRouter } from '@lambda-event-router/base';
+import { createSQSRouter } from '@lambda-event-router/sqs';
+
+import { createItemRoute } from './createItem.js';
+
+const sqsRouter = createSQSRouter(); // Defaults to batchItemFailures: false
+
+sqsRouter.route(createItemRoute);
+
+const eventRouter = new EventRouter({
+  routers: [sqsRouter],
+});
+
+export const handler: Handler = eventRouter.handler();

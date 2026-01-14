@@ -1,3 +1,4 @@
+import type { InferSchema, Schema } from '@lambda-event-router/base';
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -15,12 +16,7 @@ type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${inf
 // Clean up the extracted params into a proper object type
 export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;
 
-export interface Schema<T> {
-  safeParse(data: unknown): { success: true; data: T } | { success: false; error: unknown };
-}
-
-// Helper to infer the type from a Schema
-export type InferSchema<T> = T extends Schema<infer R> ? R : never;
+export type { InferSchema, Schema };
 
 export interface ApiRequest<
   TPath = Record<string, string>,

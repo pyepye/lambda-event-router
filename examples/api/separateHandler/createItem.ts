@@ -6,6 +6,10 @@ export const CreateItemBodySchema = z.object({
   price: z.number(),
 });
 
+export const QuerySchema = z.object({
+  dryRun: z.string().default('false'),
+});
+
 type PathParams = { orgId: string; itemId: string };
 type QueryParams = { dryRun?: string };
 type Body = z.infer<typeof CreateItemBodySchema>;

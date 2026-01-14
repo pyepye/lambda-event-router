@@ -1,3 +1,4 @@
+import { isObject } from '@lambda-event-router/base';
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
@@ -94,19 +95,13 @@ export class APIRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGat
   };
 
   canHandleEvent(event: unknown): event is APIGatewayProxyEventV2 {
-    if (typeof event !== 'object' || event === null) return false;
-
-    const e = event as Record<string, unknown>;
+    if (!isObject(event)) return false;
 
     // Check for required V2 properties
-    if (typeof e.rawPath !== 'string') return false;
-    if (typeof e.requestContext !== 'object' || e.requestContext === null) return false;
-
-    const rc = e.requestContext as Record<string, unknown>;
-    if (typeof rc.http !== 'object' || rc.http === null) return false;
-
-    const http = rc.http as Record<string, unknown>;
-    if (typeof http.method !== 'string') return false;
+    if (typeof event.rawPath !== 'string') return false;
+    if (!isObject(event.requestContext)) return false;
+    if (!isObject(event.requestContext.http)) return false;
+    if (typeof event.requestContext.http.method !== 'string') return false;
 
     return true;
   }

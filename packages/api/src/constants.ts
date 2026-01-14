@@ -1,3 +1,4 @@
+/** @public */
 export enum HTTP_STATUS_CODES {
   // 1xx Informational
   CONTINUE = 100,

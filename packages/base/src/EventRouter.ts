@@ -1,9 +1,5 @@
-import type { Context, Handler } from 'aws-lambda';
-
-export interface EventTypeRouter<TEvent = unknown, TResult = unknown> {
-  canHandleEvent(event: unknown): event is TEvent;
-  handleEvent(event: TEvent, context: Context): Promise<TResult>;
-}
+import type { Handler } from 'aws-lambda';
+import type { EventTypeRouter } from './types.js';
 
 export class EventRouter {
   private routers: EventTypeRouter[];

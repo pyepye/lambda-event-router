@@ -138,10 +138,10 @@ export class PathRouter {
       const match = path.match(route.pattern);
       if (match) {
         const params: Record<string, string> = {};
-        for (let i = 0; i < route.paramNames.length; i++) {
+        for (const [i, name] of route.paramNames.entries()) {
           const paramValue = match[i + 1];
           if (paramValue !== undefined) {
-            params[route.paramNames[i] as string] = paramValue;
+            params[name] = paramValue;
           }
         }
         return { route, params };
