@@ -11,6 +11,7 @@
   "dependencies": {
     "@lambda-event-router/base": "workspace:*",
     "@lambda-event-router/api": "workspace:*",
+    "@lambda-event-router/dynamodb-stream": "workspace:*",
     "@lambda-event-router/sqs": "workspace:*",
     "zod": "^3.24.0"
   },

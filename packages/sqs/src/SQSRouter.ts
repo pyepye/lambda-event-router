@@ -47,10 +47,10 @@ export function defineRoute<
 
 export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatchResponse> {
   private routes: InternalRoute[] = [];
-  private options: SQSRouterOptions;
+  private batchItemFailures: boolean;
 
   constructor(options?: SQSRouterOptions) {
-    this.options = options ?? {};
+    this.batchItemFailures = options?.batchItemFailures ?? false;
   }
 
   canHandleEvent(event: unknown): event is SQSEvent {
@@ -78,7 +78,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   async handleEvent(event: SQSEvent, context: Context): Promise<undefined | SQSBatchResponse> {
     const isFifo = event.Records[0]?.eventSourceARN.endsWith('.fifo') ?? false;
 
-    if (!this.options.batchItemFailures) {
+    if (!this.batchItemFailures) {
       if (isFifo) {
         await this.processFifoRecords(event.Records, context);
       } else {
