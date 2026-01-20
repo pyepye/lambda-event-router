@@ -73,7 +73,7 @@ export class Request {
       query: this.queryParams,
       body: this.body,
       headers: this.headers,
-      rawEvent: this.event,
+      event: this.event,
       context: this.context,
     };
   }

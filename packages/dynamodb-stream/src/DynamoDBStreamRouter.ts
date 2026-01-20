@@ -153,7 +153,7 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
       newImage: validatedNewImage,
       oldImage: validatedOldImage,
       eventName,
-      rawRecord: record,
+      record,
       context,
     } as DynamoDBStreamRequest;
 
@@ -185,7 +185,7 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ eventName, streamViewType, rawRecord: record });
+        return filters.customFilter({ eventName, streamViewType, record });
       }
 
       return true;

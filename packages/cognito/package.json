@@ -1,7 +1,7 @@
 {
-  "name": "@lambda-event-router/dynamodb-stream",
+  "name": "@lambda-event-router/cognito",
   "version": "0.1.0",
-  "description": "DynamoDB Stream handler for lambda-event-router",
+  "description": "Cognito handler for lambda-event-router",
   "type": "module",
   "exports": {
     ".": {
@@ -25,9 +25,6 @@
   },
   "keywords": ["aws", "lambda", "serverless"],
   "license": "UNLICENSED",
-  "dependencies": {
-    "@aws-sdk/util-dynamodb": "^3.983.0"
-  },
   "peerDependencies": {
     "@lambda-event-router/base": "workspace:*"
   },

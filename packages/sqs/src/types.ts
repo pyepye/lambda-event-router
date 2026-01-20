@@ -7,7 +7,7 @@ export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;
 export interface SQSRequest<TBody = unknown, TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes> {
   body: TBody;
   messageAttributes: TMessageAttributes;
-  rawRecord: AWSSQSRecord;
+  record: AWSSQSRecord;
   context: Context;
 }
 
@@ -21,7 +21,7 @@ export type SQSRecordHandler<
 export interface SQSFilterInput {
   body: unknown;
   messageAttributes: SQSMessageAttributes;
-  rawRecord: AWSSQSRecord;
+  record: AWSSQSRecord;
 }
 
 export interface SQSFilters {

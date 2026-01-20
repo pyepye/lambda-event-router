@@ -213,7 +213,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ body, messageAttributes, rawRecord: record });
+        return filters.customFilter({ body, messageAttributes, record });
       }
 
       return true;
@@ -274,7 +274,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     const request: SQSRequest = {
       body,
       messageAttributes,
-      rawRecord: record,
+      record,
       context,
     };
 

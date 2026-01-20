@@ -1,0 +1,30 @@
+import type { Schema } from '@lambda-event-router/base';
+import type { Context, PreTokenGenerationTriggerEvent } from 'aws-lambda';
+import type { CognitoFilters, UserAttributes } from './common.js';
+
+// PreTokenGeneration trigger sources - derived from aws-lambda
+export type PreTokenGenerationTriggerSource = PreTokenGenerationTriggerEvent['triggerSource'];
+
+// PreTokenGeneration response - derived from aws-lambda
+export type PreTokenGenerationResponse = PreTokenGenerationTriggerEvent['response'];
+
+// PreTokenGeneration request - simplified to just essential fields
+export interface PreTokenGenerationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+  triggerSource: PreTokenGenerationTriggerSource;
+  userAttributes: TUserAttributes;
+  event: PreTokenGenerationTriggerEvent;
+  context: Context;
+}
+
+// PreTokenGeneration handler type
+// Handlers modify the cloned event and return it
+export type PreTokenGenerationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+  request: PreTokenGenerationRequest<TUserAttributes>,
+) => Promise<PreTokenGenerationTriggerEvent>;
+
+// PreTokenGeneration route definition
+export interface PreTokenGenerationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+  filters?: CognitoFilters<PreTokenGenerationTriggerSource>;
+  userAttributesSchema?: Schema<TUserAttributes>;
+  handler: PreTokenGenerationHandler<TUserAttributes>;
+}

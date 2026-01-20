@@ -21,6 +21,7 @@
   "references": [
     { "path": "./packages/base" },
     { "path": "./packages/api" },
+    { "path": "./packages/cognito" },
     { "path": "./packages/sqs" },
     { "path": "./packages/dynamodb-stream" }
   ]

@@ -1,0 +1,30 @@
+import type { Schema } from '@lambda-event-router/base';
+import type { Context, CustomMessageTriggerEvent } from 'aws-lambda';
+import type { CognitoFilters, UserAttributes } from './common.js';
+
+// CustomMessage trigger sources - derived from aws-lambda
+export type CustomMessageTriggerSource = CustomMessageTriggerEvent['triggerSource'];
+
+// CustomMessage response - derived from aws-lambda
+export type CustomMessageResponse = CustomMessageTriggerEvent['response'];
+
+// CustomMessage request - simplified to just essential fields
+export interface CustomMessageRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+  triggerSource: CustomMessageTriggerSource;
+  userAttributes: TUserAttributes;
+  event: CustomMessageTriggerEvent;
+  context: Context;
+}
+
+// CustomMessage handler type
+// Handlers modify the cloned event and return it
+export type CustomMessageHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+  request: CustomMessageRequest<TUserAttributes>,
+) => Promise<CustomMessageTriggerEvent>;
+
+// CustomMessage route definition
+export interface CustomMessageRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+  filters?: CognitoFilters<CustomMessageTriggerSource>;
+  userAttributesSchema?: Schema<TUserAttributes>;
+  handler: CustomMessageHandler<TUserAttributes>;
+}

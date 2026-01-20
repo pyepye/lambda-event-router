@@ -114,7 +114,7 @@ export type FiltersToRequest<
       keys: TKeys;
       newImage: NewImageType<TEventNames, TNewItem>;
       oldImage: OldImageType<TEventNames, TOldItem>;
-      rawRecord: unknown;
+      record: unknown;
       context: unknown;
     }
   : DynamoDBStreamRequest<TKeys, TNewItem, TOldItem>;

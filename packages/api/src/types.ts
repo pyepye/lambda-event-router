@@ -27,7 +27,7 @@ export interface ApiRequest<
   query: TQuery;
   body: TBody;
   headers: Record<string, string | undefined>;
-  rawEvent: APIGatewayProxyEventV2;
+  event: APIGatewayProxyEventV2;
   context: Context;
 }
 

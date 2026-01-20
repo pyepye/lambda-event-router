@@ -7,7 +7,7 @@ export type DynamoDBStreamViewType = 'KEYS_ONLY' | 'NEW_IMAGE' | 'OLD_IMAGE' | '
 
 interface DynamoDBStreamRequestBase<TKeys = Record<string, unknown>> {
   keys: TKeys;
-  rawRecord: DynamoDBRecord;
+  record: DynamoDBRecord;
   context: Context;
 }
 
@@ -59,7 +59,7 @@ type DynamoDBStreamRecordHandler<
 export interface DynamoDBStreamFilterInput {
   eventName: DynamoDBStreamEventName;
   streamViewType?: DynamoDBStreamViewType;
-  rawRecord: DynamoDBRecord;
+  record: DynamoDBRecord;
 }
 
 interface DynamoDBStreamFilters {
