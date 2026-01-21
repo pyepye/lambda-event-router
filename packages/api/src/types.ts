@@ -1,6 +1,7 @@
 import type { InferSchema, Schema } from '@lambda-event-router/base';
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 
+// HTTP method types - more restrictive than aws-lambda's string for better type safety
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
 export type LowercaseHttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options' | 'head';
 export type AnyHttpMethod = HttpMethod | LowercaseHttpMethod;
@@ -26,7 +27,7 @@ export interface ApiRequest<
   path: TPath;
   query: TQuery;
   body: TBody;
-  headers: Record<string, string | undefined>;
+  headers: APIGatewayProxyEventV2['headers'];
   event: APIGatewayProxyEventV2;
   context: Context;
 }

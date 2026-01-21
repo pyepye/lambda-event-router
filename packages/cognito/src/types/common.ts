@@ -1,18 +1,17 @@
-// User attributes type
-export type UserAttributes = Record<string, string>;
+import type { PreSignUpTriggerEvent } from 'aws-lambda';
+
+// User attributes type - derived from aws-lambda
+export type UserAttributes = NonNullable<PreSignUpTriggerEvent['request']['userAttributes']>;
 
 // User attribute filter - can be exact match, RegExp, or function
 export type UserAttributeFilter = string | RegExp | ((value: string) => boolean);
 
-// Filter input for custom filters
+// Filter input for custom filters - uses types derived from aws-lambda
 export interface CognitoFilterInput<TTriggerSource extends string = string> {
   triggerSource: TTriggerSource;
-  userPoolId: string;
-  userName: string;
-  callerContext: {
-    awsSdkVersion: string;
-    clientId: string;
-  };
+  userPoolId: PreSignUpTriggerEvent['userPoolId'];
+  userName: PreSignUpTriggerEvent['userName'];
+  callerContext: PreSignUpTriggerEvent['callerContext'];
   request: {
     userAttributes?: UserAttributes;
   };
@@ -22,8 +21,8 @@ export interface CognitoFilterInput<TTriggerSource extends string = string> {
 // Filters for routing
 export interface CognitoFilters<TTriggerSource extends string = string> {
   triggerSources?: TTriggerSource[];
-  userPoolIds?: string[];
-  clientIds?: string[];
+  userPoolIds?: PreSignUpTriggerEvent['userPoolId'][];
+  clientIds?: PreSignUpTriggerEvent['callerContext']['clientId'][];
   userAttributes?: Record<string, UserAttributeFilter>;
   customFilter?: (input: CognitoFilterInput<TTriggerSource>) => boolean;
 }

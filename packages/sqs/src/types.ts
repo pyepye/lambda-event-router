@@ -25,8 +25,8 @@ export interface SQSFilterInput {
 }
 
 export interface SQSFilters {
-  eventSources?: string[];
-  eventSourceArns?: string[];
+  eventSources?: AWSSQSRecord['eventSource'][];
+  eventSourceArns?: AWSSQSRecord['eventSourceARN'][];
   messageAttributes?: Record<string, (string | number)[]>;
   customFilter?: (input: SQSFilterInput) => boolean;
 }

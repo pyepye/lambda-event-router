@@ -1,4 +1,5 @@
 import type { Schema } from '@lambda-event-router/base';
+import type { DynamoDBRecord } from 'aws-lambda';
 import type {
   DynamoDBStreamEventName,
   DynamoDBStreamFilterInput,
@@ -9,7 +10,7 @@ import type {
 
 export interface DynamoDBStreamFilters {
   eventNames?: DynamoDBStreamEventName[];
-  eventSourceArns?: string[];
+  eventSourceArns?: DynamoDBRecord['eventSourceARN'][];
   streamViewTypes?: DynamoDBStreamViewType[];
   customFilter?: (input: DynamoDBStreamFilterInput) => boolean;
 }
@@ -27,7 +28,7 @@ export interface RouteInputFilters<
   TViewTypes extends readonly DynamoDBStreamViewType[] | undefined = undefined,
 > {
   eventNames?: TEventNames;
-  eventSourceArns?: readonly string[];
+  eventSourceArns?: readonly DynamoDBRecord['eventSourceARN'][];
   streamViewTypes?: TViewTypes;
   customFilter?: (input: DynamoDBStreamFilterInput) => boolean;
 }

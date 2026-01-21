@@ -23,6 +23,7 @@
     { "path": "./packages/api" },
     { "path": "./packages/cognito" },
     { "path": "./packages/sqs" },
-    { "path": "./packages/dynamodb-stream" }
+    { "path": "./packages/dynamodb-stream" },
+    { "path": "./packages/s3" }
   ]
 }

@@ -4,17 +4,14 @@ import { EventRouter } from '@lambda-event-router/base';
 import { createCognitoRouter } from '@lambda-event-router/cognito';
 
 import { createAuthChallengeRoute } from './handlers/createAuthChallengeRoute.js';
-import {
-  customMessageForgotPasswordRoute,
-  customMessageSignUpRoute,
-} from './handlers/customMessageRoute.js';
+import { customMessageForgotPasswordRoute, customMessageSignUpRoute } from './handlers/customMessageRoute.js';
 import { defineAuthChallengeRoute } from './handlers/defineAuthChallengeRoute.js';
 import { postAuthenticationRoute } from './handlers/postAuthenticationRoute.js';
 import { postConfirmationRoute } from './handlers/postConfirmationRoute.js';
 import { preAuthenticationRoute } from './handlers/preAuthenticationRoute.js';
+import { preSignUpAdminCreateUserRoute } from './handlers/preSignUpAdminCreateUserRoute.js';
 import { preSignUpAdminRoute } from './handlers/preSignUpAdminRoute.js';
 import { preSignUpRoute } from './handlers/preSignUpRoute.js';
-import { preSignUpAdminCreateUserRoute } from './handlers/preSignUpAdminCreateUserRoute.js';
 import { preSignUpSignUpRoute } from './handlers/preSignUpSignUpRoute.js';
 import { preTokenGenerationRoute } from './handlers/preTokenGenerationRoute.js';
 import { userMigrationRoute } from './handlers/userMigrationRoute.js';

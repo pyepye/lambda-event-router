@@ -11,7 +11,9 @@ import type {
 
 // Define the authentication flow
 // Handlers modify the cloned event and return it
-export async function defineAuthChallenge(request: DefineAuthChallengeRequest): Promise<DefineAuthChallengeTriggerEvent> {
+export async function defineAuthChallenge(
+  request: DefineAuthChallengeRequest,
+): Promise<DefineAuthChallengeTriggerEvent> {
   const { event } = request;
   const { session } = event.request;
 
@@ -59,7 +61,9 @@ export async function defineAuthChallenge(request: DefineAuthChallengeRequest): 
 
 // Create the challenge (e.g., generate OTP)
 // Handlers modify the cloned event and return it
-export async function createAuthChallenge(request: CreateAuthChallengeRequest): Promise<CreateAuthChallengeTriggerEvent> {
+export async function createAuthChallenge(
+  request: CreateAuthChallengeRequest,
+): Promise<CreateAuthChallengeTriggerEvent> {
   const { event } = request;
 
   console.log(`Creating auth challenge for: ${event.userName}`);

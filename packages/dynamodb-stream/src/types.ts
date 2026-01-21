@@ -1,9 +1,11 @@
 import type { Schema } from '@lambda-event-router/base';
-import type { Context, DynamoDBRecord } from 'aws-lambda';
+import type { Context, DynamoDBRecord, StreamRecord } from 'aws-lambda';
 
-export type DynamoDBStreamEventName = 'INSERT' | 'MODIFY' | 'REMOVE';
+// Derive event name type from aws-lambda (excludes undefined)
+export type DynamoDBStreamEventName = NonNullable<DynamoDBRecord['eventName']>;
 
-export type DynamoDBStreamViewType = 'KEYS_ONLY' | 'NEW_IMAGE' | 'OLD_IMAGE' | 'NEW_AND_OLD_IMAGES';
+// Derive stream view type from aws-lambda (excludes undefined)
+export type DynamoDBStreamViewType = NonNullable<StreamRecord['StreamViewType']>;
 
 interface DynamoDBStreamRequestBase<TKeys = Record<string, unknown>> {
   keys: TKeys;
@@ -64,14 +66,14 @@ export interface DynamoDBStreamFilterInput {
 
 interface DynamoDBStreamFilters {
   eventNames?: DynamoDBStreamEventName[];
-  eventSourceArns?: string[];
+  eventSourceArns?: DynamoDBRecord['eventSourceARN'][];
   streamViewTypes?: DynamoDBStreamViewType[];
   customFilter?: (input: DynamoDBStreamFilterInput) => boolean;
 }
 
 // Filters without eventNames for event-specific methods (insert, modify, remove)
 interface DynamoDBStreamEventFilters {
-  eventSourceArns?: string[];
+  eventSourceArns?: DynamoDBRecord['eventSourceARN'][];
   streamViewTypes?: DynamoDBStreamViewType[];
   customFilter?: (input: DynamoDBStreamFilterInput) => boolean;
 }
