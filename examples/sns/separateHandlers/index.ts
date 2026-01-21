@@ -1,0 +1,66 @@
+import type { Handler } from 'aws-lambda';
+
+import { EventRouter } from '@lambda-event-router/base';
+import { type SNSFilterInput, createSNSRouter } from '@lambda-event-router/sns';
+
+import { CreateItemBodySchema, MessageAttributesSchema, createItem, createItemOther } from './createItem.js';
+
+const snsRouter = createSNSRouter({
+  batchItemFailures: true,
+});
+
+const SOME_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-topic';
+const SOME_DL_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-dl-topic';
+
+// Simple route with topicArns filter only
+snsRouter.route({
+  filters: {
+    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+  },
+  handler: createItemOther,
+});
+
+// Route with topicArns and subjects filtering
+snsRouter.route({
+  filters: {
+    topicArns: [SOME_TOPIC_ARN],
+    subjects: ['order-created', 'order-updated'],
+  },
+  handler: createItem,
+  bodySchema: CreateItemBodySchema,
+  messageAttributesSchema: MessageAttributesSchema,
+});
+
+// Route with topicArns and messageAttributes filtering
+snsRouter.route({
+  filters: {
+    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    messageAttributes: {
+      Type: ['ORDER', 'REFUND'],
+    },
+  },
+  handler: createItem,
+  bodySchema: CreateItemBodySchema,
+  messageAttributesSchema: MessageAttributesSchema,
+});
+
+function isHighPriority({ messageAttributes }: SNSFilterInput): boolean {
+  return messageAttributes.Priority?.Value === 'HIGH';
+}
+
+// Route with customFilter for complex logic
+snsRouter.route({
+  filters: {
+    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    customFilter: isHighPriority,
+  },
+  handler: createItem,
+  bodySchema: CreateItemBodySchema,
+  messageAttributesSchema: MessageAttributesSchema,
+});
+
+const eventRouter = new EventRouter({
+  routers: [snsRouter],
+});
+
+export const handler: Handler = eventRouter.handler();

@@ -65,6 +65,9 @@ importers:
       '@lambda-event-router/s3':
         specifier: workspace:*
         version: link:../packages/s3
+      '@lambda-event-router/sns':
+        specifier: workspace:*
+        version: link:../packages/sns
       '@lambda-event-router/sqs':
         specifier: workspace:*
         version: link:../packages/sqs
@@ -155,6 +158,25 @@ importers:
         version: 2.1.9(@types/node@22.19.7)
 
   packages/s3:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 22.19.7
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 2.1.9(@types/node@22.19.7)
+
+  packages/sns:
     dependencies:
       '@lambda-event-router/base':
         specifier: workspace:*
