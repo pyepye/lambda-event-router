@@ -90,18 +90,12 @@ export type RouteInput<
   OldImageSchemaOption<TEventNames, TOldImageSchema>;
 
 // Determine newImage type based on event names
-type NewImageType<T extends readonly DynamoDBStreamEventName[], TNewItem> = AllHaveNewImage<T> extends true
-  ? TNewItem
-  : NoneHaveNewImage<T> extends true
-    ? undefined
-    : TNewItem | undefined;
+type NewImageType<T extends readonly DynamoDBStreamEventName[], TNewItem> =
+  AllHaveNewImage<T> extends true ? TNewItem : NoneHaveNewImage<T> extends true ? undefined : TNewItem | undefined;
 
 // Determine oldImage type based on event names
-type OldImageType<T extends readonly DynamoDBStreamEventName[], TOldItem> = AllHaveOldImage<T> extends true
-  ? TOldItem
-  : NoneHaveOldImage<T> extends true
-    ? undefined
-    : TOldItem | undefined;
+type OldImageType<T extends readonly DynamoDBStreamEventName[], TOldItem> =
+  AllHaveOldImage<T> extends true ? TOldItem : NoneHaveOldImage<T> extends true ? undefined : TOldItem | undefined;
 
 // Internal type - maps filters to request type
 export type FiltersToRequest<

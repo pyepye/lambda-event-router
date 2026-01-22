@@ -40,6 +40,7 @@ export function defineRoute<
     : SNSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): SNSRouteDefinition<TBody, TMessageAttributes> {
       return { ...config, handler } as SNSRouteDefinition<TBody, TMessageAttributes>;
     },

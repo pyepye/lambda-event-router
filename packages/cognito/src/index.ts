@@ -1,9 +1,9 @@
 // Router exports
-export { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
-export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoRouter.js';
 
 // Re-export Schema for convenience
 export type { Schema } from '@lambda-event-router/base';
+export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoRouter.js';
+export { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 
 // All type exports
 export type {
@@ -12,26 +12,24 @@ export type {
   CognitoFilterInput,
   CognitoFilters,
   CognitoTriggerSource,
-  UserAttributeFilter,
-  UserAttributes,
   // CreateAuthChallenge
   CreateAuthChallengeHandler,
   CreateAuthChallengeRequest,
   CreateAuthChallengeResponse,
   CreateAuthChallengeRouteDefinition,
   CreateAuthChallengeTriggerSource,
-  // CustomMessage
-  CustomMessageHandler,
-  CustomMessageRequest,
-  CustomMessageResponse,
-  CustomMessageRouteDefinition,
-  CustomMessageTriggerSource,
   // CustomEmailSender
   CustomEmailSenderHandler,
   CustomEmailSenderRequest,
   CustomEmailSenderResponse,
   CustomEmailSenderRouteDefinition,
   CustomEmailSenderTriggerSource,
+  // CustomMessage
+  CustomMessageHandler,
+  CustomMessageRequest,
+  CustomMessageResponse,
+  CustomMessageRouteDefinition,
+  CustomMessageTriggerSource,
   // DefineAuthChallenge
   DefineAuthChallengeHandler,
   DefineAuthChallengeRequest,
@@ -68,6 +66,8 @@ export type {
   PreTokenGenerationResponse,
   PreTokenGenerationRouteDefinition,
   PreTokenGenerationTriggerSource,
+  UserAttributeFilter,
+  UserAttributes,
   // UserMigration
   UserMigrationHandler,
   UserMigrationRequest,

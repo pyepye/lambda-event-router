@@ -29,6 +29,7 @@ export function defineRoute<
   config: RouteInput<TKeysSchema, TNewImageSchema, TOldImageSchema, TEventNames, TViewTypes>,
 ): RouteBuilder<TKeys, TNewItem, TOldItem, TEventNames> {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): DynamoDBStreamRouteDefinition<TKeys, TNewItem, TOldItem> {
       return {
         filters: config.filters as DynamoDBStreamFilters,

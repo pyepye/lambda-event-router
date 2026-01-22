@@ -39,6 +39,7 @@ export function defineRoute<
     : SQSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): SQSRouteDefinition<TBody, TMessageAttributes> {
       return { ...config, handler } as SQSRouteDefinition<TBody, TMessageAttributes>;
     },
@@ -196,10 +197,6 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       const { filters } = route;
 
       if (filters.eventSourceArns && !filters.eventSourceArns.includes(record.eventSourceARN)) {
-        return false;
-      }
-
-      if (filters.eventSources && !filters.eventSources.includes(record.eventSourceARN)) {
         return false;
       }
 

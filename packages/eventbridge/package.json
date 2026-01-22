@@ -1,7 +1,7 @@
 {
-  "name": "@lambda-event-router/s3",
+  "name": "@lambda-event-router/eventbridge",
   "version": "0.1.0",
-  "description": "S3 handler for lambda-event-router",
+  "description": "EventBridge handler for lambda-event-router",
   "type": "module",
   "exports": {
     ".": {

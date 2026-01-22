@@ -1,5 +1,5 @@
 export type { Schema } from '@lambda-event-router/base';
-export { createDynamoDBStreamRouter, defineRoute, DynamoDBStreamRouter } from './DynamoDBStreamRouter.js';
+export { createDynamoDBStreamRouter, DynamoDBStreamRouter, defineRoute } from './DynamoDBStreamRouter.js';
 export type {
   DynamoDBStreamEventName,
   DynamoDBStreamFilterInput,

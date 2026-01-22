@@ -50,6 +50,7 @@ interface RouteBuilder {
 
 export function defineRoute(config: RouteInput): RouteBuilder {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): S3ObjectCreatedRouteDefinition {
       return { ...config, handler };
     },

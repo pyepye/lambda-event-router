@@ -4,9 +4,38 @@ export { createS3Router, defineRoute, S3Router } from './S3Router.js';
 export type {
   // Common types
   S3BaseRequest,
+  // Batch operation types
+  S3BatchEvent,
+  S3BatchEventJob,
+  S3BatchEventTask,
+  S3BatchHandler,
+  S3BatchRequest,
+  S3BatchResult,
+  S3BatchResultResult,
+  S3BatchResultResultCode,
+  S3BatchRouteDefinition,
   S3FilterInput,
   S3Filters,
   S3FiltersWithoutEventNames,
+  // Replication and misc types
+  S3IntelligentTieringEventName,
+  S3IntelligentTieringHandler,
+  S3IntelligentTieringRequest,
+  S3IntelligentTieringRouteDefinition,
+  // Lifecycle types
+  S3LifecycleExpirationEventName,
+  S3LifecycleExpirationHandler,
+  S3LifecycleExpirationRequest,
+  S3LifecycleExpirationRouteDefinition,
+  S3LifecycleTransitionEventName,
+  S3LifecycleTransitionHandler,
+  S3LifecycleTransitionRequest,
+  S3LifecycleTransitionRouteDefinition,
+  // ObjectAcl types
+  S3ObjectAclEventName,
+  S3ObjectAclHandler,
+  S3ObjectAclRequest,
+  S3ObjectAclRouteDefinition,
   // ObjectCreated types
   S3ObjectCreatedConvenienceRouteDefinition,
   S3ObjectCreatedEventName,
@@ -23,30 +52,11 @@ export type {
   S3ObjectRestoreHandler,
   S3ObjectRestoreRequest,
   S3ObjectRestoreRouteDefinition,
-  // Lifecycle types
-  S3LifecycleExpirationEventName,
-  S3LifecycleExpirationHandler,
-  S3LifecycleExpirationRequest,
-  S3LifecycleExpirationRouteDefinition,
-  S3LifecycleTransitionEventName,
-  S3LifecycleTransitionHandler,
-  S3LifecycleTransitionRequest,
-  S3LifecycleTransitionRouteDefinition,
   // ObjectTagging types
   S3ObjectTaggingEventName,
   S3ObjectTaggingHandler,
   S3ObjectTaggingRequest,
   S3ObjectTaggingRouteDefinition,
-  // ObjectAcl types
-  S3ObjectAclEventName,
-  S3ObjectAclHandler,
-  S3ObjectAclRequest,
-  S3ObjectAclRouteDefinition,
-  // Replication and misc types
-  S3IntelligentTieringEventName,
-  S3IntelligentTieringHandler,
-  S3IntelligentTieringRequest,
-  S3IntelligentTieringRouteDefinition,
   S3ReducedRedundancyLostObjectEventName,
   S3ReducedRedundancyLostObjectHandler,
   S3ReducedRedundancyLostObjectRequest,
@@ -55,16 +65,6 @@ export type {
   S3TestEventName,
   S3TestEventRequest,
   S3TestEventRouteDefinition,
-  // Batch operation types
-  S3BatchEvent,
-  S3BatchEventJob,
-  S3BatchEventTask,
-  S3BatchHandler,
-  S3BatchRequest,
-  S3BatchResult,
-  S3BatchResultResult,
-  S3BatchResultResultCode,
-  S3BatchRouteDefinition,
 } from './types/index.js';
 
 // Re-export event name constants

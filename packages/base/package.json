@@ -13,12 +13,14 @@
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json --noEmit && tsup",
     "dev": "tsup --watch",
-    "test": "vitest",
-    "test:run": "vitest run",
+    "test": "tsc --noEmit && vitest run",
+    "test:watch": "vitest",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
     "clean": "rm -rf dist"

@@ -76,6 +76,7 @@ export interface RouteMatch {
 export class PathRouter {
   private routes: InternalRoute[] = [];
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
     const method = definition.method.toUpperCase() as HttpMethod;
     return this.addRoute(method, definition);
@@ -91,10 +92,12 @@ export class PathRouter {
   patch: BodyRouteMethodFn = this.createBodyRoute('PATCH');
 
   private createBodyRoute(method: BodyMethod): BodyRouteMethodFn {
+    // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn return type
     return (config): this => this.addRoute(method, config);
   }
 
   private createNoBodyRoute(method: NoBodyMethod): NoBodyRouteMethodFn {
+    // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn return type
     return (config): this => this.addRoute(method, config);
   }
 

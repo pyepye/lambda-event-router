@@ -168,15 +168,15 @@ export class Response {
 }
 
 // Re-export static methods as standalone functions
-export const Ok = Response.Ok;
-export const Created = Response.Created;
-export const NoContent = Response.NoContent;
-export const TemporaryRedirect = Response.TemporaryRedirect;
-export const PermanentRedirect = Response.PermanentRedirect;
-export const BadRequest = Response.BadRequest;
-export const Unauthorised = Response.Unauthorised;
-export const Forbidden = Response.Forbidden;
-export const NotFound = Response.NotFound;
-export const Conflict = Response.Conflict;
-export const UnprocessableContent = Response.UnprocessableContent;
-export const InternalServerError = Response.InternalServerError;
+export const Ok: typeof Response.Ok = Response.Ok;
+export const Created: typeof Response.Created = Response.Created;
+export const NoContent: typeof Response.NoContent = Response.NoContent;
+export const TemporaryRedirect: typeof Response.TemporaryRedirect = Response.TemporaryRedirect;
+export const PermanentRedirect: typeof Response.PermanentRedirect = Response.PermanentRedirect;
+export const BadRequest: typeof Response.BadRequest = Response.BadRequest;
+export const Unauthorised: typeof Response.Unauthorised = Response.Unauthorised;
+export const Forbidden: typeof Response.Forbidden = Response.Forbidden;
+export const NotFound: typeof Response.NotFound = Response.NotFound;
+export const Conflict: typeof Response.Conflict = Response.Conflict;
+export const UnprocessableContent: typeof Response.UnprocessableContent = Response.UnprocessableContent;
+export const InternalServerError: typeof Response.InternalServerError = Response.InternalServerError;

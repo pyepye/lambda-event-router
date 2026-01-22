@@ -1,10 +1,10 @@
-export { SQSRouter, createSQSRouter, defineRoute } from './SQSRouter.js';
 export type { Schema } from '@lambda-event-router/base';
+export { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
 export type {
   SQSFilterInput,
   SQSFilters,
-  SQSMessageAttributeValue,
   SQSMessageAttributes,
+  SQSMessageAttributeValue,
   SQSRequest as SQSRecord,
   SQSResponse,
   SQSRouteDefinition,

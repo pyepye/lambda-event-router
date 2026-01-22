@@ -1,5 +1,5 @@
-import { isObject } from '@lambda-event-router/base';
 import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject } from '@lambda-event-router/base';
 import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
 import { Request } from './Request.js';
@@ -54,6 +54,7 @@ export function defineRoute<
   config: RouteInput<TPathString, TPathSchema, TQuerySchema, TBodySchema, TResponseSchema>,
 ): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse> {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse> {
       return { ...config, handler } as RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>;
     },
@@ -64,31 +65,37 @@ export class APIRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGat
   private router = new PathRouter();
   private response = new Response();
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
     this.router.route(definition);
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
   get: NoBodyRouteMethodFn<this> = (config) => {
     this.router.get(config);
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
   post: BodyRouteMethodFn<this> = (config) => {
     this.router.post(config);
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
   put: BodyRouteMethodFn<this> = (config) => {
     this.router.put(config);
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
   patch: BodyRouteMethodFn<this> = (config) => {
     this.router.patch(config);
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
   delete: NoBodyRouteMethodFn<this> = (config) => {
     this.router.delete(config);
     return this;

@@ -37,7 +37,7 @@ function isHighPriority({ messageAttributes }: SQSFilterInput): boolean {
 
 sqsRouter.route({
   filters: {
-    eventSources: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
+    eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
     customFilter: isHighPriority,
   },
   handler: createItem,

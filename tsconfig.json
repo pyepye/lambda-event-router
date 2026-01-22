@@ -1,9 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "ES2024",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2024"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -22,8 +22,11 @@
     { "path": "./packages/base" },
     { "path": "./packages/api" },
     { "path": "./packages/cognito" },
-    { "path": "./packages/sqs" },
     { "path": "./packages/dynamodb-stream" },
-    { "path": "./packages/s3" }
+    { "path": "./packages/eventbridge" },
+    { "path": "./packages/s3" },
+    { "path": "./packages/sns" },
+    { "path": "./packages/sqs" },
+    { "path": "./packages/testing" }
   ]
 }

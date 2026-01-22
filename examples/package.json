@@ -13,10 +13,11 @@
     "@lambda-event-router/api": "workspace:*",
     "@lambda-event-router/cognito": "workspace:*",
     "@lambda-event-router/dynamodb-stream": "workspace:*",
+    "@lambda-event-router/eventbridge": "workspace:*",
     "@lambda-event-router/s3": "workspace:*",
     "@lambda-event-router/sns": "workspace:*",
     "@lambda-event-router/sqs": "workspace:*",
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

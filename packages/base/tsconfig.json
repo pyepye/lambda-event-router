@@ -1,6 +1,8 @@
 {
   "extends": "./tsconfig.build.json",
   "compilerOptions": {
-    "composite": true
-  }
+    "composite": true,
+    "types": ["vitest/globals", "node"]
+  },
+  "exclude": ["node_modules", "dist"]
 }

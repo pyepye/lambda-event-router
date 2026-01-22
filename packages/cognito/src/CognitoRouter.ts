@@ -78,6 +78,7 @@ export function defineRoute<
     : UserAttributes,
 >(config: RouteInput<TTrigger, TUserAttributesSchema>): RouteBuilder<TTrigger, TUserAttributes> {
   return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): TypedRouteDefinition<TTrigger, TUserAttributes> {
       return {
         filters: config.filters as CognitoFilters<TTrigger> | undefined,
