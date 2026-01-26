@@ -1,0 +1,109 @@
+import type { Context, S3BatchEvent, S3BatchEventTask, S3Event, S3EventRecord } from 'aws-lambda';
+import { createMockContext } from './context.js';
+
+export interface S3HandlerEvent {
+  event: S3Event;
+  context: Context;
+}
+
+export interface S3BatchHandlerEvent {
+  event: S3BatchEvent;
+  context: Context;
+}
+
+export type S3RecordOverrides = Omit<Partial<S3EventRecord>, 's3'> & {
+  s3?: Omit<Partial<S3EventRecord['s3']>, 'bucket' | 'object'> & {
+    bucket?: Partial<S3EventRecord['s3']['bucket']>;
+    object?: Partial<S3EventRecord['s3']['object']>;
+  };
+};
+
+export function createS3Record(overrides: S3RecordOverrides = {}): S3EventRecord {
+  const { s3: s3Overrides, ...restOverrides } = overrides;
+  const { bucket: bucketOverrides, object: objectOverrides, ...restS3Overrides } = s3Overrides ?? {};
+
+  return {
+    eventVersion: '2.1',
+    eventSource: 'aws:s3',
+    awsRegion: 'us-east-1',
+    eventTime: '2024-01-01T00:00:00.000Z',
+    eventName: 'ObjectCreated:Put',
+    userIdentity: { principalId: 'EXAMPLE' },
+    requestParameters: { sourceIPAddress: '127.0.0.1' },
+    responseElements: {
+      'x-amz-request-id': 'EXAMPLE123456789',
+      'x-amz-id-2': 'EXAMPLE123/5678abcdefghijklambdaisawesome/mnopqrstuvwxyzABCDEFGH',
+    },
+    s3: {
+      s3SchemaVersion: '1.0',
+      configurationId: 'testConfigRule',
+      bucket: {
+        name: 'my-bucket',
+        ownerIdentity: { principalId: 'EXAMPLE' },
+        arn: 'arn:aws:s3:::my-bucket',
+        ...bucketOverrides,
+      },
+      object: {
+        key: 'uploads/test-file.txt',
+        size: 1024,
+        eTag: '0123456789abcdef0123456789abcdef',
+        sequencer: '0A1B2C3D4E5F678901',
+        ...objectOverrides,
+      },
+      ...restS3Overrides,
+    },
+    ...restOverrides,
+  };
+}
+
+export function createS3Event(records: S3EventRecord[] = [createS3Record()]): S3Event {
+  return { Records: records };
+}
+
+export interface CreateS3HandlerEventOptions {
+  records?: S3EventRecord[];
+  context?: Partial<Context>;
+}
+
+export function createS3HandlerEvent(options: CreateS3HandlerEventOptions = {}): S3HandlerEvent {
+  const event = createS3Event(options.records);
+  const context = createMockContext(options.context);
+  return { event, context };
+}
+
+export function createS3BatchTask(overrides: Partial<S3BatchEventTask> = {}): S3BatchEventTask {
+  return {
+    taskId: crypto.randomUUID(),
+    s3Key: 'uploads/test-file.txt',
+    s3VersionId: '1',
+    s3BucketArn: 'arn:aws:s3:::my-bucket',
+    ...overrides,
+  };
+}
+
+export function createS3BatchEvent(
+  overrides: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] } = {},
+): S3BatchEvent {
+  const { tasks, ...restOverrides } = overrides;
+
+  return {
+    invocationSchemaVersion: '1.0',
+    invocationId: crypto.randomUUID(),
+    job: {
+      id: crypto.randomUUID(),
+    },
+    tasks: tasks ?? [createS3BatchTask()],
+    ...restOverrides,
+  };
+}
+
+export interface CreateS3BatchHandlerEventOptions {
+  event?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] };
+  context?: Partial<Context>;
+}
+
+export function createS3BatchHandlerEvent(options: CreateS3BatchHandlerEventOptions = {}): S3BatchHandlerEvent {
+  const event = createS3BatchEvent(options.event);
+  const context = createMockContext(options.context);
+  return { event, context };
+}

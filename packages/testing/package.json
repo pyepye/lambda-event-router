@@ -1,7 +1,7 @@
 {
-  "name": "@lambda-event-router/sns",
+  "name": "@lambda-event-router/testing",
   "version": "0.1.0",
-  "description": "SNS handler for lambda-event-router",
+  "description": "Testing utilities for lambda-event-router",
   "type": "module",
   "exports": {
     ".": {
@@ -28,14 +28,17 @@
   "keywords": [
     "aws",
     "lambda",
-    "serverless"
+    "serverless",
+    "testing"
   ],
   "license": "UNLICENSED",
+  "dependencies": {
+    "@aws-sdk/util-dynamodb": "^3.0.0"
+  },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:*"
+    "vitest": ">=2.0.0"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "tsup": "catalog:",
