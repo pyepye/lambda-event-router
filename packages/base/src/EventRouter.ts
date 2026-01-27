@@ -5,10 +5,12 @@ export class EventRouter {
   private routers: EventTypeRouter[];
 
   constructor(options: { routers: EventTypeRouter[] }) {
-    // EventBridgeRouter is a catch-all, so it must be checked last
-    const catchAllRouters = options.routers.filter((r) => r.constructor.name === 'EventBridgeRouter');
-    const specificRouters = options.routers.filter((r) => r.constructor.name !== 'EventBridgeRouter');
-    this.routers = [...specificRouters, ...catchAllRouters];
+    // AWS EventBridge's Scheduled event does not have a specific data model, it can have any data. This means the
+    // canHandleEvent for the EventBridgeRouter has a bit of a catch-all. Because of this we should always put
+    // the EventBridgeRouter at the end of the routers, so that it only handles events that no other router can handle.
+    const eventBridgeRouters = options.routers.filter((r) => r.constructor.name === 'EventBridgeRouter');
+    const nonEventBridgeRouters = options.routers.filter((r) => r.constructor.name !== 'EventBridgeRouter');
+    this.routers = [...nonEventBridgeRouters, ...eventBridgeRouters];
   }
 
   handler(): Handler {

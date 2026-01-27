@@ -103,6 +103,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -112,12 +115,18 @@ importers:
 
   packages/base:
     devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/aws-lambda':
         specifier: 'catalog:'
         version: 8.10.160
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -140,6 +149,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -165,6 +177,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -187,6 +202,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -209,6 +227,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -231,6 +252,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
@@ -275,6 +299,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
       tsup:
         specifier: 'catalog:'
         version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)

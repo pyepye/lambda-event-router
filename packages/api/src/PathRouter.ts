@@ -68,7 +68,7 @@ export type NoBodyRouteMethodFn<TReturn = PathRouter> = <
   config: NoBodyRouteConfig<TPathString, TPath, TQuery, TResponse>,
 ) => TReturn;
 
-export interface RouteMatch {
+interface RouteMatch {
   route: InternalRoute;
   params: Record<string, string>;
 }
