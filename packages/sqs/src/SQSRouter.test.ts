@@ -1,7 +1,7 @@
 import type { Schema } from '@lambda-event-router/base';
 import { createSQSEvent, test } from '@lambda-event-router/testing';
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
-import type { SQSFilterInput, SQSMessageAttributes, SQSRequest } from './types.js';
+import type { SQSFilterInput, SQSMessageAttributes } from './types.js';
 
 describe('SQSRouter', () => {
   describe('createSQSRouter', () => {
@@ -193,6 +193,37 @@ describe('SQSRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('matches when value is one of multiple allowed values', ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.created', 'order.updated'] } },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {}, { eventType: 'order.updated' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('requires all messageAttribute filter keys to match', ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.created'], priority: ['high'] } },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      // @ts-expect-error - testing private method directly
+      const matchingResult = router.matchRoute(record, {}, { eventType: 'order.created', priority: 'high' });
+      expect(matchingResult).toBeDefined();
+
+      // @ts-expect-error - testing private method directly
+      const partialResult = router.matchRoute(record, {}, { eventType: 'order.created', priority: 'low' });
+      expect(partialResult).toBeUndefined();
+    });
+
     test('matches route when both eventSourceArns and messageAttributes match', ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
@@ -355,6 +386,19 @@ describe('SQSRouter', () => {
 
       const { event, context } = sqsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('returns batchItemFailure when no route matches and batchItemFailures is enabled', async ({
+      sqsHandlerEvent,
+    }) => {
+      const router = createSQSRouter({ batchItemFailures: true });
+
+      const { event, context } = sqsHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: event.Records[0]?.messageId }],
+      });
     });
 
     test('propagates handler error on standard queue when batchItemFailures is disabled', async ({
@@ -762,6 +806,29 @@ describe('SQSRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: transformedBody }));
     });
 
+    test('throws when bodySchema validation fails and batchItemFailures is disabled', async ({
+      sqsRecord,
+      sqsEvent,
+      context,
+    }) => {
+      const router = createSQSRouter();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      const bodySchema: Schema<unknown> = {
+        safeParse: () => ({ success: false, error: new Error('invalid') }),
+      };
+
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+          bodySchema,
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      const event = sqsEvent([record]);
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Body validation failed');
+    });
+
     test('returns batchItemFailure when bodySchema validation fails', async ({ sqsRecord, sqsEvent, context }) => {
       const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
@@ -817,6 +884,34 @@ describe('SQSRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ messageAttributes: validatedAttributes }));
     });
 
+    test('throws when messageAttributesSchema validation fails and batchItemFailures is disabled', async ({
+      sqsRecord,
+      sqsEvent,
+      context,
+    }) => {
+      const router = createSQSRouter();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      const messageAttributesSchema: Schema<SQSMessageAttributes> = {
+        safeParse: () => ({ success: false, error: new Error('invalid') }),
+      };
+
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+          messageAttributesSchema,
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord({
+        eventSourceARN: eventSourceArn,
+        messageAttributes: {
+          eventType: { stringValue: 'order.created', stringListValues: [], binaryListValues: [], dataType: 'String' },
+        },
+      });
+      const event = sqsEvent([record]);
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Message attributes validation failed');
+    });
+
     test('returns batchItemFailure when messageAttributesSchema validation fails', async ({
       sqsRecord,
       sqsEvent,
@@ -851,71 +946,43 @@ describe('SQSRouter', () => {
   });
 
   describe('full event processing', () => {
-    test('routes an SQS event through a handler and returns undefined when batchItemFailures is disabled', async ({
+    test('routes records to different handlers based on message attribute filters', async ({
       sqsRecord,
       sqsEvent,
       context,
     }) => {
-      const receivedCreateRequests: SQSRequest[] = [];
-      const receivedDeleteRequests: SQSRequest[] = [];
+      const createHandler = vi.fn();
+      const deleteHandler = vi.fn();
 
       const router = createSQSRouter();
-      const orderRoute = defineRoute({
-        filters: {
-          messageAttributes: { eventType: ['order.created'] },
-        },
-      }).handle(async (request) => {
-        receivedCreateRequests.push(request);
-      });
-      router.route(orderRoute);
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.created'] } },
+        }).handle(createHandler),
+      );
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.deleted'] } },
+        }).handle(deleteHandler),
+      );
 
-      const deleteRoute = defineRoute({
-        filters: {
-          messageAttributes: { eventType: ['order.deleted'] },
-        },
-      }).handle(async (request) => {
-        receivedDeleteRequests.push(request);
-      });
-      router.route(deleteRoute);
-
-      const body = { action: 'processOrder', orderId: '12345' };
-      const serializedBody = JSON.stringify(body);
       const records = [
         sqsRecord({
-          body: serializedBody,
-          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'string' } },
+          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
         }),
         sqsRecord({
-          body: serializedBody,
-          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'string' } },
+          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
         }),
         sqsRecord({
-          body: serializedBody,
-          messageAttributes: { eventType: { stringValue: 'order.deleted', dataType: 'string' } },
+          messageAttributes: { eventType: { stringValue: 'order.deleted', dataType: 'String' } },
         }),
       ];
       const event = sqsEvent(records);
-      const mockContext = context();
-      const result = await router.handleEvent(event, mockContext);
+      const result = await router.handleEvent(event, context());
 
       expect(result).toBeUndefined();
-      expect(receivedCreateRequests).toHaveLength(2);
-      expect(receivedCreateRequests[0]).toEqual(
-        expect.objectContaining({
-          body,
-          messageAttributes: { eventType: 'order.created' },
-          context: mockContext,
-        }),
-      );
-
-      expect(receivedDeleteRequests).toHaveLength(1);
-      expect(receivedDeleteRequests[0]).toEqual(
-        expect.objectContaining({
-          body,
-          messageAttributes: { eventType: 'order.deleted' },
-          context: mockContext,
-        }),
-      );
+      expect(createHandler).toHaveBeenCalledTimes(2);
+      expect(deleteHandler).toHaveBeenCalledTimes(1);
     });
   });
 
