@@ -77,6 +77,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   }
 
   async handleEvent(event: SQSEvent, context: Context): Promise<undefined | SQSBatchResponse> {
+    /* v8 ignore next -- @preserve - Guard is for TS. AWS always sends at least one record */
     const isFifo = event.Records[0]?.eventSourceARN.endsWith('.fifo') ?? false;
 
     if (!this.batchItemFailures) {
@@ -112,6 +113,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     for (const [i, result] of results.entries()) {
       if (result.status === 'rejected') {
         const record = records[i];
+        /* v8 ignore next -- @preserve - Guard is for TS. Record will always exist as it has same length as results */
         if (record) {
           batchItemFailures.push({ itemIdentifier: record.messageId });
         }
@@ -163,6 +165,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   private groupRecordsByMessageGroupId(records: AWSSQSRecord[]): AWSSQSRecord[][] {
     const groups = new Map<string, AWSSQSRecord[]>();
     for (const record of records) {
+      /* v8 ignore next -- @preserve - Guard is for TS. FIFO records always have MessageGroupId */
       const groupId = record.attributes.MessageGroupId ?? '';
       const group = groups.get(groupId);
       if (group) {
