@@ -123,6 +123,60 @@ suite('S3Router', () => {
     });
   });
 
+  suite('convenience methods', () => {
+    test.each([
+      { method: 'objectCreated', eventName: 's3:ObjectCreated:*' },
+      { method: 'objectCreatedPut', eventName: 's3:ObjectCreated:Put' },
+      { method: 'objectCreatedPost', eventName: 's3:ObjectCreated:Post' },
+      { method: 'objectCreatedCopy', eventName: 's3:ObjectCreated:Copy' },
+      { method: 'objectCreatedCompleteMultipartUpload', eventName: 's3:ObjectCreated:CompleteMultipartUpload' },
+      { method: 'objectRemoved', eventName: 's3:ObjectRemoved:*' },
+      { method: 'objectRemovedDelete', eventName: 's3:ObjectRemoved:Delete' },
+      { method: 'objectRemovedDeleteMarkerCreated', eventName: 's3:ObjectRemoved:DeleteMarkerCreated' },
+      { method: 'objectRestore', eventName: 's3:ObjectRestore:*' },
+      { method: 'objectRestorePost', eventName: 's3:ObjectRestore:Post' },
+      { method: 'objectRestoreCompleted', eventName: 's3:ObjectRestore:Completed' },
+      { method: 'objectRestoreDelete', eventName: 's3:ObjectRestore:Delete' },
+      { method: 'lifecycleExpiration', eventName: 's3:LifecycleExpiration:*' },
+      { method: 'lifecycleExpirationDelete', eventName: 's3:LifecycleExpiration:Delete' },
+      { method: 'lifecycleExpirationDeleteMarkerCreated', eventName: 's3:LifecycleExpiration:DeleteMarkerCreated' },
+      { method: 'lifecycleTransition', eventName: 's3:LifecycleTransition' },
+      { method: 'objectTagging', eventName: 's3:ObjectTagging:*' },
+      { method: 'objectTaggingPut', eventName: 's3:ObjectTagging:Put' },
+      { method: 'objectTaggingDelete', eventName: 's3:ObjectTagging:Delete' },
+      { method: 'objectAclPut', eventName: 's3:ObjectAcl:Put' },
+      { method: 'reducedRedundancyLostObject', eventName: 's3:ReducedRedundancyLostObject' },
+      { method: 'intelligentTiering', eventName: 's3:IntelligentTiering' },
+      { method: 'testEvent', eventName: 's3:TestEvent' },
+    ])('$method sets eventName filter to $eventName', ({ method, eventName }) => {
+      const router = new S3Router();
+      const handler = vi.fn();
+      // @ts-expect-error - dynamic method access for convenience method testing
+      router[method]({ handler });
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute({}, 'my-bucket', 'uploads/test.txt', eventName);
+
+      expect(result).toBeDefined();
+    });
+
+    test('merges user-provided filters with auto-set eventName', ({ s3Record }) => {
+      const router = new S3Router();
+      const handler = vi.fn();
+      router.objectCreatedPut({ filters: { buckets: ['specific-bucket'], prefixes: ['uploads/'] }, handler });
+
+      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+
+      // @ts-expect-error - testing private method directly
+      const matchingResult = router.matchRoute(record, 'specific-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      expect(matchingResult).toBeDefined();
+
+      // @ts-expect-error - testing private method directly
+      const nonMatchingResult = router.matchRoute(record, 'other-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      expect(nonMatchingResult).toBeUndefined();
+    });
+  });
+
   suite('matchRoute', () => {
     let router: S3Router;
 
@@ -425,38 +479,6 @@ suite('S3Router', () => {
     });
   });
 
-  suite('matchEventName', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = new S3Router();
-    });
-
-    test('returns true for exact match', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:Put']);
-      expect(result).toBe(true);
-    });
-
-    test('returns true when wildcard matches', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:*']);
-      expect(result).toBe(true);
-    });
-
-    test('returns false when wildcard does not match different category', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectRemoved:Delete', ['s3:ObjectCreated:*']);
-      expect(result).toBe(false);
-    });
-
-    test('returns false when no filter matches', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectRemoved:Delete']);
-      expect(result).toBe(false);
-    });
-  });
-
   suite('handleEvent', () => {
     test('calls matched handler with built request for ObjectCreated event', async ({ s3Record, s3HandlerEvent }) => {
       const router = new S3Router();
@@ -624,6 +646,38 @@ suite('S3Router', () => {
     });
   });
 
+  suite('matchEventName', () => {
+    let router: S3Router;
+
+    beforeEach(() => {
+      router = new S3Router();
+    });
+
+    test('returns true for exact match', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:Put']);
+      expect(result).toBe(true);
+    });
+
+    test('returns true when wildcard matches', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:*']);
+      expect(result).toBe(true);
+    });
+
+    test('returns false when wildcard does not match different category', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.matchEventName('s3:ObjectRemoved:Delete', ['s3:ObjectCreated:*']);
+      expect(result).toBe(false);
+    });
+
+    test('returns false when no filter matches', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectRemoved:Delete']);
+      expect(result).toBe(false);
+    });
+  });
+
   suite('processRecord', () => {
     test('URL-decodes key from record', async ({ s3Record, context }) => {
       const router = new S3Router();
@@ -716,60 +770,6 @@ suite('S3Router', () => {
           context: ctx,
         }),
       );
-    });
-  });
-
-  suite('convenience methods', () => {
-    test.each([
-      { method: 'objectCreated', eventName: 's3:ObjectCreated:*' },
-      { method: 'objectCreatedPut', eventName: 's3:ObjectCreated:Put' },
-      { method: 'objectCreatedPost', eventName: 's3:ObjectCreated:Post' },
-      { method: 'objectCreatedCopy', eventName: 's3:ObjectCreated:Copy' },
-      { method: 'objectCreatedCompleteMultipartUpload', eventName: 's3:ObjectCreated:CompleteMultipartUpload' },
-      { method: 'objectRemoved', eventName: 's3:ObjectRemoved:*' },
-      { method: 'objectRemovedDelete', eventName: 's3:ObjectRemoved:Delete' },
-      { method: 'objectRemovedDeleteMarkerCreated', eventName: 's3:ObjectRemoved:DeleteMarkerCreated' },
-      { method: 'objectRestore', eventName: 's3:ObjectRestore:*' },
-      { method: 'objectRestorePost', eventName: 's3:ObjectRestore:Post' },
-      { method: 'objectRestoreCompleted', eventName: 's3:ObjectRestore:Completed' },
-      { method: 'objectRestoreDelete', eventName: 's3:ObjectRestore:Delete' },
-      { method: 'lifecycleExpiration', eventName: 's3:LifecycleExpiration:*' },
-      { method: 'lifecycleExpirationDelete', eventName: 's3:LifecycleExpiration:Delete' },
-      { method: 'lifecycleExpirationDeleteMarkerCreated', eventName: 's3:LifecycleExpiration:DeleteMarkerCreated' },
-      { method: 'lifecycleTransition', eventName: 's3:LifecycleTransition' },
-      { method: 'objectTagging', eventName: 's3:ObjectTagging:*' },
-      { method: 'objectTaggingPut', eventName: 's3:ObjectTagging:Put' },
-      { method: 'objectTaggingDelete', eventName: 's3:ObjectTagging:Delete' },
-      { method: 'objectAclPut', eventName: 's3:ObjectAcl:Put' },
-      { method: 'reducedRedundancyLostObject', eventName: 's3:ReducedRedundancyLostObject' },
-      { method: 'intelligentTiering', eventName: 's3:IntelligentTiering' },
-      { method: 'testEvent', eventName: 's3:TestEvent' },
-    ])('$method sets eventName filter to $eventName', ({ method, eventName }) => {
-      const router = new S3Router();
-      const handler = vi.fn();
-      // @ts-expect-error - dynamic method access for convenience method testing
-      router[method]({ handler });
-
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({}, 'my-bucket', 'uploads/test.txt', eventName);
-
-      expect(result).toBeDefined();
-    });
-
-    test('merges user-provided filters with auto-set eventName', ({ s3Record }) => {
-      const router = new S3Router();
-      const handler = vi.fn();
-      router.objectCreatedPut({ filters: { buckets: ['specific-bucket'], prefixes: ['uploads/'] }, handler });
-
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
-
-      // @ts-expect-error - testing private method directly
-      const matchingResult = router.matchRoute(record, 'specific-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
-      expect(matchingResult).toBeDefined();
-
-      // @ts-expect-error - testing private method directly
-      const nonMatchingResult = router.matchRoute(record, 'other-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
-      expect(nonMatchingResult).toBeUndefined();
     });
   });
 

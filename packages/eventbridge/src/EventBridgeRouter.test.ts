@@ -750,47 +750,6 @@ suite('EventBridgeRouter', () => {
     });
   });
 
-  suite('validateSchema', () => {
-    let router: EventBridgeRouter;
-
-    beforeEach(() => {
-      router = new EventBridgeRouter();
-    });
-
-    test('returns data unchanged when no schema is provided', () => {
-      const data = { orderId: '12345' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'Error context');
-
-      expect(result).toBe(data);
-    });
-
-    test('returns validated data when schema succeeds', () => {
-      const data = { orderId: '12345' };
-      const transformedData = { orderId: '12345', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, schema, 'Error context');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with error context when schema fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid data') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema, 'Detail validation failed for event abc-123')).toThrow(
-        'Detail validation failed for event abc-123',
-      );
-    });
-  });
-
   suite('handleEvent - schema validation', () => {
     suite('EventBridge detailSchema', () => {
       test('handler receives validated detail from detailSchema', async ({ eventBridgeEvent, context }) => {
@@ -870,6 +829,47 @@ suite('EventBridgeRouter', () => {
           'Scheduler event validation failed',
         );
       });
+    });
+  });
+
+  suite('validateSchema', () => {
+    let router: EventBridgeRouter;
+
+    beforeEach(() => {
+      router = new EventBridgeRouter();
+    });
+
+    test('returns data unchanged when no schema is provided', () => {
+      const data = { orderId: '12345' };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.validateSchema(data, undefined, 'Error context');
+
+      expect(result).toBe(data);
+    });
+
+    test('returns validated data when schema succeeds', () => {
+      const data = { orderId: '12345' };
+      const transformedData = { orderId: '12345', validated: true };
+      const schema: Schema<typeof transformedData> = {
+        safeParse: () => ({ success: true, data: transformedData }),
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.validateSchema(data, schema, 'Error context');
+
+      expect(result).toEqual(transformedData);
+    });
+
+    test('throws with error context when schema fails', () => {
+      const schema: Schema<unknown> = {
+        safeParse: () => ({ success: false, error: new Error('invalid data') }),
+      };
+
+      // @ts-expect-error - testing private method directly
+      expect(() => router.validateSchema({}, schema, 'Detail validation failed for event abc-123')).toThrow(
+        'Detail validation failed for event abc-123',
+      );
     });
   });
 

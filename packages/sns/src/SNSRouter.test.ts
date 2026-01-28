@@ -867,81 +867,6 @@ suite('SNSRouter', () => {
     });
   });
 
-  suite('full event processing', () => {
-    test('routes an SNS event through multiple handlers and returns undefined', async ({
-      snsRecord,
-      snsEvent,
-      context,
-    }) => {
-      const receivedCreateRequests: SNSRequest[] = [];
-      const receivedDeleteRequests: SNSRequest[] = [];
-
-      const router = createSNSRouter();
-      const orderRoute = defineRoute({
-        filters: {
-          messageAttributes: { eventType: ['order.created'] },
-        },
-      }).handle(async (request) => {
-        receivedCreateRequests.push(request);
-      });
-      router.route(orderRoute);
-
-      const deleteRoute = defineRoute({
-        filters: {
-          messageAttributes: { eventType: ['order.deleted'] },
-        },
-      }).handle(async (request) => {
-        receivedDeleteRequests.push(request);
-      });
-      router.route(deleteRoute);
-
-      const body = { action: 'processOrder', orderId: '12345' };
-      const serializedBody = JSON.stringify(body);
-      const records = [
-        snsRecord({
-          Sns: {
-            Message: serializedBody,
-            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
-          },
-        }),
-        snsRecord({
-          Sns: {
-            Message: serializedBody,
-            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
-          },
-        }),
-        snsRecord({
-          Sns: {
-            Message: serializedBody,
-            MessageAttributes: { eventType: { Type: 'String', Value: 'order.deleted' } },
-          },
-        }),
-      ];
-      const event = snsEvent(records);
-      const mockContext = context();
-      const result = await router.handleEvent(event, mockContext);
-
-      expect(result).toBeUndefined();
-      expect(receivedCreateRequests).toHaveLength(2);
-      expect(receivedCreateRequests[0]).toEqual(
-        expect.objectContaining({
-          body,
-          messageAttributes: { eventType: 'order.created' },
-          context: mockContext,
-        }),
-      );
-
-      expect(receivedDeleteRequests).toHaveLength(1);
-      expect(receivedDeleteRequests[0]).toEqual(
-        expect.objectContaining({
-          body,
-          messageAttributes: { eventType: 'order.deleted' },
-          context: mockContext,
-        }),
-      );
-    });
-  });
-
   suite('parseJsonBody', () => {
     let router: SNSRouter;
 
@@ -1085,6 +1010,81 @@ suite('SNSRouter', () => {
       const result = router.validateMessageAttributes(record, messageAttributes, undefined);
 
       expect(result).toBe(messageAttributes);
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes an SNS event through multiple handlers and returns undefined', async ({
+      snsRecord,
+      snsEvent,
+      context,
+    }) => {
+      const receivedCreateRequests: SNSRequest[] = [];
+      const receivedDeleteRequests: SNSRequest[] = [];
+
+      const router = createSNSRouter();
+      const orderRoute = defineRoute({
+        filters: {
+          messageAttributes: { eventType: ['order.created'] },
+        },
+      }).handle(async (request) => {
+        receivedCreateRequests.push(request);
+      });
+      router.route(orderRoute);
+
+      const deleteRoute = defineRoute({
+        filters: {
+          messageAttributes: { eventType: ['order.deleted'] },
+        },
+      }).handle(async (request) => {
+        receivedDeleteRequests.push(request);
+      });
+      router.route(deleteRoute);
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const serializedBody = JSON.stringify(body);
+      const records = [
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
+          },
+        }),
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
+          },
+        }),
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.deleted' } },
+          },
+        }),
+      ];
+      const event = snsEvent(records);
+      const mockContext = context();
+      const result = await router.handleEvent(event, mockContext);
+
+      expect(result).toBeUndefined();
+      expect(receivedCreateRequests).toHaveLength(2);
+      expect(receivedCreateRequests[0]).toEqual(
+        expect.objectContaining({
+          body,
+          messageAttributes: { eventType: 'order.created' },
+          context: mockContext,
+        }),
+      );
+
+      expect(receivedDeleteRequests).toHaveLength(1);
+      expect(receivedDeleteRequests[0]).toEqual(
+        expect.objectContaining({
+          body,
+          messageAttributes: { eventType: 'order.deleted' },
+          context: mockContext,
+        }),
+      );
     });
   });
 });

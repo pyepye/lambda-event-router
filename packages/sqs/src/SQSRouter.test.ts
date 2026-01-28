@@ -388,19 +388,6 @@ suite('SQSRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
-    test('returns batchItemFailure when no route matches and batchItemFailures is enabled', async ({
-      sqsHandlerEvent,
-    }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
-
-      const { event, context } = sqsHandlerEvent();
-      const result = await router.handleEvent(event, context);
-
-      expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: event.Records[0]?.messageId }],
-      });
-    });
-
     test('propagates handler error on standard queue when batchItemFailures is disabled', async ({
       sqsHandlerEvent,
     }) => {
@@ -469,6 +456,19 @@ suite('SQSRouter', () => {
   });
 
   suite('handleEvent - batchItemFailures (standard)', () => {
+    test('returns batchItemFailure when no route matches and batchItemFailures is enabled', async ({
+      sqsHandlerEvent,
+    }) => {
+      const router = createSQSRouter({ batchItemFailures: true });
+
+      const { event, context } = sqsHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: event.Records[0]?.messageId }],
+      });
+    });
+
     test('returns undefined when all records succeed', async ({ sqsRecord, sqsEvent, context }) => {
       const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
@@ -945,47 +945,6 @@ suite('SQSRouter', () => {
     });
   });
 
-  suite('full event processing', () => {
-    test('routes records to different handlers based on message attribute filters', async ({
-      sqsRecord,
-      sqsEvent,
-      context,
-    }) => {
-      const createHandler = vi.fn();
-      const deleteHandler = vi.fn();
-
-      const router = createSQSRouter();
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
-        }).handle(createHandler),
-      );
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { eventType: ['order.deleted'] } },
-        }).handle(deleteHandler),
-      );
-
-      const records = [
-        sqsRecord({
-          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
-        }),
-        sqsRecord({
-          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
-        }),
-        sqsRecord({
-          messageAttributes: { eventType: { stringValue: 'order.deleted', dataType: 'String' } },
-        }),
-      ];
-      const event = sqsEvent(records);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-      expect(createHandler).toHaveBeenCalledTimes(2);
-      expect(deleteHandler).toHaveBeenCalledTimes(1);
-    });
-  });
-
   suite('parseJsonBody', () => {
     let router: SQSRouter;
 
@@ -1141,6 +1100,47 @@ suite('SQSRouter', () => {
       const result = router.validateMessageAttributes(record, messageAttributes, undefined);
 
       expect(result).toBe(messageAttributes);
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes records to different handlers based on message attribute filters', async ({
+      sqsRecord,
+      sqsEvent,
+      context,
+    }) => {
+      const createHandler = vi.fn();
+      const deleteHandler = vi.fn();
+
+      const router = createSQSRouter();
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.created'] } },
+        }).handle(createHandler),
+      );
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.deleted'] } },
+        }).handle(deleteHandler),
+      );
+
+      const records = [
+        sqsRecord({
+          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
+        }),
+        sqsRecord({
+          messageAttributes: { eventType: { stringValue: 'order.created', dataType: 'String' } },
+        }),
+        sqsRecord({
+          messageAttributes: { eventType: { stringValue: 'order.deleted', dataType: 'String' } },
+        }),
+      ];
+      const event = sqsEvent(records);
+      const result = await router.handleEvent(event, context());
+
+      expect(result).toBeUndefined();
+      expect(createHandler).toHaveBeenCalledTimes(2);
+      expect(deleteHandler).toHaveBeenCalledTimes(1);
     });
   });
 });

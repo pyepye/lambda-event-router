@@ -11,33 +11,6 @@ suite('CognitoRouter', () => {
     });
   });
 
-  suite('defineRoute', () => {
-    test('returns a builder with a handle method', () => {
-      const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
-      });
-
-      expect(builder).toHaveProperty('handle');
-      expect(typeof builder.handle).toBe('function');
-    });
-
-    test('handle returns a definition with filters, userAttributesSchema, and handler', () => {
-      const handler = vi.fn().mockImplementation(async ({ event }) => event);
-      const schema: Schema<{ email: string }> = {
-        safeParse: () => ({ success: true, data: { email: 'test@example.com' } }),
-      };
-
-      const definition = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
-        userAttributesSchema: schema,
-      }).handle(handler);
-
-      expect(definition.filters?.triggerSources).toEqual(['PreSignUp_SignUp']);
-      expect(definition.userAttributesSchema).toBe(schema);
-      expect(definition.handler).toBe(handler);
-    });
-  });
-
   suite('canHandleEvent', () => {
     let router: CognitoRouter;
 
@@ -91,6 +64,33 @@ suite('CognitoRouter', () => {
     test('returns false for an SQS-shaped event', () => {
       const event = { Records: [{ eventSource: 'aws:sqs' }] };
       expect(router.canHandleEvent(event)).toBe(false);
+    });
+  });
+
+  suite('defineRoute', () => {
+    test('returns a builder with a handle method', () => {
+      const builder = defineRoute({
+        filters: { triggerSources: ['PreSignUp_SignUp'] },
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(typeof builder.handle).toBe('function');
+    });
+
+    test('handle returns a definition with filters, userAttributesSchema, and handler', () => {
+      const handler = vi.fn().mockImplementation(async ({ event }) => event);
+      const schema: Schema<{ email: string }> = {
+        safeParse: () => ({ success: true, data: { email: 'test@example.com' } }),
+      };
+
+      const definition = defineRoute({
+        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        userAttributesSchema: schema,
+      }).handle(handler);
+
+      expect(definition.filters?.triggerSources).toEqual(['PreSignUp_SignUp']);
+      expect(definition.userAttributesSchema).toBe(schema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -458,94 +458,6 @@ suite('CognitoRouter', () => {
     });
   });
 
-  suite('matchUserAttribute', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
-    test('matches an exact string value', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', 'test@example.com')).toBe(true);
-    });
-
-    test('does not match a different string value', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', 'other@example.com')).toBe(false);
-    });
-
-    test('matches a RegExp pattern', () => {
-      // match email domain pattern
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', /@example\.com$/)).toBe(true);
-    });
-
-    test('does not match a non-matching RegExp', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', /@other\.com$/)).toBe(false);
-    });
-
-    test('matches when function returns true', () => {
-      const filter = (value: string): boolean => value.includes('@');
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', filter)).toBe(true);
-    });
-
-    test('does not match when function returns false', () => {
-      const filter = (value: string): boolean => value.startsWith('admin');
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', filter)).toBe(false);
-    });
-
-    test('returns false when value is undefined', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute(undefined, 'test')).toBe(false);
-    });
-  });
-
-  suite('validateUserAttributes', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
-    test('returns userAttributes unchanged when no schema is provided', () => {
-      const userAttributes = { email: 'test@example.com' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserAttributes(userAttributes, undefined, 'PreSignUp_SignUp');
-
-      expect(result).toBe(userAttributes);
-    });
-
-    test('returns validated data on schema success', () => {
-      const userAttributes = { email: 'test@example.com' };
-      const transformedData = { email: 'test@example.com', source: 'validated' };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with triggerSource in message on schema failure', () => {
-      const userAttributes = { email: 'bad' };
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      expect(() => {
-        // @ts-expect-error - testing private method directly
-        router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
-      }).toThrow('User attributes validation failed for trigger PreSignUp_SignUp');
-    });
-  });
-
   suite('handleEvent', () => {
     let router: CognitoRouter;
 
@@ -732,6 +644,94 @@ suite('CognitoRouter', () => {
 
       await challengeRouter.handleEvent(cognitoVerifyAuthChallengeResponseEvent(), mockContext);
       expect(verifyHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('matchUserAttribute', () => {
+    let router: CognitoRouter;
+
+    beforeEach(() => {
+      router = new CognitoRouter();
+    });
+
+    test('matches an exact string value', () => {
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', 'test@example.com')).toBe(true);
+    });
+
+    test('does not match a different string value', () => {
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', 'other@example.com')).toBe(false);
+    });
+
+    test('matches a RegExp pattern', () => {
+      // match email domain pattern
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', /@example\.com$/)).toBe(true);
+    });
+
+    test('does not match a non-matching RegExp', () => {
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', /@other\.com$/)).toBe(false);
+    });
+
+    test('matches when function returns true', () => {
+      const filter = (value: string): boolean => value.includes('@');
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', filter)).toBe(true);
+    });
+
+    test('does not match when function returns false', () => {
+      const filter = (value: string): boolean => value.startsWith('admin');
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute('test@example.com', filter)).toBe(false);
+    });
+
+    test('returns false when value is undefined', () => {
+      // @ts-expect-error - testing private method directly
+      expect(router.matchUserAttribute(undefined, 'test')).toBe(false);
+    });
+  });
+
+  suite('validateUserAttributes', () => {
+    let router: CognitoRouter;
+
+    beforeEach(() => {
+      router = new CognitoRouter();
+    });
+
+    test('returns userAttributes unchanged when no schema is provided', () => {
+      const userAttributes = { email: 'test@example.com' };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.validateUserAttributes(userAttributes, undefined, 'PreSignUp_SignUp');
+
+      expect(result).toBe(userAttributes);
+    });
+
+    test('returns validated data on schema success', () => {
+      const userAttributes = { email: 'test@example.com' };
+      const transformedData = { email: 'test@example.com', source: 'validated' };
+      const schema: Schema<typeof transformedData> = {
+        safeParse: () => ({ success: true, data: transformedData }),
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
+
+      expect(result).toEqual(transformedData);
+    });
+
+    test('throws with triggerSource in message on schema failure', () => {
+      const userAttributes = { email: 'bad' };
+      const schema: Schema<unknown> = {
+        safeParse: () => ({ success: false, error: new Error('invalid') }),
+      };
+
+      expect(() => {
+        // @ts-expect-error - testing private method directly
+        router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
+      }).toThrow('User attributes validation failed for trigger PreSignUp_SignUp');
     });
   });
 });
