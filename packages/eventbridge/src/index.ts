@@ -11,6 +11,5 @@ export type {
   EventBridgeRouteDefinition,
   ScheduledEventDetail,
   SchedulerHandler,
-  SchedulerRecord,
   SchedulerRouteDefinition,
 } from './types.js';

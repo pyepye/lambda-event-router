@@ -38,11 +38,7 @@ export interface ApiResponse<T = unknown> {
   headers?: Record<string, string>;
 }
 
-export interface HTTPResponse<T = unknown> {
-  statusCode: number;
-  body: T;
-  headers?: Record<string, string>;
-}
+export type HTTPResponse<T = unknown> = ApiResponse<T>;
 
 export type ApiHandler<
   TPath = Record<string, string>,

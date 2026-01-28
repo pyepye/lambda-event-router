@@ -41,13 +41,9 @@ export interface EventBridgeDetailTypeMap {
 export type LookupDetailType<
   TSources extends readonly string[] | undefined,
   TDetailTypes extends readonly string[] | undefined,
-> = TSources extends readonly [infer Source extends string]
-  ? TDetailTypes extends readonly [infer DetailType extends string]
-    ? Source extends keyof EventBridgeDetailTypeMap
-      ? DetailType extends keyof EventBridgeDetailTypeMap[Source]
-        ? EventBridgeDetailTypeMap[Source][DetailType]
-        : unknown
-      : unknown
+> = TSources extends readonly [infer Source extends keyof EventBridgeDetailTypeMap]
+  ? TDetailTypes extends readonly [infer DetailType extends keyof EventBridgeDetailTypeMap[Source]]
+    ? EventBridgeDetailTypeMap[Source][DetailType]
     : unknown
   : unknown;
 
@@ -81,8 +77,6 @@ export interface EventBridgeRequest<TDetail = unknown> {
 }
 
 export type EventBridgeHandler<TDetail = unknown> = (request: EventBridgeRequest<TDetail>) => Promise<void>;
-
-export type SchedulerRecord<TPayload> = TPayload;
 
 export type SchedulerHandler<TPayload = unknown> = (event: TPayload) => Promise<void>;
 

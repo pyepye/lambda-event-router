@@ -97,58 +97,40 @@ export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> 
 // Type mappings for defineRoute()
 // =============================================================================
 
-// Type mapping: trigger source -> request type
+// Mapped type: trigger source -> request type
+type TriggerRequestMap<TUserAttributes extends UserAttributes = UserAttributes> = {
+  [K in PreSignUpTriggerSource]: PreSignUpRequest<TUserAttributes>;
+} & { [K in PreAuthenticationTriggerSource]: PreAuthenticationRequest<TUserAttributes> } & {
+  [K in PostAuthenticationTriggerSource]: PostAuthenticationRequest<TUserAttributes>;
+} & { [K in PostConfirmationTriggerSource]: PostConfirmationRequest<TUserAttributes> } & {
+  [K in DefineAuthChallengeTriggerSource]: DefineAuthChallengeRequest<TUserAttributes>;
+} & { [K in CreateAuthChallengeTriggerSource]: CreateAuthChallengeRequest<TUserAttributes> } & {
+  [K in VerifyAuthChallengeResponseTriggerSource]: VerifyAuthChallengeResponseRequest<TUserAttributes>;
+} & { [K in CustomMessageTriggerSource]: CustomMessageRequest<TUserAttributes> } & {
+  [K in CustomEmailSenderTriggerSource]: CustomEmailSenderRequest<TUserAttributes>;
+} & { [K in PreTokenGenerationTriggerSource]: PreTokenGenerationRequest<TUserAttributes> } & {
+  [K in UserMigrationTriggerSource]: UserMigrationRequest<TUserAttributes>;
+};
+
 export type RequestForTrigger<
   TTrigger extends CognitoTriggerSource,
   TUserAttributes extends UserAttributes = UserAttributes,
-> = TTrigger extends PreSignUpTriggerSource
-  ? PreSignUpRequest<TUserAttributes>
-  : TTrigger extends PreAuthenticationTriggerSource
-    ? PreAuthenticationRequest<TUserAttributes>
-    : TTrigger extends PostAuthenticationTriggerSource
-      ? PostAuthenticationRequest<TUserAttributes>
-      : TTrigger extends PostConfirmationTriggerSource
-        ? PostConfirmationRequest<TUserAttributes>
-        : TTrigger extends DefineAuthChallengeTriggerSource
-          ? DefineAuthChallengeRequest<TUserAttributes>
-          : TTrigger extends CreateAuthChallengeTriggerSource
-            ? CreateAuthChallengeRequest<TUserAttributes>
-            : TTrigger extends VerifyAuthChallengeResponseTriggerSource
-              ? VerifyAuthChallengeResponseRequest<TUserAttributes>
-              : TTrigger extends CustomMessageTriggerSource
-                ? CustomMessageRequest<TUserAttributes>
-                : TTrigger extends CustomEmailSenderTriggerSource
-                  ? CustomEmailSenderRequest<TUserAttributes>
-                  : TTrigger extends PreTokenGenerationTriggerSource
-                    ? PreTokenGenerationRequest<TUserAttributes>
-                    : TTrigger extends UserMigrationTriggerSource
-                      ? UserMigrationRequest<TUserAttributes>
-                      : never;
+> = TriggerRequestMap<TUserAttributes>[TTrigger];
 
-// Type mapping: trigger source -> event type
-export type EventForTrigger<TTrigger extends CognitoTriggerSource> = TTrigger extends PreSignUpTriggerSource
-  ? PreSignUpTriggerEvent
-  : TTrigger extends PreAuthenticationTriggerSource
-    ? PreAuthenticationTriggerEvent
-    : TTrigger extends PostAuthenticationTriggerSource
-      ? PostAuthenticationTriggerEvent
-      : TTrigger extends PostConfirmationTriggerSource
-        ? PostConfirmationTriggerEvent
-        : TTrigger extends DefineAuthChallengeTriggerSource
-          ? DefineAuthChallengeTriggerEvent
-          : TTrigger extends CreateAuthChallengeTriggerSource
-            ? CreateAuthChallengeTriggerEvent
-            : TTrigger extends VerifyAuthChallengeResponseTriggerSource
-              ? VerifyAuthChallengeResponseTriggerEvent
-              : TTrigger extends CustomMessageTriggerSource
-                ? CustomMessageTriggerEvent
-                : TTrigger extends CustomEmailSenderTriggerSource
-                  ? CustomEmailSenderTriggerEvent
-                  : TTrigger extends PreTokenGenerationTriggerSource
-                    ? PreTokenGenerationTriggerEvent
-                    : TTrigger extends UserMigrationTriggerSource
-                      ? UserMigrationTriggerEvent
-                      : never;
+// Mapped type: trigger source -> event type
+type TriggerEventMap = { [K in PreSignUpTriggerSource]: PreSignUpTriggerEvent } & {
+  [K in PreAuthenticationTriggerSource]: PreAuthenticationTriggerEvent;
+} & { [K in PostAuthenticationTriggerSource]: PostAuthenticationTriggerEvent } & {
+  [K in PostConfirmationTriggerSource]: PostConfirmationTriggerEvent;
+} & { [K in DefineAuthChallengeTriggerSource]: DefineAuthChallengeTriggerEvent } & {
+  [K in CreateAuthChallengeTriggerSource]: CreateAuthChallengeTriggerEvent;
+} & { [K in VerifyAuthChallengeResponseTriggerSource]: VerifyAuthChallengeResponseTriggerEvent } & {
+  [K in CustomMessageTriggerSource]: CustomMessageTriggerEvent;
+} & { [K in CustomEmailSenderTriggerSource]: CustomEmailSenderTriggerEvent } & {
+  [K in PreTokenGenerationTriggerSource]: PreTokenGenerationTriggerEvent;
+} & { [K in UserMigrationTriggerSource]: UserMigrationTriggerEvent };
+
+export type EventForTrigger<TTrigger extends CognitoTriggerSource> = TriggerEventMap[TTrigger];
 
 // =============================================================================
 // Route definition types
