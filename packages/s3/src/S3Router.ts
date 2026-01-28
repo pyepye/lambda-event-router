@@ -62,6 +62,7 @@ export function defineRoute(config: RouteInput): RouteBuilder {
 // =============================================================================
 
 function isS3BatchEvent(event: unknown): event is S3BatchEvent {
+  /* v8 ignore next -- @preserve - Guard is for TS. canHandleEvent already checks isObject */
   if (!isObject(event)) return false;
   return (
     typeof event.invocationSchemaVersion === 'string' &&
@@ -285,12 +286,12 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
     // S3 Batch sends one task at a time per invocation
     const task = event.tasks[0];
-    if (!task) {
-      throw new Error('No tasks in S3 Batch event');
-    }
+    /* v8 ignore next -- @preserve - Guard is for TS. AWS always provides at least one task but array access could be undefined */
+    if (!task) throw new Error('No tasks in S3 Batch event');
 
     // Extract bucket name from ARN: arn:aws:s3:::bucket-name
     const bucketArn = task.s3BucketArn;
+    /* v8 ignore next -- @preserve - S3 Batch ARN always contains :::, fallback is unreachable */
     const bucket = bucketArn.split(':::')[1] ?? '';
 
     // S3 Batch keys are URL-encoded

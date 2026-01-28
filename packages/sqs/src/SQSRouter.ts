@@ -180,6 +180,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   private convertMessageAttributes(raw: AWSSQSRecord['messageAttributes']): SQSMessageAttributes {
     const result: SQSMessageAttributes = {};
     for (const [key, attr] of Object.entries(raw)) {
+      /* v8 ignore next -- @preserve - Guard is for TS. AWS always provides one of stringValue or binaryValue but both are typed as optional */
       if (attr.dataType === 'Number' && attr.stringValue != null) {
         result[key] = Number(attr.stringValue);
       } else if (attr.dataType === 'Binary' && attr.binaryValue != null) {

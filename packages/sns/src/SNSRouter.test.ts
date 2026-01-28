@@ -3,54 +3,54 @@ import { createSNSEvent, test } from '@lambda-event-router/testing';
 import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
 import type { SNSFilterInput, SNSMessageAttributes, SNSRequest } from './types.js';
 
-describe('SNSRouter', () => {
-  describe('createSNSRouter', () => {
-    it('creates an SNSRouter instance', () => {
+suite('SNSRouter', () => {
+  suite('createSNSRouter', () => {
+    test('creates an SNSRouter instance', () => {
       const router = createSNSRouter();
       expect(router).toBeInstanceOf(SNSRouter);
     });
   });
 
-  describe('canHandleEvent', () => {
+  suite('canHandleEvent', () => {
     let router: SNSRouter;
 
     beforeEach(() => {
       router = new SNSRouter();
     });
 
-    it('returns true for a valid SNS event', () => {
+    test('returns true for a valid SNS event', () => {
       const event = createSNSEvent();
       expect(router.canHandleEvent(event)).toBe(true);
     });
 
-    it('returns false for a non-SNS event', () => {
+    test('returns false for a non-SNS event', () => {
       const event = { detail: { foo: 'bar' }, source: 'custom.app' };
       expect(router.canHandleEvent(event)).toBe(false);
     });
 
-    it('returns false for null', () => {
+    test('returns false for null', () => {
       expect(router.canHandleEvent(null)).toBe(false);
     });
 
-    it('returns false for a string', () => {
+    test('returns false for a string', () => {
       expect(router.canHandleEvent('not an event')).toBe(false);
     });
 
-    it('returns false when Records is not an array', () => {
+    test('returns false when Records is not an array', () => {
       expect(router.canHandleEvent({ Records: 'not-an-array' })).toBe(false);
     });
 
-    it('returns false when first record is not an object', () => {
+    test('returns false when first record is not an object', () => {
       expect(router.canHandleEvent({ Records: ['not-an-object'] })).toBe(false);
     });
 
-    it('returns false when EventSource is not aws:sns', () => {
+    test('returns false when EventSource is not aws:sns', () => {
       expect(router.canHandleEvent({ Records: [{ EventSource: 'aws:sqs' }] })).toBe(false);
     });
   });
 
-  describe('defineRoute', () => {
-    it('returns a route builder with a handle method', () => {
+  suite('defineRoute', () => {
+    test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
         filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
       });
@@ -59,7 +59,7 @@ describe('SNSRouter', () => {
       expect(typeof builder.handle).toBe('function');
     });
 
-    it('preserves filters, schemas, and handler in the definition', () => {
+    test('preserves filters, schemas, and handler in the definition', () => {
       const bodySchema: Schema<{ action: string }> = {
         safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
       };
@@ -87,8 +87,8 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('route', () => {
-    it('returns the router instance for chaining', () => {
+  suite('route', () => {
+    test('returns the router instance for chaining', () => {
       const router = new SNSRouter();
       const definition = defineRoute({
         filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
@@ -100,7 +100,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('matchRoute', () => {
+  suite('matchRoute', () => {
     let router: SNSRouter;
 
     beforeEach(() => {
@@ -516,7 +516,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('handleEvent', () => {
+  suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ snsRecord, snsHandlerEvent }) => {
       const router = new SNSRouter();
       const handler = vi.fn();
@@ -653,7 +653,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('handleEvent - batchItemFailures', () => {
+  suite('handleEvent - batchItemFailures', () => {
     test('returns undefined when all records succeed', async ({ snsRecord, snsEvent, context }) => {
       const router = createSNSRouter({ batchItemFailures: true });
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
@@ -750,7 +750,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('handleEvent - schema validation', () => {
+  suite('handleEvent - schema validation', () => {
     test('handler receives validated body from bodySchema', async ({ snsRecord, snsEvent, context }) => {
       const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
@@ -867,7 +867,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('full event processing', () => {
+  suite('full event processing', () => {
     test('routes an SNS event through multiple handlers and returns undefined', async ({
       snsRecord,
       snsEvent,
@@ -942,7 +942,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('parseJsonBody', () => {
+  suite('parseJsonBody', () => {
     let router: SNSRouter;
 
     beforeEach(() => {
@@ -968,14 +968,14 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('convertMessageAttributes', () => {
+  suite('convertMessageAttributes', () => {
     let router: SNSRouter;
 
     beforeEach(() => {
       router = new SNSRouter();
     });
 
-    it('converts raw attributes to plain key-value pairs', () => {
+    test('converts raw attributes to plain key-value pairs', () => {
       const raw = {
         eventType: { Type: 'String', Value: 'order.created' },
         priority: { Type: 'String', Value: 'high' },
@@ -992,7 +992,7 @@ describe('SNSRouter', () => {
       });
     });
 
-    it('returns empty object for empty attributes', () => {
+    test('returns empty object for empty attributes', () => {
       // @ts-expect-error - testing private method directly
       const result = router.convertMessageAttributes({});
 
@@ -1000,7 +1000,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('validateBody', () => {
+  suite('validateBody', () => {
     let router: SNSRouter;
 
     beforeEach(() => {
@@ -1044,7 +1044,7 @@ describe('SNSRouter', () => {
     });
   });
 
-  describe('validateMessageAttributes', () => {
+  suite('validateMessageAttributes', () => {
     let router: SNSRouter;
 
     beforeEach(() => {

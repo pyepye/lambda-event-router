@@ -143,6 +143,7 @@ export class PathRouter {
         const params: Record<string, string> = {};
         for (const [i, name] of route.paramNames.entries()) {
           const paramValue = match[i + 1];
+          /* v8 ignore next -- @preserve - Guard is for TS. Capture group always exists when pattern matches */
           if (paramValue !== undefined) {
             params[name] = paramValue;
           }

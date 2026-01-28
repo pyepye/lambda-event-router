@@ -119,6 +119,7 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
         await this.processRecord(record, context);
       } catch {
         for (const remaining of records.slice(i)) {
+          /* v8 ignore next -- @preserve - Guard is for TS. eventID is always present in AWS events but typed as optional */
           if (remaining.eventID) {
             failures.push({ itemIdentifier: remaining.eventID });
           }
@@ -131,6 +132,7 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
 
   private async processRecord(record: DynamoDBRecord, context: Context): Promise<void> {
     const eventName = record.eventName as DynamoDBStreamEventName | undefined;
+    /* v8 ignore next -- @preserve - Guard is for TS. eventName is always present in AWS events but typed as optional */
     if (!eventName) {
       throw new Error(`Record missing eventName: ${record.eventID}`);
     }
@@ -141,6 +143,7 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
 
+    /* v8 ignore next -- @preserve - Guard is for TS. Keys is always present in AWS events but typed as optional */
     const keys = record.dynamodb?.Keys ? unmarshall(record.dynamodb.Keys as UnmarshallInput) : {};
     const newImage = record.dynamodb?.NewImage ? unmarshall(record.dynamodb.NewImage as UnmarshallInput) : undefined;
     const oldImage = record.dynamodb?.OldImage ? unmarshall(record.dynamodb.OldImage as UnmarshallInput) : undefined;

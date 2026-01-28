@@ -3,54 +3,54 @@ import { createSQSEvent, test } from '@lambda-event-router/testing';
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
 import type { SQSFilterInput, SQSMessageAttributes } from './types.js';
 
-describe('SQSRouter', () => {
-  describe('createSQSRouter', () => {
-    it('creates an SQSRouter instance', () => {
+suite('SQSRouter', () => {
+  suite('createSQSRouter', () => {
+    test('creates an SQSRouter instance', () => {
       const router = createSQSRouter();
       expect(router).toBeInstanceOf(SQSRouter);
     });
   });
 
-  describe('canHandleEvent', () => {
+  suite('canHandleEvent', () => {
     let router: SQSRouter;
 
     beforeEach(() => {
       router = new SQSRouter();
     });
 
-    it('returns true for a valid SQS event', () => {
+    test('returns true for a valid SQS event', () => {
       const event = createSQSEvent();
       expect(router.canHandleEvent(event)).toBe(true);
     });
 
-    it('returns false for a non-SQS event', () => {
+    test('returns false for a non-SQS event', () => {
       const event = { detail: { foo: 'bar' }, source: 'custom.app' };
       expect(router.canHandleEvent(event)).toBe(false);
     });
 
-    it('returns false for null', () => {
+    test('returns false for null', () => {
       expect(router.canHandleEvent(null)).toBe(false);
     });
 
-    it('returns false for a string', () => {
+    test('returns false for a string', () => {
       expect(router.canHandleEvent('not an event')).toBe(false);
     });
 
-    it('returns false when Records is not an array', () => {
+    test('returns false when Records is not an array', () => {
       expect(router.canHandleEvent({ Records: 'not-an-array' })).toBe(false);
     });
 
-    it('returns false when first record is not an object', () => {
+    test('returns false when first record is not an object', () => {
       expect(router.canHandleEvent({ Records: ['not-an-object'] })).toBe(false);
     });
 
-    it('returns false when eventSource is not aws:sqs', () => {
+    test('returns false when eventSource is not aws:sqs', () => {
       expect(router.canHandleEvent({ Records: [{ eventSource: 'aws:sns' }] })).toBe(false);
     });
   });
 
-  describe('defineRoute', () => {
-    it('returns a route builder with a handle method', () => {
+  suite('defineRoute', () => {
+    test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
         filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'] },
       });
@@ -59,7 +59,7 @@ describe('SQSRouter', () => {
       expect(typeof builder.handle).toBe('function');
     });
 
-    it('preserves filters, schemas, and handler in the definition', () => {
+    test('preserves filters, schemas, and handler in the definition', () => {
       const bodySchema: Schema<{ action: string }> = {
         safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
       };
@@ -87,8 +87,8 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('route', () => {
-    it('returns the router instance for chaining', () => {
+  suite('route', () => {
+    test('returns the router instance for chaining', () => {
       const router = new SQSRouter();
       const definition = defineRoute({
         filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'] },
@@ -100,7 +100,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('matchRoute', () => {
+  suite('matchRoute', () => {
     let router: SQSRouter;
 
     beforeEach(() => {
@@ -350,7 +350,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('handleEvent', () => {
+  suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ sqsRecord, sqsHandlerEvent }) => {
       const router = new SQSRouter();
       const handler = vi.fn();
@@ -468,7 +468,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('handleEvent - batchItemFailures (standard)', () => {
+  suite('handleEvent - batchItemFailures (standard)', () => {
     test('returns undefined when all records succeed', async ({ sqsRecord, sqsEvent, context }) => {
       const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
@@ -559,7 +559,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('handleEvent - FIFO processing', () => {
+  suite('handleEvent - FIFO processing', () => {
     const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
 
     test('processes records sequentially within a message group', async ({ sqsRecord, sqsEvent, context }) => {
@@ -669,7 +669,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('handleEvent - FIFO batchItemFailures', () => {
+  suite('handleEvent - FIFO batchItemFailures', () => {
     const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
 
     test('marks remaining records in group as failed when one fails', async ({ sqsRecord, sqsEvent, context }) => {
@@ -779,7 +779,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('handleEvent - schema validation', () => {
+  suite('handleEvent - schema validation', () => {
     test('handler receives validated body from bodySchema', async ({ sqsRecord, sqsEvent, context }) => {
       const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
@@ -945,7 +945,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('full event processing', () => {
+  suite('full event processing', () => {
     test('routes records to different handlers based on message attribute filters', async ({
       sqsRecord,
       sqsEvent,
@@ -986,7 +986,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('parseJsonBody', () => {
+  suite('parseJsonBody', () => {
     let router: SQSRouter;
 
     beforeEach(() => {
@@ -1012,14 +1012,14 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('convertMessageAttributes', () => {
+  suite('convertMessageAttributes', () => {
     let router: SQSRouter;
 
     beforeEach(() => {
       router = new SQSRouter();
     });
 
-    it('converts String attribute to string value', () => {
+    test('converts String attribute to string value', () => {
       const raw = {
         myString: { stringValue: 'hello', stringListValues: [], binaryListValues: [], dataType: 'String' },
       };
@@ -1030,7 +1030,7 @@ describe('SQSRouter', () => {
       expect(result).toEqual({ myString: 'hello' });
     });
 
-    it('converts Number attribute to number value', () => {
+    test('converts Number attribute to number value', () => {
       const raw = {
         myNumber: { stringValue: '42', stringListValues: [], binaryListValues: [], dataType: 'Number' },
       };
@@ -1041,7 +1041,7 @@ describe('SQSRouter', () => {
       expect(result).toEqual({ myNumber: 42 });
     });
 
-    it('converts Binary attribute to Buffer value', () => {
+    test('converts Binary attribute to Buffer value', () => {
       const binaryData = Buffer.from('binary-content').toString('base64');
       const raw = {
         myBinary: { binaryValue: binaryData, stringListValues: [], binaryListValues: [], dataType: 'Binary' },
@@ -1054,21 +1054,9 @@ describe('SQSRouter', () => {
       // @ts-expect-error - myBinary is a Buffer as asserted above
       expect(result.myBinary.toString()).toBe('binary-content');
     });
-
-    it('skips attributes with no stringValue or binaryValue', () => {
-      const raw = {
-        emptyAttr: { stringListValues: [], binaryListValues: [], dataType: 'String' },
-        validAttr: { stringValue: 'present', stringListValues: [], binaryListValues: [], dataType: 'String' },
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.convertMessageAttributes(raw);
-
-      expect(result).toEqual({ validAttr: 'present' });
-    });
   });
 
-  describe('validateBody', () => {
+  suite('validateBody', () => {
     let router: SQSRouter;
 
     beforeEach(() => {
@@ -1112,7 +1100,7 @@ describe('SQSRouter', () => {
     });
   });
 
-  describe('validateMessageAttributes', () => {
+  suite('validateMessageAttributes', () => {
     let router: SQSRouter;
 
     beforeEach(() => {

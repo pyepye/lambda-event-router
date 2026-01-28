@@ -2,24 +2,24 @@ import { createMockContext, createSQSEvent } from '@lambda-event-router/testing'
 import { createEventRouter, EventRouter } from './EventRouter.js';
 import type { EventTypeRouter } from './types.js';
 
-describe('EventRouter', () => {
-  describe('createEventRouter', () => {
-    it('creates an EventRouter instance', () => {
+suite('EventRouter', () => {
+  suite('createEventRouter', () => {
+    test('creates an EventRouter instance', () => {
       const router = createEventRouter({ routers: [] });
       expect(router).toBeInstanceOf(EventRouter);
     });
   });
 
-  describe('handler', () => {
-    it('returns a function', () => {
+  suite('handler', () => {
+    test('returns a function', () => {
       const router = createEventRouter({ routers: [] });
       const handler = router.handler();
       expect(typeof handler).toBe('function');
     });
   });
 
-  describe('full event processing', () => {
-    it('delegates to the correct router based on canHandleEvent', async () => {
+  suite('full event processing', () => {
+    test('delegates to the correct router based on canHandleEvent', async () => {
       const sqsHandler = vi.fn();
       const snsHandler = vi.fn();
 
@@ -53,7 +53,7 @@ describe('EventRouter', () => {
       expect(snsHandler).not.toHaveBeenCalled();
     });
 
-    it('throws when no router matches the event', async () => {
+    test('throws when no router matches the event', async () => {
       const eventRouter = createEventRouter({ routers: [] });
       const handler = eventRouter.handler();
 
@@ -63,7 +63,7 @@ describe('EventRouter', () => {
       await expect(handler(unknownEvent, mockContext, vi.fn())).rejects.toThrow('No router found for event');
     });
 
-    it('reorders EventBridgeRouter to the end regardless of input order', () => {
+    test('reorders EventBridgeRouter to the end regardless of input order', () => {
       const mockHandler = vi.fn();
 
       // Class names matter — the constructor reorders based on constructor.name === 'EventBridgeRouter'

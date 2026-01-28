@@ -591,7 +591,9 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     if (value === undefined) return false;
     if (typeof filter === 'string') return value === filter;
     if (filter instanceof RegExp) return filter.test(value);
+    /* v8 ignore next -- @preserve - Always true after string/RegExp checks. Branch unreachable */
     if (typeof filter === 'function') return filter(value);
+    /* v8 ignore next -- @preserve - Guard is for TS. All UserAttributeFilter variants handled above */
     return false;
   }
 
