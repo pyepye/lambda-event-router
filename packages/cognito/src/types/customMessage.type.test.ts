@@ -1,13 +1,14 @@
-import type { Context, CustomMessageTriggerEvent } from 'aws-lambda';
+import type { CustomMessageTriggerEvent } from 'aws-lambda';
+import { testCognitoTriggerTypes } from './common.type.test.js';
 import type {
-  CognitoFilters,
   CustomMessageHandler,
   CustomMessageRequest,
   CustomMessageResponse,
   CustomMessageRouteDefinition,
   CustomMessageTriggerSource,
-  UserAttributes,
 } from './index.js';
+
+type CustomAttributes = { email: string } & Record<string, string>;
 
 suite('CustomMessageTriggerSource', () => {
   test('resolves to expected literals', () => {
@@ -23,66 +24,18 @@ suite('CustomMessageTriggerSource', () => {
   });
 });
 
-suite('CustomMessageRequest', () => {
-  test('has triggerSource field', () => {
-    expectTypeOf<CustomMessageRequest['triggerSource']>().toEqualTypeOf<CustomMessageTriggerSource>();
-  });
-
-  test('has userAttributes field', () => {
-    expectTypeOf<CustomMessageRequest['userAttributes']>().toEqualTypeOf<UserAttributes>();
-  });
-
-  test('has event field', () => {
-    expectTypeOf<CustomMessageRequest['event']>().toEqualTypeOf<CustomMessageTriggerEvent>();
-  });
-
-  test('has context field', () => {
-    expectTypeOf<CustomMessageRequest['context']>().toEqualTypeOf<Context>();
-  });
-
-  test('preserves custom user attributes generic', () => {
-    type CustomAttributes = { email: string } & Record<string, string>;
-    expectTypeOf<CustomMessageRequest<CustomAttributes>['userAttributes']>().toEqualTypeOf<CustomAttributes>();
-  });
-});
-
 suite('CustomMessageResponse', () => {
   test('matches event response type', () => {
     expectTypeOf<CustomMessageResponse>().toEqualTypeOf<CustomMessageTriggerEvent['response']>();
   });
 });
 
-suite('CustomMessageHandler', () => {
-  test('accepts CustomMessageRequest and returns Promise<CustomMessageTriggerEvent>', () => {
-    expectTypeOf<CustomMessageHandler>().toEqualTypeOf<
-      (request: CustomMessageRequest) => Promise<CustomMessageTriggerEvent>
-    >();
-  });
-
-  test('preserves custom user attributes generic', () => {
-    type CustomAttributes = { email: string } & Record<string, string>;
-    expectTypeOf<CustomMessageHandler<CustomAttributes>>().toEqualTypeOf<
-      (request: CustomMessageRequest<CustomAttributes>) => Promise<CustomMessageTriggerEvent>
-    >();
-  });
-});
-
-suite('CustomMessageRouteDefinition', () => {
-  test('has optional filters field', () => {
-    expectTypeOf<CustomMessageRouteDefinition>().toHaveProperty('filters');
-  });
-
-  test('has optional userAttributesSchema field', () => {
-    expectTypeOf<CustomMessageRouteDefinition>().toHaveProperty('userAttributesSchema');
-  });
-
-  test('has handler field matching CustomMessageHandler', () => {
-    expectTypeOf<CustomMessageRouteDefinition['handler']>().toEqualTypeOf<CustomMessageHandler>();
-  });
-
-  test('filters use CustomMessageTriggerSource', () => {
-    expectTypeOf<NonNullable<CustomMessageRouteDefinition['filters']>>().toEqualTypeOf<
-      CognitoFilters<CustomMessageTriggerSource>
-    >();
-  });
-});
+testCognitoTriggerTypes<
+  CustomMessageTriggerSource,
+  CustomMessageTriggerEvent,
+  CustomMessageRequest,
+  CustomMessageRequest<CustomAttributes>,
+  CustomMessageHandler,
+  CustomMessageHandler<CustomAttributes>,
+  CustomMessageRouteDefinition
+>('CustomMessage');
