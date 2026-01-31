@@ -22,11 +22,13 @@
     { "path": "./packages/base" },
     { "path": "./packages/api" },
     { "path": "./packages/cognito" },
+    { "path": "./packages/documentdb" },
     { "path": "./packages/dynamodb-stream" },
     { "path": "./packages/eventbridge" },
     { "path": "./packages/s3" },
     { "path": "./packages/sns" },
     { "path": "./packages/sqs" },
+    { "path": "./packages/step-functions" },
     { "path": "./packages/testing" }
   ]
 }

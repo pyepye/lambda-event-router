@@ -1,0 +1,46 @@
+{
+  "name": "@lambda-event-router/documentdb",
+  "version": "0.1.0",
+  "description": "DocumentDB Change Stream handler for lambda-event-router",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json --noEmit && tsup",
+    "dev": "tsup --watch",
+    "test": "tsc --noEmit && vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "lint": "biome check src",
+    "lint:fix": "biome check --write src",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "aws",
+    "lambda",
+    "serverless"
+  ],
+  "license": "UNLICENSED",
+  "peerDependencies": {
+    "@lambda-event-router/base": "workspace:*"
+  },
+  "devDependencies": {
+    "@lambda-event-router/testing": "workspace:*",
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "tsup": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
+    "vitest": "catalog:"
+  }
+}

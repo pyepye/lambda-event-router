@@ -1,10 +1,13 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createS3Router } from '@lambda-event-router/s3';
+import type { Handler } from 'aws-lambda';
 
 import { batchOperation } from './handlers/batchOperation.js';
-import { lifecycleExpirationDelete, lifecycleExpirationDeleteMarkerCreated, lifecycleTransition } from './handlers/lifecycle.js';
+import {
+  lifecycleExpirationDelete,
+  lifecycleExpirationDeleteMarkerCreated,
+  lifecycleTransition,
+} from './handlers/lifecycle.js';
 import { intelligentTiering, reducedRedundancyLostObject, testEvent } from './handlers/misc.js';
 import { objectAclPut } from './handlers/objectAcl.js';
 import {

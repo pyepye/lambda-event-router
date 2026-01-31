@@ -1,7 +1,6 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
+import type { Handler } from 'aws-lambda';
 
 import {
   dailyCleanupRoute,

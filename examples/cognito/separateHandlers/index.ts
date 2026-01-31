@@ -1,7 +1,6 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createCognitoRouter } from '@lambda-event-router/cognito';
+import type { Handler } from 'aws-lambda';
 
 import {
   createAuthChallenge,
@@ -13,7 +12,7 @@ import { genericHandler, isTestUser } from './handlers/genericRoute.js';
 import { postAuthentication } from './handlers/postAuthentication.js';
 import { postConfirmation } from './handlers/postConfirmation.js';
 import { preAuthentication } from './handlers/preAuthentication.js';
-import { UserAttributesSchema, preSignUp, preSignUpAdmin } from './handlers/preSignUp.js';
+import { preSignUp, preSignUpAdmin, UserAttributesSchema } from './handlers/preSignUp.js';
 import { preTokenGeneration } from './handlers/preTokenGeneration.js';
 import { userMigration } from './handlers/userMigration.js';
 

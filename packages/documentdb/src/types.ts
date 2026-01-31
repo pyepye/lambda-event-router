@@ -1,0 +1,197 @@
+import type { Schema } from '@lambda-event-router/base';
+import type { Context } from 'aws-lambda';
+
+// DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
+export type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';
+
+// Change stream configuration options — these control which event fields get populated
+export type DocumentDBFullDocumentOption = 'default' | 'updateLookup' | 'whenAvailable' | 'required';
+export type DocumentDBFullDocumentBeforeChangeOption = 'off' | 'whenAvailable' | 'required';
+
+export interface DocumentDBUpdateDescription {
+  updatedFields?: Record<string, unknown>;
+  removedFields?: string[];
+}
+
+export interface DocumentDBChangeEvent {
+  _id: unknown;
+  clusterTime: unknown;
+  operationType: DocumentDBOperationType;
+  ns: { db: string; coll: string };
+  documentKey: unknown;
+  fullDocument?: unknown;
+  updateDescription?: DocumentDBUpdateDescription;
+  fullDocumentBeforeChange?: unknown;
+}
+
+export interface DocumentDBEventEntry {
+  event: DocumentDBChangeEvent;
+}
+
+export interface DocumentDBEvent {
+  eventSourceArn: string;
+  eventSource: 'aws:docdb';
+  events: DocumentDBEventEntry[];
+}
+
+// Request types — one per operation, with type-level field availability
+
+interface DocumentDBRequestBase<TDocumentKey = Record<string, unknown>> {
+  documentKey: TDocumentKey;
+  changeEvent: DocumentDBChangeEvent;
+  context: Context;
+}
+
+export interface DocumentDBInsertRequest<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+> extends DocumentDBRequestBase<TDocumentKey> {
+  operationType: 'insert';
+  fullDocument: TFullDocument;
+  updateDescription?: undefined;
+  fullDocumentBeforeChange?: undefined;
+}
+
+export interface DocumentDBUpdateRequest<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> extends DocumentDBRequestBase<TDocumentKey> {
+  operationType: 'update';
+  fullDocument?: TFullDocument;
+  updateDescription: DocumentDBUpdateDescription;
+  fullDocumentBeforeChange?: TFullDocumentBeforeChange;
+}
+
+export interface DocumentDBReplaceRequest<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> extends DocumentDBRequestBase<TDocumentKey> {
+  operationType: 'replace';
+  fullDocument: TFullDocument;
+  updateDescription?: undefined;
+  fullDocumentBeforeChange?: TFullDocumentBeforeChange;
+}
+
+export interface DocumentDBDeleteRequest<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> extends DocumentDBRequestBase<TDocumentKey> {
+  operationType: 'delete';
+  fullDocument?: undefined;
+  updateDescription?: undefined;
+  fullDocumentBeforeChange?: TFullDocumentBeforeChange;
+}
+
+export type DocumentDBRequest<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> =
+  | DocumentDBInsertRequest<TDocumentKey, TFullDocument>
+  | DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>
+  | DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>
+  | DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>;
+
+export type DocumentDBResponse = undefined;
+
+type DocumentDBRecordHandler<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> =
+  | ((request: DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
+  | ((request: DocumentDBInsertRequest<TDocumentKey, TFullDocument>) => Promise<void>)
+  | ((request: DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
+  | ((request: DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
+  | ((request: DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>) => Promise<void>);
+
+// Filter types
+
+export interface DocumentDBFilterInput {
+  operationType: DocumentDBOperationType;
+  ns: { db: string; coll: string };
+  event: DocumentDBChangeEvent;
+}
+
+interface DocumentDBFilters {
+  operationTypes?: DocumentDBOperationType[];
+  eventSourceArns?: string[];
+  databases?: string[];
+  collections?: string[];
+  fullDocument?: DocumentDBFullDocumentOption[];
+  fullDocumentBeforeChange?: DocumentDBFullDocumentBeforeChangeOption[];
+  customFilter?: (input: DocumentDBFilterInput) => boolean;
+}
+
+// Filters without operationTypes for event-specific methods (insert, update, replace, delete)
+interface DocumentDBEventFilters {
+  eventSourceArns?: string[];
+  databases?: string[];
+  collections?: string[];
+  fullDocument?: DocumentDBFullDocumentOption[];
+  fullDocumentBeforeChange?: DocumentDBFullDocumentBeforeChangeOption[];
+  customFilter?: (input: DocumentDBFilterInput) => boolean;
+}
+
+// Route definition types — one per operation + generic
+
+export interface DocumentDBInsertRouteDefinition<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+> {
+  filters: DocumentDBEventFilters;
+  documentKeySchema?: Schema<TDocumentKey>;
+  fullDocumentSchema?: Schema<TFullDocument>;
+  handler: (request: DocumentDBInsertRequest<TDocumentKey, TFullDocument>) => Promise<void>;
+}
+
+export interface DocumentDBUpdateRouteDefinition<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> {
+  filters: DocumentDBEventFilters;
+  documentKeySchema?: Schema<TDocumentKey>;
+  fullDocumentSchema?: Schema<TFullDocument>;
+  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  handler: (request: DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
+}
+
+export interface DocumentDBReplaceRouteDefinition<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> {
+  filters: DocumentDBEventFilters;
+  documentKeySchema?: Schema<TDocumentKey>;
+  fullDocumentSchema?: Schema<TFullDocument>;
+  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  handler: (request: DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
+}
+
+export interface DocumentDBDeleteRouteDefinition<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> {
+  filters: DocumentDBEventFilters;
+  documentKeySchema?: Schema<TDocumentKey>;
+  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  handler: (request: DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>) => Promise<void>;
+}
+
+export interface DocumentDBRouteDefinition<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> {
+  filters: DocumentDBFilters;
+  documentKeySchema?: Schema<TDocumentKey>;
+  fullDocumentSchema?: Schema<TFullDocument>;
+  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  handler: DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>;
+}
+
+// No batch item failures for DocumentDB — it doesn't support ReportBatchItemFailures
+export type DocumentDBRouterOptions = Record<string, never>;

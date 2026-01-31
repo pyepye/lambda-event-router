@@ -1,7 +1,6 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createSNSRouter } from '@lambda-event-router/sns';
+import type { Handler } from 'aws-lambda';
 
 import { createItemRoute } from './createItem.js';
 

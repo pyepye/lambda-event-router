@@ -1,9 +1,8 @@
+import { EventRouter } from '@lambda-event-router/base';
+import { createSNSRouter, type SNSFilterInput } from '@lambda-event-router/sns';
 import type { Handler } from 'aws-lambda';
 
-import { EventRouter } from '@lambda-event-router/base';
-import { type SNSFilterInput, createSNSRouter } from '@lambda-event-router/sns';
-
-import { CreateItemBodySchema, MessageAttributesSchema, createItem, createItemOther } from './createItem.js';
+import { CreateItemBodySchema, createItem, createItemOther, MessageAttributesSchema } from './createItem.js';
 
 const snsRouter = createSNSRouter({
   batchItemFailures: true,

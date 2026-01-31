@@ -1,9 +1,8 @@
+import { EventRouter } from '@lambda-event-router/base';
+import { createSQSRouter, type SQSFilterInput } from '@lambda-event-router/sqs';
 import type { Handler } from 'aws-lambda';
 
-import { EventRouter } from '@lambda-event-router/base';
-import { type SQSFilterInput, createSQSRouter } from '@lambda-event-router/sqs';
-
-import { CreateItemBodySchema, MessageAttributesSchema, createItem, createItemOther } from './createItem.js';
+import { CreateItemBodySchema, createItem, createItemOther, MessageAttributesSchema } from './createItem.js';
 
 const sqsRouter = createSQSRouter({
   batchItemFailures: true,

@@ -7,6 +7,8 @@ import type {
   S3BatchEventTask,
   S3Event,
   S3EventRecord,
+  SESEvent,
+  SESEventRecord,
   SNSEvent,
   SNSEventRecord,
   SQSEvent,
@@ -40,6 +42,20 @@ import {
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
 import { createMockContext } from './context.js';
+import type {
+  CreateDocumentDBHandlerEventOptions,
+  DocumentDBChangeEventOverrides,
+  DocumentDBHandlerEvent,
+} from './documentdb.js';
+import {
+  createDocumentDBChangeEvent,
+  createDocumentDBDeleteEntry,
+  createDocumentDBEvent,
+  createDocumentDBHandlerEvent,
+  createDocumentDBInsertEntry,
+  createDocumentDBReplaceEntry,
+  createDocumentDBUpdateEntry,
+} from './documentdb.js';
 import type {
   CreateDynamoDBStreamHandlerEventOptions,
   DynamoDBRecordOverrides,
@@ -75,6 +91,8 @@ import {
   createS3HandlerEvent,
   createS3Record,
 } from './s3.js';
+import type { CreateSESHandlerEventOptions, SESHandlerEvent, SESRecordOverrides } from './ses.js';
+import { createSESEvent, createSESHandlerEvent, createSESRecord } from './ses.js';
 import type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides } from './sns.js';
 import { createSNSEvent, createSNSHandlerEvent, createSNSRecord } from './sns.js';
 import type { CreateSQSHandlerEventOptions, SQSHandlerEvent, SQSRecordOverrides } from './sqs.js';
@@ -95,6 +113,9 @@ export interface TestFixtures {
   snsRecord: (overrides?: SNSRecordOverrides) => SNSEventRecord;
   snsEvent: (records?: SNSEventRecord[]) => SNSEvent;
   snsHandlerEvent: (options?: CreateSNSHandlerEventOptions) => SNSHandlerEvent;
+  sesRecord: (overrides?: SESRecordOverrides) => SESEventRecord;
+  sesEvent: (records?: SESEventRecord[]) => SESEvent;
+  sesHandlerEvent: (options?: CreateSESHandlerEventOptions) => SESHandlerEvent;
   s3Record: (overrides?: S3RecordOverrides) => S3EventRecord;
   s3Event: (records?: S3EventRecord[]) => S3Event;
   s3HandlerEvent: (options?: CreateS3HandlerEventOptions) => S3HandlerEvent;
@@ -109,6 +130,17 @@ export interface TestFixtures {
   dynamoDBRemoveRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
   dynamoDBStreamEvent: (records?: DynamoDBRecord[]) => DynamoDBStreamEvent;
   dynamoDBStreamHandlerEvent: (options?: CreateDynamoDBStreamHandlerEventOptions) => DynamoDBStreamHandlerEvent;
+  documentDBChangeEvent: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBChangeEvent>;
+  documentDBInsertEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBInsertEntry>;
+  documentDBUpdateEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBUpdateEntry>;
+  documentDBReplaceEntry: (
+    overrides?: DocumentDBChangeEventOverrides,
+  ) => ReturnType<typeof createDocumentDBReplaceEntry>;
+  documentDBDeleteEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBDeleteEntry>;
+  documentDBEvent: (
+    entries?: ReturnType<typeof createDocumentDBInsertEntry>[],
+  ) => ReturnType<typeof createDocumentDBEvent>;
+  documentDBHandlerEvent: (options?: CreateDocumentDBHandlerEventOptions) => DocumentDBHandlerEvent;
   apiEvent: (overrides?: ApiEventOverrides) => APIGatewayProxyEventV2;
   apiHandlerEvent: (options?: CreateApiHandlerEventOptions) => ApiHandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
@@ -143,6 +175,9 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   snsRecord: fixture(createSNSRecord),
   snsEvent: fixture(createSNSEvent),
   snsHandlerEvent: fixture(createSNSHandlerEvent),
+  sesRecord: fixture(createSESRecord),
+  sesEvent: fixture(createSESEvent),
+  sesHandlerEvent: fixture(createSESHandlerEvent),
   s3Record: fixture(createS3Record),
   s3Event: fixture(createS3Event),
   s3HandlerEvent: fixture(createS3HandlerEvent),
@@ -158,6 +193,13 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   dynamoDBRemoveRecord: fixture(createDynamoDBRemoveRecord),
   dynamoDBStreamEvent: fixture(createDynamoDBStreamEvent),
   dynamoDBStreamHandlerEvent: fixture(createDynamoDBStreamHandlerEvent),
+  documentDBChangeEvent: fixture(createDocumentDBChangeEvent),
+  documentDBInsertEntry: fixture(createDocumentDBInsertEntry),
+  documentDBUpdateEntry: fixture(createDocumentDBUpdateEntry),
+  documentDBReplaceEntry: fixture(createDocumentDBReplaceEntry),
+  documentDBDeleteEntry: fixture(createDocumentDBDeleteEntry),
+  documentDBEvent: fixture(createDocumentDBEvent),
+  documentDBHandlerEvent: fixture(createDocumentDBHandlerEvent),
   apiEvent: fixture(createApiEvent),
   apiHandlerEvent: fixture(createApiHandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),

@@ -1,0 +1,11 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+  "extends": "//",
+  "linter": {
+    "rules": {
+      "nursery": {
+        "useExplicitType": "off"
+      }
+    }
+  }
+}

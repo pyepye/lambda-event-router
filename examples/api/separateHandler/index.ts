@@ -1,9 +1,8 @@
-import type { Handler } from 'aws-lambda';
-
 import { createApiRouter } from '@lambda-event-router/api';
 import { EventRouter } from '@lambda-event-router/base';
+import type { Handler } from 'aws-lambda';
 
-import { CreateItemBodySchema, QuerySchema, createItem } from './createItem.js';
+import { CreateItemBodySchema, createItem, QuerySchema } from './createItem.js';
 
 const apiRouter = createApiRouter();
 

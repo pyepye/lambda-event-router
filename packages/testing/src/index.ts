@@ -40,6 +40,20 @@ export {
 } from './cognito.js';
 export { createMockContext } from './context.js';
 export type {
+  CreateDocumentDBHandlerEventOptions,
+  DocumentDBChangeEventOverrides,
+  DocumentDBHandlerEvent,
+} from './documentdb.js';
+export {
+  createDocumentDBChangeEvent,
+  createDocumentDBDeleteEntry,
+  createDocumentDBEvent,
+  createDocumentDBHandlerEvent,
+  createDocumentDBInsertEntry,
+  createDocumentDBReplaceEntry,
+  createDocumentDBUpdateEntry,
+} from './documentdb.js';
+export type {
   CreateDynamoDBStreamHandlerEventOptions,
   DynamoDBRecordOverrides,
   DynamoDBStreamHandlerEvent,
@@ -76,6 +90,8 @@ export {
   createS3HandlerEvent,
   createS3Record,
 } from './s3.js';
+export type { CreateSESHandlerEventOptions, SESHandlerEvent, SESRecordOverrides } from './ses.js';
+export { createSESEvent, createSESHandlerEvent, createSESRecord } from './ses.js';
 export type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides } from './sns.js';
 export { createSNSEvent, createSNSHandlerEvent, createSNSRecord } from './sns.js';
 export type { CreateSQSHandlerEventOptions, SQSHandlerEvent, SQSRecordOverrides } from './sqs.js';

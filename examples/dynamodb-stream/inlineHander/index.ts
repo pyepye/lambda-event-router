@@ -1,7 +1,6 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createDynamoDBStreamRouter } from '@lambda-event-router/dynamodb-stream';
+import type { Handler } from 'aws-lambda';
 
 import { allEventsRoute } from './handlers/allEventsRoute.js';
 import { insertRoute } from './handlers/insertRoute.js';

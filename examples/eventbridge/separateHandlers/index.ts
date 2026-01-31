@@ -1,13 +1,9 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
+import type { Handler } from 'aws-lambda';
 
 import {
   CleanupSchedulerSchema,
-  OrderDetailSchema,
-  ReportSchedulerSchema,
-  SyncSchedulerSchema,
   handleDailyCleanup,
   handleDataSync,
   handleEC2StateChange,
@@ -16,6 +12,9 @@ import {
   handleS3Notification,
   handleScheduledRule,
   handleWeeklyReport,
+  OrderDetailSchema,
+  ReportSchedulerSchema,
+  SyncSchedulerSchema,
 } from './handlers/eventHandlers.js';
 
 const eventBridgeRouter = createEventBridgeRouter();

@@ -1,9 +1,12 @@
-import type { Handler } from 'aws-lambda';
-
 import { EventRouter } from '@lambda-event-router/base';
 import { createS3Router } from '@lambda-event-router/s3';
+import type { Handler } from 'aws-lambda';
 
-import { objectCreatedPutImageRoute, objectCreatedRoute, objectCreatedThumbnailRoute } from './handlers/objectCreatedRoute.js';
+import {
+  objectCreatedPutImageRoute,
+  objectCreatedRoute,
+  objectCreatedThumbnailRoute,
+} from './handlers/objectCreatedRoute.js';
 
 const s3Router = createS3Router();
 
