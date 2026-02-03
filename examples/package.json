@@ -11,11 +11,13 @@
   "dependencies": {
     "@lambda-event-router/base": "workspace:*",
     "@lambda-event-router/api": "workspace:*",
+    "@lambda-event-router/code-commit": "workspace:*",
     "@lambda-event-router/cognito": "workspace:*",
     "@lambda-event-router/documentdb": "workspace:*",
     "@lambda-event-router/dynamodb-stream": "workspace:*",
     "@lambda-event-router/eventbridge": "workspace:*",
     "@lambda-event-router/s3": "workspace:*",
+    "@lambda-event-router/secrets-manager": "workspace:*",
     "@lambda-event-router/ses": "workspace:*",
     "@lambda-event-router/sns": "workspace:*",
     "@lambda-event-router/sqs": "workspace:*",

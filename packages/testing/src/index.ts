@@ -1,6 +1,21 @@
 export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 export { createApiEvent, createApiHandlerEvent } from './api.js';
 export type {
+  CodeCommitEvent,
+  CodeCommitHandlerEvent,
+  CodeCommitRecord,
+  CodeCommitRecordOverrides,
+  CodeCommitReference,
+  CodeCommitReferenceOverrides,
+  CreateCodeCommitHandlerEventOptions,
+} from './codeCommit.js';
+export {
+  createCodeCommitEvent,
+  createCodeCommitHandlerEvent,
+  createCodeCommitRecord,
+  createCodeCommitReference,
+} from './codeCommit.js';
+export type {
   CognitoCreateAuthChallengeEventOverrides,
   CognitoCustomEmailSenderEventOverrides,
   CognitoCustomMessageEventOverrides,
@@ -90,6 +105,12 @@ export {
   createS3HandlerEvent,
   createS3Record,
 } from './s3.js';
+export type {
+  CreateSecretsManagerHandlerEventOptions,
+  SecretsManagerHandlerEvent,
+  SecretsManagerRotationEventOverrides,
+} from './secretsManager.js';
+export { createSecretsManagerHandlerEvent, createSecretsManagerRotationEvent } from './secretsManager.js';
 export type { CreateSESHandlerEventOptions, SESHandlerEvent, SESRecordOverrides } from './ses.js';
 export { createSESEvent, createSESHandlerEvent, createSESRecord } from './ses.js';
 export type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides } from './sns.js';

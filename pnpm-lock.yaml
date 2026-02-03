@@ -59,6 +59,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../packages/base
+      '@lambda-event-router/code-commit':
+        specifier: workspace:*
+        version: link:../packages/code-commit
       '@lambda-event-router/cognito':
         specifier: workspace:*
         version: link:../packages/cognito
@@ -74,6 +77,9 @@ importers:
       '@lambda-event-router/s3':
         specifier: workspace:*
         version: link:../packages/s3
+      '@lambda-event-router/secrets-manager':
+        specifier: workspace:*
+        version: link:../packages/secrets-manager
       '@lambda-event-router/ses':
         specifier: workspace:*
         version: link:../packages/ses
@@ -123,6 +129,31 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/base:
+    devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
+  packages/code-commit:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -247,6 +278,31 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/s3:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
+    devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
+  packages/secrets-manager:
     dependencies:
       '@lambda-event-router/base':
         specifier: workspace:*

@@ -9,6 +9,7 @@ import type {
   S3EventRecord,
   SESEvent,
   SESEventRecord,
+  SecretsManagerRotationEvent,
   SNSEvent,
   SNSEventRecord,
   SQSEvent,
@@ -17,6 +18,21 @@ import type {
 import { test as viTest } from 'vitest';
 import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 import { createApiEvent, createApiHandlerEvent } from './api.js';
+import type {
+  CodeCommitEvent,
+  CodeCommitHandlerEvent,
+  CodeCommitRecord,
+  CodeCommitRecordOverrides,
+  CodeCommitReference,
+  CodeCommitReferenceOverrides,
+  CreateCodeCommitHandlerEventOptions,
+} from './codeCommit.js';
+import {
+  createCodeCommitEvent,
+  createCodeCommitHandlerEvent,
+  createCodeCommitRecord,
+  createCodeCommitReference,
+} from './codeCommit.js';
 import {
   createCognitoCreateAuthChallengeEvent,
   createCognitoCreateAuthChallengeHandlerEvent,
@@ -91,6 +107,12 @@ import {
   createS3HandlerEvent,
   createS3Record,
 } from './s3.js';
+import type {
+  CreateSecretsManagerHandlerEventOptions,
+  SecretsManagerHandlerEvent,
+  SecretsManagerRotationEventOverrides,
+} from './secretsManager.js';
+import { createSecretsManagerHandlerEvent, createSecretsManagerRotationEvent } from './secretsManager.js';
 import type { CreateSESHandlerEventOptions, SESHandlerEvent, SESRecordOverrides } from './ses.js';
 import { createSESEvent, createSESHandlerEvent, createSESRecord } from './ses.js';
 import type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides } from './sns.js';
@@ -124,6 +146,8 @@ export interface TestFixtures {
   s3BatchHandlerEvent: (options?: CreateS3BatchHandlerEventOptions) => S3BatchHandlerEvent;
   eventBridgeEvent: (overrides?: EventBridgeEventOverrides) => EventBridgeEvent;
   eventBridgeHandlerEvent: (options?: CreateEventBridgeHandlerEventOptions) => EventBridgeHandlerEvent;
+  secretsManagerEvent: (overrides?: SecretsManagerRotationEventOverrides) => SecretsManagerRotationEvent;
+  secretsManagerHandlerEvent: (options?: CreateSecretsManagerHandlerEventOptions) => SecretsManagerHandlerEvent;
   dynamoDBRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
   dynamoDBInsertRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
   dynamoDBModifyRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
@@ -141,6 +165,10 @@ export interface TestFixtures {
     entries?: ReturnType<typeof createDocumentDBInsertEntry>[],
   ) => ReturnType<typeof createDocumentDBEvent>;
   documentDBHandlerEvent: (options?: CreateDocumentDBHandlerEventOptions) => DocumentDBHandlerEvent;
+  codeCommitReference: (overrides?: CodeCommitReferenceOverrides) => CodeCommitReference;
+  codeCommitRecord: (overrides?: CodeCommitRecordOverrides) => CodeCommitRecord;
+  codeCommitEvent: (records?: CodeCommitRecord[]) => CodeCommitEvent;
+  codeCommitHandlerEvent: (options?: CreateCodeCommitHandlerEventOptions) => CodeCommitHandlerEvent;
   apiEvent: (overrides?: ApiEventOverrides) => APIGatewayProxyEventV2;
   apiHandlerEvent: (options?: CreateApiHandlerEventOptions) => ApiHandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
@@ -187,12 +215,18 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   // Need different eventBridge fixtures to handle the different types
   eventBridgeEvent: fixture(createEventBridgeEvent),
   eventBridgeHandlerEvent: fixture(createEventBridgeHandlerEvent),
+  secretsManagerEvent: fixture(createSecretsManagerRotationEvent),
+  secretsManagerHandlerEvent: fixture(createSecretsManagerHandlerEvent),
   dynamoDBRecord: fixture(createDynamoDBRecord),
   dynamoDBInsertRecord: fixture(createDynamoDBInsertRecord),
   dynamoDBModifyRecord: fixture(createDynamoDBModifyRecord),
   dynamoDBRemoveRecord: fixture(createDynamoDBRemoveRecord),
   dynamoDBStreamEvent: fixture(createDynamoDBStreamEvent),
   dynamoDBStreamHandlerEvent: fixture(createDynamoDBStreamHandlerEvent),
+  codeCommitReference: fixture(createCodeCommitReference),
+  codeCommitRecord: fixture(createCodeCommitRecord),
+  codeCommitEvent: fixture(createCodeCommitEvent),
+  codeCommitHandlerEvent: fixture(createCodeCommitHandlerEvent),
   documentDBChangeEvent: fixture(createDocumentDBChangeEvent),
   documentDBInsertEntry: fixture(createDocumentDBInsertEntry),
   documentDBUpdateEntry: fixture(createDocumentDBUpdateEntry),

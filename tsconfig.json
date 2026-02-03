@@ -26,6 +26,7 @@
     { "path": "./packages/dynamodb-stream" },
     { "path": "./packages/eventbridge" },
     { "path": "./packages/s3" },
+    { "path": "./packages/secrets-manager" },
     { "path": "./packages/sns" },
     { "path": "./packages/sqs" },
     { "path": "./packages/step-functions" },
