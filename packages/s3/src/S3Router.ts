@@ -261,8 +261,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     }
 
     // Handle S3 Event Notification - process records sequentially
-    const s3Event = event as S3Event;
-    for (const record of s3Event.Records) {
+    for (const record of event.Records) {
       await this.processRecord(record, context);
     }
   }

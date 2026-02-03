@@ -70,8 +70,8 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   ): this {
     this.routes.push({
       filters: definition.filters,
-      bodySchema: definition.bodySchema as Schema<unknown> | undefined,
-      messageAttributesSchema: definition.messageAttributesSchema as Schema<SNSMessageAttributes> | undefined,
+      bodySchema: definition.bodySchema,
+      messageAttributesSchema: definition.messageAttributesSchema,
       handler: definition.handler as SNSRecordHandler,
     });
     return this;

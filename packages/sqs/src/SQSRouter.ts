@@ -69,8 +69,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   ): this {
     this.routes.push({
       filters: definition.filters,
-      bodySchema: definition.bodySchema as Schema<unknown> | undefined,
-      messageAttributesSchema: definition.messageAttributesSchema as Schema<SQSMessageAttributes> | undefined,
+      bodySchema: definition.bodySchema,
+      messageAttributesSchema: definition.messageAttributesSchema,
       handler: definition.handler as SQSRecordHandler,
     });
     return this;

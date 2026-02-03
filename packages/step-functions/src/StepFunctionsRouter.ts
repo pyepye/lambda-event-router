@@ -107,7 +107,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     const isTaskToken = definition.filters.taskToken === true;
     this.routes.push({
       filters: definition.filters,
-      eventSchema: definition.eventSchema as Schema<unknown> | undefined,
+      eventSchema: definition.eventSchema,
       handler: definition.handler as (input: unknown) => Promise<unknown>,
       isTaskTokenRoute: isTaskToken,
     });

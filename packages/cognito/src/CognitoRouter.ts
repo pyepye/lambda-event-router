@@ -214,7 +214,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   route<TUserAttributes extends UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this {
     this.routes.push({
       filters: definition.filters ?? {},
-      userAttributesSchema: definition.userAttributesSchema as Schema<unknown> | undefined,
+      userAttributesSchema: definition.userAttributesSchema,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
     return this;

@@ -16,6 +16,10 @@ const VALID_STEPS: readonly SecretsManagerRotationEventStep[] = [
   'finishSecret',
 ];
 
+function isValidStep(step: string): step is SecretsManagerRotationEventStep {
+  return (VALID_STEPS as readonly string[]).includes(step);
+}
+
 interface RouteBuilder {
   handle(handler: SecretsManagerHandler): SecretsManagerRouteDefinition;
 }
@@ -37,11 +41,11 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     if (typeof event.ClientRequestToken !== 'string') return false;
     if (typeof event.Step !== 'string') return false;
 
-    return VALID_STEPS.includes(event.Step as SecretsManagerRotationEventStep);
+    return isValidStep(event.Step);
   }
 
   route(definition: SecretsManagerRouteDefinition | SecretsManagerStepRouteDefinition): this {
-    this.routes.push(definition as SecretsManagerRouteDefinition);
+    this.routes.push(definition);
     return this;
   }
 

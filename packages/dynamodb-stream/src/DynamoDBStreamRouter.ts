@@ -131,13 +131,13 @@ export class DynamoDBStreamRouter implements EventTypeRouter<DynamoDBStreamEvent
   }
 
   private async processRecord(record: DynamoDBRecord, context: Context): Promise<void> {
-    const eventName = record.eventName as DynamoDBStreamEventName | undefined;
+    const eventName = record.eventName;
     /* v8 ignore next -- @preserve - Guard is for TS. eventName is always present in AWS events but typed as optional */
     if (!eventName) {
       throw new Error(`Record missing eventName: ${record.eventID}`);
     }
 
-    const streamViewType = record.dynamodb?.StreamViewType as DynamoDBStreamViewType | undefined;
+    const streamViewType = record.dynamodb?.StreamViewType;
     const route = this.matchRoute(record, eventName, streamViewType);
     if (!route) {
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);

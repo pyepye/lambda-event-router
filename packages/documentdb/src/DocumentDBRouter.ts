@@ -129,22 +129,30 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       throw new Error(`No route matched for record ${JSON.stringify(changeEvent.documentKey)} from ${eventSourceArn}`);
     }
 
+    if (!isObject(changeEvent.documentKey)) {
+      throw new Error(`documentKey is not an object for record from ${eventSourceArn}`);
+    }
+
     const documentKey = this.validateSchema(
-      changeEvent.documentKey as Record<string, unknown>,
+      changeEvent.documentKey,
       route.documentKeySchema,
       'documentKey',
       changeEvent.documentKey,
     );
 
+    const fullDocumentObject = isObject(changeEvent.fullDocument) ? changeEvent.fullDocument : undefined;
     const fullDocument = this.validateSchema(
-      changeEvent.fullDocument as Record<string, unknown> | undefined,
+      fullDocumentObject,
       route.fullDocumentSchema,
       'fullDocument',
       changeEvent.documentKey,
     );
 
+    const fullDocumentBeforeChangeObject = isObject(changeEvent.fullDocumentBeforeChange)
+      ? changeEvent.fullDocumentBeforeChange
+      : undefined;
     const fullDocumentBeforeChange = this.validateSchema(
-      changeEvent.fullDocumentBeforeChange as Record<string, unknown> | undefined,
+      fullDocumentBeforeChangeObject,
       route.fullDocumentBeforeChangeSchema,
       'fullDocumentBeforeChange',
       changeEvent.documentKey,

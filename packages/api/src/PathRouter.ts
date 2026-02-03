@@ -113,10 +113,10 @@ export class PathRouter {
       pattern,
       paramNames,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
-      pathSchema: config.pathSchema as Schema<unknown> | undefined,
-      querySchema: config.querySchema as Schema<unknown> | undefined,
-      bodySchema: config.bodySchema as Schema<unknown> | undefined,
-      responseSchema: config.responseSchema as Schema<unknown> | undefined,
+      pathSchema: config.pathSchema,
+      querySchema: config.querySchema,
+      bodySchema: config.bodySchema,
+      responseSchema: config.responseSchema,
     });
 
     return this;
