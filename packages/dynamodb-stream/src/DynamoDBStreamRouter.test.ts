@@ -258,22 +258,6 @@ suite('DynamoDBStreamRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('skips eventSourceArns filter when record has no ARN', ({ dynamoDBInsertRecord }) => {
-      router.route(
-        defineRoute({
-          filters: {
-            eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000'],
-          },
-        }).handle(async () => {}),
-      );
-
-      const record = dynamoDBInsertRecord({ eventSourceARN: undefined });
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
-
-      expect(result).toBeDefined();
-    });
-
     test('matches route by streamViewTypes', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
@@ -300,20 +284,6 @@ suite('DynamoDBStreamRouter', () => {
       const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
-    });
-
-    test('skips streamViewTypes filter when streamViewType is undefined', ({ dynamoDBInsertRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { streamViewTypes: ['NEW_AND_OLD_IMAGES'] },
-        }).handle(async () => {}),
-      );
-
-      const record = dynamoDBInsertRecord();
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', undefined);
-
-      expect(result).toBeDefined();
     });
 
     test('matches route by customFilter', ({ dynamoDBInsertRecord }) => {

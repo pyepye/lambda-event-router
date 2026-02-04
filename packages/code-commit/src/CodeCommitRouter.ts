@@ -47,14 +47,8 @@ function extractRepositoryNameFromArn(arn: string): string {
   return arn.slice(lastColonIndex + 1);
 }
 
-// Strip refs/heads/ prefix to get branch name
-// e.g. "refs/heads/main" → "main", "refs/heads/feature/foo" → "feature/foo"
 function extractBranchNameFromRef(ref: string): string {
-  const prefix = 'refs/heads/';
-  if (ref.startsWith(prefix)) {
-    return ref.slice(prefix.length);
-  }
-  return ref;
+  return ref.replace('refs/heads/', '');
 }
 
 export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefined> {

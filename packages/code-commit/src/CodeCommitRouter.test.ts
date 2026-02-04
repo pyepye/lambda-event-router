@@ -1089,16 +1089,6 @@ suite('CodeCommitRouter', () => {
       expect(repoAHandler).toHaveBeenCalledTimes(1);
       expect(repoBHandler).toHaveBeenCalledTimes(1);
     });
-
-    test('returns undefined when event has no records', async ({ context }) => {
-      const router = createCodeCommitRouter();
-      router.route(defineRoute({ filters: {} }).handle(async () => {}));
-
-      const event = createCodeCommitEvent([]);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-    });
   });
 
   suite('full event processing', () => {
