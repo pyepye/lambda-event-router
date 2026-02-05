@@ -1,8 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import {
-  createSecretsManagerRouter,
-  type SecretsManagerFilterInput,
-} from '@lambda-event-router/secrets-manager';
+import { createSecretsManagerRouter, type SecretsManagerFilterInput } from '@lambda-event-router/secrets-manager';
 import type { Handler } from 'aws-lambda';
 
 import {
@@ -16,8 +13,7 @@ import {
 
 const secretsManagerRouter = createSecretsManagerRouter();
 
-const DATABASE_SECRET_ARN =
-  'arn:aws:secretsmanager:eu-west-1:123456789012:secret:prod/database/password-AbCdEf';
+const DATABASE_SECRET_ARN = 'arn:aws:secretsmanager:eu-west-1:123456789012:secret:prod/database/password-AbCdEf';
 
 // =============================================================================
 // Generic .route() with steps and secretIds filters

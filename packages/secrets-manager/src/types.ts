@@ -1,10 +1,6 @@
-import type { SecretsManagerRotationEventStep } from 'aws-lambda';
+import type { SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
-export interface SecretsManagerRequest {
-  secretId: string;
-  clientRequestToken: string;
-  step: SecretsManagerRotationEventStep;
-}
+export interface SecretsManagerRequest extends SecretsManagerRotationEvent {}
 
 export type SecretsManagerResponse = undefined;
 
@@ -22,7 +18,7 @@ export interface SecretsManagerFilters {
   secretSuffixes?: string[];
   secretIncludes?: string[];
   steps?: SecretsManagerRotationEventStep[];
-  customFilter?: (input: SecretsManagerFilterInput) => boolean;
+  customFilter?: (input: SecretsManagerRotationEvent) => boolean;
 }
 
 export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'steps'>;

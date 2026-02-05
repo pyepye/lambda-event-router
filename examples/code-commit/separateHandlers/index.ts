@@ -3,7 +3,12 @@ import type { CodeCommitFilterInput } from '@lambda-event-router/code-commit';
 import { createCodeCommitRouter } from '@lambda-event-router/code-commit';
 import type { Handler } from 'aws-lambda';
 
-import { processBranchCreated, processBranchDeleted, processFeaturePush, processMainPush } from './handlers/processPush.js';
+import {
+  processBranchCreated,
+  processBranchDeleted,
+  processFeaturePush,
+  processMainPush,
+} from './handlers/processPush.js';
 
 const codeCommitRouter = createCodeCommitRouter();
 

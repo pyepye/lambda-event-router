@@ -1,5 +1,7 @@
 import type {
   APIGatewayProxyEventV2,
+  CloudWatchLogsEvent,
+  ConnectContactFlowEvent,
   Context,
   DynamoDBRecord,
   DynamoDBStreamEvent,
@@ -16,8 +18,20 @@ import type {
   SQSRecord,
 } from 'aws-lambda';
 import { test as viTest } from 'vitest';
+import type {
+  AmazonConnectEventOverrides,
+  AmazonConnectHandlerEvent,
+  CreateAmazonConnectHandlerEventOptions,
+} from './amazonConnect.js';
+import { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
 import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 import { createApiEvent, createApiHandlerEvent } from './api.js';
+import type {
+  CloudWatchLogsEventOverrides,
+  CloudWatchLogsHandlerEvent,
+  CreateCloudWatchLogsHandlerEventOptions,
+} from './cloudWatchLogs.js';
+import { createCloudWatchLogsEvent, createCloudWatchLogsHandlerEvent } from './cloudWatchLogs.js';
 import type {
   CodeCommitEvent,
   CodeCommitHandlerEvent,
@@ -128,6 +142,8 @@ function fixture<T>(creator: T) {
 }
 
 export interface TestFixtures {
+  amazonConnectEvent: (overrides?: AmazonConnectEventOverrides) => ConnectContactFlowEvent;
+  amazonConnectHandlerEvent: (options?: CreateAmazonConnectHandlerEventOptions) => AmazonConnectHandlerEvent;
   context: (overrides?: Partial<Context>) => Context;
   sqsRecord: (overrides?: SQSRecordOverrides) => SQSRecord;
   sqsEvent: (records?: SQSRecord[]) => SQSEvent;
@@ -169,6 +185,8 @@ export interface TestFixtures {
   codeCommitRecord: (overrides?: CodeCommitRecordOverrides) => CodeCommitRecord;
   codeCommitEvent: (records?: CodeCommitRecord[]) => CodeCommitEvent;
   codeCommitHandlerEvent: (options?: CreateCodeCommitHandlerEventOptions) => CodeCommitHandlerEvent;
+  cloudWatchLogsEvent: (overrides?: CloudWatchLogsEventOverrides) => CloudWatchLogsEvent;
+  cloudWatchLogsHandlerEvent: (options?: CreateCloudWatchLogsHandlerEventOptions) => CloudWatchLogsHandlerEvent;
   apiEvent: (overrides?: ApiEventOverrides) => APIGatewayProxyEventV2;
   apiHandlerEvent: (options?: CreateApiHandlerEventOptions) => ApiHandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
@@ -196,6 +214,8 @@ export interface TestFixtures {
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
+  amazonConnectEvent: fixture(createAmazonConnectEvent),
+  amazonConnectHandlerEvent: fixture(createAmazonConnectHandlerEvent),
   context: fixture(createMockContext),
   sqsRecord: fixture(createSQSRecord),
   sqsEvent: fixture(createSQSEvent),
@@ -234,6 +254,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   documentDBDeleteEntry: fixture(createDocumentDBDeleteEntry),
   documentDBEvent: fixture(createDocumentDBEvent),
   documentDBHandlerEvent: fixture(createDocumentDBHandlerEvent),
+  cloudWatchLogsEvent: fixture(createCloudWatchLogsEvent),
+  cloudWatchLogsHandlerEvent: fixture(createCloudWatchLogsHandlerEvent),
   apiEvent: fixture(createApiEvent),
   apiHandlerEvent: fixture(createApiHandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),

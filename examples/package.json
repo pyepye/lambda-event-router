@@ -10,7 +10,9 @@
   },
   "dependencies": {
     "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/amazon-connect": "workspace:*",
     "@lambda-event-router/api": "workspace:*",
+    "@lambda-event-router/cloud-watch": "workspace:*",
     "@lambda-event-router/code-commit": "workspace:*",
     "@lambda-event-router/cognito": "workspace:*",
     "@lambda-event-router/documentdb": "workspace:*",

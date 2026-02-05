@@ -20,7 +20,9 @@
   },
   "references": [
     { "path": "./packages/base" },
+    { "path": "./packages/amazon-connect" },
     { "path": "./packages/api" },
+    { "path": "./packages/cloud-watch" },
     { "path": "./packages/cognito" },
     { "path": "./packages/documentdb" },
     { "path": "./packages/dynamodb-stream" },

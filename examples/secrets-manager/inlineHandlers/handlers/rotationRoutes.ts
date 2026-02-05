@@ -1,7 +1,6 @@
 import { defineRoute } from '@lambda-event-router/secrets-manager';
 
-const DATABASE_SECRET_ARN =
-  'arn:aws:secretsmanager:eu-west-1:123456789012:secret:prod/database/password-AbCdEf';
+const DATABASE_SECRET_ARN = 'arn:aws:secretsmanager:eu-west-1:123456789012:secret:prod/database/password-AbCdEf';
 
 // =============================================================================
 // Routes using .route() style with steps filter

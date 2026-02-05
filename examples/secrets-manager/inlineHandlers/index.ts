@@ -16,11 +16,7 @@ import {
 const secretsManagerRouter = createSecretsManagerRouter();
 
 // Generic .route() with steps filter — each route defines its own step
-secretsManagerRouter
-  .route(createSecretRoute)
-  .route(setSecretRoute)
-  .route(testSecretRoute)
-  .route(finishSecretRoute);
+secretsManagerRouter.route(createSecretRoute).route(setSecretRoute).route(testSecretRoute).route(finishSecretRoute);
 
 // Convenience methods — step is implied by the method name
 secretsManagerRouter

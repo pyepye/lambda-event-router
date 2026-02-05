@@ -9,11 +9,7 @@ import { pushRoute } from './handlers/pushRoute.js';
 
 const codeCommitRouter = createCodeCommitRouter();
 
-codeCommitRouter
-  .route(pushRoute)
-  .route(featureBranchRoute)
-  .route(branchCreatedRoute)
-  .route(branchDeletedRoute);
+codeCommitRouter.route(pushRoute).route(featureBranchRoute).route(branchCreatedRoute).route(branchDeletedRoute);
 
 const eventRouter = new EventRouter({
   routers: [codeCommitRouter],

@@ -1,5 +1,17 @@
+export type {
+  AmazonConnectEventOverrides,
+  AmazonConnectHandlerEvent,
+  CreateAmazonConnectHandlerEventOptions,
+} from './amazonConnect.js';
+export { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
 export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 export { createApiEvent, createApiHandlerEvent } from './api.js';
+export type {
+  CloudWatchLogsEventOverrides,
+  CloudWatchLogsHandlerEvent,
+  CreateCloudWatchLogsHandlerEventOptions,
+} from './cloudWatchLogs.js';
+export { createCloudWatchLogsEvent, createCloudWatchLogsHandlerEvent } from './cloudWatchLogs.js';
 export type {
   CodeCommitEvent,
   CodeCommitHandlerEvent,

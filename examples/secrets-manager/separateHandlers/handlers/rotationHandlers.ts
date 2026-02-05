@@ -1,7 +1,4 @@
-import type {
-  SecretsManagerRequest,
-  SecretsManagerResponse,
-} from '@lambda-event-router/secrets-manager';
+import type { SecretsManagerRequest, SecretsManagerResponse } from '@lambda-event-router/secrets-manager';
 
 // Handler for the createSecret step
 // Creates a new version of the secret in AWSPENDING staging label
