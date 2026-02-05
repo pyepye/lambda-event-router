@@ -5,9 +5,11 @@
     "build": "pnpm -r build",
     "dev": "pnpm -r dev",
     "test": "pnpm -r test",
+    "test:coverage": "pnpm -r test:coverage",
     "lint": "biome check packages",
     "lint:fix": "biome check --write packages",
     "format": "biome format --write packages",
+
     "clean": "pnpm -r clean",
     "knip": "knip"
   },

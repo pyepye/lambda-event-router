@@ -21,6 +21,7 @@
   "references": [
     { "path": "./packages/base" },
     { "path": "./packages/amazon-connect" },
+    { "path": "./packages/amazon-lex" },
     { "path": "./packages/api" },
     { "path": "./packages/cloud-watch" },
     { "path": "./packages/cognito" },

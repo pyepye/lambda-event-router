@@ -5,6 +5,7 @@ import type {
   Context,
   DynamoDBRecord,
   DynamoDBStreamEvent,
+  LexV2Event,
   S3BatchEvent,
   S3BatchEventTask,
   S3Event,
@@ -24,6 +25,12 @@ import type {
   CreateAmazonConnectHandlerEventOptions,
 } from './amazonConnect.js';
 import { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
+import type {
+  AmazonLexEventOverrides,
+  AmazonLexHandlerEvent,
+  CreateAmazonLexHandlerEventOptions,
+} from './amazonLex.js';
+import { createAmazonLexEvent, createAmazonLexHandlerEvent } from './amazonLex.js';
 import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 import { createApiEvent, createApiHandlerEvent } from './api.js';
 import type {
@@ -144,6 +151,8 @@ function fixture<T>(creator: T) {
 export interface TestFixtures {
   amazonConnectEvent: (overrides?: AmazonConnectEventOverrides) => ConnectContactFlowEvent;
   amazonConnectHandlerEvent: (options?: CreateAmazonConnectHandlerEventOptions) => AmazonConnectHandlerEvent;
+  amazonLexEvent: (overrides?: AmazonLexEventOverrides) => LexV2Event;
+  amazonLexHandlerEvent: (options?: CreateAmazonLexHandlerEventOptions) => AmazonLexHandlerEvent;
   context: (overrides?: Partial<Context>) => Context;
   sqsRecord: (overrides?: SQSRecordOverrides) => SQSRecord;
   sqsEvent: (records?: SQSRecord[]) => SQSEvent;
@@ -216,6 +225,8 @@ export interface TestFixtures {
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
   amazonConnectEvent: fixture(createAmazonConnectEvent),
   amazonConnectHandlerEvent: fixture(createAmazonConnectHandlerEvent),
+  amazonLexEvent: fixture(createAmazonLexEvent),
+  amazonLexHandlerEvent: fixture(createAmazonLexHandlerEvent),
   context: fixture(createMockContext),
   sqsRecord: fixture(createSQSRecord),
   sqsEvent: fixture(createSQSEvent),

@@ -4,6 +4,12 @@ export type {
   CreateAmazonConnectHandlerEventOptions,
 } from './amazonConnect.js';
 export { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
+export type {
+  AmazonLexEventOverrides,
+  AmazonLexHandlerEvent,
+  CreateAmazonLexHandlerEventOptions,
+} from './amazonLex.js';
+export { createAmazonLexEvent, createAmazonLexHandlerEvent } from './amazonLex.js';
 export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 export { createApiEvent, createApiHandlerEvent } from './api.js';
 export type {
