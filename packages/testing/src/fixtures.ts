@@ -19,18 +19,6 @@ import type {
   SQSRecord,
 } from 'aws-lambda';
 import { test as viTest } from 'vitest';
-import type {
-  AmazonConnectEventOverrides,
-  AmazonConnectHandlerEvent,
-  CreateAmazonConnectHandlerEventOptions,
-} from './amazonConnect.js';
-import { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
-import type {
-  AmazonLexEventOverrides,
-  AmazonLexHandlerEvent,
-  CreateAmazonLexHandlerEventOptions,
-} from './amazonLex.js';
-import { createAmazonLexEvent, createAmazonLexHandlerEvent } from './amazonLex.js';
 import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 import { createApiEvent, createApiHandlerEvent } from './api.js';
 import type {
@@ -78,6 +66,8 @@ import {
   createCognitoVerifyAuthChallengeResponseEvent,
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
+import type { ConnectEventOverrides, ConnectHandlerEvent, CreateConnectHandlerEventOptions } from './connect.js';
+import { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 import { createMockContext } from './context.js';
 import type {
   CreateDocumentDBHandlerEventOptions,
@@ -93,19 +83,15 @@ import {
   createDocumentDBReplaceEntry,
   createDocumentDBUpdateEntry,
 } from './documentdb.js';
-import type {
-  CreateDynamoDBStreamHandlerEventOptions,
-  DynamoDBRecordOverrides,
-  DynamoDBStreamHandlerEvent,
-} from './dynamodbStream.js';
+import type { CreateDynamoDBHandlerEventOptions, DynamoDBHandlerEvent, DynamoDBRecordOverrides } from './dynamodb.js';
 import {
+  createDynamoDBEvent,
+  createDynamoDBHandlerEvent,
   createDynamoDBInsertRecord,
   createDynamoDBModifyRecord,
   createDynamoDBRecord,
   createDynamoDBRemoveRecord,
-  createDynamoDBStreamEvent,
-  createDynamoDBStreamHandlerEvent,
-} from './dynamodbStream.js';
+} from './dynamodb.js';
 import type {
   CreateEventBridgeHandlerEventOptions,
   EventBridgeEvent,
@@ -113,6 +99,8 @@ import type {
   EventBridgeHandlerEvent,
 } from './eventbridge.js';
 import { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
+import type { CreateLexHandlerEventOptions, LexEventOverrides, LexHandlerEvent } from './lex.js';
+import { createLexEvent, createLexHandlerEvent } from './lex.js';
 import type {
   CreateS3BatchHandlerEventOptions,
   CreateS3HandlerEventOptions,
@@ -149,10 +137,10 @@ function fixture<T>(creator: T) {
 }
 
 export interface TestFixtures {
-  amazonConnectEvent: (overrides?: AmazonConnectEventOverrides) => ConnectContactFlowEvent;
-  amazonConnectHandlerEvent: (options?: CreateAmazonConnectHandlerEventOptions) => AmazonConnectHandlerEvent;
-  amazonLexEvent: (overrides?: AmazonLexEventOverrides) => LexV2Event;
-  amazonLexHandlerEvent: (options?: CreateAmazonLexHandlerEventOptions) => AmazonLexHandlerEvent;
+  connectEvent: (overrides?: ConnectEventOverrides) => ConnectContactFlowEvent;
+  connectHandlerEvent: (options?: CreateConnectHandlerEventOptions) => ConnectHandlerEvent;
+  lexEvent: (overrides?: LexEventOverrides) => LexV2Event;
+  lexHandlerEvent: (options?: CreateLexHandlerEventOptions) => LexHandlerEvent;
   context: (overrides?: Partial<Context>) => Context;
   sqsRecord: (overrides?: SQSRecordOverrides) => SQSRecord;
   sqsEvent: (records?: SQSRecord[]) => SQSEvent;
@@ -178,7 +166,7 @@ export interface TestFixtures {
   dynamoDBModifyRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
   dynamoDBRemoveRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
   dynamoDBStreamEvent: (records?: DynamoDBRecord[]) => DynamoDBStreamEvent;
-  dynamoDBStreamHandlerEvent: (options?: CreateDynamoDBStreamHandlerEventOptions) => DynamoDBStreamHandlerEvent;
+  dynamoDBStreamHandlerEvent: (options?: CreateDynamoDBHandlerEventOptions) => DynamoDBHandlerEvent;
   documentDBChangeEvent: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBChangeEvent>;
   documentDBInsertEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBInsertEntry>;
   documentDBUpdateEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBUpdateEntry>;
@@ -223,10 +211,10 @@ export interface TestFixtures {
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
-  amazonConnectEvent: fixture(createAmazonConnectEvent),
-  amazonConnectHandlerEvent: fixture(createAmazonConnectHandlerEvent),
-  amazonLexEvent: fixture(createAmazonLexEvent),
-  amazonLexHandlerEvent: fixture(createAmazonLexHandlerEvent),
+  connectEvent: fixture(createConnectEvent),
+  connectHandlerEvent: fixture(createConnectHandlerEvent),
+  lexEvent: fixture(createLexEvent),
+  lexHandlerEvent: fixture(createLexHandlerEvent),
   context: fixture(createMockContext),
   sqsRecord: fixture(createSQSRecord),
   sqsEvent: fixture(createSQSEvent),
@@ -252,8 +240,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   dynamoDBInsertRecord: fixture(createDynamoDBInsertRecord),
   dynamoDBModifyRecord: fixture(createDynamoDBModifyRecord),
   dynamoDBRemoveRecord: fixture(createDynamoDBRemoveRecord),
-  dynamoDBStreamEvent: fixture(createDynamoDBStreamEvent),
-  dynamoDBStreamHandlerEvent: fixture(createDynamoDBStreamHandlerEvent),
+  dynamoDBStreamEvent: fixture(createDynamoDBEvent),
+  dynamoDBStreamHandlerEvent: fixture(createDynamoDBHandlerEvent),
   codeCommitReference: fixture(createCodeCommitReference),
   codeCommitRecord: fixture(createCodeCommitRecord),
   codeCommitEvent: fixture(createCodeCommitEvent),

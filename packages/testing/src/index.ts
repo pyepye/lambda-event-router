@@ -1,15 +1,3 @@
-export type {
-  AmazonConnectEventOverrides,
-  AmazonConnectHandlerEvent,
-  CreateAmazonConnectHandlerEventOptions,
-} from './amazonConnect.js';
-export { createAmazonConnectEvent, createAmazonConnectHandlerEvent } from './amazonConnect.js';
-export type {
-  AmazonLexEventOverrides,
-  AmazonLexHandlerEvent,
-  CreateAmazonLexHandlerEventOptions,
-} from './amazonLex.js';
-export { createAmazonLexEvent, createAmazonLexHandlerEvent } from './amazonLex.js';
 export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 export { createApiEvent, createApiHandlerEvent } from './api.js';
 export type {
@@ -71,6 +59,12 @@ export {
   createCognitoVerifyAuthChallengeResponseEvent,
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
+export type {
+  ConnectEventOverrides,
+  ConnectHandlerEvent,
+  CreateConnectHandlerEventOptions,
+} from './connect.js';
+export { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 export { createMockContext } from './context.js';
 export type {
   CreateDocumentDBHandlerEventOptions,
@@ -87,18 +81,18 @@ export {
   createDocumentDBUpdateEntry,
 } from './documentdb.js';
 export type {
-  CreateDynamoDBStreamHandlerEventOptions,
+  CreateDynamoDBHandlerEventOptions,
+  DynamoDBHandlerEvent,
   DynamoDBRecordOverrides,
-  DynamoDBStreamHandlerEvent,
-} from './dynamodbStream.js';
+} from './dynamodb.js';
 export {
+  createDynamoDBEvent,
+  createDynamoDBHandlerEvent,
   createDynamoDBInsertRecord,
   createDynamoDBModifyRecord,
   createDynamoDBRecord,
   createDynamoDBRemoveRecord,
-  createDynamoDBStreamEvent,
-  createDynamoDBStreamHandlerEvent,
-} from './dynamodbStream.js';
+} from './dynamodb.js';
 export type {
   CreateEventBridgeHandlerEventOptions,
   EventBridgeEvent,
@@ -108,6 +102,12 @@ export type {
 export { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
 export type { TestFixtures } from './fixtures.js';
 export { test } from './fixtures.js';
+export type {
+  CreateLexHandlerEventOptions,
+  LexEventOverrides,
+  LexHandlerEvent,
+} from './lex.js';
+export { createLexEvent, createLexHandlerEvent } from './lex.js';
 export type {
   CreateS3BatchHandlerEventOptions,
   CreateS3HandlerEventOptions,
