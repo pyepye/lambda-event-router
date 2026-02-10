@@ -1,4 +1,4 @@
-import { BadRequest, defineRoute } from '@lambda-event-router/api';
+import { BadRequest, defineRoute } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 const QuerySchema = z.object({

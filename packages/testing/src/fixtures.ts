@@ -27,8 +27,12 @@ import type {
   CreateActiveMQHandlerEventOptions,
 } from './activeMQ.js';
 import { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
-import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
-import { createApiEvent, createApiHandlerEvent } from './api.js';
+import type {
+  ApiGatewayV2EventOverrides,
+  ApiGatewayV2HandlerEvent,
+  CreateApiGatewayV2HandlerEventOptions,
+} from './apiGatewayV2.js';
+import { createApiGatewayV2Event, createApiGatewayV2HandlerEvent } from './apiGatewayV2.js';
 import type {
   CloudWatchLogsEventOverrides,
   CloudWatchLogsHandlerEvent,
@@ -203,8 +207,8 @@ export interface TestFixtures {
   activeMQMessage: (overrides?: ActiveMQMessageOverrides) => ActiveMQMessage;
   activeMQEvent: (messages?: ActiveMQMessage[]) => ActiveMQEvent;
   activeMQHandlerEvent: (options?: CreateActiveMQHandlerEventOptions) => ActiveMQHandlerEvent;
-  apiEvent: (overrides?: ApiEventOverrides) => APIGatewayProxyEventV2;
-  apiHandlerEvent: (options?: CreateApiHandlerEventOptions) => ApiHandlerEvent;
+  apiGatewayV2Event: (overrides?: ApiGatewayV2EventOverrides) => APIGatewayProxyEventV2;
+  apiGatewayV2HandlerEvent: (options?: CreateApiGatewayV2HandlerEventOptions) => ApiGatewayV2HandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
   cognitoPreSignUpHandlerEvent: typeof createCognitoPreSignUpHandlerEvent;
   cognitoPreAuthenticationEvent: typeof createCognitoPreAuthenticationEvent;
@@ -280,8 +284,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   activeMQMessage: fixture(createActiveMQMessage),
   activeMQEvent: fixture(createActiveMQEvent),
   activeMQHandlerEvent: fixture(createActiveMQHandlerEvent),
-  apiEvent: fixture(createApiEvent),
-  apiHandlerEvent: fixture(createApiHandlerEvent),
+  apiGatewayV2Event: fixture(createApiGatewayV2Event),
+  apiGatewayV2HandlerEvent: fixture(createApiGatewayV2HandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),
   cognitoPreSignUpHandlerEvent: fixture(createCognitoPreSignUpHandlerEvent),
   cognitoPreAuthenticationEvent: fixture(createCognitoPreAuthenticationEvent),

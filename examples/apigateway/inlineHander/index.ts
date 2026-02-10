@@ -1,10 +1,10 @@
-import { createApiRouter } from '@lambda-event-router/api';
+import { createAPIGatewayRouter } from '@lambda-event-router/apigateway';
 import { EventRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { createItemRoute } from './createItem.js';
 
-const apiRouter = createApiRouter();
+const apiRouter = createAPIGatewayRouter();
 
 apiRouter.route(createItemRoute);
 

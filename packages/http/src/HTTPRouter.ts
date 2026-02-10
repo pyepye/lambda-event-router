@@ -61,7 +61,7 @@ export function defineRoute<
   };
 }
 
-export class APIRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGatewayProxyResultV2> {
+export abstract class HTTPRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGatewayProxyResultV2> {
   private router = new PathRouter();
   private response = new Response();
 
@@ -139,8 +139,4 @@ export class APIRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGat
       return this.response.internalServerError(errorMessage);
     }
   }
-}
-
-export function createApiRouter(): APIRouter {
-  return new APIRouter();
 }

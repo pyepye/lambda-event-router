@@ -15,7 +15,7 @@
     "@lambda-event-router/lex": "workspace:*",
     "@lambda-event-router/mq": "workspace:*",
     "@lambda-event-router/kafka": "workspace:*",
-    "@lambda-event-router/api": "workspace:*",
+    "@lambda-event-router/apigateway": "workspace:*",
     "@lambda-event-router/appsync": "workspace:*",
     "@lambda-event-router/config": "workspace:*",
     "@lambda-event-router/cloudformation": "workspace:*",

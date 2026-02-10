@@ -16,8 +16,8 @@ function createRoute(overrides: Partial<InternalRoute> = {}): InternalRoute {
 
 suite('Request', () => {
   suite('constructor', () => {
-    test('sets headers, method, and path from the event', ({ apiEvent, context }) => {
-      const event = apiEvent({
+    test('sets headers, method, and path from the event', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({
         headers: { 'content-type': 'application/json' },
         rawPath: '/items',
         requestContext: { http: { method: 'POST' } },
@@ -34,45 +34,45 @@ suite('Request', () => {
   });
 
   suite('body', () => {
-    test('parses a JSON body', ({ apiEvent, context }) => {
-      const event = apiEvent({ body: { name: 'test' } });
+    test('parses a JSON body', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({ body: { name: 'test' } });
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.body).toEqual({ name: 'test' });
     });
 
-    test('returns null when body is absent', ({ apiEvent, context }) => {
-      const event = apiEvent();
+    test('returns null when body is absent', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event();
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.body).toBeNull();
     });
 
-    test('returns a plain string when body is not valid JSON', ({ apiEvent, context }) => {
-      const event = apiEvent({ body: 'plain text' });
+    test('returns a plain string when body is not valid JSON', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({ body: 'plain text' });
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.body).toBe('plain text');
     });
 
-    test('decodes a base64-encoded JSON body', ({ apiEvent, context }) => {
+    test('decodes a base64-encoded JSON body', ({ apiGatewayV2Event, context }) => {
       const encoded = Buffer.from(JSON.stringify({ id: 1 })).toString('base64');
-      const event = apiEvent({ body: encoded, isBase64Encoded: true });
+      const event = apiGatewayV2Event({ body: encoded, isBase64Encoded: true });
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.body).toEqual({ id: 1 });
     });
 
-    test('returns decoded string for base64 non-JSON body', ({ apiEvent, context }) => {
+    test('returns decoded string for base64 non-JSON body', ({ apiGatewayV2Event, context }) => {
       const encoded = Buffer.from('plain text').toString('base64');
-      const event = apiEvent({ body: encoded, isBase64Encoded: true });
+      const event = apiGatewayV2Event({ body: encoded, isBase64Encoded: true });
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.body).toBe('plain text');
     });
 
-    test('caches the parsed body on subsequent accesses', ({ apiEvent, context }) => {
-      const event = apiEvent({ body: { count: 42 } });
+    test('caches the parsed body on subsequent accesses', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({ body: { count: 42 } });
       const request = new Request(event, context(), createRoute(), {});
 
       const firstAccess = request.body;
@@ -83,8 +83,8 @@ suite('Request', () => {
   });
 
   suite('validateWithSchema', () => {
-    test('returns success with original data when no schema is provided', ({ apiEvent, context }) => {
-      const request = new Request(apiEvent(), context(), createRoute(), {});
+    test('returns success with original data when no schema is provided', ({ apiGatewayV2Event, context }) => {
+      const request = new Request(apiGatewayV2Event(), context(), createRoute(), {});
       const originalData = { id: '1' };
 
       // @ts-expect-error - testing private method directly
@@ -93,10 +93,10 @@ suite('Request', () => {
       expect(result).toEqual({ success: true, data: originalData });
     });
 
-    test('returns success with transformed data when schema passes', ({ apiEvent, context }) => {
+    test('returns success with transformed data when schema passes', ({ apiGatewayV2Event, context }) => {
       const transformedData = { id: 1 };
       const schema = { safeParse: vi.fn().mockReturnValue({ success: true, data: transformedData }) };
-      const request = new Request(apiEvent(), context(), createRoute(), {});
+      const request = new Request(apiGatewayV2Event(), context(), createRoute(), {});
 
       // @ts-expect-error - testing private method directly
       const result = request.validateWithSchema(schema, { id: '1' });
@@ -104,10 +104,10 @@ suite('Request', () => {
       expect(result).toEqual({ success: true, data: transformedData });
     });
 
-    test('returns failure with error when schema fails', ({ apiEvent, context }) => {
+    test('returns failure with error when schema fails', ({ apiGatewayV2Event, context }) => {
       const schemaError = { message: 'invalid' };
       const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: schemaError }) };
-      const request = new Request(apiEvent(), context(), createRoute(), {});
+      const request = new Request(apiGatewayV2Event(), context(), createRoute(), {});
 
       // @ts-expect-error - testing private method directly
       const result = request.validateWithSchema(schema, { bad: 'data' });
@@ -117,15 +117,15 @@ suite('Request', () => {
   });
 
   suite('queryParams', () => {
-    test('returns query string parameters from the event', ({ apiEvent, context }) => {
-      const event = apiEvent({ queryStringParameters: { page: '1', limit: '10' } });
+    test('returns query string parameters from the event', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({ queryStringParameters: { page: '1', limit: '10' } });
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.queryParams).toEqual({ page: '1', limit: '10' });
     });
 
-    test('returns an empty object when no query parameters exist', ({ apiEvent, context }) => {
-      const event = apiEvent();
+    test('returns an empty object when no query parameters exist', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event();
       const request = new Request(event, context(), createRoute(), {});
 
       expect(request.queryParams).toEqual({});
@@ -133,19 +133,19 @@ suite('Request', () => {
   });
 
   suite('validate', () => {
-    test('does not throw when no schemas are defined', ({ apiEvent, context }) => {
-      const event = apiEvent();
+    test('does not throw when no schemas are defined', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event();
       const request = new Request(event, context(), createRoute(), {});
 
       expect(() => request.validate()).not.toThrow();
     });
 
-    test('throws a NotFound response when path validation fails', ({ apiEvent, context }) => {
+    test('throws a NotFound response when path validation fails', ({ apiGatewayV2Event, context }) => {
       const pathSchema = {
         safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid path' }),
       };
       const route = createRoute({ pathSchema });
-      const request = new Request(apiEvent(), context(), route, { id: 'bad' });
+      const request = new Request(apiGatewayV2Event(), context(), route, { id: 'bad' });
 
       try {
         request.validate();
@@ -157,12 +157,12 @@ suite('Request', () => {
       }
     });
 
-    test('throws a BadRequest response when query validation fails', ({ apiEvent, context }) => {
+    test('throws a BadRequest response when query validation fails', ({ apiGatewayV2Event, context }) => {
       const querySchema = {
         safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid query' }),
       };
       const route = createRoute({ querySchema });
-      const event = apiEvent({ queryStringParameters: { bad: 'param' } });
+      const event = apiGatewayV2Event({ queryStringParameters: { bad: 'param' } });
       const request = new Request(event, context(), route, {});
 
       try {
@@ -175,12 +175,12 @@ suite('Request', () => {
       }
     });
 
-    test('throws an UnprocessableContent response when body validation fails', ({ apiEvent, context }) => {
+    test('throws an UnprocessableContent response when body validation fails', ({ apiGatewayV2Event, context }) => {
       const bodySchema = {
         safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }),
       };
       const route = createRoute({ bodySchema });
-      const event = apiEvent({ body: { invalid: true } });
+      const event = apiGatewayV2Event({ body: { invalid: true } });
       const request = new Request(event, context(), route, {});
 
       try {
@@ -193,23 +193,23 @@ suite('Request', () => {
       }
     });
 
-    test('does not throw when all schemas pass', ({ apiEvent, context }) => {
+    test('does not throw when all schemas pass', ({ apiGatewayV2Event, context }) => {
       const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { id: '1' } }) };
       const querySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { page: '1' } }) };
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { name: 'test' } }) };
       const route = createRoute({ pathSchema, querySchema, bodySchema });
-      const event = apiEvent({ body: { name: 'test' }, queryStringParameters: { page: '1' } });
+      const event = apiGatewayV2Event({ body: { name: 'test' }, queryStringParameters: { page: '1' } });
       const request = new Request(event, context(), route, { id: '1' });
 
       expect(() => request.validate()).not.toThrow();
     });
 
-    test('short-circuits on path failure without calling query or body schemas', ({ apiEvent, context }) => {
+    test('short-circuits on path failure without calling query or body schemas', ({ apiGatewayV2Event, context }) => {
       const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid path' }) };
       const querySchema = { safeParse: vi.fn() };
       const bodySchema = { safeParse: vi.fn() };
       const route = createRoute({ pathSchema, querySchema, bodySchema });
-      const event = apiEvent({ body: { name: 'test' }, queryStringParameters: { page: '1' } });
+      const event = apiGatewayV2Event({ body: { name: 'test' }, queryStringParameters: { page: '1' } });
       const request = new Request(event, context(), route, { id: 'bad' });
 
       try {
@@ -222,12 +222,12 @@ suite('Request', () => {
       expect(bodySchema.safeParse).not.toHaveBeenCalled();
     });
 
-    test('short-circuits on query failure without calling body schema', ({ apiEvent, context }) => {
+    test('short-circuits on query failure without calling body schema', ({ apiGatewayV2Event, context }) => {
       const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { id: '1' } }) };
       const querySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid query' }) };
       const bodySchema = { safeParse: vi.fn() };
       const route = createRoute({ pathSchema, querySchema, bodySchema });
-      const event = apiEvent({ body: { name: 'test' }, queryStringParameters: { bad: 'param' } });
+      const event = apiGatewayV2Event({ body: { name: 'test' }, queryStringParameters: { bad: 'param' } });
       const request = new Request(event, context(), route, { id: '1' });
 
       try {
@@ -241,8 +241,8 @@ suite('Request', () => {
   });
 
   suite('buildApiRequest', () => {
-    test('returns an ApiRequest with all properties', ({ apiEvent, context }) => {
-      const event = apiEvent({
+    test('returns an ApiRequest with all properties', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({
         rawPath: '/items/42',
         requestContext: { http: { method: 'GET', path: '/items/42' } },
         headers: { authorization: 'Bearer token' },
@@ -261,8 +261,8 @@ suite('Request', () => {
       expect(apiRequest.context).toBe(mockContext);
     });
 
-    test('includes the parsed body in the request', ({ apiEvent, context }) => {
-      const event = apiEvent({ body: { name: 'test' } });
+    test('includes the parsed body in the request', ({ apiGatewayV2Event, context }) => {
+      const event = apiGatewayV2Event({ body: { name: 'test' } });
       const request = new Request(event, context(), createRoute(), {});
 
       const apiRequest = request.buildApiRequest();

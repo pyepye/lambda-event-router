@@ -1,7 +1,6 @@
 import type { Schema } from '@lambda-event-router/base';
 import { test } from '@lambda-event-router/testing';
 import { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
-import type { CognitoFilterInput } from './types/index.js';
 
 suite('CognitoRouter', () => {
   suite('createCognitoRouter', () => {
@@ -357,13 +356,14 @@ suite('CognitoRouter', () => {
         // @ts-expect-error - testing private method directly
         router.matchRoute(event, event.triggerSource);
 
-        const filterInput = customFilter.mock.calls[0]?.[0] as CognitoFilterInput;
-        expect(filterInput.triggerSource).toBe('PreSignUp_SignUp');
-        expect(filterInput.userPoolId).toBe('us-east-1_TestPool');
-        expect(filterInput.userName).toBe('test-user');
-        expect(filterInput.callerContext).toEqual(event.callerContext);
-        expect(filterInput.request.userAttributes).toEqual({ email: 'test@example.com' });
-        expect(filterInput.event).toBe(event);
+        expect(customFilter).toHaveBeenCalledWith({
+          triggerSource: 'PreSignUp_SignUp',
+          userPoolId: 'us-east-1_TestPool',
+          userName: 'test-user',
+          callerContext: event.callerContext,
+          request: { userAttributes: { email: 'test@example.com' } },
+          event,
+        });
       });
 
       test('passes undefined userAttributes in filterInput for UserMigration', ({ cognitoUserMigrationEvent }) => {
@@ -377,8 +377,11 @@ suite('CognitoRouter', () => {
         // @ts-expect-error - testing private method directly
         router.matchRoute(event, event.triggerSource);
 
-        const filterInput = customFilter.mock.calls[0]?.[0] as CognitoFilterInput;
-        expect(filterInput.request.userAttributes).toBeUndefined();
+        expect(customFilter).toHaveBeenCalledWith(
+          expect.objectContaining({
+            request: { userAttributes: undefined },
+          }),
+        );
       });
     });
 
@@ -506,9 +509,13 @@ suite('CognitoRouter', () => {
         }),
       );
 
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event: expect.objectContaining({ triggerSource: event.triggerSource }),
+        }),
+      );
       const requestEvent = handler.mock.calls[0]?.[0].event;
       expect(requestEvent).not.toBe(event);
-      expect(requestEvent.triggerSource).toBe(event.triggerSource);
     });
 
     test('uses empty object for userAttributes on UserMigration events', async ({

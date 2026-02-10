@@ -1,5 +1,5 @@
-export { APIRouter, createApiRouter, defineRoute } from './APIRouter.js';
 export { HTTP_STATUS_CODES } from './constants.js';
+export { defineRoute, HTTPRouter } from './HTTPRouter.js';
 export {
   BadRequest,
   Conflict,

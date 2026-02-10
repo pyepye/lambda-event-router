@@ -1,4 +1,4 @@
-import { type ApiRequest, type ApiResponse, BadRequest } from '@lambda-event-router/api';
+import { type ApiRequest, type ApiResponse, BadRequest } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 export const CreateItemBodySchema = z.object({

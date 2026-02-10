@@ -1,19 +1,19 @@
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
 
-export interface ApiHandlerEvent {
+export interface ApiGatewayV2HandlerEvent {
   event: APIGatewayProxyEventV2;
   context: Context;
 }
 
-export type ApiEventOverrides = Omit<Partial<APIGatewayProxyEventV2>, 'requestContext' | 'body'> & {
+export type ApiGatewayV2EventOverrides = Omit<Partial<APIGatewayProxyEventV2>, 'requestContext' | 'body'> & {
   requestContext?: Omit<Partial<APIGatewayProxyEventV2['requestContext']>, 'http'> & {
     http?: Partial<APIGatewayProxyEventV2['requestContext']['http']>;
   };
   body?: string | Record<string, unknown> | null;
 };
 
-export function createApiEvent(overrides: ApiEventOverrides = {}): APIGatewayProxyEventV2 {
+export function createApiGatewayV2Event(overrides: ApiGatewayV2EventOverrides = {}): APIGatewayProxyEventV2 {
   const { requestContext: requestContextOverrides, body: bodyOverride, ...restOverrides } = overrides;
   const { http: httpOverrides, ...restRequestContextOverrides } = requestContextOverrides ?? {};
 
@@ -52,13 +52,15 @@ export function createApiEvent(overrides: ApiEventOverrides = {}): APIGatewayPro
   };
 }
 
-export interface CreateApiHandlerEventOptions {
-  event?: ApiEventOverrides;
+export interface CreateApiGatewayV2HandlerEventOptions {
+  event?: ApiGatewayV2EventOverrides;
   context?: Partial<Context>;
 }
 
-export function createApiHandlerEvent(options: CreateApiHandlerEventOptions = {}): ApiHandlerEvent {
-  const event = createApiEvent(options.event);
+export function createApiGatewayV2HandlerEvent(
+  options: CreateApiGatewayV2HandlerEventOptions = {},
+): ApiGatewayV2HandlerEvent {
+  const event = createApiGatewayV2Event(options.event);
   const context = createMockContext(options.context);
   return { event, context };
 }

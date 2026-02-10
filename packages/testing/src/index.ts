@@ -6,8 +6,12 @@ export type {
   CreateActiveMQHandlerEventOptions,
 } from './activeMQ.js';
 export { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
-export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
-export { createApiEvent, createApiHandlerEvent } from './api.js';
+export type {
+  ApiGatewayV2EventOverrides,
+  ApiGatewayV2HandlerEvent,
+  CreateApiGatewayV2HandlerEventOptions,
+} from './apiGatewayV2.js';
+export { createApiGatewayV2Event, createApiGatewayV2HandlerEvent } from './apiGatewayV2.js';
 export type {
   CloudWatchLogsEventOverrides,
   CloudWatchLogsHandlerEvent,
