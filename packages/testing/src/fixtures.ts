@@ -19,6 +19,14 @@ import type {
   SQSRecord,
 } from 'aws-lambda';
 import { test as viTest } from 'vitest';
+import type {
+  ActiveMQEvent,
+  ActiveMQHandlerEvent,
+  ActiveMQMessage,
+  ActiveMQMessageOverrides,
+  CreateActiveMQHandlerEventOptions,
+} from './activeMQ.js';
+import { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
 import type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 import { createApiEvent, createApiHandlerEvent } from './api.js';
 import type {
@@ -102,6 +110,14 @@ import { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbr
 import type { CreateLexHandlerEventOptions, LexEventOverrides, LexHandlerEvent } from './lex.js';
 import { createLexEvent, createLexHandlerEvent } from './lex.js';
 import type {
+  CreateRabbitMQHandlerEventOptions,
+  RabbitMQEvent,
+  RabbitMQHandlerEvent,
+  RabbitMQMessage,
+  RabbitMQMessageOverrides,
+} from './rabbitMQ.js';
+import { createRabbitMQEvent, createRabbitMQHandlerEvent, createRabbitMQMessage } from './rabbitMQ.js';
+import type {
   CreateS3BatchHandlerEventOptions,
   CreateS3HandlerEventOptions,
   S3BatchHandlerEvent,
@@ -184,6 +200,9 @@ export interface TestFixtures {
   codeCommitHandlerEvent: (options?: CreateCodeCommitHandlerEventOptions) => CodeCommitHandlerEvent;
   cloudWatchLogsEvent: (overrides?: CloudWatchLogsEventOverrides) => CloudWatchLogsEvent;
   cloudWatchLogsHandlerEvent: (options?: CreateCloudWatchLogsHandlerEventOptions) => CloudWatchLogsHandlerEvent;
+  activeMQMessage: (overrides?: ActiveMQMessageOverrides) => ActiveMQMessage;
+  activeMQEvent: (messages?: ActiveMQMessage[]) => ActiveMQEvent;
+  activeMQHandlerEvent: (options?: CreateActiveMQHandlerEventOptions) => ActiveMQHandlerEvent;
   apiEvent: (overrides?: ApiEventOverrides) => APIGatewayProxyEventV2;
   apiHandlerEvent: (options?: CreateApiHandlerEventOptions) => ApiHandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
@@ -208,6 +227,9 @@ export interface TestFixtures {
   cognitoPreTokenGenerationHandlerEvent: typeof createCognitoPreTokenGenerationHandlerEvent;
   cognitoUserMigrationEvent: typeof createCognitoUserMigrationEvent;
   cognitoUserMigrationHandlerEvent: typeof createCognitoUserMigrationHandlerEvent;
+  rabbitMQMessage: (overrides?: RabbitMQMessageOverrides) => RabbitMQMessage;
+  rabbitMQEvent: (messagesByQueue?: Record<string, RabbitMQMessage[]>) => RabbitMQEvent;
+  rabbitMQHandlerEvent: (options?: CreateRabbitMQHandlerEventOptions) => RabbitMQHandlerEvent;
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
@@ -255,6 +277,9 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   documentDBHandlerEvent: fixture(createDocumentDBHandlerEvent),
   cloudWatchLogsEvent: fixture(createCloudWatchLogsEvent),
   cloudWatchLogsHandlerEvent: fixture(createCloudWatchLogsHandlerEvent),
+  activeMQMessage: fixture(createActiveMQMessage),
+  activeMQEvent: fixture(createActiveMQEvent),
+  activeMQHandlerEvent: fixture(createActiveMQHandlerEvent),
   apiEvent: fixture(createApiEvent),
   apiHandlerEvent: fixture(createApiHandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),
@@ -279,4 +304,7 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   cognitoPreTokenGenerationHandlerEvent: fixture(createCognitoPreTokenGenerationHandlerEvent),
   cognitoUserMigrationEvent: fixture(createCognitoUserMigrationEvent),
   cognitoUserMigrationHandlerEvent: fixture(createCognitoUserMigrationHandlerEvent),
+  rabbitMQMessage: fixture(createRabbitMQMessage),
+  rabbitMQEvent: fixture(createRabbitMQEvent),
+  rabbitMQHandlerEvent: fixture(createRabbitMQHandlerEvent),
 });

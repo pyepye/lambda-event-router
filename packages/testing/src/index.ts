@@ -1,3 +1,11 @@
+export type {
+  ActiveMQEvent,
+  ActiveMQHandlerEvent,
+  ActiveMQMessage,
+  ActiveMQMessageOverrides,
+  CreateActiveMQHandlerEventOptions,
+} from './activeMQ.js';
+export { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
 export type { ApiEventOverrides, ApiHandlerEvent, CreateApiHandlerEventOptions } from './api.js';
 export { createApiEvent, createApiHandlerEvent } from './api.js';
 export type {
@@ -108,6 +116,14 @@ export type {
   LexHandlerEvent,
 } from './lex.js';
 export { createLexEvent, createLexHandlerEvent } from './lex.js';
+export type {
+  CreateRabbitMQHandlerEventOptions,
+  RabbitMQEvent,
+  RabbitMQHandlerEvent,
+  RabbitMQMessage,
+  RabbitMQMessageOverrides,
+} from './rabbitMQ.js';
+export { createRabbitMQEvent, createRabbitMQHandlerEvent, createRabbitMQMessage } from './rabbitMQ.js';
 export type {
   CreateS3BatchHandlerEventOptions,
   CreateS3HandlerEventOptions,

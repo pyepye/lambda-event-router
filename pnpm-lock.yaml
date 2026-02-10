@@ -56,18 +56,12 @@ importers:
       '@lambda-event-router/alb':
         specifier: workspace:*
         version: link:../packages/alb
-      '@lambda-event-router/kafka':
-        specifier: workspace:*
-        version: link:../packages/kafka
       '@lambda-event-router/api':
         specifier: workspace:*
         version: link:../packages/api
       '@lambda-event-router/appsync':
         specifier: workspace:*
         version: link:../packages/appsync
-      '@lambda-event-router/config':
-        specifier: workspace:*
-        version: link:../packages/config
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../packages/base
@@ -86,6 +80,9 @@ importers:
       '@lambda-event-router/cognito':
         specifier: workspace:*
         version: link:../packages/cognito
+      '@lambda-event-router/config':
+        specifier: workspace:*
+        version: link:../packages/config
       '@lambda-event-router/connect':
         specifier: workspace:*
         version: link:../packages/connect
@@ -101,6 +98,9 @@ importers:
       '@lambda-event-router/iot':
         specifier: workspace:*
         version: link:../packages/iot
+      '@lambda-event-router/kafka':
+        specifier: workspace:*
+        version: link:../packages/kafka
       '@lambda-event-router/kinesis':
         specifier: workspace:*
         version: link:../packages/kinesis
@@ -167,31 +167,6 @@ importers:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
-  packages/kafka:
-    dependencies:
-      '@lambda-event-router/base':
-        specifier: workspace:*
-        version: link:../base
-    devDependencies:
-      '@lambda-event-router/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/aws-lambda':
-        specifier: 'catalog:'
-        version: 8.10.160
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.13
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
-      tsup:
-        specifier: 'catalog:'
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
-
   packages/api:
     dependencies:
       '@lambda-event-router/base':
@@ -218,31 +193,6 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/appsync:
-    dependencies:
-      '@lambda-event-router/base':
-        specifier: workspace:*
-        version: link:../base
-    devDependencies:
-      '@lambda-event-router/testing':
-        specifier: workspace:*
-        version: link:../testing
-      '@types/aws-lambda':
-        specifier: 'catalog:'
-        version: 8.10.160
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.13
-      '@vitest/coverage-v8':
-        specifier: 'catalog:'
-        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
-      tsup:
-        specifier: 'catalog:'
-        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
-      vitest:
-        specifier: 'catalog:'
-        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
-
-  packages/config:
     dependencies:
       '@lambda-event-router/base':
         specifier: workspace:*
@@ -413,6 +363,31 @@ importers:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
+  packages/config:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
+    devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
   packages/connect:
     dependencies:
       '@lambda-event-router/base':
@@ -517,6 +492,31 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/iot:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
+    devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
+  packages/kafka:
     dependencies:
       '@lambda-event-router/base':
         specifier: workspace:*
