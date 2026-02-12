@@ -134,116 +134,116 @@ suite('Response', () => {
   });
 
   suite('create', () => {
-    test('converts an HTTPResponse to an API Gateway result', async () => {
+    test('converts an HTTPResponse to a finalized response', () => {
       const response = new Response();
 
-      const result = await response.create(Response.Ok({ message: 'hello' }));
+      const result = response.create(Response.Ok({ message: 'hello' }));
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: JSON.stringify({ message: 'hello' }) }));
     });
 
-    test('returns a 204 with empty body for null', async () => {
+    test('returns a 204 with empty body for null', () => {
       const response = new Response();
 
-      const result = await response.create(null);
+      const result = response.create(null);
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
     });
 
-    test('returns a 204 with empty body for undefined', async () => {
+    test('returns a 204 with empty body for undefined', () => {
       const response = new Response();
 
-      const result = await response.create(undefined);
+      const result = response.create(undefined);
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
     });
 
-    test('returns a 204 for an empty string', async () => {
+    test('returns a 204 for an empty string', () => {
       const response = new Response();
 
-      const result = await response.create('');
+      const result = response.create('');
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
     });
 
-    test('returns a 204 for true', async () => {
+    test('returns a 204 for true', () => {
       const response = new Response();
 
-      const result = await response.create(true);
+      const result = response.create(true);
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
     });
 
-    test('returns a 204 for an empty object', async () => {
+    test('returns a 204 for an empty object', () => {
       const response = new Response();
 
-      const result = await response.create({});
+      const result = response.create({});
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
     });
 
-    test('wraps a non-HTTPResponse value in a 200', async () => {
+    test('wraps a non-HTTPResponse value in a 200', () => {
       const response = new Response();
 
-      const result = await response.create({ data: 'value' });
+      const result = response.create({ data: 'value' });
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: JSON.stringify({ data: 'value' }) }));
     });
 
-    test('converts a string body to a 200 response', async () => {
+    test('converts a string body to a 200 response', () => {
       const response = new Response();
 
-      const result = await response.create('hello');
+      const result = response.create('hello');
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: 'hello' }));
     });
 
-    test('converts a number body to a 200 response', async () => {
+    test('converts a number body to a 200 response', () => {
       const response = new Response();
 
-      const result = await response.create(42);
+      const result = response.create(42);
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: '42' }));
     });
 
-    test('preserves headers from the HTTPResponse', async () => {
+    test('preserves headers from the HTTPResponse', () => {
       const response = new Response();
 
-      const result = await response.create(Response.TemporaryRedirect('/new-location'));
+      const result = response.create(Response.TemporaryRedirect('/new-location'));
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 307, headers: { Location: '/new-location' } }));
     });
 
-    test('returns empty string for a function body', async () => {
+    test('returns empty string for a function body', () => {
       const response = new Response();
 
-      const result = await response.create(Response.Ok(() => {}));
+      const result = response.create(Response.Ok(() => {}));
 
       expect(result).toEqual(expect.objectContaining({ body: '' }));
     });
 
-    test('returns empty string for NaN body', async () => {
+    test('returns empty string for NaN body', () => {
       const response = new Response();
 
-      const result = await response.create(Response.Ok(Number.NaN));
+      const result = response.create(Response.Ok(Number.NaN));
 
       expect(result).toEqual(expect.objectContaining({ body: '' }));
     });
 
-    test('converts a boolean body to its string representation', async () => {
+    test('converts a boolean body to its string representation', () => {
       const response = new Response();
 
-      const result = await response.create(Response.Ok(false));
+      const result = response.create(Response.Ok(false));
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: 'false' }));
     });
 
-    test('falls back to String() for a body with circular references', async () => {
+    test('falls back to String() for a body with circular references', () => {
       const response = new Response();
       const circular: Record<string, unknown> = {};
       circular.self = circular;
 
-      const result = await response.create(Response.Ok(circular));
+      const result = response.create(Response.Ok(circular));
 
       expect(result).toEqual(expect.objectContaining({ body: String(circular) }));
     });
@@ -257,10 +257,10 @@ suite('Response', () => {
       { method: 'badRequest' as const, statusCode: 400, defaultError: 'Bad request' },
       { method: 'unprocessableContent' as const, statusCode: 422, defaultError: 'Unprocessable content' },
       { method: 'internalServerError' as const, statusCode: 500, defaultError: 'Internal server error' },
-    ])('$method returns $statusCode with the default error message', async ({ method, statusCode, defaultError }) => {
+    ])('$method returns $statusCode with the default error message', ({ method, statusCode, defaultError }) => {
       const response = new Response();
 
-      const result = await response[method]();
+      const result = response[method]();
 
       expect(result).toEqual(expect.objectContaining({ statusCode, body: JSON.stringify({ error: defaultError }) }));
     });
@@ -272,10 +272,10 @@ suite('Response', () => {
       { method: 'badRequest' as const, statusCode: 400, customMessage: 'missing name' },
       { method: 'unprocessableContent' as const, statusCode: 422, customMessage: 'invalid email' },
       { method: 'internalServerError' as const, statusCode: 500, customMessage: 'db connection failed' },
-    ])('$method returns $statusCode with a custom message', async ({ method, statusCode, customMessage }) => {
+    ])('$method returns $statusCode with a custom message', ({ method, statusCode, customMessage }) => {
       const response = new Response();
 
-      const result = await response[method](customMessage);
+      const result = response[method](customMessage);
 
       expect(result).toEqual(expect.objectContaining({ statusCode, body: JSON.stringify({ error: customMessage }) }));
     });

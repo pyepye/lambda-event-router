@@ -1,17 +1,7 @@
-// import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from "aws-lambda";
-import type { APIGatewayProxyResultV2 } from 'aws-lambda';
 import { HTTP_STATUS_CODES } from './constants.js';
-import type { HTTPResponse } from './types.js';
+import type { FinalizedHTTPResponse, HTTPResponse } from './types.js';
 
 export class Response {
-  // private event: APIGatewayProxyEventV2 | undefined;
-  // private context: Context | undefined;
-
-  // setRequestContext(event: APIGatewayProxyEventV2, context: Context): void {
-  //   this.event = event;
-  //   this.context = context;
-  // }
-
   // Static factory methods for creating raw response objects (body not yet stringified)
   static BadRequest(): HTTPResponse<{ error: string }>;
   static BadRequest<T>(body: T): HTTPResponse<T>;
@@ -126,8 +116,8 @@ export class Response {
     return typeof response.statusCode === 'number';
   }
 
-  // Instance methods for building complete API Gateway responses
-  async create(response: unknown): Promise<APIGatewayProxyResultV2> {
+  // Instance methods for building finalized responses (body stringified)
+  create(response: unknown): FinalizedHTTPResponse {
     const validResponse = Response.buildHTTPResponse(response);
     return {
       statusCode: validResponse.statusCode,
@@ -136,32 +126,32 @@ export class Response {
     };
   }
 
-  async unauthorised(message?: string): Promise<APIGatewayProxyResultV2> {
+  unauthorised(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.Unauthorised(body));
   }
 
-  async forbidden(message?: string): Promise<APIGatewayProxyResultV2> {
+  forbidden(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.Forbidden(body));
   }
 
-  async notFound(message?: string): Promise<APIGatewayProxyResultV2> {
+  notFound(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.NotFound(body));
   }
 
-  async badRequest(message?: string): Promise<APIGatewayProxyResultV2> {
+  badRequest(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.BadRequest(body));
   }
 
-  async unprocessableContent(message?: string): Promise<APIGatewayProxyResultV2> {
+  unprocessableContent(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.UnprocessableContent(body));
   }
 
-  async internalServerError(message?: string): Promise<APIGatewayProxyResultV2> {
+  internalServerError(message?: string): FinalizedHTTPResponse {
     const body = message ? { error: message } : undefined;
     return this.create(Response.InternalServerError(body));
   }

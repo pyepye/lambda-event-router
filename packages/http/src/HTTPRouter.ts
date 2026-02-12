@@ -1,6 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
-import type { APIGatewayProxyEventV2, APIGatewayProxyResultV2, Context } from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';
@@ -8,6 +7,7 @@ import type {
   AnyHttpMethod,
   ApiRequest,
   ApiResponse,
+  HTTPAdapter,
   InferSchema,
   PathParams,
   RouteDefinition,
@@ -61,9 +61,11 @@ export function defineRoute<
   };
 }
 
-export abstract class HTTPRouter implements EventTypeRouter<APIGatewayProxyEventV2, APIGatewayProxyResultV2> {
+export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
   private router = new PathRouter();
   private response = new Response();
+
+  constructor(private adapter: HTTPAdapter<TEvent, TResult>) {}
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
@@ -101,42 +103,37 @@ export abstract class HTTPRouter implements EventTypeRouter<APIGatewayProxyEvent
     return this;
   };
 
-  canHandleEvent(event: unknown): event is APIGatewayProxyEventV2 {
-    if (!isObject(event)) return false;
-
-    // Check for required V2 properties
-    if (typeof event.rawPath !== 'string') return false;
-    if (!isObject(event.requestContext)) return false;
-    if (!isObject(event.requestContext.http)) return false;
-    if (typeof event.requestContext.http.method !== 'string') return false;
-
-    return true;
+  canHandleEvent(event: unknown): event is TEvent {
+    return this.adapter.canHandleEvent(event);
   }
 
-  async handleEvent(event: APIGatewayProxyEventV2, context: Context): Promise<APIGatewayProxyResultV2> {
-    const method = event.requestContext.http.method;
-    const path = event.rawPath;
+  async handleEvent(event: TEvent, context: Context): Promise<TResult> {
+    const normalizedEvent = this.adapter.normalize(event);
+    const { method, path } = normalizedEvent;
 
     const routeData = this.router.match(method, path);
     if (!routeData) {
-      return this.response.notFound();
+      const notFoundResponse = this.response.notFound();
+      return this.adapter.buildResult(notFoundResponse, event);
     }
 
     const { route, params } = routeData;
-    const request = new Request(event, context, route, params);
+    const request = new Request(normalizedEvent, event, context, route, params);
 
     try {
       request.validate();
       const requestData = request.buildApiRequest();
       const handlerResponse = await route.handler(requestData);
-      return this.response.create(handlerResponse);
+      const finalizedResponse = this.response.create(handlerResponse);
+      return this.adapter.buildResult(finalizedResponse, event);
     } catch (error) {
-      // This allows HTTPErrors and HTTPRedirects to be thrown to help code flow
       if (Response.isHTTPResponse(error)) {
-        return this.response.create(error);
+        const finalizedResponse = this.response.create(error);
+        return this.adapter.buildResult(finalizedResponse, event);
       }
       const errorMessage = error instanceof Error ? error.message : undefined;
-      return this.response.internalServerError(errorMessage);
+      const errorResponse = this.response.internalServerError(errorMessage);
+      return this.adapter.buildResult(errorResponse, event);
     }
   }
 }
