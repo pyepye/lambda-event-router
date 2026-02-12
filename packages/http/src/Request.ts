@@ -1,20 +1,41 @@
-import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import type {
+  APIGatewayEventRequestContextIAMAuthorizer,
+  APIGatewayEventRequestContextJWTAuthorizer,
+  APIGatewayEventRequestContextLambdaAuthorizer,
+  Context,
+} from 'aws-lambda';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
-import type { ApiRequest, Schema } from './types.js';
+import type { APIGatewayV2EventType, ApiRequest, Schema } from './types.js';
 
 type ValidationResult<T> = { success: true; data: T } | { success: false; error: unknown };
+
+type AuthorizerContext =
+  | APIGatewayEventRequestContextJWTAuthorizer
+  | APIGatewayEventRequestContextIAMAuthorizer
+  | APIGatewayEventRequestContextLambdaAuthorizer<unknown>;
+
+function isJWTAuthorizer(authorizer: AuthorizerContext): authorizer is APIGatewayEventRequestContextJWTAuthorizer {
+  return 'jwt' in authorizer;
+}
+
+function isIAMAuthorizer(authorizer: AuthorizerContext): authorizer is APIGatewayEventRequestContextIAMAuthorizer {
+  return 'iam' in authorizer;
+}
 
 export class Request {
   readonly headers: Record<string, string | undefined>;
   readonly method: string;
   readonly path: string;
 
+  private _auth: Record<string, unknown> | undefined;
+  private _authParsed = false;
+
   private _body: unknown;
   private _bodyParsed = false;
 
   constructor(
-    readonly event: APIGatewayProxyEventV2,
+    readonly event: APIGatewayV2EventType,
     readonly context: Context,
     readonly route: InternalRoute,
     readonly pathParams: Record<string, string>,
@@ -32,6 +53,14 @@ export class Request {
     return this._body;
   }
 
+  get auth(): ApiRequest['auth'] {
+    if (!this._authParsed) {
+      this._auth = this.parseAuth();
+      this._authParsed = true;
+    }
+    return this._auth;
+  }
+
   private parseBody(): unknown {
     const { body, isBase64Encoded } = this.event;
 
@@ -44,6 +73,28 @@ export class Request {
     } catch {
       return decoded;
     }
+  }
+
+  private parseAuth(): ApiRequest['auth'] {
+    const { requestContext } = this.event;
+    if (!('requestContext' in this.event)) {
+      return;
+    }
+    if ('authentication' in requestContext && requestContext.authentication) {
+      return { clientCert: requestContext.authentication.clientCert };
+    }
+    if ('authorizer' in requestContext && requestContext.authorizer) {
+      const { authorizer } = requestContext;
+
+      if (isJWTAuthorizer(authorizer)) {
+        return authorizer.jwt;
+      }
+      if (isIAMAuthorizer(authorizer)) {
+        return authorizer.iam;
+      }
+      return { ...requestContext.authorizer };
+    }
+    return;
   }
 
   get queryParams(): Record<string, string | undefined> {
@@ -71,6 +122,7 @@ export class Request {
     return {
       path: this.pathParams,
       query: this.queryParams,
+      auth: this.auth,
       body: this.body,
       headers: this.headers,
       event: this.event,

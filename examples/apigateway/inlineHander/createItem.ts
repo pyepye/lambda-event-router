@@ -1,4 +1,4 @@
-import { BadRequest, defineRoute } from '@lambda-event-router/apigateway';
+import { BadRequest, defineRoute, Unauthorised } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 const QuerySchema = z.object({
@@ -28,7 +28,10 @@ export const createItemRoute = defineRoute({
   const { orgId, itemId } = request.path;
   const { dryRun } = request.query;
   const { name, price } = request.body;
-
+  const { auth } = request;
+  if (!auth) {
+    throw Unauthorised();
+  }
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun },

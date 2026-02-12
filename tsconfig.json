@@ -25,7 +25,7 @@
     { "path": "./packages/lex" },
     { "path": "./packages/mq" },
     { "path": "./packages/kafka" },
-    { "path": "./packages/api" },
+    { "path": "./packages/apigateway" },
     { "path": "./packages/appsync" },
     { "path": "./packages/config" },
     { "path": "./packages/cloudformation" },

@@ -1,5 +1,11 @@
 import type { InferSchema, Schema } from '@lambda-event-router/base';
-import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import type {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyEventV2WithIAMAuthorizer,
+  APIGatewayProxyEventV2WithJWTAuthorizer,
+  APIGatewayProxyEventV2WithLambdaAuthorizer,
+  Context,
+} from 'aws-lambda';
 
 // HTTP method types - more restrictive than aws-lambda's string for better type safety
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -19,6 +25,12 @@ export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { 
 
 export type { InferSchema, Schema };
 
+export type APIGatewayV2EventType =
+  | APIGatewayProxyEventV2
+  | APIGatewayProxyEventV2WithJWTAuthorizer
+  | APIGatewayProxyEventV2WithIAMAuthorizer
+  | APIGatewayProxyEventV2WithLambdaAuthorizer<unknown>;
+
 export interface ApiRequest<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
@@ -27,8 +39,9 @@ export interface ApiRequest<
   path: TPath;
   query: TQuery;
   body: TBody;
+  auth: Record<string, unknown> | undefined;
   headers: APIGatewayProxyEventV2['headers'];
-  event: APIGatewayProxyEventV2;
+  event: APIGatewayV2EventType;
   context: Context;
 }
 
