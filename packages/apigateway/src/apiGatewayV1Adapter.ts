@@ -30,7 +30,7 @@ function isLambdaAuthorizer(
   return isObject(authorizer) && 'principalId' in authorizer;
 }
 
-function flattenHeaders(event: APIGatewayV1EventType): Record<string, string | undefined> {
+function flattenHeaders(event: APIGatewayV1EventType): NormalizedHTTPEvent['headers'] {
   const headers: Record<string, string | undefined> = {};
 
   if (event.headers) {
@@ -41,6 +41,7 @@ function flattenHeaders(event: APIGatewayV1EventType): Record<string, string | u
 
   if (event.multiValueHeaders) {
     // TODO: This is not how we should handle this, should we have multiValueHeaders as another property?
+    // TODO: Should probably use flattenArrayValues if moved to http
     for (const [key, values] of Object.entries(event.multiValueHeaders)) {
       if (values && values.length > 0) {
         const lastValue = values[values.length - 1];
@@ -54,21 +55,24 @@ function flattenHeaders(event: APIGatewayV1EventType): Record<string, string | u
 
 function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
   const { requestContext } = event;
-
-  if (
-    requestContext.identity?.cognitoAuthenticationType === 'authenticated' &&
-    requestContext.identity.cognitoIdentityId
-  ) {
-    return {
-      iam: {
-        cognitoIdentityId: requestContext.identity.cognitoIdentityId,
-        cognitoIdentityPoolId: requestContext.identity.cognitoIdentityPoolId,
-        accountId: requestContext.identity.accountId,
-        caller: requestContext.identity.caller,
-        sourceIp: requestContext.identity.sourceIp,
-        userArn: requestContext.identity.userArn,
-      },
-    };
+  if (requestContext.identity) {
+    const { identity } = requestContext;
+    // TODO: Needs tests
+    if (identity.apiKey) {
+      return { apiKey: identity.apiKey, apiKeyId: identity.apiKeyId ?? undefined };
+    }
+    if (identity.cognitoAuthenticationType === 'authenticated' && identity.cognitoIdentityId) {
+      return {
+        iam: {
+          cognitoIdentityId: identity.cognitoIdentityId,
+          cognitoIdentityPoolId: identity.cognitoIdentityPoolId,
+          accountId: identity.accountId,
+          caller: identity.caller,
+          sourceIp: identity.sourceIp,
+          userArn: identity.userArn,
+        },
+      };
+    }
   }
 
   if (requestContext.authorizer) {
@@ -95,11 +99,14 @@ function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
 export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayProxyResult> = {
   canHandleEvent(event: unknown): event is APIGatewayV1EventType {
     if (!isObject(event)) return false;
-    if (typeof event.httpMethod !== 'string') return false;
-    if (typeof event.path !== 'string') return false;
+    if (typeof event.path !== 'string') return false; // Guard against VPCLatticeV1, APIGatewayV2
+    if (typeof event.httpMethod !== 'string') return false; // Guard against VPCLatticeV1, VPCLatticeV2
+    if ('rawPath' in event) return false; // Guard against APIGatewayV2
     if (!isObject(event.requestContext)) return false;
-    // V1 events do NOT have rawPath — distinguish from V2
-    if ('rawPath' in event) return false;
+    if (isObject(event.requestContext.elb)) return false; // Guard against ALBEvent
+    // event.httpMethod will guards against VPCLatticeV1, VPCLatticeV2
+    // event.path guards against APIGatewayV2
+    // event.requestContext.elb guards against ALBEvent
     return true;
   },
 
@@ -110,7 +117,6 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
       headers: flattenHeaders(event),
       query: event.queryStringParameters ?? {},
       body: event.body ?? undefined,
-      // TODO: Lets remove this. We should just decode if we can so the end user does not need to care
       isBase64Encoded: event.isBase64Encoded,
       auth: extractV1Auth(event),
     };

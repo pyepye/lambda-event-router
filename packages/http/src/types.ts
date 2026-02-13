@@ -1,5 +1,5 @@
 import type { InferSchema, Schema } from '@lambda-event-router/base';
-import type { Context } from 'aws-lambda';
+import type { ALBEvent, Context } from 'aws-lambda';
 
 // HTTP method types - more restrictive than aws-lambda's string for better type safety
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -19,6 +19,8 @@ export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { 
 
 export type { InferSchema, Schema };
 
+// TODO: Does this need to be more dynamic based on the type?
+//       If not these types should all come from the actual interfaces like targetGroupArn
 export interface Auth {
   claims?: Record<string, unknown>;
   scopes?: string[];
@@ -26,6 +28,9 @@ export interface Auth {
   context?: Record<string, unknown>;
   clientCert?: Record<string, unknown>;
   iam?: Record<string, unknown>;
+  apiKey?: string;
+  apiKeyId?: string;
+  targetGroupArn?: ALBEvent['requestContext']['elb']['targetGroupArn'];
 }
 
 export interface NormalizedHTTPEvent {

@@ -48,7 +48,6 @@ function extractV2Auth(event: APIGatewayV2EventType): Auth | undefined {
     }
     return { context: { ...authorizer } };
   }
-
   return undefined;
 }
 
@@ -59,6 +58,7 @@ export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayP
     if (!isObject(event.requestContext)) return false;
     if (!isObject(event.requestContext.http)) return false;
     if (typeof event.requestContext.http.method !== 'string') return false;
+    // event.rawPath guards against ALBEvent, VPCLatticeV1, VPCLatticeV2, APIGatewayV1
     return true;
   },
 

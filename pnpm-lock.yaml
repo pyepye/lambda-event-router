@@ -821,6 +821,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@lambda-event-router/http':
+        specifier: workspace:*
+        version: link:../http
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*

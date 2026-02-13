@@ -20,8 +20,8 @@
     "build": "tsc -p tsconfig.build.json --noEmit && tsup",
     "dev": "tsup --watch",
     "test": "tsc --noEmit && vitest run",
-    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
     "clean": "rm -rf dist"
@@ -29,18 +29,20 @@
   "keywords": [
     "aws",
     "lambda",
+    "vpc-lattice",
     "serverless"
   ],
   "license": "UNLICENSED",
-  "peerDependencies": {
-    "@lambda-event-router/base": "workspace:*"
+  "dependencies": {
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/http": "workspace:*"
   },
   "devDependencies": {
     "@lambda-event-router/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
-    "@vitest/coverage-v8": "catalog:",
     "tsup": "catalog:",
+    "@vitest/coverage-v8": "catalog:",
     "vitest": "catalog:"
   }
 }
