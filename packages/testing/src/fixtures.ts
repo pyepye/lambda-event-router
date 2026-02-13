@@ -1,4 +1,5 @@
 import type {
+  APIGatewayProxyEvent,
   APIGatewayProxyEventV2,
   CloudWatchLogsEvent,
   ConnectContactFlowEvent,
@@ -27,6 +28,12 @@ import type {
   CreateActiveMQHandlerEventOptions,
 } from './activeMQ.js';
 import { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
+import type {
+  ApiGatewayV1EventOverrides,
+  ApiGatewayV1HandlerEvent,
+  CreateApiGatewayV1HandlerEventOptions,
+} from './apiGatewayV1.js';
+import { createApiGatewayV1Event, createApiGatewayV1HandlerEvent } from './apiGatewayV1.js';
 import type {
   ApiGatewayV2EventOverrides,
   ApiGatewayV2HandlerEvent,
@@ -207,6 +214,8 @@ export interface TestFixtures {
   activeMQMessage: (overrides?: ActiveMQMessageOverrides) => ActiveMQMessage;
   activeMQEvent: (messages?: ActiveMQMessage[]) => ActiveMQEvent;
   activeMQHandlerEvent: (options?: CreateActiveMQHandlerEventOptions) => ActiveMQHandlerEvent;
+  apiGatewayV1Event: (overrides?: ApiGatewayV1EventOverrides) => APIGatewayProxyEvent;
+  apiGatewayV1HandlerEvent: (options?: CreateApiGatewayV1HandlerEventOptions) => ApiGatewayV1HandlerEvent;
   apiGatewayV2Event: (overrides?: ApiGatewayV2EventOverrides) => APIGatewayProxyEventV2;
   apiGatewayV2HandlerEvent: (options?: CreateApiGatewayV2HandlerEventOptions) => ApiGatewayV2HandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
@@ -284,6 +293,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   activeMQMessage: fixture(createActiveMQMessage),
   activeMQEvent: fixture(createActiveMQEvent),
   activeMQHandlerEvent: fixture(createActiveMQHandlerEvent),
+  apiGatewayV1Event: fixture(createApiGatewayV1Event),
+  apiGatewayV1HandlerEvent: fixture(createApiGatewayV1HandlerEvent),
   apiGatewayV2Event: fixture(createApiGatewayV2Event),
   apiGatewayV2HandlerEvent: fixture(createApiGatewayV2HandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),

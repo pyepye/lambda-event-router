@@ -1,8 +1,36 @@
 import { isObject } from '@lambda-event-router/base';
 import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
-import type { APIGatewayProxyEvent, APIGatewayProxyResult } from 'aws-lambda';
+import type {
+  APIGatewayEventDefaultAuthorizerContext,
+  APIGatewayEventLambdaAuthorizerContext,
+  APIGatewayProxyCognitoAuthorizer,
+  APIGatewayProxyEvent,
+  APIGatewayProxyResult,
+  APIGatewayProxyWithCognitoAuthorizerEvent,
+  APIGatewayProxyWithLambdaAuthorizerEvent,
+} from 'aws-lambda';
 
-function flattenHeaders(event: APIGatewayProxyEvent): Record<string, string | undefined> {
+export type APIGatewayV1EventType =
+  | APIGatewayProxyEvent
+  | APIGatewayProxyWithCognitoAuthorizerEvent
+  | APIGatewayProxyWithLambdaAuthorizerEvent<unknown>;
+
+type V1AuthorizerContext =
+  | APIGatewayEventDefaultAuthorizerContext
+  | APIGatewayProxyCognitoAuthorizer
+  | APIGatewayEventLambdaAuthorizerContext<unknown>;
+
+function isCognitoAuthorizer(authorizer: V1AuthorizerContext): authorizer is APIGatewayProxyCognitoAuthorizer {
+  return isObject(authorizer) && 'claims' in authorizer;
+}
+
+function isLambdaAuthorizer(
+  authorizer: V1AuthorizerContext,
+): authorizer is APIGatewayEventLambdaAuthorizerContext<unknown> {
+  return isObject(authorizer) && 'principalId' in authorizer;
+}
+
+function flattenHeaders(event: APIGatewayV1EventType): Record<string, string | undefined> {
   const headers: Record<string, string | undefined> = {};
 
   if (event.headers) {
@@ -24,8 +52,7 @@ function flattenHeaders(event: APIGatewayProxyEvent): Record<string, string | un
   return headers;
 }
 
-// TODO: Use correct event event types here not just the single APIGatewayProxyEvent
-function extractV1Auth(event: APIGatewayProxyEvent): Auth | undefined {
+function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
   const { requestContext } = event;
 
   if (
@@ -47,45 +74,41 @@ function extractV1Auth(event: APIGatewayProxyEvent): Auth | undefined {
   if (requestContext.authorizer) {
     const { authorizer } = requestContext;
 
-    // Cognito User Pool authorizer — claims are nested under authorizer.claims
-    if ('claims' in authorizer && authorizer.claims) {
-      return { claims: authorizer.claims as Record<string, unknown> };
+    if (isCognitoAuthorizer(authorizer)) {
+      return { claims: authorizer.claims };
     }
 
-    // Lambda authorizer — principalId + context
-    if ('principalId' in authorizer) {
-      const { principalId, ...context } = authorizer;
+    if (isLambdaAuthorizer(authorizer)) {
+      const { principalId, integrationLatency, ...context } = authorizer;
       return {
-        principalId: principalId as string,
-        context: context as Record<string, unknown>,
+        principalId,
+        context,
       };
     }
 
-    return { context: authorizer as Record<string, unknown> };
+    return { context: authorizer };
   }
 
   return undefined;
 }
 
-export function canHandleV1Event(event: unknown): event is APIGatewayProxyEvent {
-  if (!isObject(event)) return false;
-  if (typeof event.httpMethod !== 'string') return false;
-  if (typeof event.path !== 'string') return false;
-  if (!isObject(event.requestContext)) return false;
-  // V1 events do NOT have rawPath — distinguish from V2
-  if ('rawPath' in event) return false;
-  return true;
-}
+export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayProxyResult> = {
+  canHandleEvent(event: unknown): event is APIGatewayV1EventType {
+    if (!isObject(event)) return false;
+    if (typeof event.httpMethod !== 'string') return false;
+    if (typeof event.path !== 'string') return false;
+    if (!isObject(event.requestContext)) return false;
+    // V1 events do NOT have rawPath — distinguish from V2
+    if ('rawPath' in event) return false;
+    return true;
+  },
 
-export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayProxyEvent, APIGatewayProxyResult> = {
-  canHandleEvent: canHandleV1Event,
-
-  normalize(event: APIGatewayProxyEvent): NormalizedHTTPEvent {
+  normalize(event: APIGatewayV1EventType): NormalizedHTTPEvent {
     return {
       method: event.httpMethod,
       path: event.path,
       headers: flattenHeaders(event),
-      query: (event.queryStringParameters ?? {}) as Record<string, string | undefined>,
+      query: event.queryStringParameters ?? {},
       body: event.body ?? undefined,
       // TODO: Lets remove this. We should just decode if we can so the end user does not need to care
       isBase64Encoded: event.isBase64Encoded,

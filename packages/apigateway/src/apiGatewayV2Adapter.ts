@@ -52,17 +52,15 @@ function extractV2Auth(event: APIGatewayV2EventType): Auth | undefined {
   return undefined;
 }
 
-export function canHandleV2Event(event: unknown): event is APIGatewayV2EventType {
-  if (!isObject(event)) return false;
-  if (typeof event.rawPath !== 'string') return false;
-  if (!isObject(event.requestContext)) return false;
-  if (!isObject(event.requestContext.http)) return false;
-  if (typeof event.requestContext.http.method !== 'string') return false;
-  return true;
-}
-
 export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayProxyResultV2> = {
-  canHandleEvent: canHandleV2Event,
+  canHandleEvent(event: unknown): event is APIGatewayV2EventType {
+    if (!isObject(event)) return false;
+    if (typeof event.rawPath !== 'string') return false;
+    if (!isObject(event.requestContext)) return false;
+    if (!isObject(event.requestContext.http)) return false;
+    if (typeof event.requestContext.http.method !== 'string') return false;
+    return true;
+  },
 
   normalize(event: APIGatewayV2EventType): NormalizedHTTPEvent {
     return {

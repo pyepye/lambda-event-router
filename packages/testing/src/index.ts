@@ -7,6 +7,12 @@ export type {
 } from './activeMQ.js';
 export { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
 export type {
+  ApiGatewayV1EventOverrides,
+  ApiGatewayV1HandlerEvent,
+  CreateApiGatewayV1HandlerEventOptions,
+} from './apiGatewayV1.js';
+export { createApiGatewayV1Event, createApiGatewayV1HandlerEvent } from './apiGatewayV1.js';
+export type {
   ApiGatewayV2EventOverrides,
   ApiGatewayV2HandlerEvent,
   CreateApiGatewayV2HandlerEventOptions,

@@ -1,9 +1,9 @@
 import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
-import type { APIGatewayProxyEvent, APIGatewayProxyResult, APIGatewayProxyResultV2 } from 'aws-lambda';
-import { apiGatewayV1Adapter, canHandleV1Event } from './apiGatewayV1Adapter.js';
-import { type APIGatewayV2EventType, apiGatewayV2Adapter, canHandleV2Event } from './apiGatewayV2Adapter.js';
+import type { APIGatewayProxyResult, APIGatewayProxyResultV2 } from 'aws-lambda';
+import { type APIGatewayV1EventType, apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
+import { type APIGatewayV2EventType, apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
 
-export type APIGatewayEvent = APIGatewayV2EventType | APIGatewayProxyEvent;
+export type APIGatewayEvent = APIGatewayV2EventType | APIGatewayV1EventType;
 export type APIGatewayResult = APIGatewayProxyResultV2 | APIGatewayProxyResult;
 
 function isV2Event(event: APIGatewayEvent): event is APIGatewayV2EventType {
@@ -12,7 +12,7 @@ function isV2Event(event: APIGatewayEvent): event is APIGatewayV2EventType {
 
 export const apiGatewayAdapter: HTTPAdapter<APIGatewayEvent, APIGatewayResult> = {
   canHandleEvent(event: unknown): event is APIGatewayEvent {
-    return canHandleV2Event(event) || canHandleV1Event(event);
+    return apiGatewayV2Adapter.canHandleEvent(event) || apiGatewayV1Adapter.canHandleEvent(event);
   },
 
   normalize(event: APIGatewayEvent): NormalizedHTTPEvent {
