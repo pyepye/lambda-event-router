@@ -163,3 +163,17 @@ export type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides 
 export { createSNSEvent, createSNSHandlerEvent, createSNSRecord } from './sns.js';
 export type { CreateSQSHandlerEventOptions, SQSHandlerEvent, SQSRecordOverrides } from './sqs.js';
 export { createSQSEvent, createSQSHandlerEvent, createSQSRecord } from './sqs.js';
+export type {
+  CreateVPCLatticeV1HandlerEventOptions,
+  CreateVPCLatticeV2HandlerEventOptions,
+  VPCLatticeV1EventOverrides,
+  VPCLatticeV1HandlerEvent,
+  VPCLatticeV2EventOverrides,
+  VPCLatticeV2HandlerEvent,
+} from './vpcLattice.js';
+export {
+  createVPCLatticeV1Event,
+  createVPCLatticeV1HandlerEvent,
+  createVPCLatticeV2Event,
+  createVPCLatticeV2HandlerEvent,
+} from './vpcLattice.js';

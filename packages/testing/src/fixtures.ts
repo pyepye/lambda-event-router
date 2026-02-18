@@ -158,6 +158,20 @@ import type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides 
 import { createSNSEvent, createSNSHandlerEvent, createSNSRecord } from './sns.js';
 import type { CreateSQSHandlerEventOptions, SQSHandlerEvent, SQSRecordOverrides } from './sqs.js';
 import { createSQSEvent, createSQSHandlerEvent, createSQSRecord } from './sqs.js';
+import type {
+  CreateVPCLatticeV1HandlerEventOptions,
+  CreateVPCLatticeV2HandlerEventOptions,
+  VPCLatticeV1EventOverrides,
+  VPCLatticeV1HandlerEvent,
+  VPCLatticeV2EventOverrides,
+  VPCLatticeV2HandlerEvent,
+} from './vpcLattice.js';
+import {
+  createVPCLatticeV1Event,
+  createVPCLatticeV1HandlerEvent,
+  createVPCLatticeV2Event,
+  createVPCLatticeV2HandlerEvent,
+} from './vpcLattice.js';
 
 function fixture<T>(creator: T) {
   return async ({ task }: { task: unknown }, use: (value: T) => Promise<void>): Promise<void> => {
@@ -248,6 +262,10 @@ export interface TestFixtures {
   rabbitMQMessage: (overrides?: RabbitMQMessageOverrides) => RabbitMQMessage;
   rabbitMQEvent: (messagesByQueue?: Record<string, RabbitMQMessage[]>) => RabbitMQEvent;
   rabbitMQHandlerEvent: (options?: CreateRabbitMQHandlerEventOptions) => RabbitMQHandlerEvent;
+  vpcLatticeV1Event: (overrides?: VPCLatticeV1EventOverrides) => ReturnType<typeof createVPCLatticeV1Event>;
+  vpcLatticeV1HandlerEvent: (options?: CreateVPCLatticeV1HandlerEventOptions) => VPCLatticeV1HandlerEvent;
+  vpcLatticeV2Event: (overrides?: VPCLatticeV2EventOverrides) => ReturnType<typeof createVPCLatticeV2Event>;
+  vpcLatticeV2HandlerEvent: (options?: CreateVPCLatticeV2HandlerEventOptions) => VPCLatticeV2HandlerEvent;
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
@@ -329,4 +347,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   rabbitMQMessage: fixture(createRabbitMQMessage),
   rabbitMQEvent: fixture(createRabbitMQEvent),
   rabbitMQHandlerEvent: fixture(createRabbitMQHandlerEvent),
+  vpcLatticeV1Event: fixture(createVPCLatticeV1Event),
+  vpcLatticeV1HandlerEvent: fixture(createVPCLatticeV1HandlerEvent),
+  vpcLatticeV2Event: fixture(createVPCLatticeV2Event),
+  vpcLatticeV2HandlerEvent: fixture(createVPCLatticeV2HandlerEvent),
 });
