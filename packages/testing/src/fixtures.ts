@@ -1,4 +1,5 @@
 import type {
+  ALBEvent,
   APIGatewayProxyEvent,
   APIGatewayProxyEventV2,
   CloudWatchLogsEvent,
@@ -28,6 +29,8 @@ import type {
   CreateActiveMQHandlerEventOptions,
 } from './activeMQ.js';
 import { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
+import type { ALBEventOverrides, ALBHandlerEvent, CreateALBHandlerEventOptions } from './alb.js';
+import { createALBEvent, createALBHandlerEvent } from './alb.js';
 import type {
   ApiGatewayV1EventOverrides,
   ApiGatewayV1HandlerEvent,
@@ -218,6 +221,8 @@ export interface TestFixtures {
   apiGatewayV1HandlerEvent: (options?: CreateApiGatewayV1HandlerEventOptions) => ApiGatewayV1HandlerEvent;
   apiGatewayV2Event: (overrides?: ApiGatewayV2EventOverrides) => APIGatewayProxyEventV2;
   apiGatewayV2HandlerEvent: (options?: CreateApiGatewayV2HandlerEventOptions) => ApiGatewayV2HandlerEvent;
+  albEvent: (overrides?: ALBEventOverrides) => ALBEvent;
+  albHandlerEvent: (options?: CreateALBHandlerEventOptions) => ALBHandlerEvent;
   cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
   cognitoPreSignUpHandlerEvent: typeof createCognitoPreSignUpHandlerEvent;
   cognitoPreAuthenticationEvent: typeof createCognitoPreAuthenticationEvent;
@@ -297,6 +302,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   apiGatewayV1HandlerEvent: fixture(createApiGatewayV1HandlerEvent),
   apiGatewayV2Event: fixture(createApiGatewayV2Event),
   apiGatewayV2HandlerEvent: fixture(createApiGatewayV2HandlerEvent),
+  albEvent: fixture(createALBEvent),
+  albHandlerEvent: fixture(createALBHandlerEvent),
   cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),
   cognitoPreSignUpHandlerEvent: fixture(createCognitoPreSignUpHandlerEvent),
   cognitoPreAuthenticationEvent: fixture(createCognitoPreAuthenticationEvent),

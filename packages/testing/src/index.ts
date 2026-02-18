@@ -6,6 +6,8 @@ export type {
   CreateActiveMQHandlerEventOptions,
 } from './activeMQ.js';
 export { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
+export type { ALBEventOverrides, ALBHandlerEvent, CreateALBHandlerEventOptions } from './alb.js';
+export { createALBEvent, createALBHandlerEvent } from './alb.js';
 export type {
   ApiGatewayV1EventOverrides,
   ApiGatewayV1HandlerEvent,
