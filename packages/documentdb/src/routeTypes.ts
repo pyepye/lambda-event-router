@@ -1,5 +1,6 @@
 import type { Schema } from '@lambda-event-router/base';
 import type {
+  DocumentDBEventEntry,
   DocumentDBFilterInput,
   DocumentDBFullDocumentBeforeChangeOption,
   DocumentDBFullDocumentOption,
@@ -26,6 +27,7 @@ export interface InternalRequest {
   updateDescription: DocumentDBUpdateDescription | undefined;
   fullDocumentBeforeChange: Record<string, unknown> | undefined;
   changeEvent: unknown;
+  entry: DocumentDBEventEntry;
   context: unknown;
 }
 

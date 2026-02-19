@@ -144,6 +144,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     const request: StepFunctionsTaskTokenRequest = {
       taskToken: TaskToken,
       input: validatedInput,
+      event,
     };
 
     return route.handler(request);

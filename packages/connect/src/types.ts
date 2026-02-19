@@ -1,4 +1,4 @@
-import type { ConnectContactFlowEvent, ConnectContactFlowResult } from 'aws-lambda';
+import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
 
 export type ConnectChannel = ConnectContactFlowEvent['Details']['ContactData']['Channel'];
 
@@ -7,6 +7,8 @@ export type ConnectInitiationMethod = ConnectContactFlowEvent['Details']['Contac
 export interface ConnectRequest {
   contactData: ConnectContactFlowEvent['Details']['ContactData'];
   parameters: ConnectContactFlowEvent['Details']['Parameters'];
+  event: ConnectContactFlowEvent;
+  context: Context;
 }
 
 export type ConnectResponse = ConnectContactFlowResult;

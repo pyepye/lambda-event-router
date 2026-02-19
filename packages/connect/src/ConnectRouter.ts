@@ -95,7 +95,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     });
   }
 
-  async handleEvent(event: ConnectContactFlowEvent, _context: Context): Promise<ConnectContactFlowResult> {
+  async handleEvent(event: ConnectContactFlowEvent, context: Context): Promise<ConnectContactFlowResult> {
     const { ContactData: contactData, Parameters: parameters } = event.Details;
 
     const route = this.matchRoute(event);
@@ -105,7 +105,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
       );
     }
 
-    const request: ConnectRequest = { contactData, parameters };
+    const request: ConnectRequest = { contactData, parameters, event, context };
 
     return route.handler(request);
   }

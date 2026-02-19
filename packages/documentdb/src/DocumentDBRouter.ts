@@ -165,6 +165,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       updateDescription: changeEvent.updateDescription,
       fullDocumentBeforeChange,
       changeEvent,
+      entry,
       context,
     };
 

@@ -1,10 +1,12 @@
-import type { SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
+import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
 // Change case for properties on SecretsManagerRotationEvent
 export interface SecretsManagerRequest {
   step: SecretsManagerRotationEvent['Step'];
   secretId: SecretsManagerRotationEvent['SecretId'];
   clientRequestToken: SecretsManagerRotationEvent['ClientRequestToken'];
+  event: SecretsManagerRotationEvent;
+  context: Context;
 }
 
 export type SecretsManagerResponse = undefined;

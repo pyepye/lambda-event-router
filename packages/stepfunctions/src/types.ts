@@ -14,6 +14,7 @@ export type StepFunctionsRequest<TInput = unknown> = TInput;
 export interface StepFunctionsTaskTokenRequest<TInput = unknown> {
   taskToken: string;
   input: TInput;
+  event: unknown;
 }
 
 export type StepFunctionsHandler<TInput = unknown> = (request: StepFunctionsRequest<TInput>) => Promise<unknown>;

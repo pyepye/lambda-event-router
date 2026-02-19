@@ -39,6 +39,7 @@ export interface DocumentDBEvent {
 interface DocumentDBRequestBase<TDocumentKey = Record<string, unknown>> {
   documentKey: TDocumentKey;
   changeEvent: DocumentDBChangeEvent;
+  entry: DocumentDBEventEntry;
   context: Context;
 }
 

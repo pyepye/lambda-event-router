@@ -77,11 +77,11 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     });
   }
 
-  async handleEvent(event: SecretsManagerRotationEvent, _context: Context): Promise<undefined> {
+  async handleEvent(event: SecretsManagerRotationEvent, context: Context): Promise<undefined> {
     const secretId = event.SecretId;
     const clientRequestToken = event.ClientRequestToken;
     const step = event.Step;
-    const request: SecretsManagerRequest = { secretId, clientRequestToken, step };
+    const request: SecretsManagerRequest = { secretId, clientRequestToken, step, event, context };
 
     const route = this.matchRoute(request);
     if (!route) {

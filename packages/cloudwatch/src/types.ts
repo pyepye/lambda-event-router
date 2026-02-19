@@ -1,8 +1,9 @@
-import type { CloudWatchLogsDecodedData, Context } from 'aws-lambda';
+import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
 
 export type CloudWatchLogsMessageType = 'DATA_MESSAGE' | 'CONTROL_MESSAGE';
 
 export interface CloudWatchLogsRequest extends CloudWatchLogsDecodedData {
+  event: CloudWatchLogsEvent;
   context: Context;
 }
 
