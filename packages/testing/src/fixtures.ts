@@ -21,6 +21,7 @@ import type {
   SQSRecord,
 } from 'aws-lambda';
 import { test as viTest } from 'vitest';
+import type { CodePipelineEvent } from 'aws-lambda';
 import type {
   ActiveMQEvent,
   ActiveMQHandlerEvent,
@@ -88,6 +89,12 @@ import {
   createCognitoVerifyAuthChallengeResponseEvent,
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
+import type {
+  CodePipelineEventOverrides,
+  CodePipelineHandlerEvent,
+  CreateCodePipelineHandlerEventOptions,
+} from './codepipeline.js';
+import { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
 import type { ConnectEventOverrides, ConnectHandlerEvent, CreateConnectHandlerEventOptions } from './connect.js';
 import { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 import { createMockContext } from './context.js';
@@ -222,6 +229,8 @@ export interface TestFixtures {
     entries?: ReturnType<typeof createDocumentDBInsertEntry>[],
   ) => ReturnType<typeof createDocumentDBEvent>;
   documentDBHandlerEvent: (options?: CreateDocumentDBHandlerEventOptions) => DocumentDBHandlerEvent;
+  codePipelineEvent: (overrides?: CodePipelineEventOverrides) => CodePipelineEvent;
+  codePipelineHandlerEvent: (options?: CreateCodePipelineHandlerEventOptions) => CodePipelineHandlerEvent;
   codeCommitReference: (overrides?: CodeCommitReferenceOverrides) => CodeCommitReference;
   codeCommitRecord: (overrides?: CodeCommitRecordOverrides) => CodeCommitRecord;
   codeCommitEvent: (records?: CodeCommitRecord[]) => CodeCommitEvent;
@@ -300,6 +309,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   dynamoDBRemoveRecord: fixture(createDynamoDBRemoveRecord),
   dynamoDBStreamEvent: fixture(createDynamoDBEvent),
   dynamoDBStreamHandlerEvent: fixture(createDynamoDBHandlerEvent),
+  codePipelineEvent: fixture(createCodePipelineEvent),
+  codePipelineHandlerEvent: fixture(createCodePipelineHandlerEvent),
   codeCommitReference: fixture(createCodeCommitReference),
   codeCommitRecord: fixture(createCodeCommitRecord),
   codeCommitEvent: fixture(createCodeCommitEvent),

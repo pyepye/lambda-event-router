@@ -27,6 +27,12 @@ export type {
 } from './cloudWatchLogs.js';
 export { createCloudWatchLogsEvent, createCloudWatchLogsHandlerEvent } from './cloudWatchLogs.js';
 export type {
+  CodePipelineEventOverrides,
+  CodePipelineHandlerEvent,
+  CreateCodePipelineHandlerEventOptions,
+} from './codepipeline.js';
+export { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
+export type {
   CodeCommitEvent,
   CodeCommitHandlerEvent,
   CodeCommitRecord,

@@ -33,6 +33,7 @@
   ],
   "license": "UNLICENSED",
   "peerDependencies": {
+    "@aws-sdk/client-codepipeline": "^3.0.0",
     "@lambda-event-router/base": "workspace:*"
   },
   "devDependencies": {
