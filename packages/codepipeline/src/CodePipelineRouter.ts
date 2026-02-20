@@ -38,8 +38,7 @@ export function defineRoute<
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): CodePipelineRouteDefinition<TUserParameters> {
-      // @ts-expect-error - TUserParametersSchema is constrained to Schema<unknown> but TypeScript cannot narrow it to Schema<TUserParameters> here
-      return { filters: config.filters, userParametersSchema: config.userParametersSchema, handler };
+      return { ...config, handler } as CodePipelineRouteDefinition<TUserParameters>;
     },
   };
 }
@@ -65,8 +64,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     this.routes.push({
       filters: definition.filters,
       userParametersSchema: definition.userParametersSchema,
-      // @ts-expect-error - Widening CodePipelineJobHandler<TUserParameters> to CodePipelineJobHandler<unknown> for internal storage
-      handler: definition.handler,
+      handler: definition.handler as CodePipelineJobHandler,
     });
     return this;
   }
