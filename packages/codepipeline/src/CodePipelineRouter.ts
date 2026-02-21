@@ -29,6 +29,9 @@ interface RouteInput<TUserParametersSchema extends Schema<unknown> | undefined =
 
 interface RouteBuilder<TUserParameters> {
   handle(handler: CodePipelineJobHandler<TUserParameters>): CodePipelineRouteDefinition<TUserParameters>;
+  handle(
+    handler: (request: CodePipelineJobRequest<TUserParameters>) => Promise<void>,
+  ): CodePipelineRouteDefinition<TUserParameters>;
 }
 
 export function defineRoute<

@@ -36,3 +36,20 @@ export type { APIGatewayV1EventType } from './apiGatewayV1Adapter.js';
 export { apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
 export type { APIGatewayV2EventType } from './apiGatewayV2Adapter.js';
 export { apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
+export { postToConnection } from './postToConnection.js';
+export { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
+export { WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from './webSocketResponse.js';
+export type {
+  WebSocketBaseRequest,
+  WebSocketConnectRequest,
+  WebSocketConnectResponse,
+  WebSocketDisconnectRequest,
+  WebSocketEvent,
+  WebSocketEventType,
+  WebSocketFilterInput,
+  WebSocketFilters,
+  WebSocketMessageRequest,
+  WebSocketRequest,
+  WebSocketResult,
+  WebSocketRouteDefinition,
+} from './webSocketTypes.js';

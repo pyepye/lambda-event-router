@@ -3,6 +3,7 @@ import type {
   APIGatewayProxyEvent,
   APIGatewayProxyEventV2,
   CloudWatchLogsEvent,
+  CodePipelineEvent,
   ConnectContactFlowEvent,
   Context,
   DynamoDBRecord,
@@ -21,7 +22,6 @@ import type {
   SQSRecord,
 } from 'aws-lambda';
 import { test as viTest } from 'vitest';
-import type { CodePipelineEvent } from 'aws-lambda';
 import type {
   ActiveMQEvent,
   ActiveMQHandlerEvent,
@@ -65,6 +65,12 @@ import {
   createCodeCommitRecord,
   createCodeCommitReference,
 } from './codeCommit.js';
+import type {
+  CodePipelineEventOverrides,
+  CodePipelineHandlerEvent,
+  CreateCodePipelineHandlerEventOptions,
+} from './codepipeline.js';
+import { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
 import {
   createCognitoCreateAuthChallengeEvent,
   createCognitoCreateAuthChallengeHandlerEvent,
@@ -89,12 +95,6 @@ import {
   createCognitoVerifyAuthChallengeResponseEvent,
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
-import type {
-  CodePipelineEventOverrides,
-  CodePipelineHandlerEvent,
-  CreateCodePipelineHandlerEventOptions,
-} from './codepipeline.js';
-import { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
 import type { ConnectEventOverrides, ConnectHandlerEvent, CreateConnectHandlerEventOptions } from './connect.js';
 import { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 import { createMockContext } from './context.js';
@@ -179,6 +179,12 @@ import {
   createVPCLatticeV2Event,
   createVPCLatticeV2HandlerEvent,
 } from './vpcLattice.js';
+import type {
+  CreateWebSocketHandlerEventOptions,
+  WebSocketEventOverrides,
+  WebSocketHandlerEvent,
+} from './webSocket.js';
+import { createWebSocketEvent, createWebSocketHandlerEvent } from './webSocket.js';
 
 function fixture<T>(creator: T) {
   return async ({ task }: { task: unknown }, use: (value: T) => Promise<void>): Promise<void> => {
@@ -275,6 +281,8 @@ export interface TestFixtures {
   vpcLatticeV1HandlerEvent: (options?: CreateVPCLatticeV1HandlerEventOptions) => VPCLatticeV1HandlerEvent;
   vpcLatticeV2Event: (overrides?: VPCLatticeV2EventOverrides) => ReturnType<typeof createVPCLatticeV2Event>;
   vpcLatticeV2HandlerEvent: (options?: CreateVPCLatticeV2HandlerEventOptions) => VPCLatticeV2HandlerEvent;
+  webSocketEvent: (overrides?: WebSocketEventOverrides) => ReturnType<typeof createWebSocketEvent>;
+  webSocketHandlerEvent: (options?: CreateWebSocketHandlerEventOptions) => WebSocketHandlerEvent;
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
@@ -362,4 +370,6 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   vpcLatticeV1HandlerEvent: fixture(createVPCLatticeV1HandlerEvent),
   vpcLatticeV2Event: fixture(createVPCLatticeV2Event),
   vpcLatticeV2HandlerEvent: fixture(createVPCLatticeV2HandlerEvent),
+  webSocketEvent: fixture(createWebSocketEvent),
+  webSocketHandlerEvent: fixture(createWebSocketHandlerEvent),
 });

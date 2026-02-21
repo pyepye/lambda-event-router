@@ -27,12 +27,6 @@ export type {
 } from './cloudWatchLogs.js';
 export { createCloudWatchLogsEvent, createCloudWatchLogsHandlerEvent } from './cloudWatchLogs.js';
 export type {
-  CodePipelineEventOverrides,
-  CodePipelineHandlerEvent,
-  CreateCodePipelineHandlerEventOptions,
-} from './codepipeline.js';
-export { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
-export type {
   CodeCommitEvent,
   CodeCommitHandlerEvent,
   CodeCommitRecord,
@@ -47,6 +41,12 @@ export {
   createCodeCommitRecord,
   createCodeCommitReference,
 } from './codeCommit.js';
+export type {
+  CodePipelineEventOverrides,
+  CodePipelineHandlerEvent,
+  CreateCodePipelineHandlerEventOptions,
+} from './codepipeline.js';
+export { createCodePipelineEvent, createCodePipelineHandlerEvent } from './codepipeline.js';
 export type {
   CognitoCreateAuthChallengeEventOverrides,
   CognitoCustomEmailSenderEventOverrides,
@@ -183,3 +183,9 @@ export {
   createVPCLatticeV2Event,
   createVPCLatticeV2HandlerEvent,
 } from './vpcLattice.js';
+export type {
+  CreateWebSocketHandlerEventOptions,
+  WebSocketEventOverrides,
+  WebSocketHandlerEvent,
+} from './webSocket.js';
+export { createWebSocketEvent, createWebSocketHandlerEvent } from './webSocket.js';
