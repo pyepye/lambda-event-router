@@ -36,6 +36,25 @@ export type { APIGatewayV1EventType } from './apiGatewayV1Adapter.js';
 export { apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
 export type { APIGatewayV2EventType } from './apiGatewayV2Adapter.js';
 export { apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
+export {
+  createLambdaAuthorizerRouter,
+  defineLambdaAuthorizerRoute,
+  generatePolicy,
+  LambdaAuthorizerRouter,
+} from './LambdaAuthorizerRouter.js';
+export type {
+  AuthorizerType,
+  LambdaAuthorizerBaseRequest,
+  LambdaAuthorizerEvent,
+  LambdaAuthorizerFilterInput,
+  LambdaAuthorizerFilters,
+  LambdaAuthorizerHandler,
+  LambdaAuthorizerRequest,
+  LambdaAuthorizerRequestRequest,
+  LambdaAuthorizerResult,
+  LambdaAuthorizerRouteDefinition,
+  LambdaAuthorizerTokenRequest,
+} from './lambdaAuthorizerTypes.js';
 export { postToConnection } from './postToConnection.js';
 export { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
 export { WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from './webSocketResponse.js';

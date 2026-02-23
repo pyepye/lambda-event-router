@@ -9,6 +9,25 @@ export { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage 
 export type { ALBEventOverrides, ALBHandlerEvent, CreateALBHandlerEventOptions } from './alb.js';
 export { createALBEvent, createALBHandlerEvent } from './alb.js';
 export type {
+  ApiGatewayLambdaAuthorizerRequestV1EventOverrides,
+  ApiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+  ApiGatewayLambdaAuthorizerRequestV2EventOverrides,
+  ApiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+  ApiGatewayLambdaAuthorizerTokenEventOverrides,
+  ApiGatewayLambdaAuthorizerTokenHandlerEvent,
+  CreateApiGatewayLambdaAuthorizerRequestV1HandlerEventOptions,
+  CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
+  CreateApiGatewayLambdaAuthorizerTokenHandlerEventOptions,
+} from './apiGatewayLambdaAuthorizer.js';
+export {
+  createApiGatewayLambdaAuthorizerRequestV1Event,
+  createApiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+  createApiGatewayLambdaAuthorizerRequestV2Event,
+  createApiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+  createApiGatewayLambdaAuthorizerTokenEvent,
+  createApiGatewayLambdaAuthorizerTokenHandlerEvent,
+} from './apiGatewayLambdaAuthorizer.js';
+export type {
   ApiGatewayV1EventOverrides,
   ApiGatewayV1HandlerEvent,
   CreateApiGatewayV1HandlerEventOptions,

@@ -2,6 +2,9 @@ import type {
   ALBEvent,
   APIGatewayProxyEvent,
   APIGatewayProxyEventV2,
+  APIGatewayRequestAuthorizerEvent,
+  APIGatewayRequestAuthorizerEventV2,
+  APIGatewayTokenAuthorizerEvent,
   CloudWatchLogsEvent,
   CodePipelineEvent,
   ConnectContactFlowEvent,
@@ -32,6 +35,25 @@ import type {
 import { createActiveMQEvent, createActiveMQHandlerEvent, createActiveMQMessage } from './activeMQ.js';
 import type { ALBEventOverrides, ALBHandlerEvent, CreateALBHandlerEventOptions } from './alb.js';
 import { createALBEvent, createALBHandlerEvent } from './alb.js';
+import type {
+  ApiGatewayLambdaAuthorizerRequestV1EventOverrides,
+  ApiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+  ApiGatewayLambdaAuthorizerRequestV2EventOverrides,
+  ApiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+  ApiGatewayLambdaAuthorizerTokenEventOverrides,
+  ApiGatewayLambdaAuthorizerTokenHandlerEvent,
+  CreateApiGatewayLambdaAuthorizerRequestV1HandlerEventOptions,
+  CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
+  CreateApiGatewayLambdaAuthorizerTokenHandlerEventOptions,
+} from './apiGatewayLambdaAuthorizer.js';
+import {
+  createApiGatewayLambdaAuthorizerRequestV1Event,
+  createApiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+  createApiGatewayLambdaAuthorizerRequestV2Event,
+  createApiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+  createApiGatewayLambdaAuthorizerTokenEvent,
+  createApiGatewayLambdaAuthorizerTokenHandlerEvent,
+} from './apiGatewayLambdaAuthorizer.js';
 import type {
   ApiGatewayV1EventOverrides,
   ApiGatewayV1HandlerEvent,
@@ -283,6 +305,24 @@ export interface TestFixtures {
   vpcLatticeV2HandlerEvent: (options?: CreateVPCLatticeV2HandlerEventOptions) => VPCLatticeV2HandlerEvent;
   webSocketEvent: (overrides?: WebSocketEventOverrides) => ReturnType<typeof createWebSocketEvent>;
   webSocketHandlerEvent: (options?: CreateWebSocketHandlerEventOptions) => WebSocketHandlerEvent;
+  apiGatewayLambdaAuthorizerTokenEvent: (
+    overrides?: ApiGatewayLambdaAuthorizerTokenEventOverrides,
+  ) => APIGatewayTokenAuthorizerEvent;
+  apiGatewayLambdaAuthorizerTokenHandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerTokenHandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerTokenHandlerEvent;
+  apiGatewayLambdaAuthorizerRequestV1Event: (
+    overrides?: ApiGatewayLambdaAuthorizerRequestV1EventOverrides,
+  ) => APIGatewayRequestAuthorizerEvent;
+  apiGatewayLambdaAuthorizerRequestV1HandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerRequestV1HandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerRequestV1HandlerEvent;
+  apiGatewayLambdaAuthorizerRequestV2Event: (
+    overrides?: ApiGatewayLambdaAuthorizerRequestV2EventOverrides,
+  ) => APIGatewayRequestAuthorizerEventV2;
+  apiGatewayLambdaAuthorizerRequestV2HandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerRequestV2HandlerEvent;
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
@@ -372,4 +412,10 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   vpcLatticeV2HandlerEvent: fixture(createVPCLatticeV2HandlerEvent),
   webSocketEvent: fixture(createWebSocketEvent),
   webSocketHandlerEvent: fixture(createWebSocketHandlerEvent),
+  apiGatewayLambdaAuthorizerTokenEvent: fixture(createApiGatewayLambdaAuthorizerTokenEvent),
+  apiGatewayLambdaAuthorizerTokenHandlerEvent: fixture(createApiGatewayLambdaAuthorizerTokenHandlerEvent),
+  apiGatewayLambdaAuthorizerRequestV1Event: fixture(createApiGatewayLambdaAuthorizerRequestV1Event),
+  apiGatewayLambdaAuthorizerRequestV1HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV1HandlerEvent),
+  apiGatewayLambdaAuthorizerRequestV2Event: fixture(createApiGatewayLambdaAuthorizerRequestV2Event),
+  apiGatewayLambdaAuthorizerRequestV2HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV2HandlerEvent),
 });
