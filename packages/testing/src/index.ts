@@ -40,6 +40,27 @@ export type {
 } from './apiGatewayV2.js';
 export { createApiGatewayV2Event, createApiGatewayV2HandlerEvent } from './apiGatewayV2.js';
 export type {
+  AppSyncAuthorizerHandlerEvent,
+  AppSyncEventsEvent,
+  AppSyncEventsEventOverrides,
+  AppSyncEventsHandlerEvent,
+  AppSyncEventsIdentity,
+  AppSyncEventsOperation,
+  AppSyncResolverEventOverrides,
+  AppSyncResolverHandlerEvent,
+  CreateAppSyncAuthorizerHandlerEventOptions,
+  CreateAppSyncEventsHandlerEventOptions,
+  CreateAppSyncResolverHandlerEventOptions,
+} from './appSync.js';
+export {
+  createAppSyncAuthorizerEvent,
+  createAppSyncAuthorizerHandlerEvent,
+  createAppSyncEventsEvent,
+  createAppSyncEventsHandlerEvent,
+  createAppSyncResolverEvent,
+  createAppSyncResolverHandlerEvent,
+} from './appSync.js';
+export type {
   CloudWatchLogsEventOverrides,
   CloudWatchLogsHandlerEvent,
   CreateCloudWatchLogsHandlerEventOptions,
@@ -111,6 +132,7 @@ export type {
 } from './connect.js';
 export { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 export { createMockContext } from './context.js';
+export type { DeepPartial } from './deepPartial.js';
 export type {
   CreateDocumentDBHandlerEventOptions,
   DocumentDBChangeEventOverrides,

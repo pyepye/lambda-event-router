@@ -5,6 +5,8 @@ import type {
   APIGatewayRequestAuthorizerEvent,
   APIGatewayRequestAuthorizerEventV2,
   APIGatewayTokenAuthorizerEvent,
+  AppSyncAuthorizerEvent,
+  AppSyncResolverEvent,
   CloudWatchLogsEvent,
   CodePipelineEvent,
   ConnectContactFlowEvent,
@@ -67,6 +69,25 @@ import type {
 } from './apiGatewayV2.js';
 import { createApiGatewayV2Event, createApiGatewayV2HandlerEvent } from './apiGatewayV2.js';
 import type {
+  AppSyncAuthorizerHandlerEvent,
+  AppSyncEventsEvent,
+  AppSyncEventsEventOverrides,
+  AppSyncEventsHandlerEvent,
+  AppSyncResolverEventOverrides,
+  AppSyncResolverHandlerEvent,
+  CreateAppSyncAuthorizerHandlerEventOptions,
+  CreateAppSyncEventsHandlerEventOptions,
+  CreateAppSyncResolverHandlerEventOptions,
+} from './appSync.js';
+import {
+  createAppSyncAuthorizerEvent,
+  createAppSyncAuthorizerHandlerEvent,
+  createAppSyncEventsEvent,
+  createAppSyncEventsHandlerEvent,
+  createAppSyncResolverEvent,
+  createAppSyncResolverHandlerEvent,
+} from './appSync.js';
+import type {
   CloudWatchLogsEventOverrides,
   CloudWatchLogsHandlerEvent,
   CreateCloudWatchLogsHandlerEventOptions,
@@ -120,6 +141,7 @@ import {
 import type { ConnectEventOverrides, ConnectHandlerEvent, CreateConnectHandlerEventOptions } from './connect.js';
 import { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 import { createMockContext } from './context.js';
+import type { DeepPartial } from './deepPartial.js';
 import type {
   CreateDocumentDBHandlerEventOptions,
   DocumentDBChangeEventOverrides,
@@ -216,6 +238,14 @@ function fixture<T>(creator: T) {
 }
 
 export interface TestFixtures {
+  appSyncResolverEvent: (overrides?: AppSyncResolverEventOverrides) => AppSyncResolverEvent<Record<string, unknown>>;
+  appSyncResolverHandlerEvent: (options?: CreateAppSyncResolverHandlerEventOptions) => AppSyncResolverHandlerEvent;
+  appSyncAuthorizerEvent: (overrides?: DeepPartial<AppSyncAuthorizerEvent>) => AppSyncAuthorizerEvent;
+  appSyncAuthorizerHandlerEvent: (
+    options?: CreateAppSyncAuthorizerHandlerEventOptions,
+  ) => AppSyncAuthorizerHandlerEvent;
+  appSyncEventsEvent: (overrides?: AppSyncEventsEventOverrides) => AppSyncEventsEvent;
+  appSyncEventsHandlerEvent: (options?: CreateAppSyncEventsHandlerEventOptions) => AppSyncEventsHandlerEvent;
   connectEvent: (overrides?: ConnectEventOverrides) => ConnectContactFlowEvent;
   connectHandlerEvent: (options?: CreateConnectHandlerEventOptions) => ConnectHandlerEvent;
   lexEvent: (overrides?: LexEventOverrides) => LexV2Event;
@@ -326,6 +356,12 @@ export interface TestFixtures {
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
+  appSyncResolverEvent: fixture(createAppSyncResolverEvent),
+  appSyncResolverHandlerEvent: fixture(createAppSyncResolverHandlerEvent),
+  appSyncAuthorizerEvent: fixture(createAppSyncAuthorizerEvent),
+  appSyncAuthorizerHandlerEvent: fixture(createAppSyncAuthorizerHandlerEvent),
+  appSyncEventsEvent: fixture(createAppSyncEventsEvent),
+  appSyncEventsHandlerEvent: fixture(createAppSyncEventsHandlerEvent),
   connectEvent: fixture(createConnectEvent),
   connectHandlerEvent: fixture(createConnectHandlerEvent),
   lexEvent: fixture(createLexEvent),

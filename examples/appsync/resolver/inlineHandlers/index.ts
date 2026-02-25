@@ -1,0 +1,26 @@
+import { createAppSyncRouter } from '@lambda-event-router/appsync';
+import { EventRouter } from '@lambda-event-router/base';
+import type { Handler } from 'aws-lambda';
+
+import { createUserRoute } from './createUser.js';
+import { getUserRoute } from './getUser.js';
+import { getUserPostsRoute } from './getUserPosts.js';
+import { listUsersRoute } from './listUsers.js';
+import { onUserCreatedRoute } from './onUserCreated.js';
+import { updateUserRoute } from './updateUser.js';
+
+const appSyncRouter = createAppSyncRouter();
+
+appSyncRouter
+  .route(getUserRoute)
+  .route(listUsersRoute)
+  .route(createUserRoute)
+  .route(updateUserRoute)
+  .route(getUserPostsRoute)
+  .route(onUserCreatedRoute);
+
+const eventRouter = new EventRouter({
+  routers: [appSyncRouter],
+});
+
+export const handler: Handler = eventRouter.handler();

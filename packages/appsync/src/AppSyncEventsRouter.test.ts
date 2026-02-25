@@ -1,0 +1,409 @@
+import { createAppSyncEventsEvent, createMockContext, test } from '@lambda-event-router/testing';
+import { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
+
+suite('AppSyncEventsRouter', () => {
+  suite('createAppSyncEventsRouter', () => {
+    test('creates an AppSyncEventsRouter instance', () => {
+      const router = createAppSyncEventsRouter();
+      expect(router).toBeInstanceOf(AppSyncEventsRouter);
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    let router: AppSyncEventsRouter;
+
+    beforeEach(() => {
+      router = new AppSyncEventsRouter();
+    });
+
+    test('returns true for a valid AppSync events event', () => {
+      const event = createAppSyncEventsEvent();
+      expect(router.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns false for null', () => {
+      expect(router.canHandleEvent(null)).toBe(false);
+    });
+
+    test('returns false for a string', () => {
+      expect(router.canHandleEvent('not an event')).toBe(false);
+    });
+
+    test('returns false when info is missing', () => {
+      expect(router.canHandleEvent({ events: [] })).toBe(false);
+    });
+
+    test('returns false when info is not an object', () => {
+      expect(router.canHandleEvent({ info: 'not-an-object' })).toBe(false);
+    });
+
+    test('returns false when channel is missing', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channelNamespace: { name: 'default' }, operation: 'PUBLISH' },
+        }),
+      ).toBe(false);
+    });
+
+    test('returns false when channel is not an object', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channel: 'not-object', channelNamespace: { name: 'default' }, operation: 'PUBLISH' },
+        }),
+      ).toBe(false);
+    });
+
+    test('returns false when channelNamespace is missing', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channel: { path: '/default/ch' }, operation: 'PUBLISH' },
+        }),
+      ).toBe(false);
+    });
+
+    test('returns false when channelNamespace is not an object', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channel: { path: '/default/ch' }, channelNamespace: 'not-object', operation: 'PUBLISH' },
+        }),
+      ).toBe(false);
+    });
+
+    test('returns false when operation is missing', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channel: { path: '/default/ch' }, channelNamespace: { name: 'default' } },
+        }),
+      ).toBe(false);
+    });
+
+    test('returns false when operation is not a string', () => {
+      expect(
+        router.canHandleEvent({
+          info: { channel: { path: '/default/ch' }, channelNamespace: { name: 'default' }, operation: 123 },
+        }),
+      ).toBe(false);
+    });
+  });
+
+  suite('defineEventsRoute', () => {
+    test('preserves filters and handler', () => {
+      const handler = vi.fn();
+      const definition = defineEventsRoute({
+        filters: { operations: ['PUBLISH'], channelNamespaces: ['/default/*'] },
+      }).handle(handler);
+
+      expect(definition.filters).toEqual({ operations: ['PUBLISH'], channelNamespaces: ['/default/*'] });
+      expect(definition.handler).toBe(handler);
+    });
+
+    test('defaults filters to empty object when omitted', () => {
+      const handler = vi.fn();
+      const definition = defineEventsRoute({}).handle(handler);
+
+      expect(definition.filters).toEqual({});
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('route', () => {
+    test('returns this for chaining', () => {
+      const router = new AppSyncEventsRouter();
+
+      const result = router.route({
+        filters: { operations: ['PUBLISH'] },
+        handler: vi.fn(),
+      });
+
+      expect(result).toBe(router);
+    });
+  });
+
+  suite('publish', () => {
+    test('returns this for chaining', () => {
+      const router = new AppSyncEventsRouter();
+
+      const result = router.publish({
+        channelNamespace: '/default/*',
+        handler: vi.fn(),
+      });
+
+      expect(result).toBe(router);
+    });
+  });
+
+  suite('subscribe', () => {
+    test('returns this for chaining', () => {
+      const router = new AppSyncEventsRouter();
+
+      const result = router.subscribe({
+        channelNamespace: '/default/*',
+        handler: vi.fn(),
+      });
+
+      expect(result).toBe(router);
+    });
+  });
+
+  suite('matchRoute', () => {
+    let router: AppSyncEventsRouter;
+
+    beforeEach(() => {
+      router = new AppSyncEventsRouter();
+    });
+
+    test('matches by operations', () => {
+      const handler = vi.fn();
+      router.route({ filters: { operations: ['PUBLISH'] }, handler });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+      expect(matched?.handler).toBe(handler);
+    });
+
+    test('does not match when operation is different', () => {
+      router.route({ filters: { operations: ['PUBLISH'] }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'SUBSCRIBE' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('SUBSCRIBE', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('matches channelNamespace with exact path', () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespaces: ['/default/channel'] }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('matches channelNamespace with wildcard /*', () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespaces: ['/*'] }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('matches channelNamespace with prefix wildcard /foo/*', () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespaces: ['/default/*'] }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('matches channelNamespace by namespace name', () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespaces: ['default'] }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('matches channelNamespace with /namespace shorthand', () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespaces: ['/default'] }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when channelNamespace does not match', () => {
+      router.route({ filters: { channelNamespaces: ['/other/*'] }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('matches when customFilter returns true', () => {
+      const handler = vi.fn();
+      router.route({ filters: { customFilter: () => true }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when customFilter returns false', () => {
+      router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('first route wins when multiple match', () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+      router.route({ filters: { operations: ['PUBLISH'] }, handler: firstHandler });
+      router.route({ filters: { operations: ['PUBLISH'] }, handler: secondHandler });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched?.handler).toBe(firstHandler);
+    });
+
+    test('matches when combined filters and customFilter all pass', () => {
+      const handler = vi.fn();
+      router.route({
+        filters: {
+          operations: ['PUBLISH'],
+          channelNamespaces: ['/default/*'],
+          customFilter: () => true,
+        },
+        handler,
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when combined filters pass but customFilter fails', () => {
+      router.route({
+        filters: {
+          operations: ['PUBLISH'],
+          channelNamespaces: ['/default/*'],
+          customFilter: () => false,
+        },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('builds complete AppSyncEventsRequest and calls handler', async () => {
+      const router = new AppSyncEventsRouter();
+      const handler = vi.fn().mockResolvedValue({ success: true });
+
+      router.route({
+        filters: { operations: ['PUBLISH'] },
+        handler,
+      });
+
+      const event = createAppSyncEventsEvent({
+        info: {
+          operation: 'PUBLISH',
+          channel: { path: '/chat/room1', segments: ['chat', 'room1'] },
+          channelNamespace: { name: 'chat' },
+        },
+        events: [{ message: 'hello' }],
+        request: { headers: { authorization: 'Bearer token' } },
+      });
+      const context = createMockContext();
+
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ success: true });
+      expect(handler).toHaveBeenCalledOnce();
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          channel: '/chat/room1',
+          channelNamespace: 'chat',
+          operation: 'PUBLISH',
+          identity: null,
+          events: [{ message: 'hello' }],
+          info: event.info,
+          request: event.request,
+          stash: {},
+          prev: null,
+          event,
+          context,
+        }),
+      );
+    });
+
+    test('throws when no route matches', async () => {
+      const router = new AppSyncEventsRouter();
+      const event = createAppSyncEventsEvent({
+        info: { operation: 'PUBLISH', channel: { path: '/unknown/channel' } },
+      });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow(
+        'No route matched for PUBLISH on channel /unknown/channel',
+      );
+    });
+
+    test('defaults null events to empty array', async () => {
+      const router = new AppSyncEventsRouter();
+      const handler = vi.fn().mockResolvedValue(null);
+
+      router.route({ filters: {}, handler });
+
+      const event = createAppSyncEventsEvent({ events: null });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ events: [] }));
+    });
+  });
+
+  suite('handleEvent via shorthand methods', () => {
+    test('routes PUBLISH events through publish()', async () => {
+      const router = new AppSyncEventsRouter();
+      const handler = vi.fn().mockResolvedValue('publish-result');
+
+      router.publish({ channelNamespace: '/default/*', handler });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+      const context = createMockContext();
+
+      const result = await router.handleEvent(event, context);
+      expect(result).toBe('publish-result');
+    });
+
+    test('routes SUBSCRIBE events through subscribe()', async () => {
+      const router = new AppSyncEventsRouter();
+      const handler = vi.fn().mockResolvedValue('subscribe-result');
+
+      router.subscribe({ channelNamespace: '/default/*', handler });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'SUBSCRIBE' } });
+      const context = createMockContext();
+
+      const result = await router.handleEvent(event, context);
+      expect(result).toBe('subscribe-result');
+    });
+  });
+});
