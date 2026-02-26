@@ -138,6 +138,22 @@ import {
   createCognitoVerifyAuthChallengeResponseEvent,
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
+import type {
+  ConfigEvent,
+  ConfigEventOverrides,
+  ConfigHandlerEvent,
+  ConfigurationItem,
+  ConfigurationItemOverrides,
+  ConfigurationItemSummary,
+  ConfigurationItemSummaryOverrides,
+  CreateConfigHandlerEventOptions,
+} from './config.js';
+import {
+  createConfigEvent,
+  createConfigHandlerEvent,
+  createConfigurationItem,
+  createConfigurationItemSummary,
+} from './config.js';
 import type { ConnectEventOverrides, ConnectHandlerEvent, CreateConnectHandlerEventOptions } from './connect.js';
 import { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 import { createMockContext } from './context.js';
@@ -353,6 +369,10 @@ export interface TestFixtures {
   apiGatewayLambdaAuthorizerRequestV2HandlerEvent: (
     options?: CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
   ) => ApiGatewayLambdaAuthorizerRequestV2HandlerEvent;
+  configEvent: (overrides?: ConfigEventOverrides) => ConfigEvent;
+  configHandlerEvent: (options?: CreateConfigHandlerEventOptions) => ConfigHandlerEvent;
+  configurationItem: (overrides?: ConfigurationItemOverrides) => ConfigurationItem;
+  configurationItemSummary: (overrides?: ConfigurationItemSummaryOverrides) => ConfigurationItemSummary;
 }
 
 export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
@@ -454,4 +474,8 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   apiGatewayLambdaAuthorizerRequestV1HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV1HandlerEvent),
   apiGatewayLambdaAuthorizerRequestV2Event: fixture(createApiGatewayLambdaAuthorizerRequestV2Event),
   apiGatewayLambdaAuthorizerRequestV2HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV2HandlerEvent),
+  configEvent: fixture(createConfigEvent),
+  configHandlerEvent: fixture(createConfigHandlerEvent),
+  configurationItem: fixture(createConfigurationItem),
+  configurationItemSummary: fixture(createConfigurationItemSummary),
 });
