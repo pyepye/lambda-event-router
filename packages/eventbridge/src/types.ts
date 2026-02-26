@@ -78,13 +78,11 @@ export interface EventBridgeRequest<TDetail = unknown> {
 
 export type EventBridgeHandler<TDetail = unknown> = (request: EventBridgeRequest<TDetail>) => Promise<void>;
 
-export type SchedulerHandler<TPayload = unknown> = (event: TPayload) => Promise<void>;
-
 export interface EventBridgeFilterInput {
   event: unknown;
-  source?: string;
-  detailType?: string;
-  detail?: unknown;
+  source: string;
+  detailType: string;
+  detail: unknown;
 }
 
 export interface EventBridgeFilters {
@@ -100,10 +98,4 @@ export interface EventBridgeRouteDefinition<TDetail = unknown> {
   filters: EventBridgeFilters;
   detailSchema?: Schema<TDetail>;
   handler: EventBridgeHandler<TDetail>;
-}
-
-export interface SchedulerRouteDefinition<TPayload = unknown> {
-  filters: Pick<EventBridgeFilters, 'customFilter'>;
-  eventSchema?: Schema<TPayload>;
-  handler: SchedulerHandler<TPayload>;
 }

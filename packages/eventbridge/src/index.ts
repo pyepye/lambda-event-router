@@ -1,5 +1,17 @@
 export type { Schema } from '@lambda-event-router/base';
 export { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './EventBridgeRouter.js';
+export {
+  createEventBridgeSchedulerRouter,
+  defineEventBridgeSchedulerRoute,
+  EventBridgeSchedulerRouter,
+} from './EventBridgeSchedulerRouter.js';
+export type {
+  EventBridgeSchedulerFilterInput,
+  EventBridgeSchedulerFilters,
+  EventBridgeSchedulerHandler,
+  EventBridgeSchedulerRequest,
+  EventBridgeSchedulerRouteDefinition,
+} from './eventBridgeSchedulerTypes.js';
 export type {
   EC2StateChangeDetail,
   EventBridgeDetailTypeMap,
@@ -10,6 +22,4 @@ export type {
   EventBridgeRequest,
   EventBridgeRouteDefinition,
   ScheduledEventDetail,
-  SchedulerHandler,
-  SchedulerRouteDefinition,
 } from './types.js';
