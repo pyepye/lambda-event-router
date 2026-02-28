@@ -188,6 +188,12 @@ export { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbr
 export type { TestFixtures } from './fixtures.js';
 export { test } from './fixtures.js';
 export type {
+  CreateKafkaHandlerEventOptions,
+  KafkaHandlerEvent,
+  KafkaRecordOverrides,
+} from './kafka.js';
+export { createKafkaHandlerEvent, createKafkaRecord, createMSKEvent, createSelfManagedKafkaEvent } from './kafka.js';
+export type {
   CreateLexHandlerEventOptions,
   LexEventOverrides,
   LexHandlerEvent,

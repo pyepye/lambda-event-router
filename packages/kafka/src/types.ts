@@ -1,0 +1,58 @@
+import type { Schema } from '@lambda-event-router/base';
+import type {
+  Context,
+  MSKEvent,
+  MSKRecord,
+  MSKRecordHeader,
+  SelfManagedKafkaEvent,
+  SelfManagedKafkaRecord,
+} from 'aws-lambda';
+
+export type KafkaRecord = MSKRecord | SelfManagedKafkaRecord;
+
+export type KafkaEvent = MSKEvent | SelfManagedKafkaEvent;
+
+export type KafkaDecodedHeader = Record<string, string>;
+
+export interface KafkaFilterInput {
+  headers: KafkaDecodedHeader[];
+  topic: string;
+  record: KafkaRecord;
+}
+
+export interface KafkaFilters {
+  topics?: string[];
+  eventSourceArns?: string[];
+  bootstrapServers?: string[];
+  customFilter?: (input: KafkaFilterInput) => boolean;
+}
+
+export interface KafkaRequest<TValue = unknown> {
+  value: TValue;
+  key: string;
+  topic: string;
+  partition: number;
+  offset: number;
+  timestamp: number;
+  headers: KafkaDecodedHeader[];
+  record: KafkaRecord;
+  context: Context;
+}
+
+export type KafkaResponse = undefined;
+
+export interface KafkaRouteDefinition<TValue = unknown> {
+  filters: KafkaFilters;
+  valueSchema?: Schema<TValue>;
+  handler: (request: KafkaRequest<TValue>) => Promise<void>;
+}
+
+export interface KafkaRouterOptions {
+  batchItemFailures?: boolean;
+}
+
+export interface KafkaBatchResponse {
+  batchItemFailures: Array<{ itemIdentifier: string }>;
+}
+
+export type KafkaRecordHeader = MSKRecordHeader;

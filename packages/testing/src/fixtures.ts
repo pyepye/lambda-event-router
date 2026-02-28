@@ -188,6 +188,8 @@ import type {
   EventBridgeHandlerEvent,
 } from './eventbridge.js';
 import { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
+import type { CreateKafkaHandlerEventOptions, KafkaHandlerEvent, KafkaRecordOverrides } from './kafka.js';
+import { createKafkaHandlerEvent, createKafkaRecord, createMSKEvent, createSelfManagedKafkaEvent } from './kafka.js';
 import type { CreateLexHandlerEventOptions, LexEventOverrides, LexHandlerEvent } from './lex.js';
 import { createLexEvent, createLexHandlerEvent } from './lex.js';
 import type {
@@ -314,6 +316,12 @@ export interface TestFixtures {
   activeMQMessage: (overrides?: ActiveMQMessageOverrides) => ActiveMQMessage;
   activeMQEvent: (messages?: ActiveMQMessage[]) => ActiveMQEvent;
   activeMQHandlerEvent: (options?: CreateActiveMQHandlerEventOptions) => ActiveMQHandlerEvent;
+  kafkaRecord: (overrides?: KafkaRecordOverrides) => ReturnType<typeof createKafkaRecord>;
+  kafkaMSKEvent: (recordsByTopic?: Parameters<typeof createMSKEvent>[0]) => ReturnType<typeof createMSKEvent>;
+  kafkaSelfManagedEvent: (
+    recordsByTopic?: Parameters<typeof createSelfManagedKafkaEvent>[0],
+  ) => ReturnType<typeof createSelfManagedKafkaEvent>;
+  kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
   apiGatewayV1Event: (overrides?: ApiGatewayV1EventOverrides) => APIGatewayProxyEvent;
   apiGatewayV1HandlerEvent: (options?: CreateApiGatewayV1HandlerEventOptions) => ApiGatewayV1HandlerEvent;
   apiGatewayV2Event: (overrides?: ApiGatewayV2EventOverrides) => APIGatewayProxyEventV2;
@@ -431,6 +439,10 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   activeMQMessage: fixture(createActiveMQMessage),
   activeMQEvent: fixture(createActiveMQEvent),
   activeMQHandlerEvent: fixture(createActiveMQHandlerEvent),
+  kafkaRecord: fixture(createKafkaRecord),
+  kafkaMSKEvent: fixture(createMSKEvent),
+  kafkaSelfManagedEvent: fixture(createSelfManagedKafkaEvent),
+  kafkaHandlerEvent: fixture(createKafkaHandlerEvent),
   apiGatewayV1Event: fixture(createApiGatewayV1Event),
   apiGatewayV1HandlerEvent: fixture(createApiGatewayV1HandlerEvent),
   apiGatewayV2Event: fixture(createApiGatewayV2Event),
