@@ -95,6 +95,9 @@ importers:
       '@lambda-event-router/eventbridge':
         specifier: workspace:*
         version: link:../packages/eventbridge
+      '@lambda-event-router/firehose':
+        specifier: workspace:*
+        version: link:../packages/firehose
       '@lambda-event-router/iot':
         specifier: workspace:*
         version: link:../packages/iot
@@ -479,6 +482,31 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/eventbridge:
+    dependencies:
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../base
+    devDependencies:
+      '@lambda-event-router/testing':
+        specifier: workspace:*
+        version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      '@vitest/coverage-v8':
+        specifier: 'catalog:'
+        version: 4.0.18(vitest@4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0))
+      tsup:
+        specifier: 'catalog:'
+        version: 8.5.1(jiti@2.6.1)(postcss@8.5.6)(tsx@4.21.0)(typescript@5.9.3)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
+  packages/firehose:
     dependencies:
       '@lambda-event-router/base':
         specifier: workspace:*
