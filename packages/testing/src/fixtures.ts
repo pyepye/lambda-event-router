@@ -13,6 +13,8 @@ import type {
   Context,
   DynamoDBRecord,
   DynamoDBStreamEvent,
+  KinesisStreamEvent,
+  KinesisStreamRecord,
   LexV2Event,
   S3BatchEvent,
   S3BatchEventTask,
@@ -190,6 +192,8 @@ import type {
 import { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
 import type { CreateKafkaHandlerEventOptions, KafkaHandlerEvent, KafkaRecordOverrides } from './kafka.js';
 import { createKafkaHandlerEvent, createKafkaRecord, createMSKEvent, createSelfManagedKafkaEvent } from './kafka.js';
+import type { CreateKinesisHandlerEventOptions, KinesisHandlerEvent, KinesisRecordOverrides } from './kinesis.js';
+import { createKinesisEvent, createKinesisHandlerEvent, createKinesisRecord } from './kinesis.js';
 import type { CreateLexHandlerEventOptions, LexEventOverrides, LexHandlerEvent } from './lex.js';
 import { createLexEvent, createLexHandlerEvent } from './lex.js';
 import type {
@@ -322,6 +326,9 @@ export interface TestFixtures {
     recordsByTopic?: Parameters<typeof createSelfManagedKafkaEvent>[0],
   ) => ReturnType<typeof createSelfManagedKafkaEvent>;
   kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
+  kinesisRecord: (overrides?: KinesisRecordOverrides) => KinesisStreamRecord;
+  kinesisEvent: (records?: KinesisStreamRecord[]) => KinesisStreamEvent;
+  kinesisHandlerEvent: (options?: CreateKinesisHandlerEventOptions) => KinesisHandlerEvent;
   apiGatewayV1Event: (overrides?: ApiGatewayV1EventOverrides) => APIGatewayProxyEvent;
   apiGatewayV1HandlerEvent: (options?: CreateApiGatewayV1HandlerEventOptions) => ApiGatewayV1HandlerEvent;
   apiGatewayV2Event: (overrides?: ApiGatewayV2EventOverrides) => APIGatewayProxyEventV2;
@@ -443,6 +450,9 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   kafkaMSKEvent: fixture(createMSKEvent),
   kafkaSelfManagedEvent: fixture(createSelfManagedKafkaEvent),
   kafkaHandlerEvent: fixture(createKafkaHandlerEvent),
+  kinesisRecord: fixture(createKinesisRecord),
+  kinesisEvent: fixture(createKinesisEvent),
+  kinesisHandlerEvent: fixture(createKinesisHandlerEvent),
   apiGatewayV1Event: fixture(createApiGatewayV1Event),
   apiGatewayV1HandlerEvent: fixture(createApiGatewayV1HandlerEvent),
   apiGatewayV2Event: fixture(createApiGatewayV2Event),
