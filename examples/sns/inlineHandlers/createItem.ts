@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/sns';
+import { defineRoute, type SNSFilterInput } from '@lambda-event-router/sns';
 import { z } from 'zod';
 
 const SOME_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-topic';
@@ -23,4 +23,20 @@ export const createItemRoute = defineRoute({
   const { name, price } = request.body;
   const { dryRun } = request.messageAttributes;
   console.log(`Creating item: ${name} with price ${price} - dryRun: ${dryRun}`);
+});
+
+// Route that only matches urgent notifications using customFilter
+export const urgentNotificationRoute = defineRoute({
+  filters: {
+    topicArns: [SOME_TOPIC_ARN],
+    customFilter: ({ body }: SNSFilterInput) => {
+      if (typeof body !== 'object' || body === null) return false;
+      if (!('urgency' in body) || typeof body.urgency !== 'string') return false;
+      return body.urgency === 'CRITICAL';
+    },
+  },
+  bodySchema: BodySchema,
+}).handle(async (request) => {
+  const { name, price } = request.body;
+  console.log(`Urgent notification: ${name} - ${price}`);
 });

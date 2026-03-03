@@ -5,11 +5,16 @@ import type { Handler } from 'aws-lambda';
 import { allChannelsRoute } from './handlers/allChannelsRoute.js';
 import { callbackRoute } from './handlers/callbackRoute.js';
 import { chatRoute } from './handlers/chatRoute.js';
-import { voiceInboundRoute } from './handlers/voiceInboundRoute.js';
+import { vipCallerRoute, voiceInboundRoute } from './handlers/voiceInboundRoute.js';
 
 const connectRouter = createConnectRouter();
 
-connectRouter.route(voiceInboundRoute).route(chatRoute).route(callbackRoute).route(allChannelsRoute);
+connectRouter
+  .route(voiceInboundRoute)
+  .route(chatRoute)
+  .route(callbackRoute)
+  .route(allChannelsRoute)
+  .route(vipCallerRoute);
 
 const eventRouter = new EventRouter({
   routers: [connectRouter],

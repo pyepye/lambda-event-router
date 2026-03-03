@@ -1,5 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createLexRouter } from '@lambda-event-router/lex';
+import { createLexRouter, type LexFilterInput } from '@lambda-event-router/lex';
 import type { Handler } from 'aws-lambda';
 
 import { fulfillPizzaOrder, handleOrder, validatePizzaOrder } from './handlers.js';
@@ -29,6 +29,18 @@ lexRouter.fulfillmentCodeHook({
   filters: {
     intentNames: ['OrderPizza'],
     // invocationSources: ['FulfillmentCodeHook'], // Not valid filter for .fulfillmentCodeHook()
+  },
+  handler: fulfillPizzaOrder,
+});
+
+function isSpeechInput({ inputMode, botId }: LexFilterInput): boolean {
+  return inputMode === 'Speech' && botId === BOT_ID;
+}
+
+lexRouter.fulfillmentCodeHook({
+  filters: {
+    intentNames: ['OrderPizza'],
+    customFilter: isSpeechInput,
   },
   handler: fulfillPizzaOrder,
 });

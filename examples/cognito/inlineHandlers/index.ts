@@ -1,5 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createCognitoRouter } from '@lambda-event-router/cognito';
+import { type CognitoFilterInput, createCognitoRouter, type PreSignUpRequest } from '@lambda-event-router/cognito';
 import type { Handler } from 'aws-lambda';
 
 import { createAuthChallengeRoute } from './handlers/createAuthChallengeRoute.js';
@@ -46,6 +46,27 @@ cognitoRouter.preTokenGeneration(preTokenGenerationRoute);
 
 // Register UserMigration route
 cognitoRouter.userMigration(userMigrationRoute);
+
+const ENTERPRISE_CLIENT_ID = 'enterprise-app-client-id';
+
+// Register PreSignUp route with customFilter for enterprise clients
+cognitoRouter.preSignUp({
+  filters: {
+    triggerSources: ['PreSignUp_SignUp'],
+    customFilter: ({ callerContext }: CognitoFilterInput) => {
+      const clientId = callerContext.clientId;
+      return clientId === ENTERPRISE_CLIENT_ID;
+    },
+  },
+  handler: async ({ event }: PreSignUpRequest) => {
+    console.log(`Enterprise signup: ${event.userName} via client ${event.callerContext.clientId}`);
+
+    event.response.autoConfirmUser = true;
+    event.response.autoVerifyEmail = true;
+
+    return event;
+  },
+});
 
 // Create the event router
 const eventRouter = new EventRouter({

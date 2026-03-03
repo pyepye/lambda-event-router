@@ -1,4 +1,8 @@
-import type { AppSyncEventsRequest } from '@lambda-event-router/appsync';
+import type { AppSyncEventsFilterInput, AppSyncEventsRequest } from '@lambda-event-router/appsync';
+
+export function isChatChannel({ channel }: AppSyncEventsFilterInput): boolean {
+  return channel.startsWith('/default/chat/');
+}
 
 // Standalone PUBLISH handler — processes events published to a channel namespace.
 // Can transform, validate, or reject events before they reach subscribers.

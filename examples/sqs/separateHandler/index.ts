@@ -30,14 +30,19 @@ sqsRouter.route({
   messageAttributesSchema: MessageAttributesSchema,
 });
 
-function isHighPriority({ messageAttributes }: SQSFilterInput): boolean {
-  return messageAttributes.Priority === 'HIGH';
+const HIGH_VALUE_THRESHOLD = 1000;
+
+// Custom filter checking parsed body content — messageAttributes can't express value thresholds
+function isHighValueOrder({ body }: SQSFilterInput): boolean {
+  if (typeof body !== 'object' || body === null || !('total' in body)) return false;
+  const { total } = body;
+  return typeof total === 'number' && total >= HIGH_VALUE_THRESHOLD;
 }
 
 sqsRouter.route({
   filters: {
     eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
-    customFilter: isHighPriority,
+    customFilter: isHighValueOrder,
   },
   handler: createItem,
   bodySchema: CreateItemBodySchema,

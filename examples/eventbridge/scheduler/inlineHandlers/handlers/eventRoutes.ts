@@ -1,3 +1,4 @@
+import { isObject } from '@lambda-event-router/base';
 import type { EventBridgeSchedulerFilterInput } from '@lambda-event-router/eventbridge';
 import { defineEventBridgeSchedulerRoute } from '@lambda-event-router/eventbridge';
 import { z } from 'zod';
@@ -10,9 +11,12 @@ const CleanupSchedulerSchema = z.object({
   }),
 });
 
+function hasSchedulerType(event: unknown): event is Record<string, unknown> & { schedulerType: string } {
+  return isObject(event) && Object.hasOwn(event, 'schedulerType') && typeof event.schedulerType === 'string';
+}
+
 function isCleanupScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
-  if (typeof event !== 'object' || event === null) return false;
-  return (event as { schedulerType?: string }).schedulerType === 'daily-cleanup';
+  return hasSchedulerType(event) && event.schedulerType === 'daily-cleanup';
 }
 
 // Route EventBridge Scheduler events using customFilter
@@ -21,7 +25,7 @@ export const dailyCleanupRoute = defineEventBridgeSchedulerRoute({
     customFilter: isCleanupScheduler,
   },
   eventSchema: CleanupSchedulerSchema,
-}).handle(async (event) => {
+}).handle(async ({ event }) => {
   console.log(`Daily cleanup triggered with retention: ${event.config.retentionDays} days`);
 });
 
@@ -33,8 +37,7 @@ const ReportSchedulerSchema = z.object({
 });
 
 function isReportScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
-  if (typeof event !== 'object' || event === null) return false;
-  return (event as { schedulerType?: string }).schedulerType === 'weekly-report';
+  return hasSchedulerType(event) && event.schedulerType === 'weekly-report';
 }
 
 // Another scheduler route with different payload structure
@@ -43,6 +46,6 @@ export const weeklyReportRoute = defineEventBridgeSchedulerRoute({
     customFilter: isReportScheduler,
   },
   eventSchema: ReportSchedulerSchema,
-}).handle(async (event) => {
+}).handle(async ({ event }) => {
   console.log(`Weekly ${event.reportType} report for: ${event.recipients.join(', ')}`);
 });

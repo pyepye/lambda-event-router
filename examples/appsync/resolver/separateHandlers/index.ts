@@ -1,4 +1,4 @@
-import { createAppSyncRouter } from '@lambda-event-router/appsync';
+import { type AppSyncResolverFilterInput, createAppSyncRouter } from '@lambda-event-router/appsync';
 import { EventRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
@@ -44,6 +44,23 @@ appSyncRouter.route({
 appSyncRouter.subscription({
   fieldName: 'onUserCreated',
   handler: onUserCreated,
+});
+
+function isAdminMutation({ event }: AppSyncResolverFilterInput): boolean {
+  const identity = event.identity;
+  if (!(identity && 'claims' in identity)) return false;
+  const claims = identity.claims as Record<string, unknown>;
+  return claims['custom:role'] === 'admin';
+}
+
+appSyncRouter.route({
+  filters: {
+    parentTypeNames: ['Mutation'],
+    fieldNames: ['createUser'],
+    customFilter: isAdminMutation,
+  },
+  argumentsSchema: CreateUserInputSchema,
+  handler: createUser,
 });
 
 const eventRouter = new EventRouter({

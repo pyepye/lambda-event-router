@@ -1,5 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createCodePipelineRouter } from '@lambda-event-router/codepipeline';
+import { type CodePipelineFilterInput, createCodePipelineRouter } from '@lambda-event-router/codepipeline';
 import type { Handler } from 'aws-lambda';
 
 import { handleContinuation } from './handleContinuation.js';
@@ -37,6 +37,20 @@ codePipelineRouter.continuation({
     functionNames: [FUNCTION_NAME],
   },
   handler: handleContinuation,
+});
+
+function hasProductionConfig({ userParameters }: CodePipelineFilterInput): boolean {
+  return userParameters.toLowerCase().includes('production');
+}
+
+codePipelineRouter.route({
+  filters: {
+    functionNames: [FUNCTION_NAME],
+    hasInputArtifacts: true,
+    customFilter: hasProductionConfig,
+  },
+  userParametersSchema: ArtifactParametersSchema,
+  handler: processArtifacts,
 });
 
 const eventRouter = new EventRouter({

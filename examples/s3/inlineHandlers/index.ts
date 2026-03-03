@@ -3,6 +3,7 @@ import { createS3Router } from '@lambda-event-router/s3';
 import type { Handler } from 'aws-lambda';
 
 import {
+  largeFileUploadRoute,
   objectCreatedPutImageRoute,
   objectCreatedRoute,
   objectCreatedThumbnailRoute,
@@ -11,7 +12,11 @@ import {
 const s3Router = createS3Router();
 
 // Register ObjectCreated routes using generic route method
-s3Router.route(objectCreatedRoute).route(objectCreatedPutImageRoute).route(objectCreatedThumbnailRoute);
+s3Router
+  .route(objectCreatedRoute)
+  .route(objectCreatedPutImageRoute)
+  .route(objectCreatedThumbnailRoute)
+  .route(largeFileUploadRoute);
 
 const eventRouter = new EventRouter({
   routers: [s3Router],

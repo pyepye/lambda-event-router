@@ -11,6 +11,7 @@ import {
 import { intelligentTiering, reducedRedundancyLostObject, testEvent } from './handlers/misc.js';
 import { objectAclPut } from './handlers/objectAcl.js';
 import {
+  isLargeFile,
   objectCreated,
   objectCreatedCompleteMultipartUpload,
   objectCreatedCopy,
@@ -70,6 +71,15 @@ s3Router.objectCreatedCompleteMultipartUpload({
 s3Router.objectCreatedPut({
   filters: { buckets: ['my-images-bucket'], includes: ['thumbnail', 'thumb'] },
   handler: objectCreatedThumbnail,
+});
+
+// Large file uploads filtered by object size
+s3Router.objectCreated({
+  filters: {
+    buckets: ['my-uploads-bucket'],
+    customFilter: isLargeFile,
+  },
+  handler: objectCreated,
 });
 
 // =============================================================================

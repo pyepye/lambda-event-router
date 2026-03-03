@@ -1,8 +1,8 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createFirehoseRouter, type FirehoseFilterInput } from '@lambda-event-router/firehose';
+import { createFirehoseRouter } from '@lambda-event-router/firehose';
 import type { Handler } from 'aws-lambda';
 
-import { handleErrorLog } from './handlers/errorLogHandler.js';
+import { handleErrorLog, isErrorLog } from './handlers/errorLogHandler.js';
 import { handleKinesisSource, InventoryDataSchema } from './handlers/kinesisSourceHandler.js';
 import { LogDataSchema, transformLog } from './handlers/transformHandler.js';
 
@@ -20,13 +20,6 @@ firehoseRouter.route({
   handler: transformLog,
   dataSchema: LogDataSchema,
 });
-
-// data is unknown (decoded but not schema-validated) — narrow before accessing properties
-function isErrorLog({ data }: FirehoseFilterInput): boolean {
-  if (typeof data !== 'object' || data === null) return false;
-  if (!('level' in data) || typeof data.level !== 'string') return false;
-  return data.level === 'ERROR';
-}
 
 // Route with custom filter — routes error logs to a dedicated handler
 firehoseRouter.route({

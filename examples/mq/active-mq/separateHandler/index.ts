@@ -1,6 +1,6 @@
 import { EventRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { createActiveMQRouter } from '../../../../packages/mq/src/index.js';
+import { type ActiveMQFilterInput, createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 
 import { handleAllMessages, handleBytesMessage, handleOrderMessage, handleTextMessage } from './handlers.js';
 
@@ -55,6 +55,18 @@ activeMQRouter.bytesMessage({
     // messageTypes: ['jms/bytes-message'], // Not valid filter for .bytesMessage()
   },
   handler: handleBytesMessage,
+});
+
+function isPriorityDestination({ destination }: ActiveMQFilterInput): boolean {
+  return destination.startsWith('priority-');
+}
+
+activeMQRouter.textMessage({
+  filters: {
+    eventSourceArns: [BROKER_ARN],
+    customFilter: isPriorityDestination,
+  },
+  handler: handleOrderMessage,
 });
 
 const eventRouter = new EventRouter({

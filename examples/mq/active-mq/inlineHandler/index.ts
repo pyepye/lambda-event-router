@@ -5,7 +5,7 @@ import { createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 import { allMessagesRoute } from './handlers/allMessagesRoute.js';
 import { bytesMessageRoute } from './handlers/bytesMessageRoute.js';
 import { destinationRoute } from './handlers/destinationRoute.js';
-import { orderRoute } from './handlers/orderRoute.js';
+import { orderRoute, priorityOrderRoute } from './handlers/orderRoute.js';
 import { textMessageRoute } from './handlers/textMessageRoute.js';
 
 const activeMQRouter = createActiveMQRouter();
@@ -15,7 +15,8 @@ activeMQRouter
   .route(textMessageRoute)
   .route(bytesMessageRoute)
   .route(destinationRoute)
-  .route(orderRoute);
+  .route(orderRoute)
+  .route(priorityOrderRoute);
 
 const eventRouter = new EventRouter({
   routers: [activeMQRouter],

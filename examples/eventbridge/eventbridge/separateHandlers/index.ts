@@ -3,7 +3,9 @@ import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
 import type { Handler } from 'aws-lambda';
 
 import {
+  GuardDutyFindingSchema,
   handleEC2StateChange,
+  handleGuardDutyHighSeverityFinding,
   handleOrderCreated,
   handleOrderStatusChange,
   handleS3Notification,
@@ -58,6 +60,21 @@ eventBridgeRouter.route({
   },
   detailSchema: OrderDetailSchema,
   handler: handleOrderStatusChange,
+});
+
+// High-severity GuardDuty findings using customFilter to filter by severity
+eventBridgeRouter.route({
+  filters: {
+    sources: ['aws.guardduty'],
+    detailTypes: ['GuardDuty Finding'],
+    customFilter: ({ detail }) => {
+      const highSeverityThreshold = 7;
+      const finding = detail as Record<string, unknown>;
+      return (finding.severity as number) >= highSeverityThreshold;
+    },
+  },
+  detailSchema: GuardDutyFindingSchema,
+  handler: handleGuardDutyHighSeverityFinding,
 });
 
 const eventRouter = new EventRouter({

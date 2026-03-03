@@ -1,5 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createConnectRouter } from '@lambda-event-router/connect';
+import { type ConnectFilterInput, createConnectRouter } from '@lambda-event-router/connect';
 import type { Handler } from 'aws-lambda';
 
 import {
@@ -91,6 +91,19 @@ connectRouter.api({
     instanceArns: [INSTANCE_ARN],
   },
   handler: handleApiCall,
+});
+
+function isVipCaller({ event }: ConnectFilterInput): boolean {
+  const contactAttributes = event.Details.ContactData.Attributes;
+  return contactAttributes.customerTier === 'platinum';
+}
+
+connectRouter.voice({
+  filters: {
+    instanceArns: [INSTANCE_ARN],
+    customFilter: isVipCaller,
+  },
+  handler: handleVoiceCall,
 });
 
 const eventRouter = new EventRouter({

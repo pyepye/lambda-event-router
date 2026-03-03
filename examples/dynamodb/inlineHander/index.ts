@@ -3,7 +3,7 @@ import { createDynamoDBRouter } from '@lambda-event-router/dynamodb';
 import type { Handler } from 'aws-lambda';
 
 import { allEventsRoute } from './handlers/allEventsRoute.js';
-import { insertRoute } from './handlers/insertRoute.js';
+import { insertRoute, pendingStatusInsertRoute } from './handlers/insertRoute.js';
 import { noEventNameRoute } from './handlers/noEventNameRoute.js';
 import { orderInsertRoute } from './handlers/orderInsertRoute.js';
 import { orderModifyRoute } from './handlers/orderModifyRoute.js';
@@ -17,7 +17,8 @@ dynamodbStreamRouter
   .route(noEventNameRoute)
   .route(orderInsertRoute)
   .route(orderModifyRoute)
-  .route(orderRemoveRoute);
+  .route(orderRemoveRoute)
+  .route(pendingStatusInsertRoute);
 
 const eventRouter = new EventRouter({
   routers: [dynamodbStreamRouter],

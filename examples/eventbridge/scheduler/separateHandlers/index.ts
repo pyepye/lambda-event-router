@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { EventRouter, isObject } from '@lambda-event-router/base';
 import type { EventBridgeSchedulerFilterInput } from '@lambda-event-router/eventbridge';
 import { createEventBridgeSchedulerRouter } from '@lambda-event-router/eventbridge';
 import type { Handler } from 'aws-lambda';
@@ -14,20 +14,21 @@ import {
 
 const schedulerRouter = createEventBridgeSchedulerRouter();
 
+function hasSchedulerType(event: unknown): event is Record<string, unknown> & { schedulerType: string } {
+  return isObject(event) && Object.hasOwn(event, 'schedulerType') && typeof event.schedulerType === 'string';
+}
+
 // Filter functions for scheduler payloads
 function isCleanupScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
-  if (typeof event !== 'object' || event === null) return false;
-  return (event as { schedulerType?: string }).schedulerType === 'daily-cleanup';
+  return hasSchedulerType(event) && event.schedulerType === 'daily-cleanup';
 }
 
 function isReportScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
-  if (typeof event !== 'object' || event === null) return false;
-  return (event as { schedulerType?: string }).schedulerType === 'weekly-report';
+  return hasSchedulerType(event) && event.schedulerType === 'weekly-report';
 }
 
 function isSyncScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
-  if (typeof event !== 'object' || event === null) return false;
-  return (event as { schedulerType?: string }).schedulerType === 'data-sync';
+  return hasSchedulerType(event) && event.schedulerType === 'data-sync';
 }
 
 // Daily cleanup scheduler

@@ -4,6 +4,7 @@ import type { Handler } from 'aws-lambda';
 
 import {
   ec2StateChangeRoute,
+  iamPolicyChangeRoute,
   orderCreatedRoute,
   orderUpdatedRoute,
   scheduledRuleRoute,
@@ -15,7 +16,8 @@ eventBridgeRouter
   .route(ec2StateChangeRoute)
   .route(orderCreatedRoute)
   .route(orderUpdatedRoute)
-  .route(scheduledRuleRoute);
+  .route(scheduledRuleRoute)
+  .route(iamPolicyChangeRoute);
 
 const eventRouter = new EventRouter({
   routers: [eventBridgeRouter],

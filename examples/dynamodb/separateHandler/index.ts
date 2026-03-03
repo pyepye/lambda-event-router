@@ -1,5 +1,5 @@
 import { EventRouter } from '@lambda-event-router/base';
-import { createDynamoDBRouter } from '@lambda-event-router/dynamodb';
+import { createDynamoDBRouter, type DynamoDBFilterInput } from '@lambda-event-router/dynamodb';
 import type { Handler } from 'aws-lambda';
 
 import { createItem, modifyItem, removeItem, updateItem } from './createItem.js';
@@ -62,6 +62,19 @@ dynamodbStreamRouter.remove({
     eventSourceArns: [SOME_QUEUE_ARN],
   },
   handler: removeItem,
+});
+
+function isFromUsersTable({ record }: DynamoDBFilterInput): boolean {
+  const eventSourceArn = record.eventSourceARN ?? '';
+  return eventSourceArn.includes('users-table');
+}
+
+dynamodbStreamRouter.insert({
+  filters: {
+    eventSourceArns: [SOME_QUEUE_ARN],
+    customFilter: isFromUsersTable,
+  },
+  handler: createItem,
 });
 
 const eventRouter = new EventRouter({

@@ -5,11 +5,16 @@ import type { Handler } from 'aws-lambda';
 import { branchCreatedRoute } from './handlers/branchCreatedRoute.js';
 import { branchDeletedRoute } from './handlers/branchDeletedRoute.js';
 import { featureBranchRoute } from './handlers/featureBranchRoute.js';
-import { pushRoute } from './handlers/pushRoute.js';
+import { deployBotPushRoute, pushRoute } from './handlers/pushRoute.js';
 
 const codeCommitRouter = createCodeCommitRouter();
 
-codeCommitRouter.route(pushRoute).route(featureBranchRoute).route(branchCreatedRoute).route(branchDeletedRoute);
+codeCommitRouter
+  .route(pushRoute)
+  .route(featureBranchRoute)
+  .route(branchCreatedRoute)
+  .route(branchDeletedRoute)
+  .route(deployBotPushRoute);
 
 const eventRouter = new EventRouter({
   routers: [codeCommitRouter],

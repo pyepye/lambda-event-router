@@ -38,21 +38,46 @@ export const OrderDetailSchema = z.object({
   currency: z.string(),
 });
 
+type OrderDetail = z.infer<typeof OrderDetailSchema>;
+
 export async function handleOrderCreated({
   source,
   detail,
   resources,
-}: EventBridgeRequest<z.infer<typeof OrderDetailSchema>>): Promise<void> {
+}: EventBridgeRequest<OrderDetail>): Promise<void> {
   console.log(`Order created event from ${source}`);
   console.log(`Order: ${detail.orderId} for customer ${detail.customerId}`);
   console.log(`Amount: ${detail.amount} ${detail.currency}`);
   console.log(`Resources: ${resources.join(', ')}`);
 }
 
-export async function handleOrderStatusChange({
-  detailType,
-  detail,
-}: EventBridgeRequest<z.infer<typeof OrderDetailSchema>>): Promise<void> {
+export async function handleOrderStatusChange({ detailType, detail }: EventBridgeRequest<OrderDetail>): Promise<void> {
   console.log(`Order ${detail.orderId} - ${detailType}`);
   console.log(`Customer: ${detail.customerId}, Amount: ${detail.amount} ${detail.currency}`);
+}
+
+export const GuardDutyFindingSchema = z.object({
+  schemaVersion: z.string(),
+  id: z.string(),
+  type: z.string(),
+  severity: z.number(),
+  title: z.string(),
+  description: z.string(),
+  resource: z.object({
+    resourceType: z.string(),
+  }),
+});
+
+type GuardDutyFinding = z.infer<typeof GuardDutyFindingSchema>;
+
+export async function handleGuardDutyHighSeverityFinding({
+  detail,
+  account,
+  region,
+}: EventBridgeRequest<GuardDutyFinding>): Promise<void> {
+  console.log(`High severity GuardDuty finding in ${account}/${region}`);
+  console.log(`Type: ${detail.type}`);
+  console.log(`Severity: ${detail.severity}`);
+  console.log(`Title: ${detail.title}`);
+  console.log(`Resource type: ${detail.resource.resourceType}`);
 }

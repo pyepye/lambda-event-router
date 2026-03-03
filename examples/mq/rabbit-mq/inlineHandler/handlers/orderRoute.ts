@@ -1,4 +1,4 @@
-import { defineRabbitMQRoute } from '@lambda-event-router/mq';
+import { defineRabbitMQRoute, type RabbitMQFilterInput } from '@lambda-event-router/mq';
 
 import { BROKER_ARN } from '../constants.js';
 import { orderSchema } from '../orderSchemas.js';
@@ -14,4 +14,20 @@ export const orderRoute = defineRabbitMQRoute({
 }).handle(async ({ body }) => {
   // body is typed as z.infer<typeof orderSchema>
   console.log(`Order ${body.orderId} for customer ${body.customerId} - total: ${body.total}`);
+});
+
+// Match orders from retry queues using customFilter on queue name pattern
+export const retryOrderRoute = defineRabbitMQRoute({
+  filters: {
+    eventSourceArns: [BROKER_ARN],
+    contentTypes: ['application/json'],
+    customFilter: ({ queue }: RabbitMQFilterInput) => {
+      // Match messages from any retry/dead-letter queue
+      const retrySuffix = '-retry';
+      return queue.endsWith(retrySuffix);
+    },
+  },
+  bodySchema: orderSchema,
+}).handle(async ({ body }) => {
+  console.log(`Retried order ${body.orderId} for customer ${body.customerId} - total: ${body.total}`);
 });

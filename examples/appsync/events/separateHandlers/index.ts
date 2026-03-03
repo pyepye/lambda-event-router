@@ -2,7 +2,7 @@ import { createAppSyncEventsRouter } from '@lambda-event-router/appsync';
 import { EventRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { onPublish } from './onPublish.js';
+import { isChatChannel, onPublish } from './onPublish.js';
 import { onSubscribe } from './onSubscribe.js';
 
 const appSyncEventsRouter = createAppSyncEventsRouter();
@@ -16,6 +16,15 @@ appSyncEventsRouter.publish({
 appSyncEventsRouter.subscribe({
   channelNamespace: '/default/*',
   handler: onSubscribe,
+});
+
+appSyncEventsRouter.route({
+  filters: {
+    operations: ['PUBLISH'],
+    channelNamespaces: ['/default/*'],
+    customFilter: isChatChannel,
+  },
+  handler: onPublish,
 });
 
 const eventRouter = new EventRouter({

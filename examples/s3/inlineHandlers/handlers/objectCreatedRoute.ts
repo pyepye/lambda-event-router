@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/s3';
+import { defineRoute, type S3FilterInput } from '@lambda-event-router/s3';
 
 // Handle S3 ObjectCreated events with bucket and key filters
 export const objectCreatedRoute = defineRoute({
@@ -34,4 +34,20 @@ export const objectCreatedThumbnailRoute = defineRoute({
   },
 }).handle(async ({ bucket, key, objectSize }) => {
   console.log(`Thumbnail created: ${key} in ${bucket} (${objectSize} bytes)`);
+});
+
+const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024;
+
+// Match large file uploads using customFilter on object size
+export const largeFileUploadRoute = defineRoute({
+  filters: {
+    eventNames: ['s3:ObjectCreated:*'],
+    buckets: ['my-uploads-bucket'],
+    customFilter: ({ record }: S3FilterInput) => {
+      const objectSize = record.s3.object.size;
+      return objectSize >= LARGE_FILE_THRESHOLD_BYTES;
+    },
+  },
+}).handle(async ({ bucket, key, objectSize }) => {
+  console.log(`Large file uploaded: ${key} in ${bucket} (${objectSize} bytes)`);
 });

@@ -1,6 +1,6 @@
 import { EventRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { createRabbitMQRouter } from '../../../../packages/mq/src/index.js';
+import { createRabbitMQRouter, type RabbitMQFilterInput } from '../../../../packages/mq/src/index.js';
 
 import { handleAllMessages, handleJsonMessage, handleOrderMessage, handleQueueMessage } from './handlers.js';
 
@@ -36,6 +36,19 @@ rabbitMQRouter.route({
     eventSourceArns: [BROKER_ARN],
     queues: ['orders-queue'],
     contentTypes: ['application/json'],
+  },
+  handler: handleOrderMessage,
+});
+
+function isRetryQueue({ queue }: RabbitMQFilterInput): boolean {
+  return queue.endsWith('-retry');
+}
+
+rabbitMQRouter.route({
+  filters: {
+    eventSourceArns: [BROKER_ARN],
+    contentTypes: ['application/json'],
+    customFilter: isRetryQueue,
   },
   handler: handleOrderMessage,
 });

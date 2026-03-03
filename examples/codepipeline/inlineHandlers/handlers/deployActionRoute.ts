@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/codepipeline';
+import { type CodePipelineFilterInput, defineRoute } from '@lambda-event-router/codepipeline';
 import { z } from 'zod';
 
 import { FUNCTION_NAME } from '../constants.js';
@@ -20,6 +20,28 @@ export const deployActionRoute = defineRoute({
 }).handle(async ({ jobId, userParameters }) => {
   const { environment, region, stackName } = userParameters;
   console.log(`Deploying job ${jobId}: stack ${stackName} to ${environment} in ${region}`);
+
+  return {
+    outputVariables: {
+      deployedEnvironment: environment,
+      deployedRegion: region,
+    },
+  };
+});
+
+// Match deploy actions that have input artifacts and a continuation token — multi-stage deploy logic
+export const continuationDeployRoute = defineRoute({
+  filters: {
+    functionNames: [FUNCTION_NAME],
+    customFilter: ({ hasInputArtifacts, hasContinuationToken }: CodePipelineFilterInput) => {
+      // Only match jobs that are resuming with artifacts — built-in filters can't express this combination
+      return hasInputArtifacts && hasContinuationToken;
+    },
+  },
+  userParametersSchema: DeployParametersSchema,
+}).handle(async ({ jobId, userParameters }) => {
+  const { environment, region, stackName } = userParameters;
+  console.log(`Continuation deploy job ${jobId}: stack ${stackName} to ${environment} in ${region}`);
 
   return {
     outputVariables: {

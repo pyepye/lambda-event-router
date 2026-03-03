@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/sqs';
+import { defineRoute, type SQSFilterInput } from '@lambda-event-router/sqs';
 import { z } from 'zod';
 
 const SOME_QUEUE_ARN = 'arn:aws:sqs:region:account-id:some-queue';
@@ -23,4 +23,22 @@ export const createItemRoute = defineRoute({
   const { name, price } = request.body;
   const { dryRun } = request.messageAttributes;
   console.log(`Creating item: ${name} with price ${price} - ${dryRun}`);
+});
+
+const HIGH_VALUE_THRESHOLD = 1000;
+
+// Route that only matches high-value orders using customFilter
+export const highValueOrderRoute = defineRoute({
+  filters: {
+    eventSourceArns: [SOME_QUEUE_ARN],
+    customFilter: ({ body }: SQSFilterInput) => {
+      if (typeof body !== 'object' || body === null) return false;
+      if (!('total' in body) || typeof body.total !== 'number') return false;
+      return body.total > HIGH_VALUE_THRESHOLD;
+    },
+  },
+  bodySchema: BodySchema,
+}).handle(async (request) => {
+  const { name, price } = request.body;
+  console.log(`High-value order: ${name} with price ${price}`);
 });

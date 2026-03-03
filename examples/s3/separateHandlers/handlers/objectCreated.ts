@@ -1,4 +1,10 @@
-import type { S3ObjectCreatedRequest } from '@lambda-event-router/s3';
+import type { S3FilterInput, S3ObjectCreatedRequest } from '@lambda-event-router/s3';
+
+const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024;
+
+export function isLargeFile({ record }: S3FilterInput): boolean {
+  return record.s3.object.size >= LARGE_FILE_THRESHOLD_BYTES;
+}
 
 export async function objectCreated(request: S3ObjectCreatedRequest): Promise<void> {
   const { bucket, key, objectSize, eventName } = request;

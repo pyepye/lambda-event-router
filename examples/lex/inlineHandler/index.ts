@@ -5,7 +5,7 @@ import type { Handler } from 'aws-lambda';
 import { allIntentsRoute } from './handlers/allIntentsRoute.js';
 import { confirmRoute } from './handlers/confirmRoute.js';
 import { dialogHookRoute } from './handlers/dialogHookRoute.js';
-import { fulfillmentRoute } from './handlers/fulfillmentRoute.js';
+import { fulfillmentRoute, premiumFulfillmentRoute } from './handlers/fulfillmentRoute.js';
 import { inputModeRoute } from './handlers/inputModeRoute.js';
 
 const lexRouter = createLexRouter();
@@ -15,7 +15,8 @@ lexRouter
   .route(fulfillmentRoute)
   .route(allIntentsRoute)
   .route(inputModeRoute)
-  .route(confirmRoute);
+  .route(confirmRoute)
+  .route(premiumFulfillmentRoute);
 
 const eventRouter = new EventRouter({
   routers: [lexRouter],
