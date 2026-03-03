@@ -13,6 +13,8 @@ import type {
   Context,
   DynamoDBRecord,
   DynamoDBStreamEvent,
+  FirehoseTransformationEvent,
+  FirehoseTransformationEventRecord,
   KinesisStreamEvent,
   KinesisStreamRecord,
   LexV2Event,
@@ -190,6 +192,13 @@ import type {
   EventBridgeHandlerEvent,
 } from './eventbridge.js';
 import { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
+import type {
+  CreateFirehoseHandlerEventOptions,
+  FirehoseEventOverrides,
+  FirehoseHandlerEvent,
+  FirehoseRecordOverrides,
+} from './firehose.js';
+import { createFirehoseEvent, createFirehoseHandlerEvent, createFirehoseRecord } from './firehose.js';
 import type { CreateKafkaHandlerEventOptions, KafkaHandlerEvent, KafkaRecordOverrides } from './kafka.js';
 import { createKafkaHandlerEvent, createKafkaRecord, createMSKEvent, createSelfManagedKafkaEvent } from './kafka.js';
 import type { CreateKinesisHandlerEventOptions, KinesisHandlerEvent, KinesisRecordOverrides } from './kinesis.js';
@@ -326,6 +335,12 @@ export interface TestFixtures {
     recordsByTopic?: Parameters<typeof createSelfManagedKafkaEvent>[0],
   ) => ReturnType<typeof createSelfManagedKafkaEvent>;
   kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
+  firehoseRecord: (overrides?: FirehoseRecordOverrides) => FirehoseTransformationEventRecord;
+  firehoseEvent: (
+    records?: FirehoseTransformationEventRecord[],
+    overrides?: FirehoseEventOverrides,
+  ) => FirehoseTransformationEvent;
+  firehoseHandlerEvent: (options?: CreateFirehoseHandlerEventOptions) => FirehoseHandlerEvent;
   kinesisRecord: (overrides?: KinesisRecordOverrides) => KinesisStreamRecord;
   kinesisEvent: (records?: KinesisStreamRecord[]) => KinesisStreamEvent;
   kinesisHandlerEvent: (options?: CreateKinesisHandlerEventOptions) => KinesisHandlerEvent;
@@ -450,6 +465,9 @@ export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.exten
   kafkaMSKEvent: fixture(createMSKEvent),
   kafkaSelfManagedEvent: fixture(createSelfManagedKafkaEvent),
   kafkaHandlerEvent: fixture(createKafkaHandlerEvent),
+  firehoseRecord: fixture(createFirehoseRecord),
+  firehoseEvent: fixture(createFirehoseEvent),
+  firehoseHandlerEvent: fixture(createFirehoseHandlerEvent),
   kinesisRecord: fixture(createKinesisRecord),
   kinesisEvent: fixture(createKinesisEvent),
   kinesisHandlerEvent: fixture(createKinesisHandlerEvent),

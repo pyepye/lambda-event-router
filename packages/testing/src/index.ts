@@ -185,6 +185,13 @@ export type {
   EventBridgeHandlerEvent,
 } from './eventbridge.js';
 export { createEventBridgeEvent, createEventBridgeHandlerEvent } from './eventbridge.js';
+export type {
+  CreateFirehoseHandlerEventOptions,
+  FirehoseEventOverrides,
+  FirehoseHandlerEvent,
+  FirehoseRecordOverrides,
+} from './firehose.js';
+export { createFirehoseEvent, createFirehoseHandlerEvent, createFirehoseRecord } from './firehose.js';
 export type { TestFixtures } from './fixtures.js';
 export { test } from './fixtures.js';
 export type {
