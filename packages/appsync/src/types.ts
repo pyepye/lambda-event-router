@@ -46,20 +46,27 @@ export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>>
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
+export interface AppSyncResolverFieldFilters {
+  customFilter?: (input: AppSyncResolverFilterInput) => boolean;
+}
+
 export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
   fieldName: string;
+  filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: Schema<TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 export interface AppSyncMutationInput<TArgs = Record<string, unknown>> {
   fieldName: string;
+  filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: Schema<TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 export interface AppSyncSubscriptionInput<TArgs = Record<string, unknown>> {
   fieldName: string;
+  filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: Schema<TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
@@ -142,13 +149,19 @@ export interface AppSyncEventsRouteDefinition {
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
+export interface AppSyncEventsOperationFilters {
+  customFilter?: (input: AppSyncEventsFilterInput) => boolean;
+}
+
 export interface AppSyncPublishInput {
   channelNamespace: string;
+  filters?: AppSyncEventsOperationFilters;
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
 export interface AppSyncSubscribeInput {
   channelNamespace: string;
+  filters?: AppSyncEventsOperationFilters;
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 

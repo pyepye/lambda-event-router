@@ -54,6 +54,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   query<TArgs = Record<string, unknown>>(input: AppSyncQueryInput<TArgs>): this {
     return this.route({
       filters: {
+        ...input.filters,
         parentTypeNames: ['Query'],
         fieldNames: [input.fieldName],
       },
@@ -65,6 +66,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   mutation<TArgs = Record<string, unknown>>(input: AppSyncMutationInput<TArgs>): this {
     return this.route({
       filters: {
+        ...input.filters,
         parentTypeNames: ['Mutation'],
         fieldNames: [input.fieldName],
       },
@@ -76,6 +78,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   subscription<TArgs = Record<string, unknown>>(input: AppSyncSubscriptionInput<TArgs>): this {
     return this.route({
       filters: {
+        ...input.filters,
         parentTypeNames: ['Subscription'],
         fieldNames: [input.fieldName],
       },

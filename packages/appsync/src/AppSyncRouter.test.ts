@@ -391,6 +391,125 @@ suite('AppSyncRouter', () => {
     });
   });
 
+  suite('customFilter via shorthand methods', () => {
+    test('query passes customFilter to route filters', async () => {
+      const router = new AppSyncRouter();
+      const customFilter = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue('ok');
+
+      router.query({
+        fieldName: 'getUser',
+        filters: { customFilter },
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('query rejects when customFilter returns false', async () => {
+      const router = new AppSyncRouter();
+
+      router.query({
+        fieldName: 'getUser',
+        filters: { customFilter: () => false },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('mutation passes customFilter to route filters', async () => {
+      const router = new AppSyncRouter();
+      const customFilter = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue('ok');
+
+      router.mutation({
+        fieldName: 'createUser',
+        filters: { customFilter },
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Mutation', fieldName: 'createUser' },
+      });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('mutation rejects when customFilter returns false', async () => {
+      const router = new AppSyncRouter();
+
+      router.mutation({
+        fieldName: 'createUser',
+        filters: { customFilter: () => false },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Mutation', fieldName: 'createUser' },
+      });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('subscription passes customFilter to route filters', async () => {
+      const router = new AppSyncRouter();
+      const customFilter = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue('ok');
+
+      router.subscription({
+        fieldName: 'onUserCreated',
+        filters: { customFilter },
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Subscription', fieldName: 'onUserCreated' },
+      });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('subscription rejects when customFilter returns false', async () => {
+      const router = new AppSyncRouter();
+
+      router.subscription({
+        fieldName: 'onUserCreated',
+        filters: { customFilter: () => false },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Subscription', fieldName: 'onUserCreated' },
+      });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+  });
+
   suite('handleEvent via shorthand methods', () => {
     test('routes Query events through query()', async () => {
       const router = new AppSyncRouter();

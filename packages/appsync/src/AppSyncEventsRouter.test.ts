@@ -379,6 +379,80 @@ suite('AppSyncEventsRouter', () => {
     });
   });
 
+  suite('customFilter via shorthand methods', () => {
+    test('publish passes customFilter to route filters', async () => {
+      const router = new AppSyncEventsRouter();
+      const customFilter = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue('ok');
+
+      router.publish({
+        channelNamespace: '/default/*',
+        filters: { customFilter },
+        handler,
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('publish rejects when customFilter returns false', async () => {
+      const router = new AppSyncEventsRouter();
+      const customFilter = vi.fn().mockReturnValue(false);
+
+      router.publish({
+        channelNamespace: '/default/*',
+        filters: { customFilter },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('subscribe passes customFilter to route filters', async () => {
+      const router = new AppSyncEventsRouter();
+      const customFilter = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue('ok');
+
+      router.subscribe({
+        channelNamespace: '/default/*',
+        filters: { customFilter },
+        handler,
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'SUBSCRIBE' } });
+      const context = createMockContext();
+
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('subscribe rejects when customFilter returns false', async () => {
+      const router = new AppSyncEventsRouter();
+      const customFilter = vi.fn().mockReturnValue(false);
+
+      router.subscribe({
+        channelNamespace: '/default/*',
+        filters: { customFilter },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'SUBSCRIBE' } });
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+  });
+
   suite('handleEvent via shorthand methods', () => {
     test('routes PUBLISH events through publish()', async () => {
       const router = new AppSyncEventsRouter();

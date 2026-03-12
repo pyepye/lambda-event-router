@@ -47,6 +47,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
   publish(input: AppSyncPublishInput): this {
     return this.route({
       filters: {
+        ...input.filters,
         operations: ['PUBLISH'],
         channelNamespaces: [input.channelNamespace],
       },
@@ -57,6 +58,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
   subscribe(input: AppSyncSubscribeInput): this {
     return this.route({
       filters: {
+        ...input.filters,
         operations: ['SUBSCRIBE'],
         channelNamespaces: [input.channelNamespace],
       },
