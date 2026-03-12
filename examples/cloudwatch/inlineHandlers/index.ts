@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch';
 import type { Handler } from 'aws-lambda';
 
@@ -22,8 +22,8 @@ cloudWatchLogsRouter
   .route(apiGatewayLogsRoute)
   .route(highVolumeRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [cloudWatchLogsRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

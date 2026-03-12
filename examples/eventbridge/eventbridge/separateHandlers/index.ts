@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
 import type { Handler } from 'aws-lambda';
 
@@ -77,8 +77,8 @@ eventBridgeRouter.route({
   handler: handleGuardDutyHighSeverityFinding,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [eventBridgeRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createCognitoRouter } from '@lambda-event-router/cognito';
 import type { Handler } from 'aws-lambda';
 
@@ -115,8 +115,8 @@ cognitoRouter.route({
   handler: genericHandler,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [cognitoRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

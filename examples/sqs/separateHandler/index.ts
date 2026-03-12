@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createSQSRouter, type SQSFilterInput } from '@lambda-event-router/sqs';
 import type { Handler } from 'aws-lambda';
 
@@ -49,8 +49,8 @@ sqsRouter.route({
   messageAttributesSchema: MessageAttributesSchema,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [sqsRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice';
 import type { Handler } from 'aws-lambda';
 
@@ -8,8 +8,8 @@ const apiRouter = createVPCLatticeRouter();
 
 apiRouter.route(createItemRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [apiRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

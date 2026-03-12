@@ -1,18 +1,18 @@
 import { createMockContext, createSQSEvent } from '@lambda-event-router/testing';
-import { createEventRouter, EventRouter } from './EventRouter.js';
+import { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';
 import type { EventTypeRouter } from './types.js';
 
-suite('EventRouter', () => {
-  suite('createEventRouter', () => {
-    test('creates an EventRouter instance', () => {
-      const router = createEventRouter({ routers: [] });
-      expect(router).toBeInstanceOf(EventRouter);
+suite('LambdaRouter', () => {
+  suite('createLambdaRouter', () => {
+    test('creates an LambdaRouter instance', () => {
+      const router = createLambdaRouter({ routers: [] });
+      expect(router).toBeInstanceOf(LambdaRouter);
     });
   });
 
   suite('handler', () => {
     test('returns a function', () => {
-      const router = createEventRouter({ routers: [] });
+      const router = createLambdaRouter({ routers: [] });
       const handler = router.handler();
       expect(typeof handler).toBe('function');
     });
@@ -40,10 +40,10 @@ suite('EventRouter', () => {
       };
 
       // Put SNSRouter first to test that SQSRouter is correctly used for SQS events
-      const eventRouter = createEventRouter({
+      const lambdaRouter = createLambdaRouter({
         routers: [mockSNSRouter, mockSQSRouter],
       });
-      const handler = eventRouter.handler();
+      const handler = lambdaRouter.handler();
 
       const sqsEvent = createSQSEvent();
       const mockContext = createMockContext();
@@ -54,8 +54,8 @@ suite('EventRouter', () => {
     });
 
     test('throws when no router matches the event', async () => {
-      const eventRouter = createEventRouter({ routers: [] });
-      const handler = eventRouter.handler();
+      const lambdaRouter = createLambdaRouter({ routers: [] });
+      const handler = lambdaRouter.handler();
 
       const unknownEvent = { unknown: true };
       const mockContext = createMockContext();
@@ -85,12 +85,12 @@ suite('EventRouter', () => {
       const sqsRouter = new SQSRouter();
 
       // Pass EventBridgeSchedulerRouter first — it should be moved to the end
-      const eventRouter = createEventRouter({
+      const lambdaRouter = createLambdaRouter({
         routers: [schedulerRouter, sqsRouter],
       });
 
       // @ts-expect-error accessing private property to check order of routers
-      const orderedRouters: EventTypeRouter[] = eventRouter.routers;
+      const orderedRouters: EventTypeRouter[] = lambdaRouter.routers;
 
       expect(orderedRouters[0]).toBe(sqsRouter);
       expect(orderedRouters[1]).toBe(schedulerRouter);

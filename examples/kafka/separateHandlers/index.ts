@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createKafkaRouter, type KafkaFilterInput } from '@lambda-event-router/kafka';
 import type { Handler } from 'aws-lambda';
 
@@ -46,8 +46,8 @@ kafkaRouter.route({
   valueSchema: OrderValueSchema,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [kafkaRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

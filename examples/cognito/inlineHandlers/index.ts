@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { type CognitoFilterInput, createCognitoRouter, type PreSignUpRequest } from '@lambda-event-router/cognito';
 import type { Handler } from 'aws-lambda';
 
@@ -68,9 +68,9 @@ cognitoRouter.preSignUp({
   },
 });
 
-// Create the event router
-const eventRouter = new EventRouter({
+// Create the lambda router
+const lambdaRouter = new LambdaRouter({
   routers: [cognitoRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

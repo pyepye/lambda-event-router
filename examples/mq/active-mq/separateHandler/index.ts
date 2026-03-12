@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 import { type ActiveMQFilterInput, createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 
@@ -69,8 +69,8 @@ activeMQRouter.textMessage({
   handler: handleOrderMessage,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [activeMQRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

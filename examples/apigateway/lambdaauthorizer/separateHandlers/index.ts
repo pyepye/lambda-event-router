@@ -1,5 +1,5 @@
 import { createLambdaAuthorizerRouter } from '@lambda-event-router/apigateway';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { onRequestAuth } from './onRequestAuth.js';
@@ -22,8 +22,8 @@ lambdaAuthorizerRouter.request({
   handler: onRequestAuthSimple,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [lambdaAuthorizerRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

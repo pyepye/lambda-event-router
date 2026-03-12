@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createKinesisRouter, type KinesisFilterInput } from '@lambda-event-router/kinesis';
 import type { Handler } from 'aws-lambda';
 
@@ -44,8 +44,8 @@ kinesisRouter.route({
   dataSchema: OrderDataSchema,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [kinesisRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

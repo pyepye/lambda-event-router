@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createConfigRouter } from '@lambda-event-router/config';
 import type { Handler } from 'aws-lambda';
 
@@ -48,8 +48,8 @@ configRouter.route({
   handler: handleOversizedLambdaCompliance,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [configRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

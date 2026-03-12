@@ -1,5 +1,5 @@
 import { createWebSocketRouter } from '@lambda-event-router/apigateway';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { onConnect } from './onConnect.js';
@@ -34,8 +34,8 @@ webSocketRouter.route({
   },
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [webSocketRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

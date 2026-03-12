@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { DocumentDBFilterInput } from '@lambda-event-router/documentdb';
 import { createDocumentDBRouter } from '@lambda-event-router/documentdb';
 import type { Handler } from 'aws-lambda';
@@ -83,8 +83,8 @@ documentDBRouter.route({
   handler: updateOrder,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [documentDBRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createDynamoDBRouter, type DynamoDBFilterInput } from '@lambda-event-router/dynamodb';
 import type { Handler } from 'aws-lambda';
 
@@ -77,8 +77,8 @@ dynamodbStreamRouter.insert({
   handler: createItem,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [dynamodbStreamRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

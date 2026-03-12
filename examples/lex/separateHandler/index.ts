@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createLexRouter, type LexFilterInput } from '@lambda-event-router/lex';
 import type { Handler } from 'aws-lambda';
 
@@ -45,8 +45,8 @@ lexRouter.fulfillmentCodeHook({
   handler: fulfillPizzaOrder,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [lexRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

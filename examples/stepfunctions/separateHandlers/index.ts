@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions';
 import type { Handler } from 'aws-lambda';
 
@@ -99,11 +99,11 @@ stepFunctionsRouter.route({
 });
 
 // =============================================================================
-// Event Router
+// Lambda Router
 // =============================================================================
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [stepFunctionsRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

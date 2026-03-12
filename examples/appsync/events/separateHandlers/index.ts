@@ -1,5 +1,5 @@
 import { createAppSyncEventsRouter } from '@lambda-event-router/appsync';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { isChatChannel, onPublish } from './onPublish.js';
@@ -27,8 +27,8 @@ appSyncEventsRouter.route({
   handler: onPublish,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [appSyncEventsRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

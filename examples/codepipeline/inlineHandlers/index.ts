@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createCodePipelineRouter } from '@lambda-event-router/codepipeline';
 import type { Handler } from 'aws-lambda';
 
@@ -14,8 +14,8 @@ codePipelineRouter
   .route(deployActionRoute)
   .route(continuationDeployRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [codePipelineRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

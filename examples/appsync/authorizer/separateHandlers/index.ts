@@ -1,5 +1,5 @@
 import { createAppSyncAuthorizerRouter } from '@lambda-event-router/appsync';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { onAuth } from './onAuth.js';
@@ -10,8 +10,8 @@ appSyncAuthorizerRouter.route({
   handler: onAuth,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [appSyncAuthorizerRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

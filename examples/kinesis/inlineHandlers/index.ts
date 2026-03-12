@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createKinesisRouter } from '@lambda-event-router/kinesis';
 import type { Handler } from 'aws-lambda';
 
@@ -12,8 +12,8 @@ const kinesisRouter = createKinesisRouter({
 
 kinesisRouter.route(orderRoute).route(inventoryRoute).route(highPriorityRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [kinesisRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

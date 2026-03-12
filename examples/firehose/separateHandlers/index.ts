@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createFirehoseRouter } from '@lambda-event-router/firehose';
 import type { Handler } from 'aws-lambda';
 
@@ -40,8 +40,8 @@ firehoseRouter.route({
   dataSchema: InventoryDataSchema,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [firehoseRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

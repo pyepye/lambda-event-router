@@ -1,7 +1,7 @@
 import type { Context, Handler } from 'aws-lambda';
 import type { EventTypeRouter } from './types.js';
 
-export class EventRouter {
+export class LambdaRouter {
   private routers: EventTypeRouter[];
 
   constructor(options: { routers: EventTypeRouter[] }) {
@@ -29,6 +29,6 @@ export class EventRouter {
   }
 }
 
-export function createEventRouter(options: { routers: EventTypeRouter[] }): EventRouter {
-  return new EventRouter(options);
+export function createLambdaRouter(options: { routers: EventTypeRouter[] }): LambdaRouter {
+  return new LambdaRouter(options);
 }

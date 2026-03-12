@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createLexRouter } from '@lambda-event-router/lex';
 import type { Handler } from 'aws-lambda';
 
@@ -18,8 +18,8 @@ lexRouter
   .route(confirmRoute)
   .route(premiumFulfillmentRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [lexRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

@@ -1,5 +1,5 @@
 import { createAPIGatewayRouter } from '@lambda-event-router/apigateway';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { createItemRoute } from './createItem.js';
@@ -8,8 +8,8 @@ const apiRouter = createAPIGatewayRouter();
 
 apiRouter.route(createItemRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [apiRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

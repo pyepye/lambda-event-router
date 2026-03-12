@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { type ConnectFilterInput, createConnectRouter } from '@lambda-event-router/connect';
 import type { Handler } from 'aws-lambda';
 
@@ -106,8 +106,8 @@ connectRouter.voice({
   handler: handleVoiceCall,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [connectRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

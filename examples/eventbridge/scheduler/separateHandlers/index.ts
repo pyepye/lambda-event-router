@@ -1,4 +1,4 @@
-import { EventRouter, isObject } from '@lambda-event-router/base';
+import { isObject, LambdaRouter } from '@lambda-event-router/base';
 import type { EventBridgeSchedulerFilterInput } from '@lambda-event-router/eventbridge';
 import { createEventBridgeSchedulerRouter } from '@lambda-event-router/eventbridge';
 import type { Handler } from 'aws-lambda';
@@ -58,8 +58,8 @@ schedulerRouter.route({
   handler: handleDataSync,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [schedulerRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

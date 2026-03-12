@@ -1,5 +1,5 @@
 import { type AppSyncResolverFilterInput, createAppSyncRouter } from '@lambda-event-router/appsync';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { CreateUserInputSchema, createUser } from './createUser.js';
@@ -63,8 +63,8 @@ appSyncRouter.route({
   handler: createUser,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [appSyncRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

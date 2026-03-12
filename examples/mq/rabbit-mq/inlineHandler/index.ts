@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 import { createRabbitMQRouter } from '../../../../packages/mq/src/index.js';
 
@@ -16,8 +16,8 @@ rabbitMQRouter
   .route(orderRoute)
   .route(retryOrderRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [rabbitMQRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

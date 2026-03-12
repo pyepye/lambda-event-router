@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createConfigScheduledRouter } from '@lambda-event-router/config';
 import type { Handler } from 'aws-lambda';
 
@@ -8,8 +8,8 @@ const configScheduledRouter = createConfigScheduledRouter();
 
 configScheduledRouter.route(tagAuditRoute).route(crossAccountRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [configScheduledRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

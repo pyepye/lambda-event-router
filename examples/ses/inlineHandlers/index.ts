@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createSESRouter } from '@lambda-event-router/ses';
 import type { Handler } from 'aws-lambda';
 
@@ -13,8 +13,8 @@ const sesRouter = createSESRouter();
 
 sesRouter.route(inboundEmailRoute).route(partnerEmailRoute).route(internalEmailRoute).route(attachmentEmailRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [sesRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

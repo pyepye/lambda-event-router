@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createSNSRouter, type SNSFilterInput } from '@lambda-event-router/sns';
 import type { Handler } from 'aws-lambda';
 
@@ -58,8 +58,8 @@ snsRouter.route({
   messageAttributesSchema: MessageAttributesSchema,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [snsRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { CodeCommitFilterInput } from '@lambda-event-router/codecommit';
 import { createCodeCommitRouter } from '@lambda-event-router/codecommit';
 import type { Handler } from 'aws-lambda';
@@ -125,8 +125,8 @@ codeCommitRouter.route({
   handler: processMainPush,
 });
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [codeCommitRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

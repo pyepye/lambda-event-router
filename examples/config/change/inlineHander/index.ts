@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createConfigRouter } from '@lambda-event-router/config';
 import type { Handler } from 'aws-lambda';
 
@@ -8,8 +8,8 @@ const configRouter = createConfigRouter();
 
 configRouter.route(kmsKeyRotationRoute).route(elbListenerRoute).route(oversizedRdsRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [configRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

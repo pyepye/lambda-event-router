@@ -1,5 +1,5 @@
 import { createAppSyncRouter } from '@lambda-event-router/appsync';
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import { adminCreateUserRoute, createUserRoute } from './createUser.js';
@@ -20,8 +20,8 @@ appSyncRouter
   .route(onUserCreatedRoute)
   .route(adminCreateUserRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [appSyncRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

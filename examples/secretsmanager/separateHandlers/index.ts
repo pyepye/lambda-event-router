@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createSecretsManagerRouter, type SecretsManagerFilterInput } from '@lambda-event-router/secretsmanager';
 import type { Handler } from 'aws-lambda';
 
@@ -126,11 +126,11 @@ secretsManagerRouter.route({
 });
 
 // =============================================================================
-// Event Router
+// Lambda Router
 // =============================================================================
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [secretsManagerRouter],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();

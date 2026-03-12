@@ -1,4 +1,4 @@
-import { EventRouter } from '@lambda-event-router/base';
+import { LambdaRouter } from '@lambda-event-router/base';
 import { createS3Router } from '@lambda-event-router/s3';
 import type { Handler } from 'aws-lambda';
 
@@ -18,8 +18,8 @@ s3Router
   .route(objectCreatedThumbnailRoute)
   .route(largeFileUploadRoute);
 
-const eventRouter = new EventRouter({
+const lambdaRouter = new LambdaRouter({
   routers: [s3Router],
 });
 
-export const handler: Handler = eventRouter.handler();
+export const handler: Handler = lambdaRouter.handler();
