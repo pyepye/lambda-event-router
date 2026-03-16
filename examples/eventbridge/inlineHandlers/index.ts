@@ -3,10 +3,12 @@ import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
 import type { Handler } from 'aws-lambda';
 
 import {
+  codeBuildStateChangeRoute,
   ec2StateChangeRoute,
   iamPolicyChangeRoute,
   orderCreatedRoute,
   orderUpdatedRoute,
+  pipesOrderReceivedRoute,
   scheduledRuleRoute,
 } from './handlers/eventRoutes.js';
 
@@ -17,7 +19,9 @@ eventBridgeRouter
   .route(orderCreatedRoute)
   .route(orderUpdatedRoute)
   .route(scheduledRuleRoute)
-  .route(iamPolicyChangeRoute);
+  .route(iamPolicyChangeRoute)
+  .route(pipesOrderReceivedRoute)
+  .route(codeBuildStateChangeRoute);
 
 const lambdaRouter = new LambdaRouter({
   routers: [eventBridgeRouter],

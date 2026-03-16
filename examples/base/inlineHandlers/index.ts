@@ -1,14 +1,23 @@
 import { createEventRouter, LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { dailyCleanupRoute, weeklyReportRoute } from './handlers/eventRoutes.js';
+import {
+  generateReportRoute,
+  processOrderRoute,
+  scheduledCleanupRoute,
+  temperatureReadingRoute,
+} from './handlers/eventRoutes.js';
 
-const genericRouter = createEventRouter();
+const eventRouter = createEventRouter();
 
-genericRouter.route(dailyCleanupRoute).route(weeklyReportRoute);
+eventRouter
+  .route(scheduledCleanupRoute)
+  .route(processOrderRoute)
+  .route(temperatureReadingRoute)
+  .route(generateReportRoute);
 
 const lambdaRouter = new LambdaRouter({
-  routers: [genericRouter],
+  routers: [eventRouter],
 });
 
 export const handler: Handler = lambdaRouter.handler();

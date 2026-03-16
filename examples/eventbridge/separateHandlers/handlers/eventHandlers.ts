@@ -81,3 +81,47 @@ export async function handleGuardDutyHighSeverityFinding({
   console.log(`Title: ${detail.title}`);
   console.log(`Resource type: ${detail.resource.resourceType}`);
 }
+
+// --- EventBridge Pipes examples ---
+
+export const PipesOrderDetailSchema = z.object({
+  orderId: z.string(),
+  customerEmail: z.string(),
+  items: z.array(
+    z.object({
+      productId: z.string(),
+      quantity: z.number(),
+      price: z.number(),
+    }),
+  ),
+  totalAmount: z.number(),
+});
+
+type PipesOrderDetail = z.infer<typeof PipesOrderDetailSchema>;
+
+export async function handlePipesOrderReceived({ detail, time }: EventBridgeRequest<PipesOrderDetail>): Promise<void> {
+  console.log(`Pipes order received at ${time}: ${detail.orderId}`);
+  console.log(`Customer: ${detail.customerEmail}, Total: ${detail.totalAmount}`);
+  console.log(`Items: ${detail.items.length}`);
+}
+
+export const PipesInventoryDetailSchema = z.object({
+  productId: z.string(),
+  warehouseId: z.string(),
+  previousQuantity: z.number(),
+  newQuantity: z.number(),
+  changeReason: z.string(),
+});
+
+type PipesInventoryDetail = z.infer<typeof PipesInventoryDetailSchema>;
+
+export async function handlePipesInventoryChanged({
+  detail,
+  account,
+  region,
+}: EventBridgeRequest<PipesInventoryDetail>): Promise<void> {
+  const quantityDelta = detail.newQuantity - detail.previousQuantity;
+  const direction = quantityDelta >= 0 ? 'increased' : 'decreased';
+  console.log(`Inventory ${direction} in ${account}/${region}: ${detail.productId} at ${detail.warehouseId}`);
+  console.log(`${detail.previousQuantity} → ${detail.newQuantity} (${detail.changeReason})`);
+}

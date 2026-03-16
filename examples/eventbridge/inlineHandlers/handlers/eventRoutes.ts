@@ -92,3 +92,53 @@ export const iamPolicyChangeRoute = defineRoute({
   console.log(`Policy: ${detail.requestParameters.policyArn}`);
   console.log(`Performed by: ${detail.userIdentity.arn}`);
 });
+
+// --- EventBridge Pipes examples ---
+// Pipes sends events to EventBridge which triggers Lambda via standard EventBridge envelope
+
+// Pipes: SQS → Pipes → EventBridge → Lambda (order processing pipeline)
+const PipesOrderDetailSchema = z.object({
+  orderId: z.string(),
+  customerEmail: z.string(),
+  items: z.array(
+    z.object({
+      productId: z.string(),
+      quantity: z.number(),
+      price: z.number(),
+    }),
+  ),
+  totalAmount: z.number(),
+});
+
+export const pipesOrderReceivedRoute = defineRoute({
+  filters: {
+    sources: ['myapp.pipes.orders'],
+    detailTypes: ['OrderReceived'],
+  },
+  detailSchema: PipesOrderDetailSchema,
+}).handle(async ({ detail, time }) => {
+  console.log(`Pipes order received at ${time}: ${detail.orderId}`);
+  console.log(`Customer: ${detail.customerEmail}, Total: ${detail.totalAmount}`);
+  console.log(`Items: ${detail.items.length}`);
+});
+
+// Handle CodeBuild state changes for CI/CD pipeline monitoring
+const CodeBuildDetailSchema = z.object({
+  'build-id': z.string(),
+  'build-status': z.string(),
+  'project-name': z.string(),
+  'current-phase': z.string(),
+  'current-phase-context': z.string(),
+});
+
+export const codeBuildStateChangeRoute = defineRoute({
+  filters: {
+    sources: ['aws.codebuild'],
+    detailTypes: ['CodeBuild Build State Change'],
+  },
+  detailSchema: CodeBuildDetailSchema,
+}).handle(async ({ detail, account, region }) => {
+  console.log(`CodeBuild ${detail['build-status']} in ${account}/${region}`);
+  console.log(`Project: ${detail['project-name']}, Build: ${detail['build-id']}`);
+  console.log(`Phase: ${detail['current-phase']} - ${detail['current-phase-context']}`);
+});

@@ -8,9 +8,13 @@ import {
   handleGuardDutyHighSeverityFinding,
   handleOrderCreated,
   handleOrderStatusChange,
+  handlePipesInventoryChanged,
+  handlePipesOrderReceived,
   handleS3Notification,
   handleScheduledRule,
   OrderDetailSchema,
+  PipesInventoryDetailSchema,
+  PipesOrderDetailSchema,
 } from './handlers/eventHandlers.js';
 
 const eventBridgeRouter = createEventBridgeRouter();
@@ -75,6 +79,26 @@ eventBridgeRouter.route({
   },
   detailSchema: GuardDutyFindingSchema,
   handler: handleGuardDutyHighSeverityFinding,
+});
+
+// Pipes: SQS → Pipes → EventBridge → Lambda (order processing pipeline)
+eventBridgeRouter.route({
+  filters: {
+    sources: ['myapp.pipes.orders'],
+    detailTypes: ['OrderReceived'],
+  },
+  detailSchema: PipesOrderDetailSchema,
+  handler: handlePipesOrderReceived,
+});
+
+// Pipes: DynamoDB → Pipes → EventBridge → Lambda (change data capture)
+eventBridgeRouter.route({
+  filters: {
+    sources: ['myapp.pipes.inventory'],
+    detailTypes: ['InventoryChanged'],
+  },
+  detailSchema: PipesInventoryDetailSchema,
+  handler: handlePipesInventoryChanged,
 });
 
 const lambdaRouter = new LambdaRouter({

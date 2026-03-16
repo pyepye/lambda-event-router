@@ -1,5 +1,5 @@
 import type { Context } from 'aws-lambda';
-import type { EventFilterInput, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
+import type { EventFilterInput, EventFilters, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
 import type { EventTypeRouter, InferSchema, Schema } from './types.js';
 import { isObject } from './types.js';
 
@@ -10,7 +10,7 @@ interface InternalEventRoute {
 }
 
 interface EventRouteInput<TEventSchema extends Schema<unknown> | undefined = undefined> {
-  filters: { customFilter?: (input: EventFilterInput) => boolean };
+  filters: EventFilters<TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : unknown>;
   eventSchema?: TEventSchema;
 }
 
@@ -152,10 +152,11 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
   }
 
   route<TPayload>(definition: EventRouteDefinition<TPayload>): this {
-    // Cast needed: storing specific handler type in general storage (contravariance)
+    // Casts needed: storing typed route in general storage (contravariance)
     const handler = definition.handler as EventHandler<unknown>;
+    const filters = definition.filters as InternalEventRoute['filters'];
     this.routes.push({
-      filters: definition.filters,
+      filters,
       eventSchema: definition.eventSchema,
       handler,
     });

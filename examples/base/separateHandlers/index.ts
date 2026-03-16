@@ -1,64 +1,57 @@
-import type { EventFilterInput } from '@lambda-event-router/base';
-import { createEventRouter, isObject, LambdaRouter } from '@lambda-event-router/base';
+import { createEventRouter, LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
 import {
-  CleanupSchedulerSchema,
-  handleDailyCleanup,
-  handleDataSync,
-  handleWeeklyReport,
-  ReportSchedulerSchema,
-  SyncSchedulerSchema,
+  GenerateReportSchema,
+  handleGenerateReport,
+  handleProcessOrder,
+  handleScheduledCleanup,
+  handleTemperatureReading,
+  ProcessOrderSchema,
+  ScheduledCleanupSchema,
+  TemperatureReadingSchema,
 } from './handlers/eventHandlers.js';
 
-const schedulerRouter = createEventRouter();
+const eventRouter = createEventRouter();
 
-function hasSchedulerType(event: unknown): event is Record<string, unknown> & { schedulerType: string } {
-  return isObject(event) && Object.hasOwn(event, 'schedulerType') && typeof event.schedulerType === 'string';
-}
-
-// Filter functions for scheduler payloads
-function isCleanupScheduler({ event }: EventFilterInput): boolean {
-  return hasSchedulerType(event) && event.schedulerType === 'daily-cleanup';
-}
-
-function isReportScheduler({ event }: EventFilterInput): boolean {
-  return hasSchedulerType(event) && event.schedulerType === 'weekly-report';
-}
-
-function isSyncScheduler({ event }: EventFilterInput): boolean {
-  return hasSchedulerType(event) && event.schedulerType === 'data-sync';
-}
-
-// Daily cleanup scheduler
-schedulerRouter.route({
+// EventBridge Scheduler: templated input for scheduled cleanup
+eventRouter.route({
   filters: {
-    customFilter: isCleanupScheduler,
+    customFilter: ({ event }) => event.action === 'scheduled-cleanup',
   },
-  eventSchema: CleanupSchedulerSchema,
-  handler: handleDailyCleanup,
+  eventSchema: ScheduledCleanupSchema,
+  handler: handleScheduledCleanup,
 });
 
-// Weekly report scheduler
-schedulerRouter.route({
+// Step Functions Task: order processing
+eventRouter.route({
   filters: {
-    customFilter: isReportScheduler,
+    customFilter: ({ event }) => event.taskType === 'process-order',
   },
-  eventSchema: ReportSchedulerSchema,
-  handler: handleWeeklyReport,
+  eventSchema: ProcessOrderSchema,
+  handler: handleProcessOrder,
 });
 
-// Data sync scheduler
-schedulerRouter.route({
+// IoT Core Rules Engine: temperature sensor reading
+eventRouter.route({
   filters: {
-    customFilter: isSyncScheduler,
+    customFilter: ({ event }) => event.sensorType === 'temperature',
   },
-  eventSchema: SyncSchedulerSchema,
-  handler: handleDataSync,
+  eventSchema: TemperatureReadingSchema,
+  handler: handleTemperatureReading,
+});
+
+// Direct Lambda Invocation: report generation command
+eventRouter.route({
+  filters: {
+    customFilter: ({ event }) => event.command === 'generate-report',
+  },
+  eventSchema: GenerateReportSchema,
+  handler: handleGenerateReport,
 });
 
 const lambdaRouter = new LambdaRouter({
-  routers: [schedulerRouter],
+  routers: [eventRouter],
 });
 
 export const handler: Handler = lambdaRouter.handler();

@@ -347,6 +347,31 @@ suite('EventRouter', () => {
         handler,
       });
     });
+
+    test('customFilter receives typed event when eventSchema is provided', () => {
+      const eventSchema: Schema<{ taskId: string }> = {
+        safeParse: (data: unknown) => ({ success: true, data: data as { taskId: string } }),
+      };
+
+      const definition = defineEventRoute({
+        filters: {
+          customFilter: ({ event }: EventFilterInput<{ taskId: string }>) => event.taskId === 'task-123',
+        },
+        eventSchema,
+      }).handle(async () => {});
+
+      expect(definition.filters.customFilter).toBeDefined();
+    });
+
+    test('customFilter event defaults to unknown when no eventSchema is provided', () => {
+      const customFilter = vi.fn().mockReturnValue(true);
+
+      const definition = defineEventRoute({
+        filters: { customFilter },
+      }).handle(async () => {});
+
+      expect(definition.filters.customFilter).toBe(customFilter);
+    });
   });
 
   suite('route', () => {

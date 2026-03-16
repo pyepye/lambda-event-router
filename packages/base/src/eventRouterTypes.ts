@@ -1,12 +1,12 @@
 import type { Context } from 'aws-lambda';
 import type { Schema } from './types.js';
 
-export interface EventFilterInput {
-  event: unknown;
+export interface EventFilterInput<TPayload = unknown> {
+  event: TPayload;
 }
 
-export interface EventFilters {
-  customFilter?: (input: EventFilterInput) => boolean;
+export interface EventFilters<TPayload = unknown> {
+  customFilter?: (input: EventFilterInput<TPayload>) => boolean;
 }
 
 export interface EventRequest<TPayload = unknown> {
@@ -15,7 +15,7 @@ export interface EventRequest<TPayload = unknown> {
 }
 
 export interface EventRouteDefinition<TPayload = unknown> {
-  filters: EventFilters;
+  filters: EventFilters<TPayload>;
   eventSchema?: Schema<TPayload>;
   handler: EventHandler<TPayload>;
 }
