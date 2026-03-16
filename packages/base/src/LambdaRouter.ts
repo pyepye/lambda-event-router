@@ -5,11 +5,11 @@ export class LambdaRouter {
   private routers: EventTypeRouter[];
 
   constructor(options: { routers: EventTypeRouter[] }) {
-    // EventBridgeSchedulerRouter accepts arbitrary JSON payloads, making its canHandleEvent a catch-all.
+    // EventRouter accepts arbitrary JSON payloads, making its canHandleEvent a catch-all.
     // Always put it at the end so that it only handles events that no other router can handle.
-    const schedulerRouters = options.routers.filter((r) => r.constructor.name === 'EventBridgeSchedulerRouter');
-    const otherRouters = options.routers.filter((r) => r.constructor.name !== 'EventBridgeSchedulerRouter');
-    this.routers = [...otherRouters, ...schedulerRouters];
+    const customEnvelopeRouters = options.routers.filter((r) => r.constructor.name === 'EventRouter');
+    const otherRouters = options.routers.filter((r) => r.constructor.name !== 'EventRouter');
+    this.routers = [...otherRouters, ...customEnvelopeRouters];
   }
 
   handler(): Handler {

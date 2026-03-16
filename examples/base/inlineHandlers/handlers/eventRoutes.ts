@@ -1,6 +1,5 @@
-import { isObject } from '@lambda-event-router/base';
-import type { EventBridgeSchedulerFilterInput } from '@lambda-event-router/eventbridge';
-import { defineEventBridgeSchedulerRoute } from '@lambda-event-router/eventbridge';
+import type { EventFilterInput } from '@lambda-event-router/base';
+import { defineEventRoute, isObject } from '@lambda-event-router/base';
 import { z } from 'zod';
 
 // Schema for cleanup scheduler payload
@@ -15,12 +14,12 @@ function hasSchedulerType(event: unknown): event is Record<string, unknown> & { 
   return isObject(event) && Object.hasOwn(event, 'schedulerType') && typeof event.schedulerType === 'string';
 }
 
-function isCleanupScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
+function isCleanupScheduler({ event }: EventFilterInput): boolean {
   return hasSchedulerType(event) && event.schedulerType === 'daily-cleanup';
 }
 
 // Route EventBridge Scheduler events using customFilter
-export const dailyCleanupRoute = defineEventBridgeSchedulerRoute({
+export const dailyCleanupRoute = defineEventRoute({
   filters: {
     customFilter: isCleanupScheduler,
   },
@@ -36,12 +35,12 @@ const ReportSchedulerSchema = z.object({
   recipients: z.array(z.string()),
 });
 
-function isReportScheduler({ event }: EventBridgeSchedulerFilterInput): boolean {
+function isReportScheduler({ event }: EventFilterInput): boolean {
   return hasSchedulerType(event) && event.schedulerType === 'weekly-report';
 }
 
 // Another scheduler route with different payload structure
-export const weeklyReportRoute = defineEventBridgeSchedulerRoute({
+export const weeklyReportRoute = defineEventRoute({
   filters: {
     customFilter: isReportScheduler,
   },

@@ -63,11 +63,11 @@ suite('LambdaRouter', () => {
       await expect(handler(unknownEvent, mockContext, vi.fn())).rejects.toThrow('No router found for event');
     });
 
-    test('reorders EventBridgeSchedulerRouter to the end regardless of input order', () => {
+    test('reorders EventRouter to the end regardless of input order', () => {
       const mockHandler = vi.fn();
 
-      // Class names matter — the constructor reorders based on constructor.name === 'EventBridgeSchedulerRouter'
-      class EventBridgeSchedulerRouter implements EventTypeRouter {
+      // Class names matter — the constructor reorders based on constructor.name === 'EventRouter'
+      class EventRouter implements EventTypeRouter {
         canHandleEvent(event: unknown): event is unknown {
           return typeof event === 'object';
         }
@@ -81,19 +81,19 @@ suite('LambdaRouter', () => {
         handleEvent = mockHandler;
       }
 
-      const schedulerRouter = new EventBridgeSchedulerRouter();
+      const eventRouter = new EventRouter();
       const sqsRouter = new SQSRouter();
 
-      // Pass EventBridgeSchedulerRouter first — it should be moved to the end
+      // Pass EventRouter first — it should be moved to the end
       const lambdaRouter = createLambdaRouter({
-        routers: [schedulerRouter, sqsRouter],
+        routers: [eventRouter, sqsRouter],
       });
 
       // @ts-expect-error accessing private property to check order of routers
       const orderedRouters: EventTypeRouter[] = lambdaRouter.routers;
 
       expect(orderedRouters[0]).toBe(sqsRouter);
-      expect(orderedRouters[1]).toBe(schedulerRouter);
+      expect(orderedRouters[1]).toBe(eventRouter);
     });
   });
 });

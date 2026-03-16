@@ -1,25 +1,21 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
-import type {
-  EventBridgeSchedulerFilterInput,
-  EventBridgeSchedulerHandler,
-  EventBridgeSchedulerRouteDefinition,
-} from './eventBridgeSchedulerTypes.js';
+import type { EventFilterInput, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
+import type { EventTypeRouter, InferSchema, Schema } from './types.js';
+import { isObject } from './types.js';
 
-interface InternalSchedulerRoute {
-  filters: { customFilter?: (input: EventBridgeSchedulerFilterInput) => boolean };
+interface InternalEventRoute {
+  filters: { customFilter?: (input: EventFilterInput) => boolean };
   eventSchema?: Schema<unknown>;
-  handler: EventBridgeSchedulerHandler<unknown>;
+  handler: EventHandler<unknown>;
 }
 
-interface EventBridgeSchedulerRouteInput<TEventSchema extends Schema<unknown> | undefined = undefined> {
-  filters: { customFilter?: (input: EventBridgeSchedulerFilterInput) => boolean };
+interface EventRouteInput<TEventSchema extends Schema<unknown> | undefined = undefined> {
+  filters: { customFilter?: (input: EventFilterInput) => boolean };
   eventSchema?: TEventSchema;
 }
 
-interface EventBridgeSchedulerRouteBuilder<TPayload> {
-  handle(handler: EventBridgeSchedulerHandler<TPayload>): EventBridgeSchedulerRouteDefinition<TPayload>;
+interface EventRouteBuilder<TPayload> {
+  handle(handler: EventHandler<TPayload>): EventRouteDefinition<TPayload>;
 }
 
 // Check if event is from a known AWS source that has its own router
@@ -44,13 +40,13 @@ function isKnownEventSource(event: Record<string, unknown>): boolean {
 
   // Top-level eventSource field (DocumentDB, ActiveMQ, RabbitMQ)
   if (typeof event.eventSource === 'string') {
-    const topLevelSources = ['aws:docdb', 'aws:mq', 'aws:rmq'];
+    const topLevelSources = ['aws:docdb', 'aws:mq', 'aws:rmq', 'aws:kafka', 'SelfManagedKafka'];
     if (topLevelSources.includes(event.eventSource)) {
       return true;
     }
   }
 
-  // EventBridge envelope events (handled by EventBridgeRouter)
+  // EventBridge envelope events (source + detail-type + detail)
   if (typeof event.source === 'string' && typeof event['detail-type'] === 'string' && isObject(event.detail)) {
     return true;
   }
@@ -91,10 +87,24 @@ function isKnownEventSource(event: Record<string, unknown>): boolean {
     return true;
   }
 
+  // Firehose
+  if (typeof event.deliveryStreamArn === 'string' && Array.isArray(event.records)) {
+    return true;
+  }
+
+  // S3 Batch
+  if (
+    typeof event.invocationSchemaVersion === 'string' &&
+    typeof event.invocationId === 'string' &&
+    isObject(event.job) &&
+    Array.isArray(event.tasks)
+  ) {
+    return true;
+  }
+
   // AppSync (resolver or channel handler)
   if (isObject(event.info)) {
-    const info = event.info as Record<string, unknown>;
-    if (typeof info.parentTypeName === 'string' || typeof info.channel === 'string') {
+    if (typeof event.info.parentTypeName === 'string' || typeof event.info.channel === 'string') {
       return true;
     }
   }
@@ -132,8 +142,8 @@ function isKnownEventSource(event: Record<string, unknown>): boolean {
   return false;
 }
 
-export class EventBridgeSchedulerRouter implements EventTypeRouter<unknown, void> {
-  private routes: InternalSchedulerRoute[] = [];
+export class EventRouter implements EventTypeRouter<unknown, void> {
+  private routes: InternalEventRoute[] = [];
 
   canHandleEvent(event: unknown): event is unknown {
     if (!isObject(event)) return false;
@@ -141,9 +151,9 @@ export class EventBridgeSchedulerRouter implements EventTypeRouter<unknown, void
     return this.matchRoute(event) !== undefined;
   }
 
-  route<TPayload>(definition: EventBridgeSchedulerRouteDefinition<TPayload>): this {
+  route<TPayload>(definition: EventRouteDefinition<TPayload>): this {
     // Cast needed: storing specific handler type in general storage (contravariance)
-    const handler = definition.handler as EventBridgeSchedulerHandler<unknown>;
+    const handler = definition.handler as EventHandler<unknown>;
     this.routes.push({
       filters: definition.filters,
       eventSchema: definition.eventSchema,
@@ -158,12 +168,12 @@ export class EventBridgeSchedulerRouter implements EventTypeRouter<unknown, void
       throw new Error('No route matched for event');
     }
 
-    const validatedEvent = this.validateSchema(event, route.eventSchema, 'Scheduler event validation failed');
+    const validatedEvent = this.validateSchema(event, route.eventSchema, 'Event validation failed');
     await route.handler({ event: validatedEvent, context });
   }
 
-  private matchRoute(event: unknown): InternalSchedulerRoute | undefined {
-    const filterInput: EventBridgeSchedulerFilterInput = { event };
+  private matchRoute(event: unknown): InternalEventRoute | undefined {
+    const filterInput: EventFilterInput = { event };
 
     return this.routes.find((route) => {
       const { filters } = route;
@@ -189,24 +199,19 @@ export class EventBridgeSchedulerRouter implements EventTypeRouter<unknown, void
   }
 }
 
-export function defineEventBridgeSchedulerRoute<
-  TPayload = unknown,
-  TEventSchema extends Schema<unknown> | undefined = undefined,
->(
-  config: EventBridgeSchedulerRouteInput<TEventSchema>,
-): EventBridgeSchedulerRouteBuilder<TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : TPayload> {
+export function defineEventRoute<TPayload = unknown, TEventSchema extends Schema<unknown> | undefined = undefined>(
+  config: EventRouteInput<TEventSchema>,
+): EventRouteBuilder<TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : TPayload> {
   type ResolvedPayload = TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : TPayload;
   return {
-    handle(
-      handler: EventBridgeSchedulerHandler<ResolvedPayload>,
-    ): EventBridgeSchedulerRouteDefinition<ResolvedPayload> {
+    handle(handler: EventHandler<ResolvedPayload>): EventRouteDefinition<ResolvedPayload> {
       // Cast needed: generic type narrowing from builder input to route definition
-      const eventSchema = config.eventSchema as EventBridgeSchedulerRouteDefinition<ResolvedPayload>['eventSchema'];
+      const eventSchema = config.eventSchema as EventRouteDefinition<ResolvedPayload>['eventSchema'];
       return { filters: config.filters, eventSchema, handler };
     },
   };
 }
 
-export function createEventBridgeSchedulerRouter(): EventBridgeSchedulerRouter {
-  return new EventBridgeSchedulerRouter();
+export function createEventRouter(): EventRouter {
+  return new EventRouter();
 }
