@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
 
@@ -131,3 +132,17 @@ export function createVPCLatticeV2HandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface VPCLatticeFixtures {
+  vpcLatticeV1Event: (overrides?: VPCLatticeV1EventOverrides) => ReturnType<typeof createVPCLatticeV1Event>;
+  vpcLatticeV1HandlerEvent: (options?: CreateVPCLatticeV1HandlerEventOptions) => VPCLatticeV1HandlerEvent;
+  vpcLatticeV2Event: (overrides?: VPCLatticeV2EventOverrides) => ReturnType<typeof createVPCLatticeV2Event>;
+  vpcLatticeV2HandlerEvent: (options?: CreateVPCLatticeV2HandlerEventOptions) => VPCLatticeV2HandlerEvent;
+}
+
+export const vpcLatticeFixtures: FixtureMap<VPCLatticeFixtures> = {
+  vpcLatticeV1Event: fixture(createVPCLatticeV1Event),
+  vpcLatticeV1HandlerEvent: fixture(createVPCLatticeV1HandlerEvent),
+  vpcLatticeV2Event: fixture(createVPCLatticeV2Event),
+  vpcLatticeV2HandlerEvent: fixture(createVPCLatticeV2HandlerEvent),
+};

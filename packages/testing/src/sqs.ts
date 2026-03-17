@@ -1,5 +1,6 @@
 import type { SQSRecord as AWSSQSRecord, Context, SQSEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface SQSHandlerEvent {
   event: SQSEvent;
@@ -59,3 +60,15 @@ export function createSQSHandlerEvent(options: CreateSQSHandlerEventOptions = {}
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface SQSFixtures {
+  sqsRecord: (overrides?: SQSRecordOverrides) => AWSSQSRecord;
+  sqsEvent: (records?: AWSSQSRecord[]) => SQSEvent;
+  sqsHandlerEvent: (options?: CreateSQSHandlerEventOptions) => SQSHandlerEvent;
+}
+
+export const sqsFixtures: FixtureMap<SQSFixtures> = {
+  sqsRecord: fixture(createSQSRecord),
+  sqsEvent: fixture(createSQSEvent),
+  sqsHandlerEvent: fixture(createSQSHandlerEvent),
+};

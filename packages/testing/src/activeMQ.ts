@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // ActiveMQ has no @types/aws-lambda types, so we define the event shapes locally
 
@@ -89,3 +90,15 @@ export function createActiveMQHandlerEvent(options: CreateActiveMQHandlerEventOp
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ActiveMQFixtures {
+  activeMQMessage: (overrides?: ActiveMQMessageOverrides) => ActiveMQMessage;
+  activeMQEvent: (messages?: ActiveMQMessage[]) => ActiveMQEvent;
+  activeMQHandlerEvent: (options?: CreateActiveMQHandlerEventOptions) => ActiveMQHandlerEvent;
+}
+
+export const activeMQFixtures: FixtureMap<ActiveMQFixtures> = {
+  activeMQMessage: fixture(createActiveMQMessage),
+  activeMQEvent: fixture(createActiveMQEvent),
+  activeMQHandlerEvent: fixture(createActiveMQHandlerEvent),
+};

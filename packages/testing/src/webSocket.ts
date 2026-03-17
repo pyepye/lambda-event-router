@@ -4,6 +4,7 @@ import type {
   Context,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 type WebSocketEventType = 'CONNECT' | 'MESSAGE' | 'DISCONNECT';
 
@@ -65,3 +66,13 @@ export function createWebSocketHandlerEvent(options: CreateWebSocketHandlerEvent
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface WebSocketFixtures {
+  webSocketEvent: (overrides?: WebSocketEventOverrides) => ReturnType<typeof createWebSocketEvent>;
+  webSocketHandlerEvent: (options?: CreateWebSocketHandlerEventOptions) => WebSocketHandlerEvent;
+}
+
+export const webSocketFixtures: FixtureMap<WebSocketFixtures> = {
+  webSocketEvent: fixture(createWebSocketEvent),
+  webSocketHandlerEvent: fixture(createWebSocketHandlerEvent),
+};

@@ -1,6 +1,7 @@
 import type { AppSyncAuthorizerEvent, AppSyncIdentity, AppSyncResolverEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
 import type { DeepPartial } from './deepPartial.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // ─── AppSync Events types (local to avoid circular deps) ─────────────────────
 
@@ -199,3 +200,23 @@ export function createAppSyncEventsHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface AppSyncFixtures {
+  appSyncResolverEvent: (overrides?: AppSyncResolverEventOverrides) => AppSyncResolverEvent<Record<string, unknown>>;
+  appSyncResolverHandlerEvent: (options?: CreateAppSyncResolverHandlerEventOptions) => AppSyncResolverHandlerEvent;
+  appSyncAuthorizerEvent: (overrides?: DeepPartial<AppSyncAuthorizerEvent>) => AppSyncAuthorizerEvent;
+  appSyncAuthorizerHandlerEvent: (
+    options?: CreateAppSyncAuthorizerHandlerEventOptions,
+  ) => AppSyncAuthorizerHandlerEvent;
+  appSyncEventsEvent: (overrides?: AppSyncEventsEventOverrides) => AppSyncEventsEvent;
+  appSyncEventsHandlerEvent: (options?: CreateAppSyncEventsHandlerEventOptions) => AppSyncEventsHandlerEvent;
+}
+
+export const appSyncFixtures: FixtureMap<AppSyncFixtures> = {
+  appSyncResolverEvent: fixture(createAppSyncResolverEvent),
+  appSyncResolverHandlerEvent: fixture(createAppSyncResolverHandlerEvent),
+  appSyncAuthorizerEvent: fixture(createAppSyncAuthorizerEvent),
+  appSyncAuthorizerHandlerEvent: fixture(createAppSyncAuthorizerHandlerEvent),
+  appSyncEventsEvent: fixture(createAppSyncEventsEvent),
+  appSyncEventsHandlerEvent: fixture(createAppSyncEventsHandlerEvent),
+};

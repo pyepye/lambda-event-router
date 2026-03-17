@@ -1,5 +1,6 @@
 import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface CodePipelineEventOverrides {
   id?: string;
@@ -72,3 +73,13 @@ export function createCodePipelineHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface CodePipelineFixtures {
+  codePipelineEvent: (overrides?: CodePipelineEventOverrides) => CodePipelineEvent;
+  codePipelineHandlerEvent: (options?: CreateCodePipelineHandlerEventOptions) => CodePipelineHandlerEvent;
+}
+
+export const codePipelineFixtures: FixtureMap<CodePipelineFixtures> = {
+  codePipelineEvent: fixture(createCodePipelineEvent),
+  codePipelineHandlerEvent: fixture(createCodePipelineHandlerEvent),
+};

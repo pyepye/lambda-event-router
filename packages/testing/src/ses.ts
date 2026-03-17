@@ -1,5 +1,6 @@
 import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface SESHandlerEvent {
   event: SESEvent;
@@ -89,3 +90,15 @@ export function createSESHandlerEvent(options: CreateSESHandlerEventOptions = {}
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface SESFixtures {
+  sesRecord: (overrides?: SESRecordOverrides) => SESEventRecord;
+  sesEvent: (records?: SESEventRecord[]) => SESEvent;
+  sesHandlerEvent: (options?: CreateSESHandlerEventOptions) => SESHandlerEvent;
+}
+
+export const sesFixtures: FixtureMap<SESFixtures> = {
+  sesRecord: fixture(createSESRecord),
+  sesEvent: fixture(createSESEvent),
+  sesHandlerEvent: fixture(createSESHandlerEvent),
+};

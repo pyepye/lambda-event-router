@@ -1,5 +1,6 @@
 import type { Context, LexV2Event } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface LexEventOverrides {
   messageVersion?: string;
@@ -96,3 +97,13 @@ export function createLexHandlerEvent(options: CreateLexHandlerEventOptions = {}
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface LexFixtures {
+  lexEvent: (overrides?: LexEventOverrides) => LexV2Event;
+  lexHandlerEvent: (options?: CreateLexHandlerEventOptions) => LexHandlerEvent;
+}
+
+export const lexFixtures: FixtureMap<LexFixtures> = {
+  lexEvent: fixture(createLexEvent),
+  lexHandlerEvent: fixture(createLexHandlerEvent),
+};

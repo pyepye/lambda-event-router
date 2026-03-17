@@ -1,6 +1,7 @@
 import type { Context, FirehoseTransformationEvent, FirehoseTransformationEventRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
 import type { DeepPartial } from './deepPartial.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type FirehoseRecordOverrides = DeepPartial<FirehoseTransformationEventRecord>;
 
@@ -64,3 +65,18 @@ export function createFirehoseHandlerEvent(options: CreateFirehoseHandlerEventOp
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface FirehoseFixtures {
+  firehoseRecord: (overrides?: FirehoseRecordOverrides) => FirehoseTransformationEventRecord;
+  firehoseEvent: (
+    records?: FirehoseTransformationEventRecord[],
+    overrides?: FirehoseEventOverrides,
+  ) => FirehoseTransformationEvent;
+  firehoseHandlerEvent: (options?: CreateFirehoseHandlerEventOptions) => FirehoseHandlerEvent;
+}
+
+export const firehoseFixtures: FixtureMap<FirehoseFixtures> = {
+  firehoseRecord: fixture(createFirehoseRecord),
+  firehoseEvent: fixture(createFirehoseEvent),
+  firehoseHandlerEvent: fixture(createFirehoseHandlerEvent),
+};

@@ -1,5 +1,6 @@
 import type { Context, SecretsManagerRotationEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type SecretsManagerRotationEventOverrides = Partial<SecretsManagerRotationEvent>;
 
@@ -31,3 +32,13 @@ export function createSecretsManagerHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface SecretsManagerFixtures {
+  secretsManagerEvent: (overrides?: SecretsManagerRotationEventOverrides) => SecretsManagerRotationEvent;
+  secretsManagerHandlerEvent: (options?: CreateSecretsManagerHandlerEventOptions) => SecretsManagerHandlerEvent;
+}
+
+export const secretsManagerFixtures: FixtureMap<SecretsManagerFixtures> = {
+  secretsManagerEvent: fixture(createSecretsManagerRotationEvent),
+  secretsManagerHandlerEvent: fixture(createSecretsManagerHandlerEvent),
+};

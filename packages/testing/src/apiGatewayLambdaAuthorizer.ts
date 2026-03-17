@@ -6,6 +6,7 @@ import type {
   Context,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type ApiGatewayLambdaAuthorizerTokenEventOverrides = Partial<APIGatewayTokenAuthorizerEvent>;
 
@@ -178,3 +179,33 @@ export function createApiGatewayLambdaAuthorizerRequestV2HandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ApiGatewayLambdaAuthorizerFixtures {
+  apiGatewayLambdaAuthorizerTokenEvent: (
+    overrides?: ApiGatewayLambdaAuthorizerTokenEventOverrides,
+  ) => APIGatewayTokenAuthorizerEvent;
+  apiGatewayLambdaAuthorizerTokenHandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerTokenHandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerTokenHandlerEvent;
+  apiGatewayLambdaAuthorizerRequestV1Event: (
+    overrides?: ApiGatewayLambdaAuthorizerRequestV1EventOverrides,
+  ) => APIGatewayRequestAuthorizerEvent;
+  apiGatewayLambdaAuthorizerRequestV1HandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerRequestV1HandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerRequestV1HandlerEvent;
+  apiGatewayLambdaAuthorizerRequestV2Event: (
+    overrides?: ApiGatewayLambdaAuthorizerRequestV2EventOverrides,
+  ) => APIGatewayRequestAuthorizerEventV2;
+  apiGatewayLambdaAuthorizerRequestV2HandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerRequestV2HandlerEvent;
+}
+
+export const apiGatewayLambdaAuthorizerFixtures: FixtureMap<ApiGatewayLambdaAuthorizerFixtures> = {
+  apiGatewayLambdaAuthorizerTokenEvent: fixture(createApiGatewayLambdaAuthorizerTokenEvent),
+  apiGatewayLambdaAuthorizerTokenHandlerEvent: fixture(createApiGatewayLambdaAuthorizerTokenHandlerEvent),
+  apiGatewayLambdaAuthorizerRequestV1Event: fixture(createApiGatewayLambdaAuthorizerRequestV1Event),
+  apiGatewayLambdaAuthorizerRequestV1HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV1HandlerEvent),
+  apiGatewayLambdaAuthorizerRequestV2Event: fixture(createApiGatewayLambdaAuthorizerRequestV2Event),
+  apiGatewayLambdaAuthorizerRequestV2HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV2HandlerEvent),
+};

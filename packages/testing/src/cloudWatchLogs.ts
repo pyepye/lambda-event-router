@@ -1,6 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type CloudWatchLogsEventOverrides = Partial<CloudWatchLogsDecodedData>;
 
@@ -39,3 +40,13 @@ export function createCloudWatchLogsHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface CloudWatchLogsFixtures {
+  cloudWatchLogsEvent: (overrides?: CloudWatchLogsEventOverrides) => CloudWatchLogsEvent;
+  cloudWatchLogsHandlerEvent: (options?: CreateCloudWatchLogsHandlerEventOptions) => CloudWatchLogsHandlerEvent;
+}
+
+export const cloudWatchLogsFixtures: FixtureMap<CloudWatchLogsFixtures> = {
+  cloudWatchLogsEvent: fixture(createCloudWatchLogsEvent),
+  cloudWatchLogsHandlerEvent: fixture(createCloudWatchLogsHandlerEvent),
+};

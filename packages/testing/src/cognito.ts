@@ -13,6 +13,7 @@ import type {
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface CognitoHandlerEvent<TEvent> {
   event: TEvent;
@@ -367,3 +368,53 @@ export function createCognitoUserMigrationHandlerEvent(
 ): CognitoHandlerEvent<UserMigrationTriggerEvent> {
   return { event: createCognitoUserMigrationEvent(options.event), context: createMockContext(options.context) };
 }
+
+export interface CognitoFixtures {
+  cognitoPreSignUpEvent: typeof createCognitoPreSignUpEvent;
+  cognitoPreSignUpHandlerEvent: typeof createCognitoPreSignUpHandlerEvent;
+  cognitoPreAuthenticationEvent: typeof createCognitoPreAuthenticationEvent;
+  cognitoPreAuthenticationHandlerEvent: typeof createCognitoPreAuthenticationHandlerEvent;
+  cognitoPostAuthenticationEvent: typeof createCognitoPostAuthenticationEvent;
+  cognitoPostAuthenticationHandlerEvent: typeof createCognitoPostAuthenticationHandlerEvent;
+  cognitoPostConfirmationEvent: typeof createCognitoPostConfirmationEvent;
+  cognitoPostConfirmationHandlerEvent: typeof createCognitoPostConfirmationHandlerEvent;
+  cognitoDefineAuthChallengeEvent: typeof createCognitoDefineAuthChallengeEvent;
+  cognitoDefineAuthChallengeHandlerEvent: typeof createCognitoDefineAuthChallengeHandlerEvent;
+  cognitoCreateAuthChallengeEvent: typeof createCognitoCreateAuthChallengeEvent;
+  cognitoCreateAuthChallengeHandlerEvent: typeof createCognitoCreateAuthChallengeHandlerEvent;
+  cognitoVerifyAuthChallengeResponseEvent: typeof createCognitoVerifyAuthChallengeResponseEvent;
+  cognitoVerifyAuthChallengeResponseHandlerEvent: typeof createCognitoVerifyAuthChallengeResponseHandlerEvent;
+  cognitoCustomMessageEvent: typeof createCognitoCustomMessageEvent;
+  cognitoCustomMessageHandlerEvent: typeof createCognitoCustomMessageHandlerEvent;
+  cognitoCustomEmailSenderEvent: typeof createCognitoCustomEmailSenderEvent;
+  cognitoCustomEmailSenderHandlerEvent: typeof createCognitoCustomEmailSenderHandlerEvent;
+  cognitoPreTokenGenerationEvent: typeof createCognitoPreTokenGenerationEvent;
+  cognitoPreTokenGenerationHandlerEvent: typeof createCognitoPreTokenGenerationHandlerEvent;
+  cognitoUserMigrationEvent: typeof createCognitoUserMigrationEvent;
+  cognitoUserMigrationHandlerEvent: typeof createCognitoUserMigrationHandlerEvent;
+}
+
+export const cognitoFixtures: FixtureMap<CognitoFixtures> = {
+  cognitoPreSignUpEvent: fixture(createCognitoPreSignUpEvent),
+  cognitoPreSignUpHandlerEvent: fixture(createCognitoPreSignUpHandlerEvent),
+  cognitoPreAuthenticationEvent: fixture(createCognitoPreAuthenticationEvent),
+  cognitoPreAuthenticationHandlerEvent: fixture(createCognitoPreAuthenticationHandlerEvent),
+  cognitoPostAuthenticationEvent: fixture(createCognitoPostAuthenticationEvent),
+  cognitoPostAuthenticationHandlerEvent: fixture(createCognitoPostAuthenticationHandlerEvent),
+  cognitoPostConfirmationEvent: fixture(createCognitoPostConfirmationEvent),
+  cognitoPostConfirmationHandlerEvent: fixture(createCognitoPostConfirmationHandlerEvent),
+  cognitoDefineAuthChallengeEvent: fixture(createCognitoDefineAuthChallengeEvent),
+  cognitoDefineAuthChallengeHandlerEvent: fixture(createCognitoDefineAuthChallengeHandlerEvent),
+  cognitoCreateAuthChallengeEvent: fixture(createCognitoCreateAuthChallengeEvent),
+  cognitoCreateAuthChallengeHandlerEvent: fixture(createCognitoCreateAuthChallengeHandlerEvent),
+  cognitoVerifyAuthChallengeResponseEvent: fixture(createCognitoVerifyAuthChallengeResponseEvent),
+  cognitoVerifyAuthChallengeResponseHandlerEvent: fixture(createCognitoVerifyAuthChallengeResponseHandlerEvent),
+  cognitoCustomMessageEvent: fixture(createCognitoCustomMessageEvent),
+  cognitoCustomMessageHandlerEvent: fixture(createCognitoCustomMessageHandlerEvent),
+  cognitoCustomEmailSenderEvent: fixture(createCognitoCustomEmailSenderEvent),
+  cognitoCustomEmailSenderHandlerEvent: fixture(createCognitoCustomEmailSenderHandlerEvent),
+  cognitoPreTokenGenerationEvent: fixture(createCognitoPreTokenGenerationEvent),
+  cognitoPreTokenGenerationHandlerEvent: fixture(createCognitoPreTokenGenerationHandlerEvent),
+  cognitoUserMigrationEvent: fixture(createCognitoUserMigrationEvent),
+  cognitoUserMigrationHandlerEvent: fixture(createCognitoUserMigrationHandlerEvent),
+};

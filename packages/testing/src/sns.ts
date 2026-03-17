@@ -1,5 +1,6 @@
 import type { Context, SNSEvent, SNSEventRecord, SNSMessageAttribute } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface SNSHandlerEvent {
   event: SNSEvent;
@@ -58,3 +59,15 @@ export function createSNSHandlerEvent(options: CreateSNSHandlerEventOptions = {}
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface SNSFixtures {
+  snsRecord: (overrides?: SNSRecordOverrides) => SNSEventRecord;
+  snsEvent: (records?: SNSEventRecord[]) => SNSEvent;
+  snsHandlerEvent: (options?: CreateSNSHandlerEventOptions) => SNSHandlerEvent;
+}
+
+export const snsFixtures: FixtureMap<SNSFixtures> = {
+  snsRecord: fixture(createSNSRecord),
+  snsEvent: fixture(createSNSEvent),
+  snsHandlerEvent: fixture(createSNSHandlerEvent),
+};

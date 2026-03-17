@@ -1,5 +1,6 @@
 import type { Context, S3BatchEvent, S3BatchEventTask, S3Event, S3EventRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface S3HandlerEvent {
   event: S3Event;
@@ -107,3 +108,21 @@ export function createS3BatchHandlerEvent(options: CreateS3BatchHandlerEventOpti
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface S3Fixtures {
+  s3Record: (overrides?: S3RecordOverrides) => S3EventRecord;
+  s3Event: (records?: S3EventRecord[]) => S3Event;
+  s3HandlerEvent: (options?: CreateS3HandlerEventOptions) => S3HandlerEvent;
+  s3BatchTask: (overrides?: Partial<S3BatchEventTask>) => S3BatchEventTask;
+  s3BatchEvent: (overrides?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] }) => S3BatchEvent;
+  s3BatchHandlerEvent: (options?: CreateS3BatchHandlerEventOptions) => S3BatchHandlerEvent;
+}
+
+export const s3Fixtures: FixtureMap<S3Fixtures> = {
+  s3Record: fixture(createS3Record),
+  s3Event: fixture(createS3Event),
+  s3HandlerEvent: fixture(createS3HandlerEvent),
+  s3BatchTask: fixture(createS3BatchTask),
+  s3BatchEvent: fixture(createS3BatchEvent),
+  s3BatchHandlerEvent: fixture(createS3BatchHandlerEvent),
+};

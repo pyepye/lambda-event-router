@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // CodeCommit has no @types/aws-lambda types, so we define the event shapes locally
 // Based on: https://github.com/aws/aws-lambda-go/blob/main/events/code_commit.go
@@ -99,3 +100,17 @@ export function createCodeCommitHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface CodeCommitFixtures {
+  codeCommitReference: (overrides?: CodeCommitReferenceOverrides) => CodeCommitReference;
+  codeCommitRecord: (overrides?: CodeCommitRecordOverrides) => CodeCommitRecord;
+  codeCommitEvent: (records?: CodeCommitRecord[]) => CodeCommitEvent;
+  codeCommitHandlerEvent: (options?: CreateCodeCommitHandlerEventOptions) => CodeCommitHandlerEvent;
+}
+
+export const codeCommitFixtures: FixtureMap<CodeCommitFixtures> = {
+  codeCommitReference: fixture(createCodeCommitReference),
+  codeCommitRecord: fixture(createCodeCommitRecord),
+  codeCommitEvent: fixture(createCodeCommitEvent),
+  codeCommitHandlerEvent: fixture(createCodeCommitHandlerEvent),
+};

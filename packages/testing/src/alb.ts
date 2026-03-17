@@ -1,5 +1,6 @@
 import type { ALBEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ALBHandlerEvent {
   event: ALBEvent;
@@ -51,3 +52,13 @@ export function createALBHandlerEvent(options: CreateALBHandlerEventOptions = {}
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ALBFixtures {
+  albEvent: (overrides?: ALBEventOverrides) => ALBEvent;
+  albHandlerEvent: (options?: CreateALBHandlerEventOptions) => ALBHandlerEvent;
+}
+
+export const albFixtures: FixtureMap<ALBFixtures> = {
+  albEvent: fixture(createALBEvent),
+  albHandlerEvent: fixture(createALBHandlerEvent),
+};

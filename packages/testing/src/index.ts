@@ -192,6 +192,7 @@ export type {
   FirehoseRecordOverrides,
 } from './firehose.js';
 export { createFirehoseEvent, createFirehoseHandlerEvent, createFirehoseRecord } from './firehose.js';
+export { fixture } from './fixtureHelper.js';
 export type { TestFixtures } from './fixtures.js';
 export { test } from './fixtures.js';
 export type {

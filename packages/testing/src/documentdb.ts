@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // Local DocumentDB types — aws-lambda has no DocumentDB types, and importing from
 // @lambda-event-router/documentdb would create a circular dependency
@@ -137,3 +138,27 @@ export function createDocumentDBHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface DocumentDBFixtures {
+  documentDBChangeEvent: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBChangeEvent>;
+  documentDBInsertEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBInsertEntry>;
+  documentDBUpdateEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBUpdateEntry>;
+  documentDBReplaceEntry: (
+    overrides?: DocumentDBChangeEventOverrides,
+  ) => ReturnType<typeof createDocumentDBReplaceEntry>;
+  documentDBDeleteEntry: (overrides?: DocumentDBChangeEventOverrides) => ReturnType<typeof createDocumentDBDeleteEntry>;
+  documentDBEvent: (
+    entries?: ReturnType<typeof createDocumentDBInsertEntry>[],
+  ) => ReturnType<typeof createDocumentDBEvent>;
+  documentDBHandlerEvent: (options?: CreateDocumentDBHandlerEventOptions) => DocumentDBHandlerEvent;
+}
+
+export const documentDBFixtures: FixtureMap<DocumentDBFixtures> = {
+  documentDBChangeEvent: fixture(createDocumentDBChangeEvent),
+  documentDBInsertEntry: fixture(createDocumentDBInsertEntry),
+  documentDBUpdateEntry: fixture(createDocumentDBUpdateEntry),
+  documentDBReplaceEntry: fixture(createDocumentDBReplaceEntry),
+  documentDBDeleteEntry: fixture(createDocumentDBDeleteEntry),
+  documentDBEvent: fixture(createDocumentDBEvent),
+  documentDBHandlerEvent: fixture(createDocumentDBHandlerEvent),
+};

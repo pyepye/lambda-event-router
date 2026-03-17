@@ -1,6 +1,7 @@
 import type { Context, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
 import type { DeepPartial } from './deepPartial.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type KinesisRecordOverrides = DeepPartial<KinesisStreamRecord>;
 
@@ -54,3 +55,15 @@ export function createKinesisHandlerEvent(options: CreateKinesisHandlerEventOpti
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface KinesisFixtures {
+  kinesisRecord: (overrides?: KinesisRecordOverrides) => KinesisStreamRecord;
+  kinesisEvent: (records?: KinesisStreamRecord[]) => KinesisStreamEvent;
+  kinesisHandlerEvent: (options?: CreateKinesisHandlerEventOptions) => KinesisHandlerEvent;
+}
+
+export const kinesisFixtures: FixtureMap<KinesisFixtures> = {
+  kinesisRecord: fixture(createKinesisRecord),
+  kinesisEvent: fixture(createKinesisEvent),
+  kinesisHandlerEvent: fixture(createKinesisHandlerEvent),
+};

@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type ConfigMessageType =
   | 'ConfigurationItemChangeNotification'
@@ -163,3 +164,17 @@ export function createConfigHandlerEvent(options: CreateConfigHandlerEventOption
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ConfigFixtures {
+  configEvent: (overrides?: ConfigEventOverrides) => ConfigEvent;
+  configHandlerEvent: (options?: CreateConfigHandlerEventOptions) => ConfigHandlerEvent;
+  configurationItem: (overrides?: ConfigurationItemOverrides) => ConfigurationItem;
+  configurationItemSummary: (overrides?: ConfigurationItemSummaryOverrides) => ConfigurationItemSummary;
+}
+
+export const configFixtures: FixtureMap<ConfigFixtures> = {
+  configEvent: fixture(createConfigEvent),
+  configHandlerEvent: fixture(createConfigHandlerEvent),
+  configurationItem: fixture(createConfigurationItem),
+  configurationItemSummary: fixture(createConfigurationItemSummary),
+};

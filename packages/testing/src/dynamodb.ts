@@ -1,6 +1,7 @@
 import { marshall } from '@aws-sdk/util-dynamodb';
 import type { AttributeValue, Context, DynamoDBRecord, DynamoDBStreamEvent, StreamRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // The SDK marshall returns its own AttributeValue type (Uint8Array for binary)
 // while aws-lambda uses string for binary. For test data without binary fields,
@@ -97,3 +98,21 @@ export function createDynamoDBHandlerEvent(options: CreateDynamoDBHandlerEventOp
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface DynamoDBFixtures {
+  dynamoDBRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
+  dynamoDBInsertRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
+  dynamoDBModifyRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
+  dynamoDBRemoveRecord: (overrides?: DynamoDBRecordOverrides) => DynamoDBRecord;
+  dynamoDBStreamEvent: (records?: DynamoDBRecord[]) => DynamoDBStreamEvent;
+  dynamoDBStreamHandlerEvent: (options?: CreateDynamoDBHandlerEventOptions) => DynamoDBHandlerEvent;
+}
+
+export const dynamoDBFixtures: FixtureMap<DynamoDBFixtures> = {
+  dynamoDBRecord: fixture(createDynamoDBRecord),
+  dynamoDBInsertRecord: fixture(createDynamoDBInsertRecord),
+  dynamoDBModifyRecord: fixture(createDynamoDBModifyRecord),
+  dynamoDBRemoveRecord: fixture(createDynamoDBRemoveRecord),
+  dynamoDBStreamEvent: fixture(createDynamoDBEvent),
+  dynamoDBStreamHandlerEvent: fixture(createDynamoDBHandlerEvent),
+};

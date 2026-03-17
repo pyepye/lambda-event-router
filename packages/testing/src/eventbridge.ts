@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface EventBridgeEvent<TDetail = unknown> {
   version: string;
@@ -49,3 +50,13 @@ export function createEventBridgeHandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface EventBridgeFixtures {
+  eventBridgeEvent: (overrides?: EventBridgeEventOverrides) => EventBridgeEvent;
+  eventBridgeHandlerEvent: (options?: CreateEventBridgeHandlerEventOptions) => EventBridgeHandlerEvent;
+}
+
+export const eventBridgeFixtures: FixtureMap<EventBridgeFixtures> = {
+  eventBridgeEvent: fixture(createEventBridgeEvent),
+  eventBridgeHandlerEvent: fixture(createEventBridgeHandlerEvent),
+};

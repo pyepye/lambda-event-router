@@ -1,5 +1,6 @@
 import type { Context, MSKEvent, MSKRecord, SelfManagedKafkaEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface KafkaRecordOverrides {
   topic?: string;
@@ -88,3 +89,19 @@ export function createKafkaHandlerEvent(options: CreateKafkaHandlerEventOptions 
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface KafkaFixtures {
+  kafkaRecord: (overrides?: KafkaRecordOverrides) => ReturnType<typeof createKafkaRecord>;
+  kafkaMSKEvent: (recordsByTopic?: Parameters<typeof createMSKEvent>[0]) => ReturnType<typeof createMSKEvent>;
+  kafkaSelfManagedEvent: (
+    recordsByTopic?: Parameters<typeof createSelfManagedKafkaEvent>[0],
+  ) => ReturnType<typeof createSelfManagedKafkaEvent>;
+  kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
+}
+
+export const kafkaFixtures: FixtureMap<KafkaFixtures> = {
+  kafkaRecord: fixture(createKafkaRecord),
+  kafkaMSKEvent: fixture(createMSKEvent),
+  kafkaSelfManagedEvent: fixture(createSelfManagedKafkaEvent),
+  kafkaHandlerEvent: fixture(createKafkaHandlerEvent),
+};

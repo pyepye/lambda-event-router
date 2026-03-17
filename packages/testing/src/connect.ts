@@ -1,5 +1,6 @@
 import type { ConnectContactFlowEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ConnectEventOverrides {
   Name?: ConnectContactFlowEvent['Name'];
@@ -57,3 +58,13 @@ export function createConnectHandlerEvent(options: CreateConnectHandlerEventOpti
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ConnectFixtures {
+  connectEvent: (overrides?: ConnectEventOverrides) => ConnectContactFlowEvent;
+  connectHandlerEvent: (options?: CreateConnectHandlerEventOptions) => ConnectHandlerEvent;
+}
+
+export const connectFixtures: FixtureMap<ConnectFixtures> = {
+  connectEvent: fixture(createConnectEvent),
+  connectHandlerEvent: fixture(createConnectHandlerEvent),
+};

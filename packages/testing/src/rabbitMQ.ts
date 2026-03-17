@@ -1,5 +1,6 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // RabbitMQ has no @types/aws-lambda types, so we define the event shapes locally
 
@@ -92,3 +93,15 @@ export function createRabbitMQHandlerEvent(options: CreateRabbitMQHandlerEventOp
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface RabbitMQFixtures {
+  rabbitMQMessage: (overrides?: RabbitMQMessageOverrides) => RabbitMQMessage;
+  rabbitMQEvent: (messagesByQueue?: Record<string, RabbitMQMessage[]>) => RabbitMQEvent;
+  rabbitMQHandlerEvent: (options?: CreateRabbitMQHandlerEventOptions) => RabbitMQHandlerEvent;
+}
+
+export const rabbitMQFixtures: FixtureMap<RabbitMQFixtures> = {
+  rabbitMQMessage: fixture(createRabbitMQMessage),
+  rabbitMQEvent: fixture(createRabbitMQEvent),
+  rabbitMQHandlerEvent: fixture(createRabbitMQHandlerEvent),
+};

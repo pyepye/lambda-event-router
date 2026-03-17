@@ -1,5 +1,6 @@
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ApiGatewayV1HandlerEvent {
   event: APIGatewayProxyEvent;
@@ -77,3 +78,13 @@ export function createApiGatewayV1HandlerEvent(
   const context = createMockContext(options.context);
   return { event, context };
 }
+
+export interface ApiGatewayV1Fixtures {
+  apiGatewayV1Event: (overrides?: ApiGatewayV1EventOverrides) => APIGatewayProxyEvent;
+  apiGatewayV1HandlerEvent: (options?: CreateApiGatewayV1HandlerEventOptions) => ApiGatewayV1HandlerEvent;
+}
+
+export const apiGatewayV1Fixtures: FixtureMap<ApiGatewayV1Fixtures> = {
+  apiGatewayV1Event: fixture(createApiGatewayV1Event),
+  apiGatewayV1HandlerEvent: fixture(createApiGatewayV1HandlerEvent),
+};
