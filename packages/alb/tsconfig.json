@@ -5,5 +5,5 @@
     "types": ["vitest/globals", "node"]
   },
   "exclude": ["node_modules", "dist"],
-  "references": [{ "path": "../base" }, { "path": "../http" }]
+  "references": [{ "path": "../base" }, { "path": "../testing" }, { "path": "../http" }]
 }

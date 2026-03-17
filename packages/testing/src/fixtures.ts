@@ -30,6 +30,7 @@ import type {
   SQSEvent,
   SQSRecord,
 } from 'aws-lambda';
+import type { TestAPI } from 'vitest';
 import { test as viTest } from 'vitest';
 import type {
   ActiveMQEvent,
@@ -405,7 +406,7 @@ export interface TestFixtures {
   configurationItemSummary: (overrides?: ConfigurationItemSummaryOverrides) => ConfigurationItemSummary;
 }
 
-export const test: ReturnType<typeof viTest.extend<TestFixtures>> = viTest.extend<TestFixtures>({
+export const test: TestAPI<TestFixtures> = viTest.extend<TestFixtures>({
   appSyncResolverEvent: fixture(createAppSyncResolverEvent),
   appSyncResolverHandlerEvent: fixture(createAppSyncResolverHandlerEvent),
   appSyncAuthorizerEvent: fixture(createAppSyncAuthorizerEvent),
