@@ -1,37 +1,34 @@
 import type {
-  APIGatewayEventRequestContextV2,
   APIGatewayRequestAuthorizerEvent,
   APIGatewayRequestAuthorizerEventV2,
   APIGatewayTokenAuthorizerEvent,
   Context,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type ApiGatewayLambdaAuthorizerTokenEventOverrides = Partial<APIGatewayTokenAuthorizerEvent>;
+export type ApiGatewayLambdaAuthorizerTokenEventOverrides = DeepPartial<APIGatewayTokenAuthorizerEvent>;
 
 export function createApiGatewayLambdaAuthorizerTokenEvent(
   overrides: ApiGatewayLambdaAuthorizerTokenEventOverrides = {},
 ): APIGatewayTokenAuthorizerEvent {
-  return {
+  const defaults: APIGatewayTokenAuthorizerEvent = {
     type: 'TOKEN',
     authorizationToken: 'Bearer test-token',
     methodArn: 'arn:aws:execute-api:us-east-1:123456789012:abc123/prod/GET/resource',
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
-export interface ApiGatewayLambdaAuthorizerRequestV1EventOverrides
-  extends Omit<Partial<APIGatewayRequestAuthorizerEvent>, 'requestContext'> {
-  requestContext?: Partial<APIGatewayRequestAuthorizerEvent['requestContext']>;
-}
+export type ApiGatewayLambdaAuthorizerRequestV1EventOverrides = DeepPartial<APIGatewayRequestAuthorizerEvent>;
 
 export function createApiGatewayLambdaAuthorizerRequestV1Event(
   overrides: ApiGatewayLambdaAuthorizerRequestV1EventOverrides = {},
 ): APIGatewayRequestAuthorizerEvent {
-  const { requestContext: requestContextOverrides, ...restOverrides } = overrides;
-
-  return {
+  const defaults: APIGatewayRequestAuthorizerEvent = {
     type: 'REQUEST',
     methodArn: 'arn:aws:execute-api:us-east-1:123456789012:abc123/prod/GET/resource',
     resource: '/resource',
@@ -72,26 +69,18 @@ export function createApiGatewayLambdaAuthorizerRequestV1Event(
       requestTimeEpoch: 1704067200000,
       resourceId: 'abc123',
       resourcePath: '/resource',
-      ...requestContextOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
-export interface ApiGatewayLambdaAuthorizerRequestV2EventOverrides
-  extends Omit<Partial<APIGatewayRequestAuthorizerEventV2>, 'requestContext'> {
-  requestContext?: Partial<Omit<APIGatewayEventRequestContextV2, 'http'>> & {
-    http?: Partial<APIGatewayEventRequestContextV2['http']>;
-  };
-}
+export type ApiGatewayLambdaAuthorizerRequestV2EventOverrides = DeepPartial<APIGatewayRequestAuthorizerEventV2>;
 
 export function createApiGatewayLambdaAuthorizerRequestV2Event(
   overrides: ApiGatewayLambdaAuthorizerRequestV2EventOverrides = {},
 ): APIGatewayRequestAuthorizerEventV2 {
-  const { requestContext: requestContextOverrides, ...restOverrides } = overrides;
-  const { http: httpOverrides, ...restRequestContextOverrides } = requestContextOverrides ?? {};
-
-  return {
+  const defaults: APIGatewayRequestAuthorizerEventV2 = {
     version: '2.0',
     type: 'REQUEST',
     routeArn: 'arn:aws:execute-api:us-east-1:123456789012:abc123/$default/GET/resource',
@@ -113,17 +102,16 @@ export function createApiGatewayLambdaAuthorizerRequestV2Event(
         protocol: 'HTTP/1.1',
         sourceIp: '127.0.0.1',
         userAgent: 'test-agent',
-        ...httpOverrides,
       },
       requestId: crypto.randomUUID(),
       routeKey: '$default',
       stage: '$default',
       time: '01/Jan/2024:00:00:00 +0000',
       timeEpoch: 1704067200000,
-      ...restRequestContextOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export interface ApiGatewayLambdaAuthorizerTokenHandlerEvent {

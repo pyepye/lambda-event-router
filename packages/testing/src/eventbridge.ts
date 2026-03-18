@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface EventBridgeEvent<TDetail = unknown> {
@@ -19,12 +21,10 @@ export interface EventBridgeHandlerEvent {
   context: Context;
 }
 
-export type EventBridgeEventOverrides = Omit<Partial<EventBridgeEvent>, 'detail'> & {
-  detail?: unknown;
-};
+export type EventBridgeEventOverrides = DeepPartial<EventBridgeEvent>;
 
 export function createEventBridgeEvent(overrides: EventBridgeEventOverrides = {}): EventBridgeEvent {
-  return {
+  const defaults: EventBridgeEvent = {
     version: '0',
     id: crypto.randomUUID(),
     source: 'my.app',
@@ -34,8 +34,9 @@ export function createEventBridgeEvent(overrides: EventBridgeEventOverrides = {}
     region: 'us-east-1',
     resources: [],
     detail: { orderId: '12345' },
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export interface CreateEventBridgeHandlerEventOptions {

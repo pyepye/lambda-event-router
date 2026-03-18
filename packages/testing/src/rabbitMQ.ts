@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // RabbitMQ has no @types/aws-lambda types, so we define the event shapes locally
@@ -39,16 +41,20 @@ export interface RabbitMQHandlerEvent {
   context: Context;
 }
 
-export type RabbitMQMessageOverrides = Omit<Partial<RabbitMQMessage>, 'basicProperties'> & {
-  basicProperties?: Partial<RabbitMQMessage['basicProperties']>;
+export type RabbitMQMessageOverrides = Omit<DeepPartial<RabbitMQMessage>, 'data'> & {
+  data?: string | Record<string, unknown>;
 };
 
 const defaultBody: string = JSON.stringify({ action: 'process', id: '123' });
 
 export function createRabbitMQMessage(overrides: RabbitMQMessageOverrides = {}): RabbitMQMessage {
-  const { basicProperties, ...restOverrides } = overrides;
+  const { data: dataOverride, ...restOverrides } = overrides;
 
-  return {
+  const dataString = typeof dataOverride === 'object' ? JSON.stringify(dataOverride) : dataOverride;
+  const encodedData =
+    dataString !== undefined ? Buffer.from(dataString).toString('base64') : Buffer.from(defaultBody).toString('base64');
+
+  const defaults: RabbitMQMessage = {
     basicProperties: {
       contentType: 'application/json',
       contentEncoding: null,
@@ -65,12 +71,12 @@ export function createRabbitMQMessage(overrides: RabbitMQMessageOverrides = {}):
       appId: null,
       clusterId: null,
       bodySize: defaultBody.length,
-      ...basicProperties,
     },
-    data: Buffer.from(defaultBody).toString('base64'),
+    data: encodedData,
     redelivered: false,
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createRabbitMQEvent(

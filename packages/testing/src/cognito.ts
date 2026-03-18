@@ -13,6 +13,8 @@ import type {
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface CognitoHandlerEvent<TEvent> {
@@ -25,18 +27,16 @@ interface CognitoBaseOverrides {
   region?: string;
   userPoolId?: string;
   userName?: string;
-  callerContext?: Partial<PreSignUpTriggerEvent['callerContext']>;
+  callerContext?: DeepPartial<PreSignUpTriggerEvent['callerContext']>;
 }
 
 type CognitoTriggerOverrides<TEvent extends { request: object; response: object }> = CognitoBaseOverrides & {
-  request?: Partial<TEvent['request']>;
-  response?: Partial<TEvent['response']>;
+  request?: DeepPartial<TEvent['request']>;
+  response?: DeepPartial<TEvent['response']>;
 };
 
 function createBaseFields(overrides: CognitoBaseOverrides): Record<string, unknown> {
-  const { callerContext: callerContextOverrides, ...restOverrides } = overrides;
-
-  return {
+  const defaults = {
     version: '1',
     region: 'us-east-1',
     userPoolId: 'us-east-1_TestPool',
@@ -44,10 +44,10 @@ function createBaseFields(overrides: CognitoBaseOverrides): Record<string, unkno
     callerContext: {
       awsSdkVersion: '3.0.0',
       clientId: 'test-client-id',
-      ...callerContextOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 // =============================================================================

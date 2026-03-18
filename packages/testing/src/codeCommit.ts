@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // CodeCommit has no @types/aws-lambda types, so we define the event shapes locally
@@ -33,11 +35,9 @@ export interface CodeCommitEvent {
   Records: CodeCommitRecord[];
 }
 
-export type CodeCommitReferenceOverrides = Partial<CodeCommitReference>;
+export type CodeCommitReferenceOverrides = DeepPartial<CodeCommitReference>;
 
-export type CodeCommitRecordOverrides = Omit<Partial<CodeCommitRecord>, 'codecommit'> & {
-  codecommit?: { references?: CodeCommitReference[] };
-};
+export type CodeCommitRecordOverrides = DeepPartial<CodeCommitRecord>;
 
 export interface CodeCommitHandlerEvent {
   event: CodeCommitEvent;
@@ -59,20 +59,19 @@ function randomHexString(length: number): string {
 }
 
 export function createCodeCommitReference(overrides: CodeCommitReferenceOverrides = {}): CodeCommitReference {
-  return {
+  const defaults: CodeCommitReference = {
     commit: randomHexString(40),
     ref: 'refs/heads/main',
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createCodeCommitRecord(overrides: CodeCommitRecordOverrides = {}): CodeCommitRecord {
-  const { codecommit: codecommitOverrides, ...restOverrides } = overrides;
-
-  return {
+  const defaults: CodeCommitRecord = {
     awsRegion: 'us-east-1',
     codecommit: {
-      references: codecommitOverrides?.references ?? [createCodeCommitReference()],
+      references: [createCodeCommitReference()],
     },
     eventId: crypto.randomUUID(),
     eventName: 'TriggerEventTest',
@@ -85,8 +84,9 @@ export function createCodeCommitRecord(overrides: CodeCommitRecordOverrides = {}
     eventTriggerName: 'my-trigger',
     eventVersion: '1',
     userIdentityARN: 'arn:aws:iam::123456789012:user/test-user',
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createCodeCommitEvent(records: CodeCommitRecord[] = [createCodeCommitRecord()]): CodeCommitEvent {

@@ -1,8 +1,10 @@
 import type { Context, SecretsManagerRotationEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type SecretsManagerRotationEventOverrides = Partial<SecretsManagerRotationEvent>;
+export type SecretsManagerRotationEventOverrides = DeepPartial<SecretsManagerRotationEvent>;
 
 export interface SecretsManagerHandlerEvent {
   event: SecretsManagerRotationEvent;
@@ -17,12 +19,13 @@ export interface CreateSecretsManagerHandlerEventOptions {
 export function createSecretsManagerRotationEvent(
   overrides: SecretsManagerRotationEventOverrides = {},
 ): SecretsManagerRotationEvent {
-  return {
+  const defaults: SecretsManagerRotationEvent = {
     Step: 'createSecret',
     SecretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
     ClientRequestToken: crypto.randomUUID(),
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createSecretsManagerHandlerEvent(

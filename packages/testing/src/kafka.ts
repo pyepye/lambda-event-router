@@ -1,17 +1,14 @@
 import type { Context, MSKEvent, MSKRecord, SelfManagedKafkaEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export interface KafkaRecordOverrides {
-  topic?: string;
-  partition?: number;
-  offset?: number;
-  timestamp?: number;
-  timestampType?: 'CREATE_TIME' | 'LOG_APPEND_TIME';
+export type KafkaRecordOverrides = Omit<DeepPartial<MSKRecord>, 'key' | 'value' | 'headers'> & {
   key?: string;
   value?: string | object;
   headers?: Record<string, string>[];
-}
+};
 
 export interface KafkaHandlerEvent {
   event: MSKEvent | SelfManagedKafkaEvent;
@@ -48,7 +45,7 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKReco
     return encoded;
   });
 
-  return {
+  const defaults: MSKRecord = {
     topic: 'test-topic',
     partition: 0,
     offset: 0,
@@ -57,8 +54,9 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKReco
     key: encodedKey,
     value: encodedValue,
     headers: encodedHeaders,
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createMSKEvent(

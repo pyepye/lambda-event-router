@@ -1,9 +1,14 @@
 import type { Context, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type KinesisRecordOverrides = DeepPartial<KinesisStreamRecord>;
+export type KinesisRecordOverrides = Omit<DeepPartial<KinesisStreamRecord>, 'kinesis'> & {
+  kinesis?: Omit<DeepPartial<KinesisStreamRecord['kinesis']>, 'data'> & {
+    data?: string | Record<string, unknown>;
+  };
+};
 
 export interface KinesisHandlerEvent {
   event: KinesisStreamEvent;
@@ -16,34 +21,33 @@ export interface CreateKinesisHandlerEventOptions {
 }
 
 export function createKinesisRecord(overrides: KinesisRecordOverrides = {}): KinesisStreamRecord {
-  const { kinesis: kinesisOverrides, ...restOverrides } = overrides;
-
   const defaultBody = { action: 'processOrder', orderId: '12345' };
-  const hasDataOverride = kinesisOverrides !== undefined && Object.hasOwn(kinesisOverrides, 'data');
+  const defaultEncodedData = Buffer.from(JSON.stringify(defaultBody)).toString('base64');
 
-  let encodedData: string;
-  if (hasDataOverride) {
-    encodedData = kinesisOverrides.data as string;
-  } else {
-    encodedData = Buffer.from(JSON.stringify(defaultBody)).toString('base64');
-  }
+  const { kinesis: kinesisOverrides, ...restOverrides } = overrides;
+  const { data: dataOverride, ...restKinesisOverrides } = kinesisOverrides ?? {};
 
-  return {
+  const dataString = typeof dataOverride === 'object' ? JSON.stringify(dataOverride) : dataOverride;
+  const encodedData = dataString !== undefined ? Buffer.from(dataString).toString('base64') : defaultEncodedData;
+
+  const defaults: KinesisStreamRecord = {
     kinesis: {
       data: encodedData,
-      partitionKey: kinesisOverrides?.partitionKey ?? 'partition-key-1',
-      sequenceNumber: kinesisOverrides?.sequenceNumber ?? crypto.randomUUID(),
-      approximateArrivalTimestamp: kinesisOverrides?.approximateArrivalTimestamp ?? 1704067200,
-      kinesisSchemaVersion: kinesisOverrides?.kinesisSchemaVersion ?? '1.0',
+      partitionKey: 'partition-key-1',
+      sequenceNumber: crypto.randomUUID(),
+      approximateArrivalTimestamp: 1704067200,
+      kinesisSchemaVersion: '1.0',
     },
-    eventID: restOverrides.eventID ?? crypto.randomUUID(),
-    eventVersion: restOverrides.eventVersion ?? '1.0',
-    eventSource: restOverrides.eventSource ?? 'aws:kinesis',
-    eventSourceARN: restOverrides.eventSourceARN ?? 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream',
-    eventName: restOverrides.eventName ?? 'aws:kinesis:record',
-    invokeIdentityArn: restOverrides.invokeIdentityArn ?? 'arn:aws:iam::123456789012:role/lambda-role',
-    awsRegion: restOverrides.awsRegion ?? 'us-east-1',
+    eventID: crypto.randomUUID(),
+    eventVersion: '1.0',
+    eventSource: 'aws:kinesis',
+    eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream',
+    eventName: 'aws:kinesis:record',
+    invokeIdentityArn: 'arn:aws:iam::123456789012:role/lambda-role',
+    awsRegion: 'us-east-1',
   };
+
+  return deepMerge(deepMerge(defaults, restOverrides), { kinesis: restKinesisOverrides });
 }
 
 export function createKinesisEvent(records: KinesisStreamRecord[] = [createKinesisRecord()]): KinesisStreamEvent {

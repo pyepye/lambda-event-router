@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // ActiveMQ has no @types/aws-lambda types, so we define the event shapes locally
@@ -39,17 +41,22 @@ export interface ActiveMQHandlerEvent {
   context: Context;
 }
 
-export type ActiveMQMessageOverrides = Omit<Partial<ActiveMQMessage>, 'destination'> & {
-  destination?: Partial<ActiveMQMessage['destination']>;
+export type ActiveMQMessageOverrides = Omit<DeepPartial<ActiveMQMessage>, 'data'> & {
+  data?: string | Record<string, unknown>;
 };
 
 const defaultBody: string = JSON.stringify({ action: 'process', id: '123' });
 
 export function createActiveMQMessage(overrides: ActiveMQMessageOverrides = {}): ActiveMQMessage {
-  const { destination, ...restOverrides } = overrides;
   const now = Date.now();
 
-  return {
+  const { data: dataOverride, ...restOverrides } = overrides;
+
+  const dataString = typeof dataOverride === 'object' ? JSON.stringify(dataOverride) : dataOverride;
+  const encodedData =
+    dataString !== undefined ? Buffer.from(dataString).toString('base64') : Buffer.from(defaultBody).toString('base64');
+
+  const defaults: ActiveMQMessage = {
     messageID: crypto.randomUUID(),
     messageType: 'jms/text-message',
     timestamp: now,
@@ -58,18 +65,18 @@ export function createActiveMQMessage(overrides: ActiveMQMessageOverrides = {}):
     replyTo: null,
     destination: {
       physicalName: 'test-queue',
-      ...destination,
     },
     redelivered: false,
     type: '',
     expiration: 0,
     priority: 4,
-    data: Buffer.from(defaultBody).toString('base64'),
+    data: encodedData,
     brokerInTime: now,
     brokerOutTime: now + 1,
     properties: {},
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createActiveMQEvent(messages: ActiveMQMessage[] = [createActiveMQMessage()]): ActiveMQEvent {

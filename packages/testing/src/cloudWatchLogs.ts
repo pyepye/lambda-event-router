@@ -1,9 +1,11 @@
 import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type CloudWatchLogsEventOverrides = Partial<CloudWatchLogsDecodedData>;
+export type CloudWatchLogsEventOverrides = DeepPartial<CloudWatchLogsDecodedData>;
 
 export interface CloudWatchLogsHandlerEvent {
   event: CloudWatchLogsEvent;
@@ -16,16 +18,16 @@ export interface CreateCloudWatchLogsHandlerEventOptions {
 }
 
 export function createCloudWatchLogsEvent(overrides: CloudWatchLogsEventOverrides = {}): CloudWatchLogsEvent {
-  const decodedData: CloudWatchLogsDecodedData = {
+  const defaults: CloudWatchLogsDecodedData = {
     owner: '123456789012',
     logGroup: '/aws/lambda/my-function',
     logStream: '2024/01/01/[$LATEST]abc123',
     subscriptionFilters: ['my-filter'],
     messageType: 'DATA_MESSAGE',
     logEvents: [{ id: crypto.randomUUID(), timestamp: Date.now(), message: 'test log message' }],
-    ...overrides,
   };
 
+  const decodedData = deepMerge(defaults, overrides);
   const jsonString = JSON.stringify(decodedData);
   const compressed = gzipSync(Buffer.from(jsonString));
   const encoded = compressed.toString('base64');

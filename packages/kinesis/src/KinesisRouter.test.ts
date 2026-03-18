@@ -302,17 +302,17 @@ suite('KinesisRouter', () => {
       const router = new KinesisRouter();
       const handler = vi.fn();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
-      const body = { action: 'processOrder', orderId: '12345' };
-      const encodedData = Buffer.from(JSON.stringify(body)).toString('base64');
+
       const definition = defineRoute({
         filters: { eventSourceArns: [eventSourceArn] },
       }).handle(handler);
       router.route(definition);
 
+      const body = { action: 'processOrder', orderId: '12345' }; // This gets auto encoded by kinesisRecord
       const record = kinesisRecord({
         eventSourceARN: eventSourceArn,
         kinesis: {
-          data: encodedData,
+          data: body,
           partitionKey: 'partition-key-1',
           sequenceNumber: 'seq-123',
           approximateArrivalTimestamp: 1704067200,

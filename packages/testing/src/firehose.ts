@@ -1,9 +1,12 @@
 import type { Context, FirehoseTransformationEvent, FirehoseTransformationEventRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type FirehoseRecordOverrides = DeepPartial<FirehoseTransformationEventRecord>;
+export type FirehoseRecordOverrides = Omit<DeepPartial<FirehoseTransformationEventRecord>, 'data'> & {
+  data?: string | Record<string, unknown>;
+};
 
 export interface FirehoseEventOverrides {
   deliveryStreamArn?: string;
@@ -23,22 +26,20 @@ export interface CreateFirehoseHandlerEventOptions {
 
 export function createFirehoseRecord(overrides: FirehoseRecordOverrides = {}): FirehoseTransformationEventRecord {
   const defaultBody = { action: 'processOrder', orderId: '12345' };
-  const hasDataOverride = Object.hasOwn(overrides, 'data');
+  const defaultEncodedData = Buffer.from(JSON.stringify(defaultBody)).toString('base64');
 
-  let encodedData: string;
-  if (hasDataOverride) {
-    encodedData = overrides.data as string;
-  } else {
-    encodedData = Buffer.from(JSON.stringify(defaultBody)).toString('base64');
-  }
+  const { data: dataOverride, ...restOverrides } = overrides;
 
-  return {
-    recordId: overrides.recordId ?? crypto.randomUUID(),
+  const dataString = typeof dataOverride === 'object' ? JSON.stringify(dataOverride) : dataOverride;
+  const encodedData = dataString !== undefined ? Buffer.from(dataString).toString('base64') : defaultEncodedData;
+
+  const defaults: FirehoseTransformationEventRecord = {
+    recordId: crypto.randomUUID(),
     data: encodedData,
-    approximateArrivalTimestamp: overrides.approximateArrivalTimestamp ?? 1704067200,
-    kinesisRecordMetadata:
-      overrides.kinesisRecordMetadata as FirehoseTransformationEventRecord['kinesisRecordMetadata'],
+    approximateArrivalTimestamp: 1704067200,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createFirehoseEvent(

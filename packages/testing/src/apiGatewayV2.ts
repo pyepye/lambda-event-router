@@ -1,5 +1,7 @@
 import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ApiGatewayV2HandlerEvent {
@@ -7,21 +9,24 @@ export interface ApiGatewayV2HandlerEvent {
   context: Context;
 }
 
-export type ApiGatewayV2EventOverrides = Omit<Partial<APIGatewayProxyEventV2>, 'requestContext' | 'body'> & {
-  requestContext?: Omit<Partial<APIGatewayProxyEventV2['requestContext']>, 'http'> & {
-    http?: Partial<APIGatewayProxyEventV2['requestContext']['http']>;
-  };
+export type ApiGatewayV2EventOverrides = Omit<DeepPartial<APIGatewayProxyEventV2>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
 export function createApiGatewayV2Event(overrides: ApiGatewayV2EventOverrides = {}): APIGatewayProxyEventV2 {
-  const { requestContext: requestContextOverrides, body: bodyOverride, ...restOverrides } = overrides;
-  const { http: httpOverrides, ...restRequestContextOverrides } = requestContextOverrides ?? {};
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  const isObjectBody = bodyOverride !== null && typeof bodyOverride === 'object';
-  const resolvedBody = isObjectBody ? JSON.stringify(bodyOverride) : (bodyOverride ?? undefined);
+  let resolvedBody: string | undefined;
+  if (hasBodyOverride) {
+    if (bodyOverride !== null && bodyOverride !== undefined && typeof bodyOverride === 'object') {
+      resolvedBody = JSON.stringify(bodyOverride);
+    } else if (typeof bodyOverride === 'string') {
+      resolvedBody = bodyOverride;
+    }
+  }
 
-  return {
+  const defaults: APIGatewayProxyEventV2 = {
     version: '2.0',
     routeKey: '$default',
     rawPath: '/',
@@ -44,13 +49,12 @@ export function createApiGatewayV2Event(overrides: ApiGatewayV2EventOverrides = 
         protocol: 'HTTP/1.1',
         sourceIp: '127.0.0.1',
         userAgent: 'test-agent',
-        ...httpOverrides,
       },
-      ...restRequestContextOverrides,
     },
-    ...restOverrides,
     ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface CreateApiGatewayV2HandlerEventOptions {

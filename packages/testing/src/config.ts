@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type ConfigMessageType =
@@ -63,10 +65,10 @@ export interface ConfigEvent {
   version: string;
 }
 
-export type ConfigurationItemOverrides = Partial<ConfigurationItem>;
+export type ConfigurationItemOverrides = DeepPartial<ConfigurationItem>;
 
 export function createConfigurationItem(overrides: ConfigurationItemOverrides = {}): ConfigurationItem {
-  return {
+  const defaults: ConfigurationItem = {
     resourceType: 'AWS::EC2::Instance',
     resourceId: 'i-1234567890abcdef0',
     configurationItemStatus: 'ResourceDiscovered',
@@ -82,16 +84,17 @@ export function createConfigurationItem(overrides: ConfigurationItemOverrides = 
     supplementaryConfiguration: {},
     relatedEvents: [],
     relationships: [],
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
-export type ConfigurationItemSummaryOverrides = Partial<ConfigurationItemSummary>;
+export type ConfigurationItemSummaryOverrides = DeepPartial<ConfigurationItemSummary>;
 
 export function createConfigurationItemSummary(
   overrides: ConfigurationItemSummaryOverrides = {},
 ): ConfigurationItemSummary {
-  return {
+  const defaults: ConfigurationItemSummary = {
     resourceType: 'AWS::EC2::Instance',
     resourceId: 'i-1234567890abcdef0',
     configurationItemStatus: 'ResourceDiscovered',
@@ -101,25 +104,18 @@ export function createConfigurationItemSummary(
     awsAccountId: '123456789012',
     awsRegion: 'us-east-1',
     configurationStateId: 'state-123',
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
-export interface ConfigEventOverrides {
-  invokingEvent?: Partial<InvokingEvent>;
+export type ConfigEventOverrides = Omit<DeepPartial<ConfigEvent>, 'invokingEvent' | 'ruleParameters'> & {
+  invokingEvent?: DeepPartial<InvokingEvent>;
   ruleParameters?: Record<string, string>;
-  resultToken?: string;
-  eventLeftScope?: boolean;
-  executionRoleArn?: string;
-  configRuleArn?: string;
-  configRuleName?: string;
-  configRuleId?: string;
-  accountId?: string;
-  version?: string;
-}
+};
 
 export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigEvent {
-  const { invokingEvent: invokingEventOverride, ruleParameters: ruleParametersOverride, ...rest } = overrides;
+  const { invokingEvent: invokingEventOverride, ruleParameters: ruleParametersOverride, ...restOverrides } = overrides;
 
   const defaultInvokingEvent: InvokingEvent = {
     messageType: 'ConfigurationItemChangeNotification',
@@ -128,13 +124,13 @@ export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigE
     recordVersion: '1.3',
   };
 
-  const invokingEvent: InvokingEvent = invokingEventOverride
-    ? { ...defaultInvokingEvent, ...invokingEventOverride }
+  const invokingEvent = invokingEventOverride
+    ? deepMerge(defaultInvokingEvent, invokingEventOverride)
     : defaultInvokingEvent;
 
   const ruleParameters = ruleParametersOverride ?? {};
 
-  return {
+  const defaults: ConfigEvent = {
     invokingEvent: JSON.stringify(invokingEvent),
     ruleParameters: JSON.stringify(ruleParameters),
     resultToken: 'result-token-123',
@@ -145,8 +141,9 @@ export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigE
     configRuleId: 'config-rule-abc123',
     accountId: '123456789012',
     version: '1.0',
-    ...rest,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface ConfigHandlerEvent {

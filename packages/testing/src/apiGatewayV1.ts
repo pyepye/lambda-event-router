@@ -1,5 +1,7 @@
 import type { APIGatewayProxyEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ApiGatewayV1HandlerEvent {
@@ -7,18 +9,24 @@ export interface ApiGatewayV1HandlerEvent {
   context: Context;
 }
 
-export type ApiGatewayV1EventOverrides = Omit<Partial<APIGatewayProxyEvent>, 'requestContext' | 'body'> & {
-  requestContext?: Partial<APIGatewayProxyEvent['requestContext']>;
+export type ApiGatewayV1EventOverrides = Omit<DeepPartial<APIGatewayProxyEvent>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
 export function createApiGatewayV1Event(overrides: ApiGatewayV1EventOverrides = {}): APIGatewayProxyEvent {
-  const { requestContext: requestContextOverrides, body: bodyOverride, ...restOverrides } = overrides;
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  const isObjectBody = bodyOverride !== null && typeof bodyOverride === 'object';
-  const resolvedBody = isObjectBody ? JSON.stringify(bodyOverride) : (bodyOverride ?? null);
+  let resolvedBody: string | null = null;
+  if (hasBodyOverride) {
+    if (bodyOverride !== null && bodyOverride !== undefined && typeof bodyOverride === 'object') {
+      resolvedBody = JSON.stringify(bodyOverride);
+    } else if (typeof bodyOverride === 'string') {
+      resolvedBody = bodyOverride;
+    }
+  }
 
-  return {
+  const defaults: APIGatewayProxyEvent = {
     httpMethod: 'GET',
     path: '/',
     headers: {},
@@ -59,11 +67,10 @@ export function createApiGatewayV1Event(overrides: ApiGatewayV1EventOverrides = 
       requestTimeEpoch: 1704067200000,
       resourceId: 'resource-id',
       resourcePath: '/{proxy+}',
-      ...requestContextOverrides,
     },
-    ...restOverrides,
-    ...(resolvedBody !== null ? { body: resolvedBody } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface CreateApiGatewayV1HandlerEventOptions {

@@ -1,5 +1,6 @@
-import type { AppSyncAuthorizerEvent, AppSyncIdentity, AppSyncResolverEvent, Context } from 'aws-lambda';
+import type { AppSyncAuthorizerEvent, AppSyncResolverEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
@@ -43,15 +44,7 @@ export interface AppSyncEventsEvent {
 
 // ─── Resolver Event ──────────────────────────────────────────────────────────
 
-export interface AppSyncResolverEventOverrides {
-  arguments?: Record<string, unknown>;
-  identity?: AppSyncIdentity;
-  source?: Record<string, unknown> | null;
-  stash?: Record<string, unknown>;
-  prev?: { result: Record<string, unknown> } | null;
-  info?: Partial<AppSyncResolverEvent<Record<string, unknown>>['info']>;
-  request?: Partial<AppSyncResolverEvent<Record<string, unknown>>['request']>;
-}
+export type AppSyncResolverEventOverrides = DeepPartial<AppSyncResolverEvent<Record<string, unknown>>>;
 
 export interface AppSyncResolverHandlerEvent {
   event: AppSyncResolverEvent<Record<string, unknown>>;
@@ -66,26 +59,26 @@ export interface CreateAppSyncResolverHandlerEventOptions {
 export function createAppSyncResolverEvent(
   overrides: AppSyncResolverEventOverrides = {},
 ): AppSyncResolverEvent<Record<string, unknown>> {
-  return {
-    arguments: overrides.arguments ?? {},
-    identity: overrides.identity ?? undefined,
-    source: overrides.source ?? null,
-    stash: overrides.stash ?? {},
-    prev: overrides.prev ?? null,
+  const defaults: AppSyncResolverEvent<Record<string, unknown>> = {
+    arguments: {},
+    identity: undefined,
+    source: null,
+    stash: {},
+    prev: null,
     info: {
       selectionSetList: [],
       selectionSetGraphQL: '',
       parentTypeName: 'Query',
       fieldName: 'getUser',
       variables: {},
-      ...overrides.info,
     },
     request: {
       headers: {},
       domainName: null,
-      ...overrides.request,
     },
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createAppSyncResolverHandlerEvent(
@@ -111,9 +104,9 @@ export interface CreateAppSyncAuthorizerHandlerEventOptions {
 export function createAppSyncAuthorizerEvent(
   overrides: DeepPartial<AppSyncAuthorizerEvent> = {},
 ): AppSyncAuthorizerEvent {
-  return {
-    authorizationToken: overrides.authorizationToken ?? 'Bearer test-token',
-    requestHeaders: overrides.requestHeaders ?? {},
+  const defaults: AppSyncAuthorizerEvent = {
+    authorizationToken: 'Bearer test-token',
+    requestHeaders: {},
     requestContext: {
       apiId: 'test-api-id',
       accountId: '123456789012',
@@ -121,9 +114,10 @@ export function createAppSyncAuthorizerEvent(
       queryString: 'query { getUser { id name } }',
       operationName: 'GetUser',
       variables: {},
-      ...overrides.requestContext,
     },
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createAppSyncAuthorizerHandlerEvent(
@@ -136,21 +130,7 @@ export function createAppSyncAuthorizerHandlerEvent(
 
 // ─── Events Event ────────────────────────────────────────────────────────────
 
-export interface AppSyncEventsEventOverrides {
-  identity?: AppSyncEventsIdentity | null;
-  stash?: Record<string, unknown>;
-  events?: Record<string, unknown>[] | null;
-  prev?: { result: Record<string, unknown> } | null;
-  result?: unknown;
-  error?: unknown;
-  outErrors?: unknown[];
-  info?: {
-    channel?: Partial<AppSyncEventsEvent['info']['channel']>;
-    channelNamespace?: Partial<AppSyncEventsEvent['info']['channelNamespace']>;
-    operation?: AppSyncEventsOperation;
-  };
-  request?: Partial<AppSyncEventsEvent['request']>;
-}
+export type AppSyncEventsEventOverrides = DeepPartial<AppSyncEventsEvent>;
 
 export interface AppSyncEventsHandlerEvent {
   event: AppSyncEventsEvent;
@@ -163,34 +143,31 @@ export interface CreateAppSyncEventsHandlerEventOptions {
 }
 
 export function createAppSyncEventsEvent(overrides: AppSyncEventsEventOverrides = {}): AppSyncEventsEvent {
-  const infoOverrides = overrides.info;
-
-  return {
-    identity: overrides.identity ?? null,
-    stash: overrides.stash ?? {},
-    events: Object.hasOwn(overrides, 'events') ? (overrides.events ?? null) : [{ data: 'test-payload' }],
-    prev: overrides.prev ?? null,
-    result: overrides.result ?? null,
-    error: overrides.error ?? null,
-    outErrors: overrides.outErrors ?? [],
+  const defaults: AppSyncEventsEvent = {
+    identity: null,
+    stash: {},
+    events: [{ data: 'test-payload' }],
+    prev: null,
+    result: null,
+    error: null,
+    outErrors: [],
     info: {
       channel: {
         path: '/default/channel',
         segments: ['default', 'channel'],
-        ...infoOverrides?.channel,
       },
       channelNamespace: {
         name: 'default',
-        ...infoOverrides?.channelNamespace,
       },
-      operation: infoOverrides?.operation ?? 'PUBLISH',
+      operation: 'PUBLISH',
     },
     request: {
       headers: {},
       domainName: null,
-      ...overrides.request,
     },
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createAppSyncEventsHandlerEvent(

@@ -1,5 +1,7 @@
 import type { Context, SNSEvent, SNSEventRecord, SNSMessageAttribute } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface SNSHandlerEvent {
@@ -7,12 +9,14 @@ export interface SNSHandlerEvent {
   context: Context;
 }
 
-export type SNSRecordOverrides = Omit<Partial<SNSEventRecord>, 'Sns'> & {
-  Sns?: Partial<SNSEventRecord['Sns']>;
+export type SNSRecordOverrides = Omit<DeepPartial<SNSEventRecord>, 'Sns'> & {
+  Sns?: Omit<DeepPartial<SNSEventRecord['Sns']>, 'Message'> & {
+    Message?: string | Record<string, unknown>;
+  };
 };
 
 export function createSNSRecord(overrides: SNSRecordOverrides = {}): SNSEventRecord {
-  const { Sns: snsOverrides, ...restOverrides } = overrides;
+  const messageId = crypto.randomUUID();
 
   const defaultMessageAttributes: Record<string, SNSMessageAttribute> = {
     eventType: {
@@ -21,9 +25,12 @@ export function createSNSRecord(overrides: SNSRecordOverrides = {}): SNSEventRec
     },
   };
 
-  const messageId = crypto.randomUUID();
+  const { Sns: snsOverrides, ...restOverrides } = overrides;
+  const { Message: messageOverride, ...restSnsOverrides } = snsOverrides ?? {};
 
-  return {
+  const message = typeof messageOverride === 'object' ? JSON.stringify(messageOverride) : messageOverride;
+
+  const defaults: SNSEventRecord = {
     EventVersion: '1.0',
     EventSubscriptionArn: 'arn:aws:sns:us-east-1:123456789012:my-topic:a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     EventSource: 'aws:sns',
@@ -33,16 +40,16 @@ export function createSNSRecord(overrides: SNSRecordOverrides = {}): SNSEventRec
       Signature: 'EXAMPLE_SIGNATURE',
       SigningCertUrl: 'https://sns.us-east-1.amazonaws.com/SimpleNotificationService-abc123.pem',
       MessageId: messageId,
-      Message: JSON.stringify({ action: 'processOrder', orderId: '12345' }),
+      Message: message ?? JSON.stringify({ action: 'processOrder', orderId: '12345' }),
       MessageAttributes: defaultMessageAttributes,
       Type: 'Notification',
       UnsubscribeUrl: `https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&SubscriptionArn=arn:aws:sns:us-east-1:123456789012:my-topic:${messageId}`,
       TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic',
       Subject: 'Order Notification',
-      ...snsOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(deepMerge(defaults, restOverrides), { Sns: restSnsOverrides });
 }
 
 export function createSNSEvent(records: SNSEventRecord[] = [createSNSRecord()]): SNSEvent {

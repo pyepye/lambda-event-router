@@ -1,6 +1,8 @@
 import { marshall } from '@aws-sdk/util-dynamodb';
-import type { AttributeValue, Context, DynamoDBRecord, DynamoDBStreamEvent, StreamRecord } from 'aws-lambda';
+import type { AttributeValue, Context, DynamoDBRecord, DynamoDBStreamEvent } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // The SDK marshall returns its own AttributeValue type (Uint8Array for binary)
@@ -15,20 +17,19 @@ export interface DynamoDBHandlerEvent {
   context: Context;
 }
 
-export type DynamoDBRecordOverrides = Omit<Partial<DynamoDBRecord>, 'dynamodb'> & {
-  dynamodb?: Partial<Omit<StreamRecord, 'Keys' | 'NewImage' | 'OldImage'>>;
+export type DynamoDBRecordOverrides = DeepPartial<DynamoDBRecord> & {
   keys?: Record<string, unknown>;
   newImage?: Record<string, unknown>;
   oldImage?: Record<string, unknown>;
 };
 
 export function createDynamoDBRecord(overrides: DynamoDBRecordOverrides = {}): DynamoDBRecord {
-  const { dynamodb: dynamodbOverrides, keys, newImage, oldImage, ...restOverrides } = overrides;
+  const { keys, newImage, oldImage, ...restOverrides } = overrides;
 
   const defaultKeys = keys ?? { pk: 'pk-123', sk: 'sk-123' };
   const defaultNewImage = newImage ?? { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' };
 
-  return {
+  const defaults: DynamoDBRecord = {
     eventID: crypto.randomUUID(),
     eventName: 'INSERT',
     eventVersion: '1.1',
@@ -43,10 +44,10 @@ export function createDynamoDBRecord(overrides: DynamoDBRecordOverrides = {}): D
       SequenceNumber: '111',
       SizeBytes: 256,
       StreamViewType: 'NEW_AND_OLD_IMAGES',
-      ...dynamodbOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createDynamoDBInsertRecord(overrides: DynamoDBRecordOverrides = {}): DynamoDBRecord {
@@ -59,12 +60,12 @@ export function createDynamoDBModifyRecord(overrides: DynamoDBRecordOverrides = 
 }
 
 export function createDynamoDBRemoveRecord(overrides: DynamoDBRecordOverrides = {}): DynamoDBRecord {
-  const { dynamodb: dynamodbOverrides, keys, oldImage, newImage: _newImage, ...restOverrides } = overrides;
+  const { keys, oldImage, newImage: _newImage, ...restOverrides } = overrides;
 
   const defaultKeys = keys ?? { pk: 'pk-123', sk: 'sk-123' };
   const defaultOldImage = oldImage ?? { pk: 'pk-123', sk: 'sk-123', name: 'Deleted Item' };
 
-  return {
+  const defaults: DynamoDBRecord = {
     eventID: crypto.randomUUID(),
     eventName: 'REMOVE',
     eventVersion: '1.1',
@@ -78,10 +79,10 @@ export function createDynamoDBRemoveRecord(overrides: DynamoDBRecordOverrides = 
       SequenceNumber: '111',
       SizeBytes: 256,
       StreamViewType: 'NEW_AND_OLD_IMAGES',
-      ...dynamodbOverrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createDynamoDBEvent(records: DynamoDBRecord[] = [createDynamoDBRecord()]): DynamoDBStreamEvent {

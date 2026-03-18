@@ -1,14 +1,10 @@
 import type { ConnectContactFlowEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export interface ConnectEventOverrides {
-  Name?: ConnectContactFlowEvent['Name'];
-  Details?: {
-    ContactData?: Partial<ConnectContactFlowEvent['Details']['ContactData']>;
-    Parameters?: ConnectContactFlowEvent['Details']['Parameters'];
-  };
-}
+export type ConnectEventOverrides = DeepPartial<ConnectContactFlowEvent>;
 
 export interface ConnectHandlerEvent {
   event: ConnectContactFlowEvent;
@@ -21,11 +17,10 @@ export interface CreateConnectHandlerEventOptions {
 }
 
 export function createConnectEvent(overrides: ConnectEventOverrides = {}): ConnectContactFlowEvent {
-  const contactDataOverrides = overrides.Details?.ContactData;
   const contactId = crypto.randomUUID();
 
-  return {
-    Name: overrides.Name ?? 'ContactFlowEvent',
+  const defaults: ConnectContactFlowEvent = {
+    Name: 'ContactFlowEvent',
     Details: {
       ContactData: {
         Attributes: {},
@@ -46,11 +41,12 @@ export function createConnectEvent(overrides: ConnectEventOverrides = {}): Conne
             Audio: null,
           },
         },
-        ...contactDataOverrides,
       },
-      Parameters: overrides.Details?.Parameters ?? { action: 'getCustomerInfo' },
+      Parameters: { action: 'getCustomerInfo' },
     },
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createConnectHandlerEvent(options: CreateConnectHandlerEventOptions = {}): ConnectHandlerEvent {

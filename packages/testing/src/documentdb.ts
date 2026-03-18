@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // Local DocumentDB types — aws-lambda has no DocumentDB types, and importing from
@@ -32,10 +34,7 @@ interface DocumentDBEvent {
   events: DocumentDBEventEntry[];
 }
 
-export type DocumentDBChangeEventOverrides = Partial<Omit<DocumentDBChangeEvent, 'ns' | 'updateDescription'>> & {
-  ns?: Partial<DocumentDBChangeEvent['ns']>;
-  updateDescription?: Partial<DocumentDBUpdateDescription>;
-};
+export type DocumentDBChangeEventOverrides = DeepPartial<DocumentDBChangeEvent>;
 
 export interface DocumentDBHandlerEvent {
   event: DocumentDBEvent;
@@ -49,24 +48,28 @@ export interface CreateDocumentDBHandlerEventOptions {
 }
 
 export function createDocumentDBChangeEvent(overrides: DocumentDBChangeEventOverrides = {}): DocumentDBChangeEvent {
-  const { ns: nsOverrides, updateDescription: updateDescriptionOverrides, ...restOverrides } = overrides;
+  // Extract fields typed as `unknown` — these should replace defaults entirely, not deep merge
+  const { _id, clusterTime, documentKey, fullDocument, fullDocumentBeforeChange, ...restOverrides } = overrides;
 
-  return {
-    _id: { _data: crypto.randomUUID() },
-    clusterTime: { $timestamp: { t: 1704067200, i: 1 } },
+  const hasFullDocument = Object.hasOwn(overrides, 'fullDocument');
+  const hasFullDocumentBeforeChange = Object.hasOwn(overrides, 'fullDocumentBeforeChange');
+
+  const defaults: DocumentDBChangeEvent = {
+    _id: _id ?? { _data: crypto.randomUUID() },
+    clusterTime: clusterTime ?? { $timestamp: { t: 1704067200, i: 1 } },
     operationType: 'insert',
     ns: {
       db: 'test-db',
       coll: 'test-collection',
-      ...nsOverrides,
     },
-    documentKey: { _id: { $oid: crypto.randomUUID() } },
-    fullDocument: { _id: { $oid: crypto.randomUUID() }, name: 'Test Document', status: 'active' },
-    ...(updateDescriptionOverrides
-      ? { updateDescription: { updatedFields: {}, removedFields: [], ...updateDescriptionOverrides } }
-      : {}),
-    ...restOverrides,
+    documentKey: documentKey ?? { _id: { $oid: crypto.randomUUID() } },
+    ...(hasFullDocument
+      ? { fullDocument }
+      : { fullDocument: { _id: { $oid: crypto.randomUUID() }, name: 'Test Document', status: 'active' } }),
+    ...(hasFullDocumentBeforeChange ? { fullDocumentBeforeChange } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createDocumentDBInsertEntry(overrides: DocumentDBChangeEventOverrides = {}): DocumentDBEventEntry {

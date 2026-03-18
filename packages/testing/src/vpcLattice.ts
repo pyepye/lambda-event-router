@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -44,24 +46,32 @@ interface VPCLatticeEventV2 {
   requestContext: VPCLatticeRequestContextV2;
 }
 
-export type VPCLatticeV1EventOverrides = Omit<Partial<VPCLatticeEventV1>, 'body'> & {
+export type VPCLatticeV1EventOverrides = Omit<DeepPartial<VPCLatticeEventV1>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
 export function createVPCLatticeV1Event(overrides: VPCLatticeV1EventOverrides = {}): VPCLatticeEventV1 {
   const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  const isObjectBody = bodyOverride !== null && typeof bodyOverride === 'object';
-  const resolvedBody = isObjectBody ? JSON.stringify(bodyOverride) : (bodyOverride ?? undefined);
+  let resolvedBody: string | undefined;
+  if (hasBodyOverride) {
+    if (bodyOverride !== null && bodyOverride !== undefined && typeof bodyOverride === 'object') {
+      resolvedBody = JSON.stringify(bodyOverride);
+    } else if (typeof bodyOverride === 'string') {
+      resolvedBody = bodyOverride;
+    }
+  }
 
-  return {
+  const defaults: VPCLatticeEventV1 = {
     method: 'GET',
     raw_path: '/',
     is_base64_encoded: false,
     headers: {},
-    ...restOverrides,
     ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface VPCLatticeV1HandlerEvent {
@@ -82,21 +92,24 @@ export function createVPCLatticeV1HandlerEvent(
   return { event, context };
 }
 
-export type VPCLatticeV2EventOverrides = Omit<Partial<VPCLatticeEventV2>, 'requestContext' | 'body'> & {
-  requestContext?: Omit<Partial<VPCLatticeRequestContextV2>, 'identity'> & {
-    identity?: Partial<NonNullable<VPCLatticeRequestContextV2['identity']>>;
-  };
+export type VPCLatticeV2EventOverrides = Omit<DeepPartial<VPCLatticeEventV2>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
 export function createVPCLatticeV2Event(overrides: VPCLatticeV2EventOverrides = {}): VPCLatticeEventV2 {
-  const { requestContext: requestContextOverrides, body: bodyOverride, ...restOverrides } = overrides;
-  const { identity: identityOverrides, ...restRequestContextOverrides } = requestContextOverrides ?? {};
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  const isObjectBody = bodyOverride !== null && typeof bodyOverride === 'object';
-  const resolvedBody = isObjectBody ? JSON.stringify(bodyOverride) : (bodyOverride ?? undefined);
+  let resolvedBody: string | undefined;
+  if (hasBodyOverride) {
+    if (bodyOverride !== null && bodyOverride !== undefined && typeof bodyOverride === 'object') {
+      resolvedBody = JSON.stringify(bodyOverride);
+    } else if (typeof bodyOverride === 'string') {
+      resolvedBody = bodyOverride;
+    }
+  }
 
-  return {
+  const defaults: VPCLatticeEventV2 = {
     version: '2.0',
     method: 'GET',
     path: '/',
@@ -107,12 +120,11 @@ export function createVPCLatticeV2Event(overrides: VPCLatticeV2EventOverrides = 
       targetGroupArn: 'arn:aws:vpc-lattice:us-east-1:123456789012:targetgroup/tg-1234567890abcdef0',
       region: 'us-east-1',
       timeEpoch: 1704067200000,
-      ...(identityOverrides ? { identity: identityOverrides } : {}),
-      ...restRequestContextOverrides,
     },
-    ...restOverrides,
     ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface VPCLatticeV2HandlerEvent {

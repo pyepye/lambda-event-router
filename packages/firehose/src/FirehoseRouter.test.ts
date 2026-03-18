@@ -444,9 +444,8 @@ suite('FirehoseRouter', () => {
         }).handle(handler),
       );
 
-      const body = { action: 'processOrder', orderId: '12345' };
-      const encodedData = Buffer.from(JSON.stringify(body)).toString('base64');
-      const record = firehoseRecord({ data: encodedData, approximateArrivalTimestamp: 1704067200 });
+      const body = { action: 'processOrder', orderId: '12345' }; // body gets automatically base64 encoded by firehoseRecord
+      const record = firehoseRecord({ data: body, approximateArrivalTimestamp: 1704067200 });
       const event = createFirehoseEvent([record]);
       const ctx = context();
 
@@ -661,14 +660,14 @@ suite('FirehoseRouter', () => {
       const router = new FirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
-      const body = { action: 'processOrder', orderId: '12345' };
-      const encodedData = Buffer.from(JSON.stringify(body)).toString('base64');
+
       const definition = defineRoute({
         filters: { deliveryStreamArns: [deliveryStreamArn] },
       }).handle(handler);
       router.route(definition);
 
-      const record = firehoseRecord({ data: encodedData, approximateArrivalTimestamp: 1704067200 });
+      const body = { action: 'processOrder', orderId: '12345' }; // body gets automatically base64 encoded by firehoseRecord
+      const record = firehoseRecord({ data: body, approximateArrivalTimestamp: 1704067200 });
       const { event, context } = firehoseHandlerEvent({
         records: [record],
         eventOverrides: { deliveryStreamArn },
@@ -787,9 +786,8 @@ suite('FirehoseRouter', () => {
 
       router.route(defineRoute({ filters: {} }).handle(handler));
 
-      const rawText = 'plain text log line';
-      const encodedData = Buffer.from(rawText).toString('base64');
-      const record = firehoseRecord({ data: encodedData });
+      const rawText = 'plain text log line'; // This get automatically base64 encoded by firehoseRecord
+      const record = firehoseRecord({ data: rawText });
       const event = firehoseEvent([record]);
       await router.handleEvent(event, context());
 

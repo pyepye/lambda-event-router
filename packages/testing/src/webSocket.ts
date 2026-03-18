@@ -4,6 +4,8 @@ import type {
   Context,
 } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 type WebSocketEventType = 'CONNECT' | 'MESSAGE' | 'DISCONNECT';
@@ -15,20 +17,24 @@ interface WebSocketEvent
   multiValueHeaders?: Record<string, string[]>;
 }
 
-export interface WebSocketEventOverrides {
-  requestContext?: Partial<WebSocketEvent['requestContext']>;
-  body?: string;
-  isBase64Encoded?: boolean;
-  stageVariables?: Record<string, string>;
-  headers?: Record<string, string>;
-  queryStringParameters?: Record<string, string>;
-  multiValueHeaders?: Record<string, string[]>;
-}
+export type WebSocketEventOverrides = Omit<DeepPartial<WebSocketEvent>, 'body'> & {
+  body?: string | Record<string, unknown> | null;
+};
 
 export function createWebSocketEvent(overrides: WebSocketEventOverrides = {}): WebSocketEvent {
-  const { requestContext: requestContextOverrides, ...restOverrides } = overrides;
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  return {
+  function resolveBody(): string | undefined {
+    if (!hasBodyOverride) return undefined;
+    if (bodyOverride === null) return JSON.stringify(bodyOverride);
+    if (typeof bodyOverride === 'object') return JSON.stringify(bodyOverride);
+    return bodyOverride;
+  }
+
+  const body = resolveBody();
+
+  const defaults: WebSocketEvent = {
     requestContext: {
       routeKey: '$default',
       eventType: 'MESSAGE' as WebSocketEventType,
@@ -43,12 +49,12 @@ export function createWebSocketEvent(overrides: WebSocketEventOverrides = {}): W
       connectionId: 'TEST-CONNECTION-ID',
       apiId: 'abc123',
       messageDirection: 'IN',
-      ...requestContextOverrides,
     },
-    body: '{"action":"sendMessage","message":"hello"}',
+    body: body ?? '{"action":"sendMessage","message":"hello"}',
     isBase64Encoded: false,
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface WebSocketHandlerEvent {

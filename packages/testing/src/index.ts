@@ -150,6 +150,7 @@ export type {
 } from './connect.js';
 export { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 export { createMockContext } from './context.js';
+export { deepMerge } from './deepMerge.js';
 export type { DeepPartial } from './deepPartial.js';
 export type {
   CreateDocumentDBHandlerEventOptions,

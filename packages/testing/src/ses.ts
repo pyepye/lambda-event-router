@@ -1,5 +1,7 @@
 import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface SESHandlerEvent {
@@ -7,21 +9,10 @@ export interface SESHandlerEvent {
   context: Context;
 }
 
-export type SESRecordOverrides = Omit<Partial<SESEventRecord>, 'ses'> & {
-  ses?: Partial<Omit<SESEventRecord['ses'], 'mail' | 'receipt'>> & {
-    mail?: Partial<Omit<SESMail, 'commonHeaders'>> & {
-      commonHeaders?: Partial<SESMail['commonHeaders']>;
-    };
-    receipt?: Partial<SESReceipt>;
-  };
-};
+export type SESRecordOverrides = DeepPartial<SESEventRecord>;
 
 export function createSESRecord(overrides: SESRecordOverrides = {}): SESEventRecord {
-  const { ses: sesOverrides, ...restOverrides } = overrides;
-  const { mail: mailOverrides, receipt: receiptOverrides } = sesOverrides ?? {};
-  const { commonHeaders: commonHeadersOverrides, ...restMailOverrides } = mailOverrides ?? {};
-
-  const messageId = mailOverrides?.messageId ?? crypto.randomUUID();
+  const messageId = crypto.randomUUID();
 
   const defaultCommonHeaders: SESMail['commonHeaders'] = {
     returnPath: 'sender@example.com',
@@ -30,7 +21,6 @@ export function createSESRecord(overrides: SESRecordOverrides = {}): SESEventRec
     to: ['recipient@example.com'],
     messageId: `<${messageId}@mail.example.com>`,
     subject: 'Test Email Subject',
-    ...commonHeadersOverrides,
   };
 
   const defaultMail: SESMail = {
@@ -45,7 +35,6 @@ export function createSESRecord(overrides: SESRecordOverrides = {}): SESEventRec
       { name: 'Subject', value: 'Test Email Subject' },
     ],
     commonHeaders: defaultCommonHeaders,
-    ...restMailOverrides,
   };
 
   const defaultReceipt: SESReceipt = {
@@ -62,18 +51,18 @@ export function createSESRecord(overrides: SESRecordOverrides = {}): SESEventRec
       functionArn: 'arn:aws:lambda:us-east-1:123456789012:function:my-ses-handler',
       invocationType: 'Event',
     },
-    ...receiptOverrides,
   };
 
-  return {
+  const defaults: SESEventRecord = {
     eventSource: 'aws:ses',
     eventVersion: '1.0',
     ses: {
       mail: defaultMail,
       receipt: defaultReceipt,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createSESEvent(records: SESEventRecord[] = [createSESRecord()]): SESEvent {

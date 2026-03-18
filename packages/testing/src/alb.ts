@@ -1,5 +1,7 @@
 import type { ALBEvent, Context } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface ALBHandlerEvent {
@@ -7,21 +9,24 @@ export interface ALBHandlerEvent {
   context: Context;
 }
 
-export type ALBEventOverrides = Omit<Partial<ALBEvent>, 'requestContext' | 'body'> & {
-  requestContext?: Partial<ALBEvent['requestContext']> & {
-    elb?: Partial<ALBEvent['requestContext']['elb']>;
-  };
+export type ALBEventOverrides = Omit<DeepPartial<ALBEvent>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
 export function createALBEvent(overrides: ALBEventOverrides = {}): ALBEvent {
-  const { requestContext: requestContextOverrides, body: bodyOverride, ...restOverrides } = overrides;
-  const { elb: elbOverrides, ...restRequestContextOverrides } = requestContextOverrides ?? {};
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const hasBodyOverride = Object.hasOwn(overrides, 'body');
 
-  const isObjectBody = bodyOverride !== null && typeof bodyOverride === 'object';
-  const resolvedBody = isObjectBody ? JSON.stringify(bodyOverride) : (bodyOverride ?? null);
+  let resolvedBody: string | null = null;
+  if (hasBodyOverride) {
+    if (bodyOverride !== null && bodyOverride !== undefined && typeof bodyOverride === 'object') {
+      resolvedBody = JSON.stringify(bodyOverride);
+    } else if (typeof bodyOverride === 'string') {
+      resolvedBody = bodyOverride;
+    }
+  }
 
-  return {
+  const defaults: ALBEvent = {
     httpMethod: 'GET',
     path: '/',
     headers: {},
@@ -33,13 +38,11 @@ export function createALBEvent(overrides: ALBEventOverrides = {}): ALBEvent {
       elb: {
         targetGroupArn:
           'arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-target-group/50dc6c495c0c9188',
-        ...elbOverrides,
       },
-      ...restRequestContextOverrides,
     },
-    ...restOverrides,
-    ...(resolvedBody !== null ? { body: resolvedBody } : {}),
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export interface CreateALBHandlerEventOptions {

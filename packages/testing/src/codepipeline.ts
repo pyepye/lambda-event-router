@@ -1,8 +1,10 @@
 import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export interface CodePipelineEventOverrides {
+export type CodePipelineEventOverrides = DeepPartial<CodePipelineEvent> & {
   id?: string;
   accountId?: string;
   functionName?: string;
@@ -11,7 +13,7 @@ export interface CodePipelineEventOverrides {
   outputArtifacts?: Artifact[];
   artifactCredentials?: Credentials;
   continuationToken?: string;
-}
+};
 
 export interface CodePipelineHandlerEvent {
   event: CodePipelineEvent;
@@ -46,24 +48,38 @@ function createDefaultCredentials(): Credentials {
 }
 
 export function createCodePipelineEvent(overrides: CodePipelineEventOverrides = {}): CodePipelineEvent {
-  return {
+  const {
+    id,
+    accountId,
+    functionName,
+    userParameters,
+    inputArtifacts,
+    outputArtifacts,
+    artifactCredentials,
+    continuationToken,
+    ...restOverrides
+  } = overrides;
+
+  const defaults: CodePipelineEvent = {
     'CodePipeline.job': {
-      id: overrides.id ?? crypto.randomUUID(),
-      accountId: overrides.accountId ?? '123456789012',
+      id: id ?? crypto.randomUUID(),
+      accountId: accountId ?? '123456789012',
       data: {
         actionConfiguration: {
           configuration: {
-            FunctionName: overrides.functionName ?? 'my-pipeline-function',
-            UserParameters: overrides.userParameters ?? '',
+            FunctionName: functionName ?? 'my-pipeline-function',
+            UserParameters: userParameters ?? '',
           },
         },
-        inputArtifacts: overrides.inputArtifacts ?? [createDefaultArtifact('MyAppSource')],
-        outputArtifacts: overrides.outputArtifacts ?? [],
-        artifactCredentials: overrides.artifactCredentials ?? createDefaultCredentials(),
-        continuationToken: overrides.continuationToken,
+        inputArtifacts: inputArtifacts ?? [createDefaultArtifact('MyAppSource')],
+        outputArtifacts: outputArtifacts ?? [],
+        artifactCredentials: artifactCredentials ?? createDefaultCredentials(),
+        continuationToken,
       },
     },
   };
+
+  return deepMerge(defaults, restOverrides);
 }
 
 export function createCodePipelineHandlerEvent(

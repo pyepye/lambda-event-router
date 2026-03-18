@@ -1,5 +1,7 @@
 import type { Context, S3BatchEvent, S3BatchEventTask, S3Event, S3EventRecord } from 'aws-lambda';
 import { createMockContext } from './context.js';
+import { deepMerge } from './deepMerge.js';
+import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export interface S3HandlerEvent {
@@ -12,18 +14,10 @@ export interface S3BatchHandlerEvent {
   context: Context;
 }
 
-export type S3RecordOverrides = Omit<Partial<S3EventRecord>, 's3'> & {
-  s3?: Omit<Partial<S3EventRecord['s3']>, 'bucket' | 'object'> & {
-    bucket?: Partial<S3EventRecord['s3']['bucket']>;
-    object?: Partial<S3EventRecord['s3']['object']>;
-  };
-};
+export type S3RecordOverrides = DeepPartial<S3EventRecord>;
 
 export function createS3Record(overrides: S3RecordOverrides = {}): S3EventRecord {
-  const { s3: s3Overrides, ...restOverrides } = overrides;
-  const { bucket: bucketOverrides, object: objectOverrides, ...restS3Overrides } = s3Overrides ?? {};
-
-  return {
+  const defaults: S3EventRecord = {
     eventVersion: '2.1',
     eventSource: 'aws:s3',
     awsRegion: 'us-east-1',
@@ -42,19 +36,17 @@ export function createS3Record(overrides: S3RecordOverrides = {}): S3EventRecord
         name: 'my-bucket',
         ownerIdentity: { principalId: 'EXAMPLE' },
         arn: 'arn:aws:s3:::my-bucket',
-        ...bucketOverrides,
       },
       object: {
         key: 'uploads/test-file.txt',
         size: 1024,
         eTag: '0123456789abcdef0123456789abcdef',
         sequencer: '0A1B2C3D4E5F678901',
-        ...objectOverrides,
       },
-      ...restS3Overrides,
     },
-    ...restOverrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createS3Event(records: S3EventRecord[] = [createS3Record()]): S3Event {
@@ -72,14 +64,17 @@ export function createS3HandlerEvent(options: CreateS3HandlerEventOptions = {}):
   return { event, context };
 }
 
-export function createS3BatchTask(overrides: Partial<S3BatchEventTask> = {}): S3BatchEventTask {
-  return {
+export type S3BatchTaskOverrides = DeepPartial<S3BatchEventTask>;
+
+export function createS3BatchTask(overrides: S3BatchTaskOverrides = {}): S3BatchEventTask {
+  const defaults: S3BatchEventTask = {
     taskId: crypto.randomUUID(),
     s3Key: 'uploads/test-file.txt',
     s3VersionId: '1',
     s3BucketArn: 'arn:aws:s3:::my-bucket',
-    ...overrides,
   };
+
+  return deepMerge(defaults, overrides);
 }
 
 export function createS3BatchEvent(
@@ -113,7 +108,7 @@ export interface S3Fixtures {
   s3Record: (overrides?: S3RecordOverrides) => S3EventRecord;
   s3Event: (records?: S3EventRecord[]) => S3Event;
   s3HandlerEvent: (options?: CreateS3HandlerEventOptions) => S3HandlerEvent;
-  s3BatchTask: (overrides?: Partial<S3BatchEventTask>) => S3BatchEventTask;
+  s3BatchTask: (overrides?: S3BatchTaskOverrides) => S3BatchEventTask;
   s3BatchEvent: (overrides?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] }) => S3BatchEvent;
   s3BatchHandlerEvent: (options?: CreateS3BatchHandlerEventOptions) => S3BatchHandlerEvent;
 }
