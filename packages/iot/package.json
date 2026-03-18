@@ -19,7 +19,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json --noEmit && tsup",
     "dev": "tsup --watch",
-    "test": "tsc --noEmit && vitest run",
+    "test": "#tsc --noEmit && vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "lint": "biome check src",

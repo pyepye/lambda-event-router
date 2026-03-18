@@ -25,7 +25,7 @@ export interface SecretsManagerFilters {
   secretSuffixes?: string[];
   secretIncludes?: string[];
   steps?: SecretsManagerRotationEventStep[];
-  customFilter?: (input: SecretsManagerRequest) => boolean;
+  customFilter?: (input: SecretsManagerFilterInput) => boolean;
 }
 
 export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'steps'>;

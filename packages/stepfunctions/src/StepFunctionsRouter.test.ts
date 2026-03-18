@@ -404,6 +404,7 @@ suite('StepFunctionsRouter', () => {
       expect(handler).toHaveBeenCalledWith({
         taskToken: 'token-xyz',
         input: { orderId: '456', status: 'approved' },
+        event,
       });
       expect(result).toEqual({ sent: true });
     });
@@ -488,6 +489,7 @@ suite('StepFunctionsRouter', () => {
       expect(handler).toHaveBeenCalledWith({
         taskToken: 'token-abc',
         input: validatedInput,
+        event: { TaskToken: 'token-abc', orderId: '123' },
       });
     });
 
@@ -606,6 +608,7 @@ suite('StepFunctionsRouter', () => {
       expect(taskTokenHandler).toHaveBeenCalledWith({
         taskToken: 'token-1',
         input: { orderId: '100' },
+        event: { TaskToken: 'token-1', orderId: '100' },
       });
       expect(taskTokenResult).toEqual({ sent: true });
 

@@ -2,6 +2,7 @@ import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 import type {
+  SecretsManagerFilterInput,
   SecretsManagerFilters,
   SecretsManagerHandler,
   SecretsManagerRequest,
@@ -81,18 +82,19 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     const secretId = event.SecretId;
     const clientRequestToken = event.ClientRequestToken;
     const step = event.Step;
-    const request: SecretsManagerRequest = { secretId, clientRequestToken, step, event, context };
+    const filterInput: SecretsManagerFilterInput = { secretId, clientRequestToken, step };
 
-    const route = this.matchRoute(request);
+    const route = this.matchRoute(filterInput);
     if (!route) {
       throw new Error(
         `No route matched for Secrets Manager rotation event (step: ${event.Step}, secretId: ${event.SecretId})`,
       );
     }
+    const request: SecretsManagerRequest = { ...filterInput, event, context };
     await route.handler(request);
   }
 
-  private matchRoute(request: SecretsManagerRequest): SecretsManagerRouteDefinition | undefined {
+  private matchRoute(request: SecretsManagerFilterInput): SecretsManagerRouteDefinition | undefined {
     const { secretId, step } = request;
 
     return this.routes.find((route) => {

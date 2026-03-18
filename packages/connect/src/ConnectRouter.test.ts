@@ -423,6 +423,8 @@ suite('handleEvent', () => {
     expect(handler).toHaveBeenCalledWith({
       contactData: event.Details.ContactData,
       parameters: event.Details.Parameters,
+      event,
+      context,
     });
   });
 
