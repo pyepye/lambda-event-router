@@ -365,6 +365,28 @@ suite('ActiveMQRouter', () => {
     });
   });
 
+  suite('parseJsonBody', () => {
+    let router: ActiveMQRouter;
+
+    beforeEach(() => {
+      router = new ActiveMQRouter();
+    });
+
+    test('parses valid JSON string into an object', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.parseJsonBody('{"action":"process"}');
+
+      expect(result).toEqual({ action: 'process' });
+    });
+
+    test('returns raw string when data is not valid JSON', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.parseJsonBody('not-json');
+
+      expect(result).toBe('not-json');
+    });
+  });
+
   suite('validateBody', () => {
     let router: ActiveMQRouter;
 
@@ -372,29 +394,29 @@ suite('ActiveMQRouter', () => {
       router = new ActiveMQRouter();
     });
 
-    test('returns raw data string when no schema', () => {
-      const data = '{"action":"process"}';
+    test('returns pre-parsed body when no schema', () => {
+      const body = { action: 'process' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(data, undefined, 'msg-1');
+      const result = router.validateBody(body, undefined, 'msg-1');
 
-      expect(result).toBe(data);
+      expect(result).toBe(body);
     });
 
     test('returns validated data on schema success', () => {
-      const data = '{"action":"process"}';
+      const body = { action: 'process' };
       const transformedData = { action: 'process', validated: true };
       const schema: Schema<typeof transformedData> = {
         safeParse: () => ({ success: true, data: transformedData }),
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(data, schema, 'msg-1');
+      const result = router.validateBody(body, schema, 'msg-1');
 
       expect(result).toEqual(transformedData);
     });
 
-    test('throws on JSON parse failure', () => {
+    test('throws on JSON parse failure when body is still a string', () => {
       const schema: Schema<unknown> = {
         safeParse: () => ({ success: true, data: {} }),
       };
@@ -411,7 +433,7 @@ suite('ActiveMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('{"valid":"json"}', schema, 'msg-42')).toThrow(
+      expect(() => router.validateBody({ valid: 'json' }, schema, 'msg-42')).toThrow(
         'Body validation failed for message msg-42',
       );
     });
@@ -448,16 +470,17 @@ suite('ActiveMQRouter', () => {
       const handler = vi.fn();
       router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
 
-      const body = JSON.stringify({ decoded: true });
-      const message = activeMQMessage({ data: Buffer.from(body).toString('base64') });
+      const body = { decoded: true }; // This gets auto encoded by activeMQMessage
+      const message = activeMQMessage({ data: body });
       const event = createActiveMQEvent([message]);
 
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledTimes(1);
+      const expectedDecodedData = JSON.stringify(body);
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.objectContaining({ data: body }),
+          message: expect.objectContaining({ data: expectedDecodedData }),
           body,
         }),
       );

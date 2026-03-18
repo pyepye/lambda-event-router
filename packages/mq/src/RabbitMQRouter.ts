@@ -59,7 +59,8 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           throw new Error(`No route matched for message on queue ${queueName} from ${event.eventSourceArn}`);
         }
 
-        const body = this.validateBody(decodedData, route.bodySchema, queueName);
+        const parsedBody = this.parseJsonBody(decodedData);
+        const body = this.validateBody(parsedBody, route.bodySchema, queueName);
 
         const request: RabbitMQRequest = {
           message: decodedMessage,
@@ -107,19 +108,24 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     });
   }
 
-  private validateBody(data: string, schema: Schema<unknown> | undefined, queueName: string): unknown {
-    if (!schema) {
+  private parseJsonBody(data: string): unknown {
+    try {
+      return JSON.parse(data);
+    } catch {
       return data;
     }
+  }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(data);
-    } catch {
+  private validateBody(body: unknown, schema: Schema<unknown> | undefined, queueName: string): unknown {
+    if (!schema) {
+      return body;
+    }
+
+    if (typeof body === 'string') {
       throw new Error(`Failed to parse JSON body for message on queue ${queueName}`);
     }
 
-    const result = schema.safeParse(parsed);
+    const result = schema.safeParse(body);
     if (!result.success) {
       throw new Error(`Body validation failed for message on queue ${queueName}`);
     }

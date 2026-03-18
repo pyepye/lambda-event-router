@@ -302,6 +302,28 @@ suite('RabbitMQRouter', () => {
     });
   });
 
+  suite('parseJsonBody', () => {
+    let router: RabbitMQRouter;
+
+    beforeEach(() => {
+      router = new RabbitMQRouter();
+    });
+
+    test('parses valid JSON string into an object', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.parseJsonBody('{"action":"process"}');
+
+      expect(result).toEqual({ action: 'process' });
+    });
+
+    test('returns raw string when data is not valid JSON', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.parseJsonBody('not-json');
+
+      expect(result).toBe('not-json');
+    });
+  });
+
   suite('validateBody', () => {
     let router: RabbitMQRouter;
 
@@ -309,29 +331,29 @@ suite('RabbitMQRouter', () => {
       router = new RabbitMQRouter();
     });
 
-    test('returns raw data string when no schema', () => {
-      const data = '{"action":"process"}';
+    test('returns pre-parsed body when no schema', () => {
+      const body = { action: 'process' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(data, undefined, 'orders');
+      const result = router.validateBody(body, undefined, 'orders');
 
-      expect(result).toBe(data);
+      expect(result).toBe(body);
     });
 
     test('returns validated data on schema success', () => {
-      const data = '{"action":"process"}';
+      const body = { action: 'process' };
       const transformedData = { action: 'process', validated: true };
       const schema: Schema<typeof transformedData> = {
         safeParse: () => ({ success: true, data: transformedData }),
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(data, schema, 'orders');
+      const result = router.validateBody(body, schema, 'orders');
 
       expect(result).toEqual(transformedData);
     });
 
-    test('throws on JSON parse failure', () => {
+    test('throws on JSON parse failure when body is still a string', () => {
       const schema: Schema<unknown> = {
         safeParse: () => ({ success: true, data: {} }),
       };
@@ -348,7 +370,7 @@ suite('RabbitMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('{"valid":"json"}', schema, 'orders')).toThrow(
+      expect(() => router.validateBody({ valid: 'json' }, schema, 'orders')).toThrow(
         'Body validation failed for message on queue orders',
       );
     });
@@ -383,16 +405,17 @@ suite('RabbitMQRouter', () => {
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
-      const body = JSON.stringify({ decoded: true });
-      const message = rabbitMQMessage({ data: Buffer.from(body).toString('base64') });
+      const body = { decoded: true };
+      const message = rabbitMQMessage({ data: body }); // This gets auto encoded by activeMQMessage
       const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
 
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledTimes(1);
+      const expectedDecodedData = JSON.stringify(body);
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          message: expect.objectContaining({ data: body }),
+          message: expect.objectContaining({ data: expectedDecodedData }),
           body,
         }),
       );

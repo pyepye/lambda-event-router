@@ -73,7 +73,8 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
         throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
       }
 
-      const body = this.validateBody(decodedData, route.bodySchema, message.messageID);
+      const parsedBody = this.parseJsonBody(decodedData);
+      const body = this.validateBody(parsedBody, route.bodySchema, message.messageID);
 
       const request: ActiveMQRequest = {
         message: decodedMessage,
@@ -117,19 +118,24 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     });
   }
 
-  private validateBody(data: string, schema: Schema<unknown> | undefined, messageId: string): unknown {
-    if (!schema) {
+  private parseJsonBody(data: string): unknown {
+    try {
+      return JSON.parse(data);
+    } catch {
       return data;
     }
+  }
 
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(data);
-    } catch {
+  private validateBody(body: unknown, schema: Schema<unknown> | undefined, messageId: string): unknown {
+    if (!schema) {
+      return body;
+    }
+
+    if (typeof body === 'string') {
       throw new Error(`Failed to parse JSON body for message ${messageId}`);
     }
 
-    const result = schema.safeParse(parsed);
+    const result = schema.safeParse(body);
     if (!result.success) {
       throw new Error(`Body validation failed for message ${messageId}`);
     }
