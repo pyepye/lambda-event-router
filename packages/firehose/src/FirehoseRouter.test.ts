@@ -653,6 +653,18 @@ suite('FirehoseRouter', () => {
 
       expect(result).toBe(data);
     });
+
+    test('throws when data is a string and schema is provided', ({ firehoseRecord }) => {
+      const record = firehoseRecord();
+      const schema: Schema<unknown> = {
+        safeParse: () => ({ success: true, data: {} }),
+      };
+
+      // @ts-expect-error - testing private method directly
+      expect(() => router.validateData('not valid json', schema, record)).toThrow(
+        `Failed to parse JSON data for record ${record.recordId}`,
+      );
+    });
   });
 
   suite('handleEvent', () => {
@@ -868,8 +880,7 @@ suite('FirehoseRouter', () => {
       );
 
       const body = { action: 'processOrder', orderId: '12345' };
-      const encodedData = Buffer.from(JSON.stringify(body)).toString('base64');
-      const record = firehoseRecord({ data: encodedData });
+      const record = firehoseRecord({ data: body });
       const event = firehoseEvent([record]);
       await router.handleEvent(event, context());
 

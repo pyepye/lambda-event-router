@@ -231,14 +231,19 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   }
 
   private validateBody(record: AWSSQSRecord, body: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (schema) {
-      const result = schema.safeParse(body);
-      if (!result.success) {
-        throw new Error(`Body validation failed for record ${record.messageId}`);
-      }
-      return result.data;
+    if (!schema) {
+      return body;
     }
-    return body;
+
+    if (typeof body === 'string') {
+      throw new Error(`Failed to parse JSON body for record ${record.messageId}`);
+    }
+
+    const result = schema.safeParse(body);
+    if (!result.success) {
+      throw new Error(`Body validation failed for record ${record.messageId}`);
+    }
+    return result.data;
   }
 
   private validateMessageAttributes(

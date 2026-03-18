@@ -1057,6 +1057,18 @@ suite('SQSRouter', () => {
 
       expect(result).toBe(body);
     });
+
+    test('throws when body is a string and schema is provided', ({ sqsRecord }) => {
+      const record = sqsRecord();
+      const schema: Schema<unknown> = {
+        safeParse: () => ({ success: true, data: {} }),
+      };
+
+      // @ts-expect-error - testing private method directly
+      expect(() => router.validateBody(record, 'not valid json', schema)).toThrow(
+        `Failed to parse JSON body for record ${record.messageId}`,
+      );
+    });
   });
 
   suite('validateMessageAttributes', () => {

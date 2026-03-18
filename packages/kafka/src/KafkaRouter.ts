@@ -194,6 +194,10 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       return data;
     }
 
+    if (typeof data === 'string') {
+      throw new Error(`Failed to parse JSON value for record on topic ${record.topic} partition ${record.partition}`);
+    }
+
     const result = schema.safeParse(data);
     if (!result.success) {
       throw new Error(`Value validation failed for record on topic ${record.topic} partition ${record.partition}`);

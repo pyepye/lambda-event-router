@@ -184,6 +184,10 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       return data;
     }
 
+    if (typeof data === 'string') {
+      throw new Error(`Failed to parse JSON data for record ${record.recordId}`);
+    }
+
     const result = schema.safeParse(data);
     if (!result.success) {
       throw new Error(`Data validation failed for record ${record.recordId}`);

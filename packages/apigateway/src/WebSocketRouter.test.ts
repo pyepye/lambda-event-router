@@ -510,6 +510,16 @@ suite('WebSocketRouter', () => {
       // @ts-expect-error - testing private method
       expect(() => router.validateBody({ key: 'bad' }, schema)).toThrow('Body validation failed');
     });
+
+    test('throws when body is a string and schema is provided', () => {
+      const schema = { safeParse: vi.fn().mockReturnValue({ success: true, data: {} }) };
+      const router = new WebSocketRouter();
+
+      // @ts-expect-error - testing private method
+      expect(() => router.validateBody('not valid json', schema)).toThrow(
+        'Failed to parse JSON body for WebSocket message',
+      );
+    });
   });
 
   suite('buildResult (private)', () => {

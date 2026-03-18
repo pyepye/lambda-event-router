@@ -93,6 +93,9 @@ export class Request {
   }
 
   private validateBody(): ValidationResult<unknown> {
+    if (this.route.bodySchema && typeof this.body === 'string') {
+      return { success: false, error: 'Failed to parse JSON body' };
+    }
     return this.validateWithSchema<unknown>(this.route.bodySchema, this.body);
   }
 

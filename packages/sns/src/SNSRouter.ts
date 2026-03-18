@@ -143,14 +143,19 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   }
 
   private validateBody(record: SNSEventRecord, body: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (schema) {
-      const result = schema.safeParse(body);
-      if (!result.success) {
-        throw new Error(`Body validation failed for record ${record.Sns.MessageId}`);
-      }
-      return result.data;
+    if (!schema) {
+      return body;
     }
-    return body;
+
+    if (typeof body === 'string') {
+      throw new Error(`Failed to parse JSON body for record ${record.Sns.MessageId}`);
+    }
+
+    const result = schema.safeParse(body);
+    if (!result.success) {
+      throw new Error(`Body validation failed for record ${record.Sns.MessageId}`);
+    }
+    return result.data;
   }
 
   private validateMessageAttributes(

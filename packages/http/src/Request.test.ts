@@ -237,6 +237,25 @@ suite('Request', () => {
       expect(() => request.validate()).not.toThrow();
     });
 
+    test('throws UnprocessableContent when body is a string and bodySchema is provided', () => {
+      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: {} }) };
+      const route = createRoute({ bodySchema });
+      const normalizedEvent = createNormalizedEvent({ body: 'not valid json' });
+      const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
+
+      try {
+        request.validate();
+        expect.unreachable('should have thrown');
+      } catch (thrown) {
+        expect(Response.isHTTPResponse(thrown)).toBe(true);
+        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
+        expect(thrown.statusCode).toBe(422);
+        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
+        expect(thrown.body).toBe('Failed to parse JSON body');
+      }
+      expect(bodySchema.safeParse).not.toHaveBeenCalled();
+    });
+
     test('short-circuits on path failure without calling query or body schemas', () => {
       const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid path' }) };
       const querySchema = { safeParse: vi.fn() };
