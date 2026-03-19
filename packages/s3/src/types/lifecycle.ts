@@ -4,6 +4,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
 // Lifecycle Expiration Event Names
 // =============================================================================
 
+/* v8 ignore next 5 -- @preserve - Constant declaration, no logic to test */
 export const LIFECYCLE_EXPIRATION_EVENT_NAMES = [
   's3:LifecycleExpiration:*',
   's3:LifecycleExpiration:Delete',
@@ -16,6 +17,7 @@ export type S3LifecycleExpirationEventName = (typeof LIFECYCLE_EXPIRATION_EVENT_
 // Lifecycle Transition Event Names
 // =============================================================================
 
+/* v8 ignore next -- @preserve - Constant declaration, no logic to test */
 export const LIFECYCLE_TRANSITION_EVENT_NAMES = ['s3:LifecycleTransition'] as const;
 
 export type S3LifecycleTransitionEventName = (typeof LIFECYCLE_TRANSITION_EVENT_NAMES)[number];

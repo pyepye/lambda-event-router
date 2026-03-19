@@ -372,6 +372,18 @@ suite('LambdaAuthorizerRouter', () => {
       );
     });
 
+    test('catches and returns thrown authorizer response', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const thrownPolicy = generatePolicy('user-1', 'Deny', 'arn:aws:execute-api:*:*:*');
+      const handler = vi.fn().mockRejectedValue(thrownPolicy);
+      const router = new LambdaAuthorizerRouter();
+      router.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(thrownPolicy);
+    });
+
     test('matches request route with specific method filter', async ({
       apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
     }) => {

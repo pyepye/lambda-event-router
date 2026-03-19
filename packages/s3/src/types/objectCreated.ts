@@ -5,6 +5,7 @@ import type { S3BaseRequest, S3Filters, S3FiltersWithoutEventNames } from './com
 // Event Names
 // =============================================================================
 
+/* v8 ignore next 7 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_CREATED_EVENT_NAMES = [
   's3:ObjectCreated:*',
   's3:ObjectCreated:Put',

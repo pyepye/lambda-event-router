@@ -20,8 +20,8 @@ export function defineRoute(config: RouteInput): RouteBuilder {
 }
 
 function extractDomain(email: string): string {
-  const parts = email.split('@');
-  return parts[1] ?? '';
+  const [, domain = ''] = email.split('@');
+  return domain;
 }
 
 export class SESRouter implements EventTypeRouter<SESEvent, undefined> {

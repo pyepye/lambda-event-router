@@ -1,6 +1,4 @@
 import { createApiGatewayV2Event } from '@lambda-event-router/testing';
-import type { APIGatewayProxyEventV2WithJWTAuthorizer } from 'aws-lambda';
-import type { APIGatewayV2EventType } from './apiGatewayV2Adapter.js';
 import { apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
 
 suite('apiGatewayV2Adapter', () => {
@@ -79,6 +77,82 @@ suite('apiGatewayV2Adapter', () => {
       expect(normalized.auth).toEqual({
         claims: { sub: 'user-1', iss: 'https://cognito.example.com' },
         scopes: ['openid', 'email'],
+      });
+    });
+
+    test('extracts client certificate auth', () => {
+      const baseEvent = createApiGatewayV2Event();
+      const event: APIGatewayV2EventType = {
+        ...baseEvent,
+        requestContext: {
+          ...baseEvent.requestContext,
+          authentication: {
+            clientCert: {
+              clientCertPem: 'CERT_PEM',
+              subjectDN: 'CN=client',
+              issuerDN: 'CN=issuer',
+              serialNumber: '1234',
+              validity: { notBefore: '2024-01-01', notAfter: '2025-01-01' },
+            },
+          },
+        },
+      } as unknown as APIGatewayV2EventType;
+
+      const normalized = apiGatewayV2Adapter.normalize(event);
+
+      expect(normalized.auth).toEqual({
+        clientCert: {
+          clientCertPem: 'CERT_PEM',
+          subjectDN: 'CN=client',
+          issuerDN: 'CN=issuer',
+          serialNumber: '1234',
+          validity: { notBefore: '2024-01-01', notAfter: '2025-01-01' },
+        },
+      });
+    });
+
+    test('extracts IAM authorizer auth', () => {
+      const baseEvent = createApiGatewayV2Event();
+      const event: APIGatewayV2EventType = {
+        ...baseEvent,
+        requestContext: {
+          ...baseEvent.requestContext,
+          authorizer: {
+            iam: {
+              accessKey: 'AKIAIOSFODNN7EXAMPLE',
+              accountId: '123456789012',
+              callerId: 'AIDACKCEVSQ6C2EXAMPLE',
+              cognitoIdentity: null,
+              principalOrgId: 'o-abc123',
+              userArn: 'arn:aws:iam::123456789012:user/test',
+              userId: 'AIDACKCEVSQ6C2EXAMPLE',
+            },
+          },
+        },
+      } as unknown as APIGatewayV2EventType;
+
+      const normalized = apiGatewayV2Adapter.normalize(event);
+
+      expect(normalized.auth?.iam).toBeDefined();
+      expect(normalized.auth?.iam?.accountId).toBe('123456789012');
+    });
+
+    test('returns default authorizer context when authorizer has no jwt or iam key', () => {
+      const baseEvent = createApiGatewayV2Event();
+      const event: APIGatewayV2EventType = {
+        ...baseEvent,
+        requestContext: {
+          ...baseEvent.requestContext,
+          authorizer: {
+            lambda: { customKey: 'customValue' },
+          },
+        },
+      } as unknown as APIGatewayV2EventType;
+
+      const normalized = apiGatewayV2Adapter.normalize(event);
+
+      expect(normalized.auth).toEqual({
+        context: { lambda: { customKey: 'customValue' } },
       });
     });
 

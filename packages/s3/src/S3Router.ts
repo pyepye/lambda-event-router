@@ -418,7 +418,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     context: Context,
     bucket: string,
     key: string,
-  ): S3ObjectCreatedRequest | S3ObjectRestoreRequest {
+  ): S3BaseRequest | S3ObjectCreatedRequest | S3ObjectRestoreRequest {
     const s3Object = record.s3.object;
     const eventName = record.eventName;
 
@@ -435,23 +435,25 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
     // ObjectRestore events include glacier restoration data
     if (eventName.startsWith('s3:ObjectRestore:')) {
-      return {
+      const restoreRequest: S3ObjectRestoreRequest = {
         ...baseRequest,
         restoreEventData: record.glacierEventData?.restoreEventData,
-      } as S3ObjectRestoreRequest;
+      };
+      return restoreRequest;
     }
 
     // ObjectCreated events include size and eTag
     if (eventName.startsWith('s3:ObjectCreated:')) {
-      return {
+      const createdRequest: S3ObjectCreatedRequest = {
         ...baseRequest,
         objectSize: s3Object.size,
         eTag: s3Object.eTag,
-      } as S3ObjectCreatedRequest;
+      };
+      return createdRequest;
     }
 
     // All other events use base request (ObjectRemoved, Lifecycle, Tagging, etc.)
-    return baseRequest as S3ObjectCreatedRequest;
+    return baseRequest;
   }
 }
 

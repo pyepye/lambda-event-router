@@ -4,6 +4,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
 // Event Names
 // =============================================================================
 
+/* v8 ignore next -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_ACL_EVENT_NAMES = ['s3:ObjectAcl:Put'] as const;
 
 export type S3ObjectAclEventName = (typeof OBJECT_ACL_EVENT_NAMES)[number];

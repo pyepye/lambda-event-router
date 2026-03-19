@@ -4,6 +4,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
 // Event Names
 // =============================================================================
 
+/* v8 ignore next 5 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_TAGGING_EVENT_NAMES = [
   's3:ObjectTagging:*',
   's3:ObjectTagging:Put',

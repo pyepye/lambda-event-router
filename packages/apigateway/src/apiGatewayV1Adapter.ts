@@ -55,9 +55,9 @@ function flattenHeaders(event: APIGatewayV1EventType): NormalizedHTTPEvent['head
 
 function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
   const { requestContext } = event;
+  /* v8 ignore next -- @preserve - Guard is for TS. API Gateway V1 always provides requestContext.identity */
   if (requestContext.identity) {
     const { identity } = requestContext;
-    // TODO: Needs tests
     if (identity.apiKey) {
       return { apiKey: identity.apiKey, apiKeyId: identity.apiKeyId ?? undefined };
     }
@@ -104,7 +104,7 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
     if ('rawPath' in event) return false; // Guard against APIGatewayV2
     if (!isObject(event.requestContext)) return false;
     if (isObject(event.requestContext.elb)) return false; // Guard against ALBEvent
-    // event.httpMethod will guards against VPCLatticeV1, VPCLatticeV2
+    // event.httpMethod guards against VPCLatticeV1, VPCLatticeV2
     // event.path guards against APIGatewayV2
     // event.requestContext.elb guards against ALBEvent
     return true;

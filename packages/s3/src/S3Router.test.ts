@@ -623,6 +623,19 @@ suite('S3Router', () => {
       });
     });
 
+    test('rethrows non-S3BatchResponse errors', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({
+        handler: async () => {
+          throw new Error('something broke');
+        },
+      });
+
+      const event = s3BatchEvent();
+
+      // @ts-expect-error - testing private method directly
+      await expect(router.handleBatchEvent(event, context())).rejects.toThrow('something broke');
+    });
+
     test('catches thrown S3BatchResponse and wraps into result', async ({ s3BatchEvent, context }) => {
       router.batchOperation({
         handler: async () => {

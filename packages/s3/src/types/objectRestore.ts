@@ -5,6 +5,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
 // Event Names
 // =============================================================================
 
+/* v8 ignore next 6 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_RESTORE_EVENT_NAMES = [
   's3:ObjectRestore:*',
   's3:ObjectRestore:Post',
