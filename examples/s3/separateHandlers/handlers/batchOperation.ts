@@ -1,19 +1,9 @@
-import type { S3BatchRequest, S3BatchResult } from '@lambda-event-router/s3';
+import type { S3BatchRequest, S3BatchResponse } from '@lambda-event-router/s3';
+import { Succeeded } from '@lambda-event-router/s3';
 
-export async function batchOperation(request: S3BatchRequest): Promise<S3BatchResult> {
-  const { taskId, bucket, key, event } = request;
+export async function batchOperation(request: S3BatchRequest): Promise<S3BatchResponse> {
+  const { taskId, bucket, key } = request;
   console.log(`Processing batch task ${taskId}: ${key} in ${bucket}`);
 
-  return {
-    invocationSchemaVersion: event.invocationSchemaVersion,
-    treatMissingKeysAs: 'PermanentFailure',
-    invocationId: event.invocationId,
-    results: [
-      {
-        taskId,
-        resultCode: 'Succeeded',
-        resultString: `Processed ${key}`,
-      },
-    ],
-  };
+  return Succeeded(`Processed ${key}`);
 }
