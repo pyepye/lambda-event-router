@@ -115,9 +115,15 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       'configuration',
     );
 
-    const itemWithValidatedConfig: ConfigurationItem = configurationItem
-      ? { ...configurationItem, configuration: validatedConfiguration ?? configurationItem.configuration }
-      : (configurationItem as unknown as ConfigurationItem);
+    /* v8 ignore next 3 -- @preserve - Non-oversized ConfigurationItemChangeNotification events always have configurationItem */
+    if (!configurationItem) {
+      throw new Error('configurationItem is required for ConfigurationItemChangeNotification events');
+    }
+
+    const itemWithValidatedConfig: ConfigurationItem = {
+      ...configurationItem,
+      configuration: validatedConfiguration ?? configurationItem.configuration,
+    };
 
     const request: ConfigRequest = {
       configurationItem: itemWithValidatedConfig,

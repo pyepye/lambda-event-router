@@ -1,6 +1,7 @@
 import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
+import { isWebSocketResponse } from './webSocketResponse.js';
 import type {
   WebSocketConnectResponse,
   WebSocketEvent,
@@ -175,7 +176,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       const response = await route.handler(request);
       return this.buildResult(response);
     } catch (error) {
-      if (isObject(error) && typeof error.statusCode === 'number') {
+      if (isWebSocketResponse(error)) {
         return { statusCode: error.statusCode };
       }
       throw error;

@@ -132,6 +132,32 @@ suite('AppSyncAuthorizerRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('No authorizer route registered');
     });
 
+    test('returns the response when handler throws an AppSyncAuthorizerResponse', async () => {
+      const router = new AppSyncAuthorizerRouter();
+      const thrownResponse = { isAuthorized: false, deniedFields: ['secret'] };
+      const handler = vi.fn().mockRejectedValue(thrownResponse);
+
+      router.route({ handler });
+
+      const event = createAppSyncAuthorizerEvent();
+      const context = createMockContext();
+
+      const result = await router.handleEvent(event, context);
+      expect(result).toBe(thrownResponse);
+    });
+
+    test('re-throws when handler throws a non-response error', async () => {
+      const router = new AppSyncAuthorizerRouter();
+      const handler = vi.fn().mockRejectedValue(new Error('unexpected failure'));
+
+      router.route({ handler });
+
+      const event = createAppSyncAuthorizerEvent();
+      const context = createMockContext();
+
+      await expect(router.handleEvent(event, context)).rejects.toThrow('unexpected failure');
+    });
+
     test('builds complete AppSyncAuthorizerRequest and calls handler', async () => {
       const router = new AppSyncAuthorizerRouter();
       const handler = vi.fn().mockResolvedValue({ isAuthorized: true });

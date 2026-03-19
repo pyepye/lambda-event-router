@@ -1,10 +1,11 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
-import type { Context, S3BatchEvent, S3Event, S3EventRecord } from 'aws-lambda';
+import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
+import type { S3BatchResponse } from './batchResponse.js';
+import { isS3BatchResponse } from './batchResponse.js';
 import type {
   S3BaseRequest,
   S3BatchRequest,
-  S3BatchResult,
   S3BatchRouteDefinition,
   S3FilterInput,
   S3Filters,
@@ -306,7 +307,39 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       context,
     };
 
-    return this.batchRoute.handler(request);
+    const handler = this.batchRoute.handler;
+    const response = await this.processBatchTask(handler, request);
+
+    return this.buildBatchResult(event, task.taskId, response);
+  }
+
+  private async processBatchTask(
+    handler: (request: S3BatchRequest) => Promise<S3BatchResponse>,
+    request: S3BatchRequest,
+  ): Promise<S3BatchResponse> {
+    try {
+      return await handler(request);
+    } catch (error) {
+      if (isS3BatchResponse(error)) {
+        return error;
+      }
+      throw error;
+    }
+  }
+
+  private buildBatchResult(event: S3BatchEvent, taskId: string, response: S3BatchResponse): S3BatchResult {
+    return {
+      invocationSchemaVersion: event.invocationSchemaVersion,
+      treatMissingKeysAs: 'PermanentFailure',
+      invocationId: event.invocationId,
+      results: [
+        {
+          taskId,
+          resultCode: response.resultCode,
+          resultString: response.resultString ?? '',
+        },
+      ],
+    };
   }
 
   private async processRecord(record: S3EventRecord, context: Context): Promise<void> {

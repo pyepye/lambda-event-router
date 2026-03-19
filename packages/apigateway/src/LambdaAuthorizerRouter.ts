@@ -7,6 +7,7 @@ import type {
   APIGatewayTokenAuthorizerEvent,
   Context,
 } from 'aws-lambda';
+import { isAuthorizerResponse } from './lambdaAuthorizerResponse.js';
 import type {
   AuthorizerType,
   LambdaAuthorizerEvent,
@@ -168,19 +169,26 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
 
     const request = this.buildRequest(event, context, filterInput);
 
-    const result = await route.handler(request);
+    try {
+      const result = await route.handler(request);
 
-    if (isRequestV2Event(event) && typeof result === 'boolean') {
-      return { isAuthorized: result };
+      if (isRequestV2Event(event) && typeof result === 'boolean') {
+        return { isAuthorized: result };
+      }
+
+      if (typeof result === 'boolean') {
+        throw new Error(
+          'Boolean responses are only supported for HTTP API (v2) request authorizers using simple response mode',
+        );
+      }
+
+      return result;
+    } catch (error) {
+      if (isAuthorizerResponse(error)) {
+        return error;
+      }
+      throw error;
     }
-
-    if (typeof result === 'boolean') {
-      throw new Error(
-        'Boolean responses are only supported for HTTP API (v2) request authorizers using simple response mode',
-      );
-    }
-
-    return result;
   }
 
   private extractFilterInput(event: LambdaAuthorizerEvent): LambdaAuthorizerFilterInput {

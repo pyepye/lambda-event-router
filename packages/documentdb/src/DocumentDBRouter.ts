@@ -129,6 +129,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       throw new Error(`No route matched for record ${JSON.stringify(changeEvent.documentKey)} from ${eventSourceArn}`);
     }
 
+    /* v8 ignore next -- @preserve - Guard is for TS. DocumentDB always provides documentKey as an object */
     if (!isObject(changeEvent.documentKey)) {
       throw new Error(`documentKey is not an object for record from ${eventSourceArn}`);
     }

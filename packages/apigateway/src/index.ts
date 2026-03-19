@@ -42,6 +42,7 @@ export {
   generatePolicy,
   LambdaAuthorizerRouter,
 } from './LambdaAuthorizerRouter.js';
+export { Allow, Deny, isAuthorizerResponse } from './lambdaAuthorizerResponse.js';
 export type {
   AuthorizerType,
   LambdaAuthorizerBaseRequest,
@@ -57,7 +58,7 @@ export type {
 } from './lambdaAuthorizerTypes.js';
 export { postToConnection } from './postToConnection.js';
 export { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
-export { WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from './webSocketResponse.js';
+export { isWebSocketResponse, WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from './webSocketResponse.js';
 export type {
   WebSocketBaseRequest,
   WebSocketConnectRequest,

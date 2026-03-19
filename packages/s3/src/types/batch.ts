@@ -1,4 +1,5 @@
-import type { Context, S3BatchEvent, S3BatchEventTask, S3BatchResult, S3BatchResultResultCode } from 'aws-lambda';
+import type { Context, S3BatchEvent, S3BatchEventTask, S3BatchResultResultCode } from 'aws-lambda';
+import type { S3BatchResponse } from '../batchResponse.js';
 
 // =============================================================================
 // Request Type for Individual Tasks
@@ -20,7 +21,7 @@ export interface S3BatchRequest {
 // =============================================================================
 
 // Handler for processing individual batch tasks
-export type S3BatchHandler = (request: S3BatchRequest) => Promise<S3BatchResult>;
+export type S3BatchHandler = (request: S3BatchRequest) => Promise<S3BatchResponse>;
 
 // =============================================================================
 // Route Definition Types

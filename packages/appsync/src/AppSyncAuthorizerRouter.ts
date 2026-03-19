@@ -1,6 +1,7 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
 import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
+import { isAppSyncAuthorizerResponse } from './appSyncAuthorizerResponse.js';
 import type {
   AppSyncAuthorizerRequest,
   AppSyncAuthorizerRouteBuilder,
@@ -59,7 +60,14 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
       context,
     };
 
-    return this.routeDefinition.handler(request);
+    try {
+      return await this.routeDefinition.handler(request);
+    } catch (error) {
+      if (isAppSyncAuthorizerResponse(error)) {
+        return error;
+      }
+      throw error;
+    }
   }
 }
 

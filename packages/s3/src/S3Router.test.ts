@@ -111,12 +111,7 @@ suite('S3Router', () => {
       const router = new S3Router();
 
       const result = router.batchOperation({
-        handler: async () => ({
-          invocationSchemaVersion: '1.0',
-          treatMissingKeysAs: 'PermanentFailure' as const,
-          invocationId: 'test',
-          results: [],
-        }),
+        handler: async () => ({ resultCode: 'Succeeded' as const }),
       });
 
       expect(result).toBe(router);
@@ -524,20 +519,19 @@ suite('S3Router', () => {
       expect(callOrder).toEqual(['start-file-a.txt', 'end-file-a.txt', 'start-file-b.txt', 'end-file-b.txt']);
     });
 
-    test('routes S3 Batch event to batch handler', async ({ s3BatchHandlerEvent }) => {
+    test('routes S3 Batch event to batch handler and wraps result', async ({ s3BatchHandlerEvent }) => {
       const router = new S3Router();
-      const batchResult = {
-        invocationSchemaVersion: '1.0',
-        treatMissingKeysAs: 'PermanentFailure' as const,
-        invocationId: 'test',
-        results: [{ taskId: 'task-1', resultCode: 'Succeeded' as const, resultString: 'ok' }],
-      };
-      router.batchOperation({ handler: async () => batchResult });
+      router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const, resultString: 'ok' }) });
 
       const { event, context } = s3BatchHandlerEvent();
       const result = await router.handleEvent(event, context);
 
-      expect(result).toEqual(batchResult);
+      expect(result).toEqual({
+        invocationSchemaVersion: event.invocationSchemaVersion,
+        treatMissingKeysAs: 'PermanentFailure',
+        invocationId: event.invocationId,
+        results: [{ taskId: event.tasks[0]?.taskId, resultCode: 'Succeeded', resultString: 'ok' }],
+      });
     });
   });
 
@@ -549,12 +543,7 @@ suite('S3Router', () => {
     });
 
     test('parses bucket name from ARN', async ({ s3BatchEvent, context }) => {
-      const handler = vi.fn().mockResolvedValue({
-        invocationSchemaVersion: '1.0',
-        treatMissingKeysAs: 'PermanentFailure',
-        invocationId: 'test',
-        results: [],
-      });
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
       router.batchOperation({ handler });
 
       const event = s3BatchEvent({
@@ -568,12 +557,7 @@ suite('S3Router', () => {
     });
 
     test('URL-decodes key with + as space and percent encoding', async ({ s3BatchEvent, context }) => {
-      const handler = vi.fn().mockResolvedValue({
-        invocationSchemaVersion: '1.0',
-        treatMissingKeysAs: 'PermanentFailure',
-        invocationId: 'test',
-        results: [],
-      });
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
       router.batchOperation({ handler });
 
       const event = s3BatchEvent({
@@ -590,12 +574,7 @@ suite('S3Router', () => {
       s3BatchEvent,
       context,
     }) => {
-      const handler = vi.fn().mockResolvedValue({
-        invocationSchemaVersion: '1.0',
-        treatMissingKeysAs: 'PermanentFailure',
-        invocationId: 'test',
-        results: [],
-      });
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
       router.batchOperation({ handler });
 
       const task = createS3BatchTask({
@@ -628,21 +607,40 @@ suite('S3Router', () => {
       await expect(router.handleBatchEvent(event, context())).rejects.toThrow('No batch operation handler registered');
     });
 
-    test('returns handler result', async ({ s3BatchEvent, context }) => {
-      const batchResult = {
-        invocationSchemaVersion: '1.0',
-        treatMissingKeysAs: 'PermanentFailure' as const,
-        invocationId: 'test',
-        results: [{ taskId: 'task-1', resultCode: 'Succeeded' as const, resultString: 'done' }],
-      };
-      router.batchOperation({ handler: async () => batchResult });
+    test('wraps handler response into S3BatchResult envelope', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const, resultString: 'done' }) });
 
       const event = s3BatchEvent();
 
       // @ts-expect-error - testing private method directly
       const result = await router.handleBatchEvent(event, context());
 
-      expect(result).toEqual(batchResult);
+      expect(result).toEqual({
+        invocationSchemaVersion: event.invocationSchemaVersion,
+        treatMissingKeysAs: 'PermanentFailure',
+        invocationId: event.invocationId,
+        results: [{ taskId: event.tasks[0]?.taskId, resultCode: 'Succeeded', resultString: 'done' }],
+      });
+    });
+
+    test('catches thrown S3BatchResponse and wraps into result', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({
+        handler: async () => {
+          throw { resultCode: 'PermanentFailure' as const, resultString: 'bad object' };
+        },
+      });
+
+      const event = s3BatchEvent();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.handleBatchEvent(event, context());
+
+      expect(result).toEqual({
+        invocationSchemaVersion: event.invocationSchemaVersion,
+        treatMissingKeysAs: 'PermanentFailure',
+        invocationId: event.invocationId,
+        results: [{ taskId: event.tasks[0]?.taskId, resultCode: 'PermanentFailure', resultString: 'bad object' }],
+      });
     });
   });
 

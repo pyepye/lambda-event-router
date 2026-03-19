@@ -344,6 +344,31 @@ suite('ConfigRouter', () => {
       );
     });
 
+    test('uses configurationItem.configuration when no schema and configuration is undefined', async ({
+      configEvent,
+      context,
+    }) => {
+      const router = new ConfigRouter();
+      const handler = vi.fn();
+      const configItem = createConfigurationItem({ configuration: undefined });
+
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const event = configEvent({
+        invokingEvent: {
+          messageType: 'ConfigurationItemChangeNotification',
+          configurationItem: configItem,
+        },
+      });
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          configurationItem: expect.objectContaining({ configuration: undefined }),
+        }),
+      );
+    });
+
     test('oversized notification calls handler with ConfigOversizedRequest containing configurationItemSummary', async ({
       configEvent,
       context,

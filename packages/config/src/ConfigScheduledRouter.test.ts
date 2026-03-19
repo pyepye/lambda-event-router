@@ -35,6 +35,12 @@ suite('ConfigScheduledRouter', () => {
       expect(router.canHandleEvent({ invokingEvent: '{}', configRuleName: 'rule', resultToken: 123 })).toBe(false);
     });
 
+    test('returns false when parsed invokingEvent is not an object', () => {
+      expect(router.canHandleEvent({ invokingEvent: '"a string"', configRuleName: 'rule', resultToken: 'token' })).toBe(
+        false,
+      );
+    });
+
     test('returns false for invalid JSON', () => {
       expect(router.canHandleEvent({ invokingEvent: 'not-json', configRuleName: 'rule', resultToken: 'token' })).toBe(
         false,
@@ -226,6 +232,19 @@ suite('ConfigScheduledRouter', () => {
         event,
         context: mockContext,
       });
+    });
+
+    test('defaults ruleParameters to empty object when empty string', async ({ context }) => {
+      const router = new ConfigScheduledRouter();
+      const handler = vi.fn();
+
+      router.route(defineConfigScheduledRoute({ filters: {} }).handle(handler));
+
+      const event = createScheduledConfigEvent();
+      const modifiedEvent = { ...event, ruleParameters: '' };
+      await router.handleEvent(modifiedEvent, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: {} }));
     });
 
     test('throws when no route matches', async ({ context }) => {

@@ -1,5 +1,11 @@
 import type { WebSocketResult } from './webSocketTypes.js';
 
+export function isWebSocketResponse(value: unknown): value is WebSocketResult {
+  if (typeof value !== 'object' || value === null) return false;
+  if (!('statusCode' in value)) return false;
+  return typeof value.statusCode === 'number';
+}
+
 export function WebSocketOk(): WebSocketResult {
   return { statusCode: 200 };
 }
