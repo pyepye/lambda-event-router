@@ -52,10 +52,8 @@ function flattenQuery(event: VPCLatticeEventV2): NormalizedHTTPEvent['query'] {
 
 function flattenArrayValues(data: Record<string, string[] | undefined>): Record<string, string | undefined> {
   const result: Record<string, string | undefined> = {};
-  if (data) {
-    for (const [key, value] of Object.entries(data)) {
-      result[key.toLowerCase()] = value?.join();
-    }
+  for (const [key, value] of Object.entries(data)) {
+    result[key.toLowerCase()] = value?.join();
   }
   return result;
 }

@@ -55,6 +55,14 @@ suite('vpcLatticeV1Adapter', () => {
       expect(normalized.headers.authorization).toBe('Bearer token');
     });
 
+    test('returns empty headers when headers is undefined', () => {
+      const event = createVPCLatticeV1Event({ headers: undefined });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.headers).toEqual({});
+    });
+
     test('returns empty query when query_string_parameters is undefined', () => {
       const event = createVPCLatticeV1Event();
 
