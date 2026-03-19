@@ -1,4 +1,10 @@
-import type { APIGatewayProxyEventV2, Context } from 'aws-lambda';
+import type {
+  APIGatewayProxyEventV2,
+  APIGatewayProxyEventV2WithIAMAuthorizer,
+  APIGatewayProxyEventV2WithJWTAuthorizer,
+  APIGatewayProxyEventV2WithLambdaAuthorizer,
+  Context,
+} from 'aws-lambda';
 import { createMockContext } from './context.js';
 import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
@@ -79,3 +85,88 @@ export const apiGatewayV2Fixtures: FixtureMap<ApiGatewayV2Fixtures> = {
   apiGatewayV2Event: fixture(createApiGatewayV2Event),
   apiGatewayV2HandlerEvent: fixture(createApiGatewayV2HandlerEvent),
 };
+
+export type ApiGatewayV2WithJWTAuthorizerEventOverrides = Omit<
+  DeepPartial<APIGatewayProxyEventV2WithJWTAuthorizer>,
+  'body'
+> & {
+  body?: string | Record<string, unknown> | null;
+};
+
+export function createApiGatewayV2WithJWTAuthorizerEvent(
+  overrides: ApiGatewayV2WithJWTAuthorizerEventOverrides = {},
+): APIGatewayProxyEventV2WithJWTAuthorizer {
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const base = createApiGatewayV2Event({ body: bodyOverride });
+  const defaults: APIGatewayProxyEventV2WithJWTAuthorizer = {
+    ...base,
+    requestContext: {
+      ...base.requestContext,
+      authorizer: {
+        principalId: 'user-1',
+        integrationLatency: 50,
+        jwt: {
+          claims: { sub: 'user-1', iss: 'https://cognito-idp.us-east-1.amazonaws.com/us-east-1_example' },
+          scopes: ['openid'],
+        },
+      },
+    },
+  };
+  return deepMerge(defaults, restOverrides);
+}
+
+export type ApiGatewayV2WithIAMAuthorizerEventOverrides = Omit<
+  DeepPartial<APIGatewayProxyEventV2WithIAMAuthorizer>,
+  'body'
+> & {
+  body?: string | Record<string, unknown> | null;
+};
+
+export function createApiGatewayV2WithIAMAuthorizerEvent(
+  overrides: ApiGatewayV2WithIAMAuthorizerEventOverrides = {},
+): APIGatewayProxyEventV2WithIAMAuthorizer {
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const base = createApiGatewayV2Event({ body: bodyOverride });
+  const defaults: APIGatewayProxyEventV2WithIAMAuthorizer = {
+    ...base,
+    requestContext: {
+      ...base.requestContext,
+      authorizer: {
+        iam: {
+          accessKey: 'ASIA1EXAMPLE',
+          accountId: '123456789012',
+          callerId: 'AROA1EXAMPLE:session-name',
+          cognitoIdentity: null,
+          principalOrgId: 'o-example123',
+          userArn: 'arn:aws:iam::123456789012:user/test-user',
+          userId: 'AROA1EXAMPLE',
+        },
+      },
+    },
+  };
+  return deepMerge(defaults, restOverrides);
+}
+
+export type ApiGatewayV2WithLambdaAuthorizerEventOverrides = Omit<
+  DeepPartial<APIGatewayProxyEventV2WithLambdaAuthorizer<Record<string, unknown>>>,
+  'body'
+> & {
+  body?: string | Record<string, unknown> | null;
+};
+
+export function createApiGatewayV2WithLambdaAuthorizerEvent(
+  overrides: ApiGatewayV2WithLambdaAuthorizerEventOverrides = {},
+): APIGatewayProxyEventV2WithLambdaAuthorizer<Record<string, unknown>> {
+  const { body: bodyOverride, ...restOverrides } = overrides;
+  const base = createApiGatewayV2Event({ body: bodyOverride });
+  const defaults: APIGatewayProxyEventV2WithLambdaAuthorizer<Record<string, unknown>> = {
+    ...base,
+    requestContext: {
+      ...base.requestContext,
+      authorizer: {
+        lambda: { userId: 'user-1', role: 'admin' },
+      },
+    },
+  };
+  return deepMerge(defaults, restOverrides);
+}

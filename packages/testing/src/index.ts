@@ -36,9 +36,18 @@ export { createApiGatewayV1Event, createApiGatewayV1HandlerEvent } from './apiGa
 export type {
   ApiGatewayV2EventOverrides,
   ApiGatewayV2HandlerEvent,
+  ApiGatewayV2WithIAMAuthorizerEventOverrides,
+  ApiGatewayV2WithJWTAuthorizerEventOverrides,
+  ApiGatewayV2WithLambdaAuthorizerEventOverrides,
   CreateApiGatewayV2HandlerEventOptions,
 } from './apiGatewayV2.js';
-export { createApiGatewayV2Event, createApiGatewayV2HandlerEvent } from './apiGatewayV2.js';
+export {
+  createApiGatewayV2Event,
+  createApiGatewayV2HandlerEvent,
+  createApiGatewayV2WithIAMAuthorizerEvent,
+  createApiGatewayV2WithJWTAuthorizerEvent,
+  createApiGatewayV2WithLambdaAuthorizerEvent,
+} from './apiGatewayV2.js';
 export type {
   AppSyncAuthorizerHandlerEvent,
   AppSyncEventsEvent,

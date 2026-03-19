@@ -1,4 +1,9 @@
-import { createApiGatewayV2Event } from '@lambda-event-router/testing';
+import {
+  createApiGatewayV2Event,
+  createApiGatewayV2WithIAMAuthorizerEvent,
+  createApiGatewayV2WithJWTAuthorizerEvent,
+  createApiGatewayV2WithLambdaAuthorizerEvent,
+} from '@lambda-event-router/testing';
 import { apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
 
 suite('apiGatewayV2Adapter', () => {
@@ -56,21 +61,16 @@ suite('apiGatewayV2Adapter', () => {
     });
 
     test('extracts JWT auth from V2 event', () => {
-      const baseEvent = createApiGatewayV2Event();
-      const event: APIGatewayV2EventType = {
-        ...baseEvent,
+      const event = createApiGatewayV2WithJWTAuthorizerEvent({
         requestContext: {
-          ...baseEvent.requestContext,
           authorizer: {
-            principalId: 'user-1',
-            integrationLatency: 100,
             jwt: {
               claims: { sub: 'user-1', iss: 'https://cognito.example.com' },
               scopes: ['openid', 'email'],
             },
           },
         },
-      } as APIGatewayProxyEventV2WithJWTAuthorizer;
+      });
 
       const normalized = apiGatewayV2Adapter.normalize(event);
 
@@ -81,11 +81,8 @@ suite('apiGatewayV2Adapter', () => {
     });
 
     test('extracts client certificate auth', () => {
-      const baseEvent = createApiGatewayV2Event();
-      const event: APIGatewayV2EventType = {
-        ...baseEvent,
+      const event = createApiGatewayV2Event({
         requestContext: {
-          ...baseEvent.requestContext,
           authentication: {
             clientCert: {
               clientCertPem: 'CERT_PEM',
@@ -96,7 +93,7 @@ suite('apiGatewayV2Adapter', () => {
             },
           },
         },
-      } as unknown as APIGatewayV2EventType;
+      });
 
       const normalized = apiGatewayV2Adapter.normalize(event);
 
@@ -112,47 +109,41 @@ suite('apiGatewayV2Adapter', () => {
     });
 
     test('extracts IAM authorizer auth', () => {
-      const baseEvent = createApiGatewayV2Event();
-      const event: APIGatewayV2EventType = {
-        ...baseEvent,
+      const event = createApiGatewayV2WithIAMAuthorizerEvent({
         requestContext: {
-          ...baseEvent.requestContext,
           authorizer: {
             iam: {
-              accessKey: 'AKIAIOSFODNN7EXAMPLE',
-              accountId: '123456789012',
-              callerId: 'AIDACKCEVSQ6C2EXAMPLE',
+              accessKey: 'test-access-key',
+              accountId: '999888777666',
+              callerId: 'test-caller-id',
               cognitoIdentity: null,
-              principalOrgId: 'o-abc123',
-              userArn: 'arn:aws:iam::123456789012:user/test',
-              userId: 'AIDACKCEVSQ6C2EXAMPLE',
+              principalOrgId: 'o-test123',
+              userArn: 'arn:aws:iam::999888777666:user/test',
+              userId: 'test-user-id',
             },
           },
         },
-      } as unknown as APIGatewayV2EventType;
+      });
 
       const normalized = apiGatewayV2Adapter.normalize(event);
 
       expect(normalized.auth?.iam).toBeDefined();
-      expect(normalized.auth?.iam?.accountId).toBe('123456789012');
+      expect(normalized.auth?.iam?.accountId).toBe('999888777666');
     });
 
     test('returns default authorizer context when authorizer has no jwt or iam key', () => {
-      const baseEvent = createApiGatewayV2Event();
-      const event: APIGatewayV2EventType = {
-        ...baseEvent,
+      const event = createApiGatewayV2WithLambdaAuthorizerEvent({
         requestContext: {
-          ...baseEvent.requestContext,
           authorizer: {
-            lambda: { customKey: 'customValue' },
+            lambda: { tenantId: 'tenant-1', role: 'viewer' },
           },
         },
-      } as unknown as APIGatewayV2EventType;
+      });
 
       const normalized = apiGatewayV2Adapter.normalize(event);
 
       expect(normalized.auth).toEqual({
-        context: { lambda: { customKey: 'customValue' } },
+        context: { lambda: { userId: 'user-1', role: 'viewer', tenantId: 'tenant-1' } },
       });
     });
 
