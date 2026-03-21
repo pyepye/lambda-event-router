@@ -572,7 +572,7 @@ suite('DocumentDBRouter', () => {
       router.route(defineRoute({ filters: {}, documentKeySchema }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent();
-      await expect(router.handleEvent(event, context)).rejects.toThrow('documentKey validation failed');
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed on documentKey');
     });
 
     test('handler receives validated fullDocument from fullDocumentSchema', async ({ documentDBHandlerEvent }) => {
@@ -600,7 +600,7 @@ suite('DocumentDBRouter', () => {
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
-      await expect(router.handleEvent(event, context)).rejects.toThrow('fullDocument validation failed');
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed on fullDocument');
     });
 
     test('handler receives validated fullDocumentBeforeChange from fullDocumentBeforeChangeSchema', async ({
@@ -636,7 +636,7 @@ suite('DocumentDBRouter', () => {
         fullDocumentBeforeChange: { name: 'Before Change' },
       });
       const { event, context } = documentDBHandlerEvent({ entries: [entry] });
-      await expect(router.handleEvent(event, context)).rejects.toThrow('fullDocumentBeforeChange validation failed');
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed on fullDocumentBeforeChange');
     });
 
     test('skips fullDocument validation when fullDocument is undefined (delete)', async ({
@@ -703,7 +703,7 @@ suite('DocumentDBRouter', () => {
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateSchema({ _id: 'raw' }, schema, 'fullDocument', eventId)).toThrow(
-        `fullDocument validation failed for record ${JSON.stringify(eventId)}`,
+        `Schema validation failed on fullDocument for record ${JSON.stringify(eventId)}`,
       );
     });
 

@@ -84,11 +84,7 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       throw new Error(`No route matched for EventBridge event: ${event.source} / ${event['detail-type']}`);
     }
 
-    const detail = this.validateSchema(
-      event.detail,
-      route.detailSchema,
-      `Detail validation failed for event ${event.id}`,
-    );
+    const detail = this.validateSchema(event.detail, route.detailSchema, event.id);
 
     const request: EventBridgeRequest = {
       source: event.source,
@@ -144,14 +140,14 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     });
   }
 
-  private validateSchema(data: unknown, schema: Schema<unknown> | undefined, errorContext: string): unknown {
+  private validateSchema(data: unknown, schema: Schema<unknown> | undefined, eventId: string): unknown {
     if (!schema) {
       return data;
     }
 
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`${errorContext}: ${result.error}`);
+      throw new Error(`Schema validation failed for event ${eventId}`, { cause: result.error });
     }
     return result.data;
   }

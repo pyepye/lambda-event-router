@@ -495,7 +495,7 @@ suite('EventBridgeRouter', () => {
       );
 
       const event = eventBridgeEvent();
-      await expect(router.handleEvent(event, context())).rejects.toThrow('Detail validation failed for event');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Schema validation failed for event');
     });
   });
 
@@ -510,7 +510,7 @@ suite('EventBridgeRouter', () => {
       const data = { orderId: '12345' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'Error context');
+      const result = router.validateSchema(data, undefined, 'event-123');
 
       expect(result).toBe(data);
     });
@@ -523,7 +523,7 @@ suite('EventBridgeRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, schema, 'Error context');
+      const result = router.validateSchema(data, schema, 'event-123');
 
       expect(result).toEqual(transformedData);
     });
@@ -534,8 +534,8 @@ suite('EventBridgeRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema, 'Detail validation failed for event abc-123')).toThrow(
-        'Detail validation failed for event abc-123',
+      expect(() => router.validateSchema({}, schema, 'abc-123')).toThrow(
+        'Schema validation failed for event abc-123',
       );
     });
   });

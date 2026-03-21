@@ -113,13 +113,13 @@ suite('Request', () => {
     });
   });
 
-  suite('validateWithSchema', () => {
+  suite('validateSchema', () => {
     test('returns success with original data when no schema is provided', () => {
       const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
       const originalData = { id: '1' };
 
       // @ts-expect-error - testing private method directly
-      const result = request.validateWithSchema(undefined, originalData);
+      const result = request.validateSchema(undefined, originalData);
 
       expect(result).toEqual({ success: true, data: originalData });
     });
@@ -130,7 +130,7 @@ suite('Request', () => {
       const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
 
       // @ts-expect-error - testing private method directly
-      const result = request.validateWithSchema(schema, { id: '1' });
+      const result = request.validateSchema(schema, { id: '1' });
 
       expect(result).toEqual({ success: true, data: transformedData });
     });
@@ -141,7 +141,7 @@ suite('Request', () => {
       const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
 
       // @ts-expect-error - testing private method directly
-      const result = request.validateWithSchema(schema, { bad: 'data' });
+      const result = request.validateSchema(schema, { bad: 'data' });
 
       expect(result).toEqual({ success: false, error: schemaError });
     });
@@ -237,8 +237,8 @@ suite('Request', () => {
       expect(() => request.validate()).not.toThrow();
     });
 
-    test('throws UnprocessableContent when body is a string and bodySchema is provided', () => {
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: {} }) };
+    test('throws UnprocessableContent when body is a string and bodySchema rejects it', () => {
+      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'expected object, received string' }) };
       const route = createRoute({ bodySchema });
       const normalizedEvent = createNormalizedEvent({ body: 'not valid json' });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
@@ -250,10 +250,8 @@ suite('Request', () => {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
         // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
         expect(thrown.statusCode).toBe(422);
-        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
-        expect(thrown.body).toBe('Failed to parse JSON body');
       }
-      expect(bodySchema.safeParse).not.toHaveBeenCalled();
+      expect(bodySchema.safeParse).toHaveBeenCalled();
     });
 
     test('short-circuits on path failure without calling query or body schemas', () => {

@@ -149,13 +149,9 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       return data;
     }
 
-    if (typeof data === 'string') {
-      throw new Error(`Failed to parse JSON data for record ${record.eventID}`);
-    }
-
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`Data validation failed for record ${record.eventID}`);
+      throw new Error(`Data validation failed for record ${record.eventID}`, { cause: result.error });
     }
     return result.data;
   }

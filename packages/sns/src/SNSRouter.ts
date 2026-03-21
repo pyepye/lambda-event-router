@@ -142,35 +142,31 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     }
   }
 
-  private validateBody(record: SNSEventRecord, body: unknown, schema: Schema<unknown> | undefined): unknown {
+  private validateBody(body: unknown, schema: Schema<unknown> | undefined, messageId: string): unknown {
     if (!schema) {
       return body;
     }
 
-    if (typeof body === 'string') {
-      throw new Error(`Failed to parse JSON body for record ${record.Sns.MessageId}`);
-    }
-
     const result = schema.safeParse(body);
     if (!result.success) {
-      throw new Error(`Body validation failed for record ${record.Sns.MessageId}`);
+      throw new Error(`Body validation failed for record ${messageId}`, { cause: result.error });
     }
     return result.data;
   }
 
   private validateMessageAttributes(
-    record: SNSEventRecord,
     messageAttributes: SNSMessageAttributes,
     schema: Schema<SNSMessageAttributes> | undefined,
+    messageId: string,
   ): SNSMessageAttributes {
-    if (schema) {
-      const result = schema.safeParse(messageAttributes);
-      if (!result.success) {
-        throw new Error(`Message attributes validation failed for record ${record.Sns.MessageId}`);
-      }
-      return result.data;
+    if (!schema) {
+      return messageAttributes;
     }
-    return messageAttributes;
+    const result = schema.safeParse(messageAttributes);
+    if (!result.success) {
+      throw new Error(`Message attributes validation failed for record ${messageId}`, { cause: result.error });
+    }
+    return result.data;
   }
 
   private async processRecord(record: SNSEventRecord, context: Context): Promise<void> {
@@ -182,12 +178,12 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       throw new Error(`No route matched for record from ${record.Sns.TopicArn}`);
     }
 
-    const body = this.validateBody(record, parsedBody, route.bodySchema);
+    const body = this.validateBody(parsedBody, route.bodySchema, record.Sns.MessageId);
     const convertedAttributes = this.convertMessageAttributes(rawMessageAttributes);
     const validatedMessageAttributes = this.validateMessageAttributes(
-      record,
       convertedAttributes,
       route.messageAttributesSchema,
+      record.Sns.MessageId,
     );
 
     const request: SNSRequest = {

@@ -602,10 +602,12 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     schema: Schema<unknown> | undefined,
     triggerSource: CognitoTriggerSource,
   ): UserAttributes {
-    if (!schema) return userAttributes;
+    if (!schema) {
+      return userAttributes;
+    }
     const result = schema.safeParse(userAttributes);
     if (!result.success) {
-      throw new Error(`User attributes validation failed for trigger ${triggerSource}`);
+      throw new Error(`User attributes validation failed for trigger ${triggerSource}`, { cause: result.error });
     }
     return result.data as UserAttributes;
   }

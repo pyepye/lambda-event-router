@@ -175,7 +175,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
 
     const result = schema.safeParse(event);
     if (!result.success) {
-      throw new Error(`Event validation failed: ${result.error}`);
+      throw new Error(`Event validation failed`, { cause: result.error });
     }
     return result.data;
   }

@@ -85,7 +85,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
         return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
       }
 
-      const validatedData = this.validateData(data, route.dataSchema, record);
+      const validatedData = this.validateData(data, route.dataSchema, record.recordId);
 
       const request: FirehoseRequest = {
         data: validatedData,
@@ -175,22 +175,14 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     }
   }
 
-  private validateData(
-    data: unknown,
-    schema: Schema<unknown> | undefined,
-    record: FirehoseTransformationEventRecord,
-  ): unknown {
+  private validateData(data: unknown, schema: Schema<unknown> | undefined, recordId: string): unknown {
     if (!schema) {
       return data;
     }
 
-    if (typeof data === 'string') {
-      throw new Error(`Failed to parse JSON data for record ${record.recordId}`);
-    }
-
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`Data validation failed for record ${record.recordId}`);
+      throw new Error(`Data validation failed for record ${recordId}`, { cause: result.error });
     }
     return result.data;
   }

@@ -212,13 +212,9 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   private validateBody(body: unknown, schema: Schema<unknown> | undefined): unknown {
     if (!schema) return body;
 
-    if (typeof body === 'string') {
-      throw new Error('Failed to parse JSON body for WebSocket message');
-    }
-
     const result = schema.safeParse(body);
     if (!result.success) {
-      throw new Error('Body validation failed for WebSocket message');
+      throw new Error('Body validation failed for WebSocket body', { cause: result.error });
     }
     return result.data;
   }

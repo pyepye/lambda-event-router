@@ -85,21 +85,18 @@ export class Request {
   }
 
   private validatePath(): ValidationResult<Record<string, string>> {
-    return this.validateWithSchema<Record<string, string>>(this.route.pathSchema, this.pathParams);
+    return this.validateSchema<Record<string, string>>(this.route.pathSchema, this.pathParams);
   }
 
   private validateQuery(): ValidationResult<Record<string, string | undefined>> {
-    return this.validateWithSchema<Record<string, string | undefined>>(this.route.querySchema, this.queryParams);
+    return this.validateSchema<Record<string, string | undefined>>(this.route.querySchema, this.queryParams);
   }
 
   private validateBody(): ValidationResult<unknown> {
-    if (this.route.bodySchema && typeof this.body === 'string') {
-      return { success: false, error: 'Failed to parse JSON body' };
-    }
-    return this.validateWithSchema<unknown>(this.route.bodySchema, this.body);
+    return this.validateSchema<unknown>(this.route.bodySchema, this.body);
   }
 
-  private validateWithSchema<T>(schema: Schema<unknown> | undefined, data: unknown): ValidationResult<T> {
+  private validateSchema<T>(schema: Schema<unknown> | undefined, data: unknown): ValidationResult<T> {
     if (!schema) {
       return { success: true, data: data as T };
     }

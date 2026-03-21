@@ -404,13 +404,13 @@ describe('validateValue', () => {
   test('throws when value is a string and schema is provided', ({ kafkaRecord }) => {
     const router = createKafkaRouter();
     const schema: Schema<unknown> = {
-      safeParse: () => ({ success: true, data: {} }),
+      safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
     };
     const record = kafkaRecord({ topic: 'orders', partition: 1 });
 
     // @ts-expect-error testing private method
     expect(() => router.validateValue('not valid json', schema, record)).toThrow(
-      'Failed to parse JSON value for record on topic orders partition 1',
+      'Value validation failed for record on topic orders partition 1',
     );
   });
 });

@@ -154,7 +154,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
 
     const result = schema.safeParse(args);
     if (!result.success) {
-      throw new Error(`Arguments validation failed for ${parentTypeName}.${fieldName}`);
+      throw new Error(`Arguments validation failed for ${parentTypeName}.${fieldName}`, { cause: result.error });
     }
     return result.data as T;
   }

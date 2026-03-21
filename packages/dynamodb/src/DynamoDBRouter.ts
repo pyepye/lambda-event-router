@@ -208,7 +208,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
 
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`${imageName} validation failed for record ${recordId}`);
+      throw new Error(`Image validation failed for ${imageName} on record ${recordId}`, { cause: result.error });
     }
     return result.data as T;
   }

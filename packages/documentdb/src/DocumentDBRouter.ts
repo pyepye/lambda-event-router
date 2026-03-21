@@ -209,7 +209,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     data: T,
     schema: Schema<unknown> | undefined,
     fieldName: string,
-    eventId: unknown,
+    eventId: Record<string, unknown>,
   ): T {
     if (!schema || data === undefined) {
       return data;
@@ -217,7 +217,9 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
 
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`${fieldName} validation failed for record ${JSON.stringify(eventId)}`);
+      throw new Error(`Schema validation failed on ${fieldName} for record ${JSON.stringify(eventId)}`, {
+        cause: result.error,
+      });
     }
     return result.data as T;
   }

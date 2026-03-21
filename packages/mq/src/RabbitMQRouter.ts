@@ -60,7 +60,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         }
 
         const parsedBody = this.parseJsonBody(decodedData);
-        const body = this.validateBody(parsedBody, route.bodySchema, queueName);
+        const body = this.validateBody(parsedBody, route.bodySchema);
 
         const request: RabbitMQRequest = {
           message: decodedMessage,
@@ -116,18 +116,14 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     }
   }
 
-  private validateBody(body: unknown, schema: Schema<unknown> | undefined, queueName: string): unknown {
+  private validateBody(body: unknown, schema: Schema<unknown> | undefined): unknown {
     if (!schema) {
       return body;
     }
 
-    if (typeof body === 'string') {
-      throw new Error(`Failed to parse JSON body for message on queue ${queueName}`);
-    }
-
     const result = schema.safeParse(body);
     if (!result.success) {
-      throw new Error(`Body validation failed for message on queue ${queueName}`);
+      throw new Error(`Body validation failed`, { cause: result.error });
     }
     return result.data;
   }

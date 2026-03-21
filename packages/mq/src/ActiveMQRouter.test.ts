@@ -416,14 +416,14 @@ suite('ActiveMQRouter', () => {
       expect(result).toEqual(transformedData);
     });
 
-    test('throws on JSON parse failure when body is still a string', () => {
+    test('throws on schema failure when body is still a string', () => {
       const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
+        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateBody('not-json', schema, 'msg-42')).toThrow(
-        'Failed to parse JSON body for message msg-42',
+        'Body validation failed for message msg-42',
       );
     });
 

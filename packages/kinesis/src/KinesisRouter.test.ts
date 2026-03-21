@@ -543,12 +543,12 @@ suite('KinesisRouter', () => {
     test('throws when data is a string and schema is provided', ({ kinesisRecord }) => {
       const record = kinesisRecord();
       const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
+        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateData('not valid json', schema, record)).toThrow(
-        `Failed to parse JSON data for record ${record.eventID}`,
+        `Data validation failed for record ${record.eventID}`,
       );
     });
   });

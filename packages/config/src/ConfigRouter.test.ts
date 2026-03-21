@@ -308,7 +308,7 @@ suite('ConfigRouter', () => {
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateSchema({ key: 'value' }, schema, 'ruleParameters')).toThrow(
-        'ruleParameters validation failed',
+        'Schema validation failed for ruleParameters',
       );
     });
   });
@@ -462,7 +462,7 @@ suite('ConfigRouter', () => {
       router.route(defineRoute({ filters: {}, ruleParametersSchema }).handle(async () => {}));
 
       const event = configEvent({ ruleParameters: { bad: 'data' } });
-      await expect(router.handleEvent(event, context())).rejects.toThrow('ruleParameters validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Schema validation failed for ruleParameters');
     });
 
     test('validates configuration schema for normal events', async ({ configEvent, context }) => {
@@ -506,7 +506,7 @@ suite('ConfigRouter', () => {
           }),
         },
       });
-      await expect(router.handleEvent(event, context())).rejects.toThrow('configuration validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Schema validation failed for configuration');
     });
 
     test('skips configuration schema validation for oversized events', async ({ configEvent, context }) => {

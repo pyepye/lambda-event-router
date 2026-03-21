@@ -941,7 +941,7 @@ suite('SNSRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(record, body, schema);
+      const result = router.validateBody(body, schema, record.Sns.MessageId);
 
       expect(result).toEqual(validatedData);
     });
@@ -953,7 +953,7 @@ suite('SNSRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody(record, {}, schema)).toThrow(
+      expect(() => router.validateBody({}, schema, record.Sns.MessageId)).toThrow(
         `Body validation failed for record ${record.Sns.MessageId}`,
       );
     });
@@ -963,7 +963,7 @@ suite('SNSRouter', () => {
       const body = { action: 'processOrder' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(record, body, undefined);
+      const result = router.validateBody(body, undefined, record.Sns.MessageId);
 
       expect(result).toBe(body);
     });
@@ -971,12 +971,12 @@ suite('SNSRouter', () => {
     test('throws when body is a string and schema is provided', ({ snsRecord }) => {
       const record = snsRecord();
       const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
+        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody(record, 'not valid json', schema)).toThrow(
-        `Failed to parse JSON body for record ${record.Sns.MessageId}`,
+      expect(() => router.validateBody('not valid json', schema, record.Sns.MessageId)).toThrow(
+        `Body validation failed for record ${record.Sns.MessageId}`,
       );
     });
   });
@@ -997,7 +997,7 @@ suite('SNSRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(record, messageAttributes, schema);
+      const result = router.validateMessageAttributes(messageAttributes, schema, record.Sns.MessageId);
 
       expect(result).toEqual(validatedAttributes);
     });
@@ -1009,7 +1009,7 @@ suite('SNSRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateMessageAttributes(record, {}, schema)).toThrow(
+      expect(() => router.validateMessageAttributes({}, schema, record.Sns.MessageId)).toThrow(
         `Message attributes validation failed for record ${record.Sns.MessageId}`,
       );
     });
@@ -1019,7 +1019,7 @@ suite('SNSRouter', () => {
       const messageAttributes = { eventType: 'order.created' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(record, messageAttributes, undefined);
+      const result = router.validateMessageAttributes(messageAttributes, undefined, record.Sns.MessageId);
 
       expect(result).toBe(messageAttributes);
     });

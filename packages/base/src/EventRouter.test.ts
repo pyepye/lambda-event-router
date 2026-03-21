@@ -536,7 +536,7 @@ suite('EventRouter', () => {
       );
 
       await expect(router.handleEvent({ taskId: 'task-123' }, createMockContext())).rejects.toThrow(
-        'Event validation failed',
+        'Schema validation failed for event',
       );
     });
   });
@@ -552,7 +552,7 @@ suite('EventRouter', () => {
       const data = { taskId: 'task-123' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'Error context');
+      const result = router.validateSchema(data, undefined);
 
       expect(result).toBe(data);
     });
@@ -565,7 +565,7 @@ suite('EventRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, schema, 'Error context');
+      const result = router.validateSchema(data, schema);
 
       expect(result).toEqual(transformedData);
     });
@@ -576,7 +576,7 @@ suite('EventRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema, 'Event validation failed')).toThrow('Event validation failed');
+      expect(() => router.validateSchema({}, schema)).toThrow('Schema validation failed for event');
     });
   });
 });

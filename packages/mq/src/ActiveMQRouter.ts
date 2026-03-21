@@ -131,13 +131,9 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       return body;
     }
 
-    if (typeof body === 'string') {
-      throw new Error(`Failed to parse JSON body for message ${messageId}`);
-    }
-
     const result = schema.safeParse(body);
     if (!result.success) {
-      throw new Error(`Body validation failed for message ${messageId}`);
+      throw new Error(`Body validation failed for message ${messageId}`, { cause: result.error });
     }
     return result.data;
   }

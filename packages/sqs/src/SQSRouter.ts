@@ -230,35 +230,31 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     }
   }
 
-  private validateBody(record: AWSSQSRecord, body: unknown, schema: Schema<unknown> | undefined): unknown {
+  private validateBody(body: unknown, schema: Schema<unknown> | undefined, messageId: string): unknown {
     if (!schema) {
       return body;
     }
 
-    if (typeof body === 'string') {
-      throw new Error(`Failed to parse JSON body for record ${record.messageId}`);
-    }
-
     const result = schema.safeParse(body);
     if (!result.success) {
-      throw new Error(`Body validation failed for record ${record.messageId}`);
+      throw new Error(`Body validation failed for record ${messageId}`, { cause: result.error });
     }
     return result.data;
   }
 
   private validateMessageAttributes(
-    record: AWSSQSRecord,
     messageAttributes: SQSMessageAttributes,
     schema: Schema<SQSMessageAttributes> | undefined,
+    messageId: string,
   ): SQSMessageAttributes {
-    if (schema) {
-      const result = schema.safeParse(messageAttributes);
-      if (!result.success) {
-        throw new Error(`Message attributes validation failed for record ${record.messageId}`);
-      }
-      return result.data;
+    if (!schema) {
+      return messageAttributes;
     }
-    return messageAttributes;
+    const result = schema.safeParse(messageAttributes);
+    if (!result.success) {
+      throw new Error(`Message attributes validation failed for record ${messageId}`, { cause: result.error });
+    }
+    return result.data;
   }
 
   private async processRecord(record: AWSSQSRecord, context: Context): Promise<void> {
@@ -270,11 +266,11 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       throw new Error(`No route matched for record from ${record.eventSourceARN}`);
     }
 
-    const body = this.validateBody(record, parsedBody, route.bodySchema);
+    const body = this.validateBody(parsedBody, route.bodySchema, record.messageId);
     const messageAttributes = this.validateMessageAttributes(
-      record,
       convertedAttributes,
       route.messageAttributesSchema,
+      record.messageId,
     );
 
     const request: SQSRequest = {

@@ -759,7 +759,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([record]);
-      await expect(router.handleEvent(event, context())).rejects.toThrow('Keys validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Image validation failed for Keys');
     });
 
     test('returns batchItemFailure when keysSchema validation fails', async ({
@@ -818,7 +818,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([record]);
-      await expect(router.handleEvent(event, context())).rejects.toThrow('NewImage validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Image validation failed for NewImage');
     });
 
     test('returns batchItemFailure when newImageSchema validation fails', async ({
@@ -877,7 +877,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBModifyRecord();
       const event = dynamoDBStreamEvent([record]);
-      await expect(router.handleEvent(event, context())).rejects.toThrow('OldImage validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Image validation failed for OldImage');
     });
 
     test('returns batchItemFailure when oldImageSchema validation fails', async ({
@@ -952,7 +952,7 @@ suite('DynamoDBRouter', () => {
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateImage({ pk: 'test' }, schema, 'NewImage', 'event-42')).toThrow(
-        'NewImage validation failed for record event-42',
+        'Image validation failed for NewImage on record event-42',
       );
     });
 

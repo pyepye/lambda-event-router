@@ -193,7 +193,7 @@ suite('ConfigScheduledRouter', () => {
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateSchema({ key: 'value' }, schema, 'ruleParameters')).toThrow(
-        'ruleParameters validation failed',
+        'Schema validation failed for ruleParameters',
       );
     });
   });
@@ -284,7 +284,7 @@ suite('ConfigScheduledRouter', () => {
       router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(async () => {}));
 
       const event = createScheduledConfigEvent({ ruleParameters: { bad: 'data' } });
-      await expect(router.handleEvent(event, context())).rejects.toThrow('ruleParameters validation failed');
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Schema validation failed for ruleParameters');
     });
   });
 

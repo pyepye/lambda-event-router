@@ -335,7 +335,7 @@ suite('RabbitMQRouter', () => {
       const body = { action: 'process' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, undefined, 'orders');
+      const result = router.validateBody(body, undefined);
 
       expect(result).toBe(body);
     });
@@ -348,19 +348,19 @@ suite('RabbitMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, schema, 'orders');
+      const result = router.validateBody(body, schema);
 
       expect(result).toEqual(transformedData);
     });
 
-    test('throws on JSON parse failure when body is still a string', () => {
+    test('throws on schema failure when body is still a string', () => {
       const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
+        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not-json', schema, 'orders')).toThrow(
-        'Failed to parse JSON body for message on queue orders',
+      expect(() => router.validateBody('not-json', schema)).toThrow(
+        'Body validation failed',
       );
     });
 
@@ -370,8 +370,8 @@ suite('RabbitMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({ valid: 'json' }, schema, 'orders')).toThrow(
-        'Body validation failed for message on queue orders',
+      expect(() => router.validateBody({ valid: 'json' }, schema)).toThrow(
+        'Body validation failed',
       );
     });
   });

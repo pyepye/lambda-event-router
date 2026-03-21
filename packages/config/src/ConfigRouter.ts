@@ -181,7 +181,7 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
 
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`${name} validation failed`);
+      throw new Error(`Schema validation failed for ${name}`, { cause: result.error });
     }
     return result.data as T;
   }

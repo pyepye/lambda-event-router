@@ -169,7 +169,7 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
       throw new Error('No route matched for event');
     }
 
-    const validatedEvent = this.validateSchema(event, route.eventSchema, 'Event validation failed');
+    const validatedEvent = this.validateSchema(event, route.eventSchema);
     await route.handler({ event: validatedEvent, context });
   }
 
@@ -187,14 +187,14 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
     });
   }
 
-  private validateSchema(data: unknown, schema: Schema<unknown> | undefined, errorContext: string): unknown {
+  private validateSchema(data: unknown, schema: Schema<unknown> | undefined): unknown {
     if (!schema) {
       return data;
     }
 
     const result = schema.safeParse(data);
     if (!result.success) {
-      throw new Error(`${errorContext}: ${result.error}`);
+      throw new Error('Schema validation failed for event', { cause: result.error });
     }
     return result.data;
   }

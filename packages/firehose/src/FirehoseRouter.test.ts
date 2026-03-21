@@ -627,7 +627,7 @@ suite('FirehoseRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, schema, record);
+      const result = router.validateData(data, schema, record.recordId);
 
       expect(result).toEqual(validatedData);
     });
@@ -639,7 +639,7 @@ suite('FirehoseRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateData({}, schema, record)).toThrow(
+      expect(() => router.validateData({}, schema, record.recordId)).toThrow(
         'Data validation failed for record validation-fail-record',
       );
     });
@@ -649,7 +649,7 @@ suite('FirehoseRouter', () => {
       const data = { action: 'processOrder' };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, undefined, record);
+      const result = router.validateData(data, undefined, record.recordId);
 
       expect(result).toBe(data);
     });
@@ -657,12 +657,12 @@ suite('FirehoseRouter', () => {
     test('throws when data is a string and schema is provided', ({ firehoseRecord }) => {
       const record = firehoseRecord();
       const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
+        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateData('not valid json', schema, record)).toThrow(
-        `Failed to parse JSON data for record ${record.recordId}`,
+      expect(() => router.validateData('not valid json', schema, record.recordId)).toThrow(
+        `Data validation failed for record ${record.recordId}`,
       );
     });
   });

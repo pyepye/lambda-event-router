@@ -109,9 +109,9 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
 
       const parsedUserParameters = this.parseUserParameters(rawUserParameters);
       const validatedUserParameters = this.validateUserParameters(
-        jobId,
         parsedUserParameters,
         route.userParametersSchema,
+        jobId,
       );
 
       const request: CodePipelineJobRequest = {
@@ -177,11 +177,11 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     }
   }
 
-  private validateUserParameters(jobId: string, userParameters: unknown, schema: Schema<unknown> | undefined): unknown {
+  private validateUserParameters(userParameters: unknown, schema: Schema<unknown> | undefined, jobId: string): unknown {
     if (schema) {
       const result = schema.safeParse(userParameters);
       if (!result.success) {
-        throw new Error(`UserParameters validation failed for job ${jobId}`);
+        throw new Error(`UserParameters validation failed for job ${jobId}`, { cause: result.error });
       }
       return result.data;
     }

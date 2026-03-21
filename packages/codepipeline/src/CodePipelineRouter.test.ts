@@ -503,7 +503,7 @@ suite('CodePipelineRouter', () => {
     test('returns params unchanged when no schema', () => {
       const params = { key: 'value' };
       // @ts-expect-error - testing private method directly
-      const result = router.validateUserParameters('job-1', params, undefined);
+      const result = router.validateUserParameters(params, undefined, 'job-1');
       expect(result).toBe(params);
     });
 
@@ -514,7 +514,7 @@ suite('CodePipelineRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      const result = router.validateUserParameters('job-1', { key: 'value' }, schema);
+      const result = router.validateUserParameters({ key: 'value' }, schema, 'job-1');
       expect(result).toBe(parsedData);
     });
 
@@ -524,7 +524,7 @@ suite('CodePipelineRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateUserParameters('job-1', 'bad', schema)).toThrow(
+      expect(() => router.validateUserParameters('bad', schema, 'job-1')).toThrow(
         'UserParameters validation failed for job job-1',
       );
     });
