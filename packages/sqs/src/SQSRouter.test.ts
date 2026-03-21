@@ -3,6 +3,12 @@ import { createSQSEvent, test } from '@lambda-event-router/testing';
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
 import type { SQSFilterInput, SQSMessageAttributes } from './types.js';
 
+let router: SQSRouter;
+
+beforeEach(() => {
+  router = new SQSRouter();
+});
+
 suite('SQSRouter', () => {
   suite('createSQSRouter', () => {
     test('creates an SQSRouter instance', () => {
@@ -12,12 +18,6 @@ suite('SQSRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = new SQSRouter();
-    });
-
     test('returns true for a valid SQS event', () => {
       const event = createSQSEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -89,7 +89,6 @@ suite('SQSRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new SQSRouter();
       const definition = defineRoute({
         filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'] },
       }).handle(async () => {});
@@ -101,12 +100,6 @@ suite('SQSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = createSQSRouter();
-    });
-
     test('matches route by eventSourceArns', ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
@@ -328,7 +321,6 @@ suite('SQSRouter', () => {
     test('selects the first matching route when multiple routes match', ({ sqsRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.created'] } },
@@ -352,18 +344,18 @@ suite('SQSRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ sqsRecord, sqsHandlerEvent }) => {
-      const router = new SQSRouter();
       const handler = vi.fn();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
-      const body = { action: 'processOrder', orderId: '12345' };
+
       const definition = defineRoute({
         filters: { eventSourceArns: [eventSourceArn] },
       }).handle(handler);
       router.route(definition);
 
+      const body = { action: 'processOrder', orderId: '12345' };
       const record = sqsRecord({
         eventSourceARN: eventSourceArn,
-        body: JSON.stringify(body),
+        body: JSON.stringify(body), // TODO: Fixture should stringify
         messageAttributes: {
           eventType: { stringValue: 'order.created', stringListValues: [], binaryListValues: [], dataType: 'String' },
         },
@@ -382,8 +374,6 @@ suite('SQSRouter', () => {
     });
 
     test('throws when no route matches', async ({ sqsHandlerEvent }) => {
-      const router = createSQSRouter();
-
       const { event, context } = sqsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
@@ -391,7 +381,6 @@ suite('SQSRouter', () => {
     test('propagates handler error on standard queue when batchItemFailures is disabled', async ({
       sqsHandlerEvent,
     }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -411,7 +400,7 @@ suite('SQSRouter', () => {
       context,
     }) => {
       const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
-      const router = createSQSRouter();
+
       router.route(
         defineRoute({
           filters: { eventSourceArns: [fifoArn] },
@@ -429,7 +418,6 @@ suite('SQSRouter', () => {
     });
 
     test('processes standard queue records in parallel', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const callOrder: string[] = [];
 
@@ -456,11 +444,15 @@ suite('SQSRouter', () => {
   });
 
   suite('handleEvent - batchItemFailures (standard)', () => {
+    let router: SQSRouter;
+
+    beforeEach(() => {
+      router = new SQSRouter({ batchItemFailures: true });
+    });
+
     test('returns batchItemFailure when no route matches and batchItemFailures is enabled', async ({
       sqsHandlerEvent,
     }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
-
       const { event, context } = sqsHandlerEvent();
       const result = await router.handleEvent(event, context);
 
@@ -470,7 +462,6 @@ suite('SQSRouter', () => {
     });
 
     test('returns undefined when all records succeed', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -494,7 +485,6 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const failingRecord = sqsRecord({ eventSourceARN: eventSourceArn });
 
@@ -526,7 +516,6 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const failingRecordA = sqsRecord({ eventSourceARN: eventSourceArn });
       const failingRecordB = sqsRecord({ eventSourceARN: eventSourceArn });
@@ -560,10 +549,8 @@ suite('SQSRouter', () => {
   });
 
   suite('handleEvent - FIFO processing', () => {
-    const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
-
     test('processes records sequentially within a message group', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter();
+      const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
       const callOrder: string[] = [];
 
       router.route(
@@ -599,7 +586,7 @@ suite('SQSRouter', () => {
     });
 
     test('processes multiple message groups in parallel', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter();
+      const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
       const callOrder: string[] = [];
 
       router.route(
@@ -631,7 +618,7 @@ suite('SQSRouter', () => {
     });
 
     test('groups records by MessageGroupId', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter();
+      const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
       const groupARecords: string[] = [];
       const groupBRecords: string[] = [];
 
@@ -671,10 +658,13 @@ suite('SQSRouter', () => {
 
   suite('handleEvent - FIFO batchItemFailures', () => {
     const fifoArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue.fifo';
+    let router: SQSRouter;
+
+    beforeEach(() => {
+      router = new SQSRouter({ batchItemFailures: true });
+    });
 
     test('marks remaining records in group as failed when one fails', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
-
       const record1 = sqsRecord({
         eventSourceARN: fifoArn,
         attributes: { MessageGroupId: 'group-1' },
@@ -716,8 +706,6 @@ suite('SQSRouter', () => {
     });
 
     test('returns empty batchItemFailures when all records succeed', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [fifoArn] },
@@ -735,8 +723,6 @@ suite('SQSRouter', () => {
     });
 
     test('failures in one group do not affect other groups', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
-
       const groupARecord1 = sqsRecord({
         eventSourceARN: fifoArn,
         attributes: { MessageGroupId: 'group-A' },
@@ -781,7 +767,6 @@ suite('SQSRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated body from bodySchema', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const handler = vi.fn();
       const transformedBody = { action: 'processOrder', orderId: '12345', validated: true };
@@ -798,7 +783,7 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({
         eventSourceARN: eventSourceArn,
-        body: JSON.stringify({ action: 'processOrder', orderId: '12345' }),
+        body: JSON.stringify({ action: 'processOrder', orderId: '12345' }), // TODO: Fixture should stringify
       });
       const event = sqsEvent([record]);
       await router.handleEvent(event, context());
@@ -811,12 +796,10 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const bodySchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -830,12 +813,11 @@ suite('SQSRouter', () => {
     });
 
     test('returns batchItemFailure when bodySchema validation fails', async ({ sqsRecord, sqsEvent, context }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
+      const router = new SQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const bodySchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -857,14 +839,12 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const handler = vi.fn();
       const validatedAttributes = { eventType: 'order.created', extra: 'field' };
       const messageAttributesSchema: Schema<SQSMessageAttributes> = {
         safeParse: () => ({ success: true, data: validatedAttributes }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -889,12 +869,10 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter();
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const messageAttributesSchema: Schema<SQSMessageAttributes> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -917,12 +895,11 @@ suite('SQSRouter', () => {
       sqsEvent,
       context,
     }) => {
-      const router = createSQSRouter({ batchItemFailures: true });
+      const router = new SQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const messageAttributesSchema: Schema<SQSMessageAttributes> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -946,12 +923,6 @@ suite('SQSRouter', () => {
   });
 
   suite('parseJsonBody', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = new SQSRouter();
-    });
-
     test('parses valid JSON body into an object', ({ sqsRecord }) => {
       const record = sqsRecord({ body: '{"greeting":"hello"}' });
 
@@ -972,12 +943,6 @@ suite('SQSRouter', () => {
   });
 
   suite('convertMessageAttributes', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = new SQSRouter();
-    });
-
     test('converts String attribute to string value', () => {
       const raw = {
         myString: { stringValue: 'hello', stringListValues: [], binaryListValues: [], dataType: 'String' },
@@ -1016,12 +981,6 @@ suite('SQSRouter', () => {
   });
 
   suite('validateBody', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = new SQSRouter();
-    });
-
     test('returns validated data when bodySchema succeeds', ({ sqsRecord }) => {
       const record = sqsRecord();
       const body = { action: 'processOrder', orderId: '12345' };
@@ -1072,12 +1031,6 @@ suite('SQSRouter', () => {
   });
 
   suite('validateMessageAttributes', () => {
-    let router: SQSRouter;
-
-    beforeEach(() => {
-      router = new SQSRouter();
-    });
-
     test('returns validated attributes when messageAttributesSchema succeeds', ({ sqsRecord }) => {
       const record = sqsRecord();
       const messageAttributes = { eventType: 'order.created' };
@@ -1123,8 +1076,6 @@ suite('SQSRouter', () => {
     }) => {
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
-
-      const router = createSQSRouter();
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.created'] } },

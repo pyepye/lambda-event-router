@@ -3,6 +3,12 @@ import { CodeCommitRouter, createCodeCommitRouter, defineRoute } from './CodeCom
 import type { CodeCommitFilterInput } from './types.js';
 
 suite('CodeCommitRouter', () => {
+  let router: CodeCommitRouter;
+
+  beforeEach(() => {
+    router = new CodeCommitRouter();
+  });
+
   suite('createCodeCommitRouter', () => {
     test('creates a CodeCommitRouter instance', () => {
       const router = createCodeCommitRouter();
@@ -11,12 +17,6 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: CodeCommitRouter;
-
-    beforeEach(() => {
-      router = new CodeCommitRouter();
-    });
-
     test('returns true for a valid CodeCommit event', () => {
       const event = createCodeCommitEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -73,7 +73,6 @@ suite('CodeCommitRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodeCommitRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -86,7 +85,6 @@ suite('CodeCommitRouter', () => {
 
   suite('push', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodeCommitRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -97,13 +95,11 @@ suite('CodeCommitRouter', () => {
     });
 
     test('only matches push references', ({ codeCommitRecord, codeCommitReference }) => {
-      const router = createCodeCommitRouter();
+      router.push(defineRoute({ filters: {} }).handle(async () => {}));
+
       const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
       const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const deletedRef = codeCommitReference({ ref: 'refs/heads/old-branch', deleted: true });
-
-      router.push(defineRoute({ filters: {} }).handle(async () => {}));
-
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef, deletedRef] },
       });
@@ -120,7 +116,6 @@ suite('CodeCommitRouter', () => {
 
   suite('branchCreated', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodeCommitRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -131,13 +126,11 @@ suite('CodeCommitRouter', () => {
     });
 
     test('only matches created references', ({ codeCommitRecord, codeCommitReference }) => {
-      const router = createCodeCommitRouter();
+      router.branchCreated(defineRoute({ filters: {} }).handle(async () => {}));
+
       const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
       const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const deletedRef = codeCommitReference({ ref: 'refs/heads/old-branch', deleted: true });
-
-      router.branchCreated(defineRoute({ filters: {} }).handle(async () => {}));
-
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef, deletedRef] },
       });
@@ -154,7 +147,6 @@ suite('CodeCommitRouter', () => {
 
   suite('branchDeleted', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodeCommitRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -165,13 +157,11 @@ suite('CodeCommitRouter', () => {
     });
 
     test('only matches deleted references', ({ codeCommitRecord, codeCommitReference }) => {
-      const router = createCodeCommitRouter();
+      router.branchDeleted(defineRoute({ filters: {} }).handle(async () => {}));
+
       const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
       const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const deletedRef = codeCommitReference({ ref: 'refs/heads/old-branch', deleted: true });
-
-      router.branchDeleted(defineRoute({ filters: {} }).handle(async () => {}));
-
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef, deletedRef] },
       });
@@ -187,12 +177,6 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('filterReferences', () => {
-    let router: CodeCommitRouter;
-
-    beforeEach(() => {
-      router = new CodeCommitRouter();
-    });
-
     test('push filter returns references without created or deleted', ({ codeCommitReference }) => {
       const pushRef = codeCommitReference();
       const createdRef = codeCommitReference({ created: true });
@@ -262,12 +246,6 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: CodeCommitRouter;
-
-    beforeEach(() => {
-      router = createCodeCommitRouter();
-    });
-
     test('matches route by eventSourceArns', ({ codeCommitRecord }) => {
       const eventSourceArn = 'arn:aws:codecommit:us-east-1:123456789012:my-repo';
       router.route(
@@ -515,6 +493,12 @@ suite('CodeCommitRouter', () => {
 
     test('customFilter receives correct arguments', ({ codeCommitRecord, codeCommitReference }) => {
       const customFilter = vi.fn().mockReturnValue(true);
+      router.route(
+        defineRoute({
+          filters: { customFilter },
+        }).handle(async () => {}),
+      );
+
       const reference = codeCommitReference({ ref: 'refs/heads/main' });
       const record = codeCommitRecord({
         codecommit: { references: [reference] },
@@ -522,12 +506,6 @@ suite('CodeCommitRouter', () => {
         eventSourceARN: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
         eventTriggerName: 'my-trigger',
       });
-
-      router.route(
-        defineRoute({
-          filters: { customFilter },
-        }).handle(async () => {}),
-      );
 
       // @ts-expect-error - testing private method directly
       const route = router.routes[0];
@@ -562,15 +540,14 @@ suite('CodeCommitRouter', () => {
       codeCommitRecord,
       codeCommitReference,
     }) => {
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
-
       router.push(
         defineRoute({
           filters: { branches: ['main'] },
         }).handle(async () => {}),
       );
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -588,14 +565,13 @@ suite('CodeCommitRouter', () => {
       codeCommitRecord,
       codeCommitReference,
     }) => {
-      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
-
       router.push(
         defineRoute({
           filters: {},
         }).handle(async () => {}),
       );
 
+      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [createdRef] },
       });
@@ -612,15 +588,14 @@ suite('CodeCommitRouter', () => {
       codeCommitReference,
     }) => {
       const customFilter = vi.fn().mockReturnValue(true);
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
-
       router.push(
         defineRoute({
           filters: { customFilter },
         }).handle(async () => {}),
       );
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/main', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -638,7 +613,6 @@ suite('CodeCommitRouter', () => {
 
     test('customFilter is not called when an earlier filter fails', ({ codeCommitRecord }) => {
       const customFilter = vi.fn().mockReturnValue(true);
-
       router.route(
         defineRoute({
           filters: {
@@ -729,16 +703,9 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('matchRoutes', () => {
-    let router: CodeCommitRouter;
-
-    beforeEach(() => {
-      router = createCodeCommitRouter();
-    });
-
     test('returns all matching routes, not just the first', ({ codeCommitRecord }) => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(handlerA));
       router.route(defineRoute({ filters: {} }).handle(handlerB));
 
@@ -753,12 +720,11 @@ suite('CodeCommitRouter', () => {
       codeCommitRecord,
       codeCommitReference,
     }) => {
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
-
       router.push(defineRoute({ filters: {} }).handle(async () => {}));
       router.branchCreated(defineRoute({ filters: {} }).handle(async () => {}));
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -775,7 +741,6 @@ suite('CodeCommitRouter', () => {
     test('non-matching routes are skipped', ({ codeCommitRecord }) => {
       const handlerA = vi.fn();
       const handlerB = vi.fn();
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:other-repo'] },
@@ -808,12 +773,6 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('processRecord', () => {
-    let router: CodeCommitRouter;
-
-    beforeEach(() => {
-      router = createCodeCommitRouter();
-    });
-
     test('throws when no route matches', async ({ codeCommitRecord, context }) => {
       const record = codeCommitRecord();
 
@@ -829,6 +788,8 @@ suite('CodeCommitRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
       const reference = codeCommitReference({ ref: 'refs/heads/main' });
       const mockContext = context();
       const record = codeCommitRecord({
@@ -837,8 +798,6 @@ suite('CodeCommitRouter', () => {
         eventTriggerName: 'my-trigger',
         eventSourceARN: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
       });
-
-      router.route(defineRoute({ filters: {} }).handle(handler));
 
       // @ts-expect-error - testing private method directly
       await router.processRecord(record, mockContext);
@@ -859,11 +818,11 @@ suite('CodeCommitRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
 
       router.push(defineRoute({ filters: {} }).handle(handler));
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -921,12 +880,11 @@ suite('CodeCommitRouter', () => {
     }) => {
       const pushHandler = vi.fn();
       const createHandler = vi.fn();
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
-
       router.push(defineRoute({ filters: {} }).handle(pushHandler));
       router.branchCreated(defineRoute({ filters: {} }).handle(createHandler));
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -942,7 +900,6 @@ suite('CodeCommitRouter', () => {
 
   suite('handleEvent', () => {
     test('returns undefined on success', async ({ codeCommitHandlerEvent }) => {
-      const router = createCodeCommitRouter();
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const { event, context } = codeCommitHandlerEvent();
@@ -952,14 +909,11 @@ suite('CodeCommitRouter', () => {
     });
 
     test('throws when no route matches', async ({ codeCommitHandlerEvent }) => {
-      const router = createCodeCommitRouter();
-
       const { event, context } = codeCommitHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler errors', async ({ codeCommitHandlerEvent }) => {
-      const router = createCodeCommitRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -971,7 +925,6 @@ suite('CodeCommitRouter', () => {
     });
 
     test('processes multiple records in parallel', async ({ codeCommitRecord, codeCommitEvent, context }) => {
-      const router = createCodeCommitRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -999,17 +952,15 @@ suite('CodeCommitRouter', () => {
       codeCommitEvent,
       context,
     }) => {
-      const router = createCodeCommitRouter();
       const handler = vi.fn();
       const eventSourceArn = 'arn:aws:codecommit:us-east-1:123456789012:my-repo';
-      const reference = codeCommitReference({ ref: 'refs/heads/main' });
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
         }).handle(handler),
       );
 
+      const reference = codeCommitReference({ ref: 'refs/heads/main' });
       const record = codeCommitRecord({
         eventSourceARN: eventSourceArn,
         codecommit: { references: [reference] },
@@ -1033,15 +984,14 @@ suite('CodeCommitRouter', () => {
       codeCommitEvent,
       context,
     }) => {
-      const router = createCodeCommitRouter();
       const pushHandler = vi.fn();
       const createHandler = vi.fn();
-      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
-      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
 
       router.push(defineRoute({ filters: {} }).handle(pushHandler));
       router.branchCreated(defineRoute({ filters: {} }).handle(createHandler));
 
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
       const record = codeCommitRecord({
         codecommit: { references: [pushRef, createdRef] },
       });
@@ -1060,10 +1010,8 @@ suite('CodeCommitRouter', () => {
       codeCommitEvent,
       context,
     }) => {
-      const router = createCodeCommitRouter();
       const repoAHandler = vi.fn();
       const repoBHandler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { repositoryNames: ['repo-a'] },
@@ -1101,8 +1049,6 @@ suite('CodeCommitRouter', () => {
       const pushHandler = vi.fn();
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
-
-      const router = createCodeCommitRouter();
       router.push(defineRoute({ filters: {} }).handle(pushHandler));
       router.branchCreated(defineRoute({ filters: {} }).handle(createHandler));
       router.branchDeleted(defineRoute({ filters: {} }).handle(deleteHandler));
@@ -1134,8 +1080,6 @@ suite('CodeCommitRouter', () => {
       const pushHandler = vi.fn();
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
-
-      const router = createCodeCommitRouter();
       router.push(defineRoute({ filters: {} }).handle(pushHandler));
       router.branchCreated(defineRoute({ filters: {} }).handle(createHandler));
       router.branchDeleted(defineRoute({ filters: {} }).handle(deleteHandler));
@@ -1166,8 +1110,6 @@ suite('CodeCommitRouter', () => {
     }) => {
       const mainHandler = vi.fn();
       const catchAllHandler = vi.fn();
-
-      const router = createCodeCommitRouter();
       router.push(defineRoute({ filters: { branches: ['main'] } }).handle(mainHandler));
       router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
 

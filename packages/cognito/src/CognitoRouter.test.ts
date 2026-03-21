@@ -3,6 +3,12 @@ import { test } from '@lambda-event-router/testing';
 import { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 
 suite('CognitoRouter', () => {
+  let router: CognitoRouter;
+
+  beforeEach(() => {
+    router = new CognitoRouter();
+  });
+
   suite('createCognitoRouter', () => {
     test('creates a CognitoRouter instance', () => {
       const router = createCognitoRouter();
@@ -11,12 +17,6 @@ suite('CognitoRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('returns true for a valid Cognito event', () => {
       const event = { triggerSource: 'PreSignUp_SignUp', userPoolId: 'us-east-1_TestPool' };
       expect(router.canHandleEvent(event)).toBe(true);
@@ -95,8 +95,6 @@ suite('CognitoRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CognitoRouter();
-
       const result = router.route({
         handler: vi.fn(),
       });
@@ -106,12 +104,6 @@ suite('CognitoRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     suite('triggerSources filter', () => {
       test('matches when triggerSource is in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
@@ -426,7 +418,6 @@ suite('CognitoRouter', () => {
       test('selects the first matching route', ({ cognitoPreSignUpEvent }) => {
         const firstHandler = vi.fn();
         const secondHandler = vi.fn();
-
         router.route({ handler: firstHandler });
         router.route({ handler: secondHandler });
 
@@ -462,12 +453,6 @@ suite('CognitoRouter', () => {
   });
 
   suite('handleEvent', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('throws "No route matched" with triggerSource when no match', async ({ cognitoPreSignUpEvent, context }) => {
       const event = cognitoPreSignUpEvent();
 
@@ -605,21 +590,20 @@ suite('CognitoRouter', () => {
       const postConfirmationHandler = vi.fn();
       const userMigrationHandler = vi.fn();
 
-      const multiRouter = createCognitoRouter();
-      multiRouter
+      router
         .preSignUp({ handler: preSignUpHandler })
         .postConfirmation({ handler: postConfirmationHandler })
         .userMigration({ handler: userMigrationHandler });
 
       const mockContext = context();
 
-      await multiRouter.handleEvent(cognitoPreSignUpEvent(), mockContext);
+      await router.handleEvent(cognitoPreSignUpEvent(), mockContext);
       expect(preSignUpHandler).toHaveBeenCalledTimes(1);
 
-      await multiRouter.handleEvent(cognitoPostConfirmationEvent(), mockContext);
+      await router.handleEvent(cognitoPostConfirmationEvent(), mockContext);
       expect(postConfirmationHandler).toHaveBeenCalledTimes(1);
 
-      await multiRouter.handleEvent(cognitoUserMigrationEvent(), mockContext);
+      await router.handleEvent(cognitoUserMigrationEvent(), mockContext);
       expect(userMigrationHandler).toHaveBeenCalledTimes(1);
     });
 
@@ -632,35 +616,27 @@ suite('CognitoRouter', () => {
       const defineHandler = vi.fn();
       const createHandler = vi.fn();
       const verifyHandler = vi.fn();
-
-      const challengeRouter = createCognitoRouter();
-      challengeRouter
+      router
         .defineAuthChallenge({ handler: defineHandler })
         .createAuthChallenge({ handler: createHandler })
         .verifyAuthChallengeResponse({ handler: verifyHandler });
 
       const mockContext = context();
 
-      await challengeRouter.handleEvent(cognitoDefineAuthChallengeEvent(), mockContext);
+      await router.handleEvent(cognitoDefineAuthChallengeEvent(), mockContext);
       expect(defineHandler).toHaveBeenCalledTimes(1);
       expect(createHandler).not.toHaveBeenCalled();
       expect(verifyHandler).not.toHaveBeenCalled();
 
-      await challengeRouter.handleEvent(cognitoCreateAuthChallengeEvent(), mockContext);
+      await router.handleEvent(cognitoCreateAuthChallengeEvent(), mockContext);
       expect(createHandler).toHaveBeenCalledTimes(1);
 
-      await challengeRouter.handleEvent(cognitoVerifyAuthChallengeResponseEvent(), mockContext);
+      await router.handleEvent(cognitoVerifyAuthChallengeResponseEvent(), mockContext);
       expect(verifyHandler).toHaveBeenCalledTimes(1);
     });
   });
 
   suite('matchUserAttribute', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('matches an exact string value', () => {
       // @ts-expect-error - testing private method directly
       expect(router.matchUserAttribute('test@example.com', 'test@example.com')).toBe(true);
@@ -701,12 +677,6 @@ suite('CognitoRouter', () => {
   });
 
   suite('validateUserAttributes', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('returns userAttributes unchanged when no schema is provided', () => {
       const userAttributes = { email: 'test@example.com' };
 

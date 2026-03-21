@@ -1,14 +1,14 @@
 import { test } from '@lambda-event-router/testing';
 import { CognitoRouter } from './CognitoRouter.js';
 
+let router: CognitoRouter;
+
+beforeEach(() => {
+  router = new CognitoRouter();
+});
+
 suite('CognitoRouter - trigger methods', () => {
   suite('addTriggerRoute', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('uses definition triggerSources when provided', ({ cognitoPreSignUpEvent }) => {
       router.preSignUp({
         filters: { triggerSources: ['PreSignUp_AdminCreateUser'] },
@@ -44,12 +44,6 @@ suite('CognitoRouter - trigger methods', () => {
   });
 
   suite('chaining', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test.each([
       'preSignUp',
       'preAuthentication',
@@ -102,12 +96,6 @@ suite('CognitoRouter - trigger methods', () => {
   });
 
   suite('convenience methods - default trigger sources', () => {
-    let router: CognitoRouter;
-
-    beforeEach(() => {
-      router = new CognitoRouter();
-    });
-
     test('preSignUp matches all PreSignUp trigger sources', ({ cognitoPreSignUpEvent }) => {
       router.preSignUp({ handler: vi.fn() });
 
@@ -274,7 +262,6 @@ suite('CognitoRouter - trigger methods', () => {
 
   suite('individual trigger source methods - specificity', () => {
     test('preSignUpSignUp matches only PreSignUp_SignUp', ({ cognitoPreSignUpEvent }) => {
-      const router = new CognitoRouter();
       router.preSignUpSignUp({ handler: vi.fn() });
 
       const matchEvent = cognitoPreSignUpEvent();
@@ -288,7 +275,6 @@ suite('CognitoRouter - trigger methods', () => {
     });
 
     test('preSignUpAdminCreateUser matches only PreSignUp_AdminCreateUser', ({ cognitoPreSignUpEvent }) => {
-      const router = new CognitoRouter();
       router.preSignUpAdminCreateUser({ handler: vi.fn() });
 
       const matchEvent = cognitoPreSignUpEvent();
@@ -302,7 +288,6 @@ suite('CognitoRouter - trigger methods', () => {
     });
 
     test('preSignUpExternalProvider matches only PreSignUp_ExternalProvider', ({ cognitoPreSignUpEvent }) => {
-      const router = new CognitoRouter();
       router.preSignUpExternalProvider({ handler: vi.fn() });
 
       const matchEvent = cognitoPreSignUpEvent();
@@ -318,7 +303,6 @@ suite('CognitoRouter - trigger methods', () => {
     test('postConfirmationConfirmSignUp matches only PostConfirmation_ConfirmSignUp', ({
       cognitoPostConfirmationEvent,
     }) => {
-      const router = new CognitoRouter();
       router.postConfirmationConfirmSignUp({ handler: vi.fn() });
 
       const matchEvent = cognitoPostConfirmationEvent();
@@ -332,7 +316,6 @@ suite('CognitoRouter - trigger methods', () => {
     });
 
     test('customMessageSignUp matches only CustomMessage_SignUp', ({ cognitoCustomMessageEvent }) => {
-      const router = new CognitoRouter();
       router.customMessageSignUp({ handler: vi.fn() });
 
       const matchEvent = cognitoCustomMessageEvent();
@@ -346,7 +329,6 @@ suite('CognitoRouter - trigger methods', () => {
     });
 
     test('customEmailSenderSignUp matches only CustomEmailSender_SignUp', ({ cognitoCustomEmailSenderEvent }) => {
-      const router = new CognitoRouter();
       router.customEmailSenderSignUp({ handler: vi.fn() });
 
       const matchEvent = cognitoCustomEmailSenderEvent();
@@ -362,7 +344,6 @@ suite('CognitoRouter - trigger methods', () => {
     test('preTokenGenerationHostedAuth matches only TokenGeneration_HostedAuth', ({
       cognitoPreTokenGenerationEvent,
     }) => {
-      const router = new CognitoRouter();
       router.preTokenGenerationHostedAuth({ handler: vi.fn() });
 
       const matchEvent = cognitoPreTokenGenerationEvent();
@@ -376,7 +357,6 @@ suite('CognitoRouter - trigger methods', () => {
     });
 
     test('userMigrationAuthentication matches only UserMigration_Authentication', ({ cognitoUserMigrationEvent }) => {
-      const router = new CognitoRouter();
       router.userMigrationAuthentication({ handler: vi.fn() });
 
       const matchEvent = cognitoUserMigrationEvent();

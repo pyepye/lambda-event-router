@@ -3,6 +3,12 @@ import { createALBEvent, test } from '@lambda-event-router/testing';
 import { ALBRouter, createALBRouter } from './ALBRouter.js';
 
 suite('ALBRouter', () => {
+  let router: ALBRouter;
+
+  beforeEach(() => {
+    router = new ALBRouter();
+  });
+
   suite('createALBRouter', () => {
     test('creates an ALBRouter instance', () => {
       const router = createALBRouter();
@@ -12,7 +18,6 @@ suite('ALBRouter', () => {
 
   suite('canHandleEvent', () => {
     test('returns true for a valid ALB event', () => {
-      const router = new ALBRouter();
       const event = createALBEvent();
       expect(router.canHandleEvent(event)).toBe(true);
     });
@@ -20,7 +25,6 @@ suite('ALBRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ALBRouter();
       const definition = defineRoute({
         method: 'GET',
         path: '/items',
@@ -40,8 +44,6 @@ suite('ALBRouter', () => {
       { method: 'patch' as const, path: '/items/:id', handler: async () => Ok({ patched: true }) },
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
-      const router = new ALBRouter();
-
       // @ts-expect-error - calling union of method signatures
       const result = router[method]({ path, handler });
 
@@ -51,7 +53,6 @@ suite('ALBRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler and returns a response with statusCode and body', async ({ albHandlerEvent }) => {
-      const router = new ALBRouter();
       router.get({
         path: '/',
         handler: async () => Ok({ message: 'hello' }),
@@ -69,7 +70,6 @@ suite('ALBRouter', () => {
     });
 
     test('returns 404 when no route matches', async ({ albHandlerEvent }) => {
-      const router = new ALBRouter();
       router.get({ path: '/items', handler: async () => Ok({}) });
 
       const { event, context } = albHandlerEvent({ event: { path: '/unknown' } });
@@ -84,7 +84,6 @@ suite('ALBRouter', () => {
     });
 
     test('catches a generic Error and returns 500 with the error message', async ({ albHandlerEvent }) => {
-      const router = new ALBRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -104,7 +103,6 @@ suite('ALBRouter', () => {
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ albHandlerEvent }) => {
-      const router = new ALBRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -128,12 +126,9 @@ suite('ALBRouter', () => {
     }) => {
       const handler = vi.fn();
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
-      const router = new ALBRouter();
       router.post({ path: '/', handler, bodySchema });
 
-      const { event, context } = albHandlerEvent({
-        event: { httpMethod: 'POST', body: { bad: 'data' } },
-      });
+      const { event, context } = albHandlerEvent({ event: { httpMethod: 'POST', body: { bad: 'data' } } });
       const result = await router.handleEvent(event, context);
 
       expect(result).toEqual(
@@ -146,7 +141,6 @@ suite('ALBRouter', () => {
 
     test('passes extracted path params to the handler', async ({ albHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      const router = new ALBRouter();
       router.get({ path: '/items/:id', handler });
 
       const { event, context } = albHandlerEvent({ event: { path: '/items/42' } });
@@ -158,7 +152,6 @@ suite('ALBRouter', () => {
 
     test('passes query params to the handler', async ({ albHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      const router = new ALBRouter();
       router.get({ path: '/items', handler });
 
       const { event, context } = albHandlerEvent({
@@ -172,7 +165,6 @@ suite('ALBRouter', () => {
 
     test('passes parsed body to the handler', async ({ albHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      const router = new ALBRouter();
       router.post({ path: '/items', handler });
 
       const { event, context } = albHandlerEvent({

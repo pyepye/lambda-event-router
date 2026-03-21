@@ -2,6 +2,12 @@ import { createSESEvent, test } from '@lambda-event-router/testing';
 import { createSESRouter, defineRoute, SESRouter } from './SESRouter.js';
 
 suite('SESRouter', () => {
+  let router: SESRouter;
+
+  beforeEach(() => {
+    router = new SESRouter();
+  });
+
   suite('createSESRouter', () => {
     test('creates an SESRouter instance', () => {
       const router = createSESRouter();
@@ -10,12 +16,6 @@ suite('SESRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: SESRouter;
-
-    beforeEach(() => {
-      router = new SESRouter();
-    });
-
     test('returns true for a valid SES event', () => {
       const event = createSESEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -72,7 +72,6 @@ suite('SESRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new SESRouter();
       const definition = defineRoute({
         filters: { recipients: ['user@example.com'] },
       }).handle(async () => {});
@@ -84,12 +83,6 @@ suite('SESRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: SESRouter;
-
-    beforeEach(() => {
-      router = createSESRouter();
-    });
-
     test('matches route by recipients', ({ sesRecord }) => {
       router.route(
         defineRoute({
@@ -525,7 +518,6 @@ suite('SESRouter', () => {
 
   suite('buildRequest', () => {
     test('builds request with all expected properties', ({ sesRecord, context }) => {
-      const router = createSESRouter();
       const record = sesRecord();
       const { mail, receipt } = record.ses;
       const mockContext = context();
@@ -545,7 +537,6 @@ suite('SESRouter', () => {
     });
 
     test('sets subject to undefined when commonHeaders.subject is undefined', ({ sesRecord, context }) => {
-      const router = createSESRouter();
       const record = sesRecord({ ses: { mail: { commonHeaders: { subject: undefined } } } });
       const { mail, receipt } = record.ses;
       const mockContext = context();
@@ -559,7 +550,6 @@ suite('SESRouter', () => {
 
   suite('handleEvent', () => {
     test('calls matched handler with correct SESRequest shape', async ({ sesRecord, sesHandlerEvent }) => {
-      const router = createSESRouter();
       const handler = vi.fn();
       router.route(
         defineRoute({
@@ -585,7 +575,6 @@ suite('SESRouter', () => {
     });
 
     test('returns undefined', async ({ sesHandlerEvent }) => {
-      const router = createSESRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -599,14 +588,11 @@ suite('SESRouter', () => {
     });
 
     test('throws when no route matches', async ({ sesHandlerEvent }) => {
-      const router = createSESRouter();
-
       const { event, context } = sesHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('throws with messageId in error message', async ({ sesRecord, sesHandlerEvent }) => {
-      const router = createSESRouter();
       const record = sesRecord();
 
       const { event, context } = sesHandlerEvent({ records: [record] });
@@ -614,7 +600,6 @@ suite('SESRouter', () => {
     });
 
     test('propagates handler error', async ({ sesHandlerEvent }) => {
-      const router = createSESRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -628,7 +613,6 @@ suite('SESRouter', () => {
     });
 
     test('processes records in parallel', async ({ sesRecord, sesEvent, context }) => {
-      const router = createSESRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -662,7 +646,6 @@ suite('SESRouter', () => {
       const internalHandler = vi.fn();
       const externalHandler = vi.fn();
 
-      const router = createSESRouter();
       router.route(
         defineRoute({
           filters: { senderDomains: ['internal.com'] },

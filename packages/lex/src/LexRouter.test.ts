@@ -2,6 +2,12 @@ import { createLexEvent, test } from '@lambda-event-router/testing';
 import { createLexRouter, defineRoute, LexRouter } from './LexRouter.js';
 import type { LexFilterInput } from './types.js';
 
+let router: LexRouter;
+
+beforeEach(() => {
+  router = new LexRouter();
+});
+
 suite('createLexRouter', () => {
   test('returns an LexRouter instance', () => {
     const router = createLexRouter();
@@ -11,8 +17,6 @@ suite('createLexRouter', () => {
 });
 
 suite('canHandleEvent', () => {
-  const router = createLexRouter();
-
   test('returns true for a valid LexV2Event', ({ lexEvent }) => {
     const event = lexEvent();
 
@@ -101,7 +105,6 @@ suite('defineRoute', () => {
   test('preserves all filter configuration', () => {
     const handler = vi.fn();
     const customFilter = vi.fn();
-
     const definition = defineRoute({
       filters: {
         intentNames: ['OrderPizza'],
@@ -124,7 +127,6 @@ suite('defineRoute', () => {
 
 suite('route', () => {
   test('route, dialogCodeHook and fulfillmentCodeHook return this for chaining', () => {
-    const router = createLexRouter();
     const handler = vi.fn();
 
     const routeResult = router.route({ filters: { intentNames: ['OrderPizza'] }, handler });
@@ -139,11 +141,10 @@ suite('route', () => {
 
 suite('matchRoute', () => {
   test('matches when intentName is in the intentNames filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { intentNames: ['CheckBalance'] }, handler });
-    const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
 
+    const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -152,10 +153,9 @@ suite('matchRoute', () => {
   });
 
   test('does not match when intentName is not in the intentNames filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { intentNames: ['OrderDrink'] }, handler: vi.fn() });
-    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
 
+    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -163,11 +163,10 @@ suite('matchRoute', () => {
   });
 
   test('matches when invocationSource is in the invocationSources filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { invocationSources: ['FulfillmentCodeHook'] }, handler });
-    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -176,10 +175,9 @@ suite('matchRoute', () => {
   });
 
   test('does not match when invocationSource is not in the invocationSources filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { invocationSources: ['FulfillmentCodeHook'] }, handler: vi.fn() });
-    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -187,11 +185,10 @@ suite('matchRoute', () => {
   });
 
   test('matches when botId is in the botIds filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { botIds: ['MYBOTID'] }, handler });
-    const event = lexEvent({ bot: { id: 'MYBOTID' } });
 
+    const event = lexEvent({ bot: { id: 'MYBOTID' } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -200,10 +197,9 @@ suite('matchRoute', () => {
   });
 
   test('does not match when botId is not in the botIds filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { botIds: ['OTHERBOTID'] }, handler: vi.fn() });
-    const event = lexEvent({ bot: { id: 'TESTBOTID' } });
 
+    const event = lexEvent({ bot: { id: 'TESTBOTID' } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -211,11 +207,10 @@ suite('matchRoute', () => {
   });
 
   test('matches when inputMode is in the inputModes filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { inputModes: ['Speech'] }, handler });
-    const event = lexEvent({ inputMode: 'Speech' });
 
+    const event = lexEvent({ inputMode: 'Speech' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -224,10 +219,9 @@ suite('matchRoute', () => {
   });
 
   test('does not match when inputMode is not in the inputModes filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { inputModes: ['Speech'] }, handler: vi.fn() });
-    const event = lexEvent({ inputMode: 'Text' });
 
+    const event = lexEvent({ inputMode: 'Text' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -235,11 +229,10 @@ suite('matchRoute', () => {
   });
 
   test('matches when a single filter has multiple allowed values', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { intentNames: ['OrderPizza', 'OrderDrink'] }, handler });
-    const event = lexEvent({ sessionState: { intent: { name: 'OrderDrink' } } });
 
+    const event = lexEvent({ sessionState: { intent: { name: 'OrderDrink' } } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -248,7 +241,6 @@ suite('matchRoute', () => {
   });
 
   test('matches when all combined filters match', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({
       filters: {
@@ -259,13 +251,13 @@ suite('matchRoute', () => {
       },
       handler,
     });
+
     const event = lexEvent({
       sessionState: { intent: { name: 'OrderPizza' } },
       invocationSource: 'DialogCodeHook',
       bot: { id: 'TESTBOTID' },
       inputMode: 'Text',
     });
-
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -274,16 +266,15 @@ suite('matchRoute', () => {
   });
 
   test('does not match when combined filters partially match', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({
       filters: { intentNames: ['OrderPizza'], invocationSources: ['FulfillmentCodeHook'] },
       handler: vi.fn(),
     });
+
     const event = lexEvent({
       sessionState: { intent: { name: 'OrderPizza' } },
       invocationSource: 'DialogCodeHook',
     });
-
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -291,11 +282,10 @@ suite('matchRoute', () => {
   });
 
   test('matches when custom filter returns true', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: { customFilter: () => true }, handler });
-    const event = lexEvent();
 
+    const event = lexEvent();
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -304,10 +294,9 @@ suite('matchRoute', () => {
   });
 
   test('does not match when custom filter returns false', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
-    const event = lexEvent();
 
+    const event = lexEvent();
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -315,16 +304,15 @@ suite('matchRoute', () => {
   });
 
   test('custom filter receives correct input', ({ lexEvent }) => {
-    const router = createLexRouter();
     const customFilter = vi.fn().mockReturnValue(true);
     router.route({ filters: { customFilter }, handler: vi.fn() });
+
     const event = lexEvent({
       sessionState: { intent: { name: 'OrderPizza' } },
       invocationSource: 'FulfillmentCodeHook',
       inputMode: 'Speech',
       bot: { id: 'MYBOTID' },
     });
-
     // @ts-expect-error - testing private method
     router.matchRoute(event);
 
@@ -338,14 +326,13 @@ suite('matchRoute', () => {
   });
 
   test('custom filter is checked after other filters', ({ lexEvent }) => {
-    const router = createLexRouter();
     const customFilter = vi.fn().mockReturnValue(true);
     router.route({
       filters: { intentNames: ['OrderDrink'], customFilter },
       handler: vi.fn(),
     });
-    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
 
+    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
     router.matchRoute(event);
 
@@ -353,11 +340,10 @@ suite('matchRoute', () => {
   });
 
   test('matches any event when filters are empty (catch-all)', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.route({ filters: {}, handler });
-    const event = lexEvent();
 
+    const event = lexEvent();
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -366,13 +352,12 @@ suite('matchRoute', () => {
   });
 
   test('first match wins when multiple routes match', ({ lexEvent }) => {
-    const router = createLexRouter();
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
     router.route({ filters: { intentNames: ['OrderPizza'] }, handler: firstHandler });
     router.route({ filters: { intentNames: ['OrderPizza'] }, handler: secondHandler });
-    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
 
+    const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -382,11 +367,10 @@ suite('matchRoute', () => {
 
 suite('convenience methods', () => {
   test('dialogCodeHook sets the DialogCodeHook invocationSource filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.dialogCodeHook({ filters: {}, handler });
-    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -394,10 +378,9 @@ suite('convenience methods', () => {
   });
 
   test('dialogCodeHook does not match FulfillmentCodeHook events', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.dialogCodeHook({ filters: {}, handler: vi.fn() });
-    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -405,14 +388,13 @@ suite('convenience methods', () => {
   });
 
   test('dialogCodeHook preserves additional filters', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.dialogCodeHook({ filters: { intentNames: ['OrderPizza'] }, handler });
+
     const event = lexEvent({
       invocationSource: 'DialogCodeHook',
       sessionState: { intent: { name: 'OrderPizza' } },
     });
-
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -421,11 +403,10 @@ suite('convenience methods', () => {
   });
 
   test('fulfillmentCodeHook sets the FulfillmentCodeHook invocationSource filter', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.fulfillmentCodeHook({ filters: {}, handler });
-    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -433,10 +414,9 @@ suite('convenience methods', () => {
   });
 
   test('fulfillmentCodeHook does not match DialogCodeHook events', ({ lexEvent }) => {
-    const router = createLexRouter();
     router.fulfillmentCodeHook({ filters: {}, handler: vi.fn() });
-    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
 
+    const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -444,15 +424,14 @@ suite('convenience methods', () => {
   });
 
   test('fulfillmentCodeHook preserves additional filters', ({ lexEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn();
     router.fulfillmentCodeHook({ filters: { intentNames: ['OrderPizza'], botIds: ['TESTBOTID'] }, handler });
+
     const event = lexEvent({
       invocationSource: 'FulfillmentCodeHook',
       sessionState: { intent: { name: 'OrderPizza' } },
       bot: { id: 'TESTBOTID' },
     });
-
     // @ts-expect-error - testing private method
     const result = router.matchRoute(event);
 
@@ -463,7 +442,6 @@ suite('convenience methods', () => {
 
 suite('handleEvent', () => {
   test('matched route handler receives correct LexRequest', async ({ lexHandlerEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn().mockResolvedValue({
       sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'OrderPizza', state: 'Fulfilled' } },
     });
@@ -485,11 +463,11 @@ suite('handleEvent', () => {
   });
 
   test('passes sessionAttributes from the event when present', async ({ lexHandlerEvent }) => {
-    const router = createLexRouter();
     const handler = vi.fn().mockResolvedValue({
       sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'OrderPizza', state: 'Fulfilled' } },
     });
     router.route({ filters: {}, handler });
+
     const sessionAttributes = { userId: 'user-123', locale: 'en_US' };
     const { event, context } = lexHandlerEvent({
       event: { sessionState: { sessionAttributes } },
@@ -501,7 +479,6 @@ suite('handleEvent', () => {
   });
 
   test('returns the handler result', async ({ lexHandlerEvent }) => {
-    const router = createLexRouter();
     const expectedResult = {
       sessionState: {
         dialogAction: { type: 'Close' as const },
@@ -509,6 +486,7 @@ suite('handleEvent', () => {
       },
     };
     router.route({ filters: {}, handler: vi.fn().mockResolvedValue(expectedResult) });
+
     const { event, context } = lexHandlerEvent();
 
     const result = await router.handleEvent(event, context);
@@ -517,8 +495,8 @@ suite('handleEvent', () => {
   });
 
   test('throws when no route matches', async ({ lexHandlerEvent }) => {
-    const router = createLexRouter();
     router.route({ filters: { intentNames: ['OrderDrink'] }, handler: vi.fn() });
+
     const { event, context } = lexHandlerEvent({
       event: {
         sessionState: { intent: { name: 'OrderPizza' } },
@@ -532,9 +510,9 @@ suite('handleEvent', () => {
   });
 
   test('handler error propagates', async ({ lexHandlerEvent }) => {
-    const router = createLexRouter();
     const handlerError = new Error('handler failed');
     router.route({ filters: {}, handler: vi.fn().mockRejectedValue(handlerError) });
+
     const { event, context } = lexHandlerEvent();
 
     await expect(router.handleEvent(event, context)).rejects.toThrow('handler failed');
@@ -543,7 +521,6 @@ suite('handleEvent', () => {
 
 suite('full integration', () => {
   test('dispatches to the correct handler based on invocationSource and intentName', async ({ context }) => {
-    const router = createLexRouter();
     const dialogHandler = vi.fn().mockResolvedValue({
       sessionState: { dialogAction: { type: 'Delegate' }, intent: { name: 'OrderPizza', state: 'InProgress' } },
     });
@@ -581,7 +558,6 @@ suite('full integration', () => {
   });
 
   test('falls through to catch-all when no specific route matches', async ({ context }) => {
-    const router = createLexRouter();
     const specificHandler = vi.fn();
     const catchAllHandler = vi.fn().mockResolvedValue({
       sessionState: { dialogAction: { type: 'ElicitIntent' } },
@@ -612,8 +588,7 @@ suite('full integration', () => {
     const fulfillmentHandler = vi.fn().mockResolvedValue({
       sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'OrderPizza', state: 'Fulfilled' } },
     });
-
-    const router = createLexRouter()
+    router
       .dialogCodeHook({ filters: { intentNames: ['OrderPizza'] }, handler: dialogHandler })
       .fulfillmentCodeHook({ filters: { intentNames: ['OrderPizza'] }, handler: fulfillmentHandler })
       .route({ filters: {}, handler: vi.fn() });

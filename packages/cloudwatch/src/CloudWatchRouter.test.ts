@@ -3,6 +3,12 @@ import type { CloudWatchLogsDecodedData } from 'aws-lambda';
 import { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchRouter.js';
 
 suite('CloudWatchLogsRouter', () => {
+  let router: CloudWatchLogsRouter;
+
+  beforeEach(() => {
+    router = new CloudWatchLogsRouter();
+  });
+
   suite('createCloudWatchLogsRouter', () => {
     test('creates a CloudWatchLogsRouter instance', () => {
       const router = createCloudWatchLogsRouter();
@@ -11,12 +17,6 @@ suite('CloudWatchLogsRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: CloudWatchLogsRouter;
-
-    beforeEach(() => {
-      router = new CloudWatchLogsRouter();
-    });
-
     test('returns true for a valid CloudWatch Logs event', () => {
       const event = createCloudWatchLogsEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -69,7 +69,6 @@ suite('CloudWatchLogsRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CloudWatchLogsRouter();
       const definition = defineRoute({
         filters: { logGroups: ['/aws/lambda/my-function'] },
       }).handle(async () => {});
@@ -82,8 +81,6 @@ suite('CloudWatchLogsRouter', () => {
 
   suite('dataMessage', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CloudWatchLogsRouter();
-
       const result = router.dataMessage({
         filters: {},
         handler: async () => {},
@@ -93,9 +90,7 @@ suite('CloudWatchLogsRouter', () => {
     });
 
     test('forces messageTypes to DATA_MESSAGE in filters', () => {
-      const router = new CloudWatchLogsRouter();
       const handler = vi.fn();
-
       router.dataMessage({ filters: { logGroups: ['/aws/lambda/my-function'] }, handler });
 
       const decodedData: CloudWatchLogsDecodedData = {
@@ -122,8 +117,6 @@ suite('CloudWatchLogsRouter', () => {
 
   suite('controlMessage', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CloudWatchLogsRouter();
-
       const result = router.controlMessage({
         filters: {},
         handler: async () => {},
@@ -133,7 +126,6 @@ suite('CloudWatchLogsRouter', () => {
     });
 
     test('forces messageTypes to CONTROL_MESSAGE in filters', () => {
-      const router = new CloudWatchLogsRouter();
       const handler = vi.fn();
 
       router.controlMessage({ filters: { logGroups: ['/aws/lambda/my-function'] }, handler });
@@ -162,7 +154,6 @@ suite('CloudWatchLogsRouter', () => {
 
   suite('decodeLogData', () => {
     test('decodes base64 + gzip compressed log data', () => {
-      const router = new CloudWatchLogsRouter();
       const event = createCloudWatchLogsEvent({
         owner: '111222333444',
         logGroup: '/aws/lambda/test-func',
@@ -176,7 +167,6 @@ suite('CloudWatchLogsRouter', () => {
     });
 
     test('returns parsed CloudWatchLogsDecodedData', () => {
-      const router = new CloudWatchLogsRouter();
       const event = createCloudWatchLogsEvent();
 
       // @ts-expect-error - testing private method directly
@@ -192,12 +182,6 @@ suite('CloudWatchLogsRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: CloudWatchLogsRouter;
-
-    beforeEach(() => {
-      router = createCloudWatchLogsRouter();
-    });
-
     test('matches route by messageTypes', () => {
       router.route(
         defineRoute({
@@ -520,7 +504,6 @@ suite('CloudWatchLogsRouter', () => {
     test('selects first matching route when multiple match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { logGroups: ['/aws/lambda/my-function'] },
@@ -600,7 +583,6 @@ suite('CloudWatchLogsRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with decoded data and context', async ({ cloudWatchLogsHandlerEvent }) => {
-      const router = new CloudWatchLogsRouter();
       const handler = vi.fn();
       router.route(
         defineRoute({
@@ -615,14 +597,11 @@ suite('CloudWatchLogsRouter', () => {
     });
 
     test('throws when no route matches', async ({ cloudWatchLogsHandlerEvent }) => {
-      const router = createCloudWatchLogsRouter();
-
       const { event, context } = cloudWatchLogsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler errors', async ({ cloudWatchLogsHandlerEvent }) => {
-      const router = createCloudWatchLogsRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -634,7 +613,6 @@ suite('CloudWatchLogsRouter', () => {
     });
 
     test('verifies the request shape', async ({ context }) => {
-      const router = new CloudWatchLogsRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -674,7 +652,6 @@ suite('CloudWatchLogsRouter', () => {
       const lambdaHandler = vi.fn();
       const ecsHandler = vi.fn();
 
-      const router = createCloudWatchLogsRouter();
       router.route(
         defineRoute({
           filters: { logGroupPrefixes: ['/aws/lambda/'] },

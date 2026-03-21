@@ -32,9 +32,12 @@ function getSentCommand(callIndex: number = 0): { input: unknown } {
 }
 
 suite('CodePipelineRouter', () => {
+  let router: CodePipelineRouter;
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockSend.mockResolvedValue({});
+    router = new CodePipelineRouter();
   });
 
   suite('createCodePipelineRouter', () => {
@@ -60,12 +63,6 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: CodePipelineRouter;
-
-    beforeEach(() => {
-      router = new CodePipelineRouter();
-    });
-
     test('returns true for a valid CodePipeline event', () => {
       const event = createCodePipelineEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -137,7 +134,6 @@ suite('CodePipelineRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodePipelineRouter();
       const definition = defineRoute({
         filters: { functionNames: ['my-function'] },
       }).handle(async () => undefined);
@@ -150,8 +146,6 @@ suite('CodePipelineRouter', () => {
 
   suite('continuation', () => {
     test('returns the router instance for chaining', () => {
-      const router = new CodePipelineRouter();
-
       const result = router.continuation({
         filters: {},
         handler: async () => undefined,
@@ -161,7 +155,6 @@ suite('CodePipelineRouter', () => {
     });
 
     test('sets hasContinuationToken to true in filters', () => {
-      const router = new CodePipelineRouter();
       const handler = vi.fn();
 
       router.continuation({
@@ -192,12 +185,6 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: CodePipelineRouter;
-
-    beforeEach(() => {
-      router = createCodePipelineRouter();
-    });
-
     test('matches when no filters are set', () => {
       router.route(defineRoute({ filters: {} }).handle(async () => undefined));
 
@@ -367,7 +354,6 @@ suite('CodePipelineRouter', () => {
       const customFilter = (input: CodePipelineFilterInput): boolean => {
         return input.functionName.startsWith('my-');
       };
-
       router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
 
       const filterInput: CodePipelineFilterInput = {
@@ -384,7 +370,6 @@ suite('CodePipelineRouter', () => {
 
     test('rejects when customFilter returns false', () => {
       const customFilter = (): boolean => false;
-
       router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
 
       const filterInput: CodePipelineFilterInput = {
@@ -436,7 +421,6 @@ suite('CodePipelineRouter', () => {
     test('returns first matching route', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
@@ -456,12 +440,6 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('parseUserParameters', () => {
-    let router: CodePipelineRouter;
-
-    beforeEach(() => {
-      router = createCodePipelineRouter();
-    });
-
     test('parses valid JSON object', () => {
       // @ts-expect-error - testing private method directly
       const result = router.parseUserParameters('{"key":"value"}');
@@ -494,12 +472,6 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('validateUserParameters', () => {
-    let router: CodePipelineRouter;
-
-    beforeEach(() => {
-      router = createCodePipelineRouter();
-    });
-
     test('returns params unchanged when no schema', () => {
       const params = { key: 'value' };
       // @ts-expect-error - testing private method directly
@@ -532,9 +504,7 @@ suite('CodePipelineRouter', () => {
 
   suite('handleEvent', () => {
     test('calls matched handler with correct CodePipelineJobRequest fields', async ({ context }) => {
-      const router = createCodePipelineRouter();
       const handler = vi.fn().mockResolvedValue(undefined);
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = createCodePipelineEvent({ functionName: 'my-func', userParameters: '{"env":"prod"}' });
@@ -559,8 +529,6 @@ suite('CodePipelineRouter', () => {
     });
 
     test('reports success via PutJobSuccessResultCommand', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-
       router.route(
         defineRoute({ filters: {} }).handle(async () => ({
           outputVariables: { buildId: '123' },
@@ -580,8 +548,6 @@ suite('CodePipelineRouter', () => {
     });
 
     test('reports success with outputVariables and continuationToken', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-
       router.route(
         defineRoute({ filters: {} }).handle(async () => ({
           outputVariables: { status: 'ok' },
@@ -601,8 +567,6 @@ suite('CodePipelineRouter', () => {
     });
 
     test('reports success with just jobId when handler returns undefined', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-
       router.route(defineRoute({ filters: {} }).handle(async () => undefined));
 
       const { event, context } = codePipelineHandlerEvent({ event: { id: 'test-job-id' } });
@@ -613,9 +577,7 @@ suite('CodePipelineRouter', () => {
     });
 
     test('reports failure and re-throws when handler throws Error', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
       const handlerError = new Error('handler failed');
-
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw handlerError;
@@ -636,8 +598,6 @@ suite('CodePipelineRouter', () => {
     });
 
     test('reports failure and re-throws when handler throws non-Error', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw 'string-error';
@@ -658,19 +618,14 @@ suite('CodePipelineRouter', () => {
     });
 
     test('throws when no route matches', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-
       const { event, context } = codePipelineHandlerEvent({ event: { id: 'test-job-id' } });
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('swallows reportFailure errors and re-throws original', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
-      const originalError = new Error('original error');
-
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
-          throw originalError;
+          throw new Error('original error');
         }),
       );
 
@@ -681,13 +636,11 @@ suite('CodePipelineRouter', () => {
     });
 
     test('validates userParameters against schema', async ({ context }) => {
-      const router = createCodePipelineRouter();
       const validatedData = { env: 'staging' };
       const schema = {
         safeParse: vi.fn().mockReturnValue({ success: true, data: validatedData }),
       };
       const handler = vi.fn().mockResolvedValue(undefined);
-
       router.route(defineRoute({ filters: {}, userParametersSchema: schema }).handle(handler));
 
       const event = createCodePipelineEvent({ userParameters: '{"env":"staging"}' });
@@ -699,11 +652,9 @@ suite('CodePipelineRouter', () => {
     });
 
     test('throws when schema validation fails', async ({ codePipelineHandlerEvent }) => {
-      const router = createCodePipelineRouter();
       const schema = {
         safeParse: vi.fn().mockReturnValue({ success: false }),
       };
-
       router.route(defineRoute({ filters: {}, userParametersSchema: schema }).handle(async () => undefined));
 
       const { event, context } = codePipelineHandlerEvent({ event: { id: 'test-job-id' } });
@@ -711,9 +662,7 @@ suite('CodePipelineRouter', () => {
     });
 
     test('handles JSON userParameters', async ({ context }) => {
-      const router = createCodePipelineRouter();
       const handler = vi.fn().mockResolvedValue(undefined);
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = createCodePipelineEvent({ userParameters: '{"action":"deploy"}' });
@@ -724,9 +673,7 @@ suite('CodePipelineRouter', () => {
     });
 
     test('handles non-JSON userParameters', async ({ context }) => {
-      const router = createCodePipelineRouter();
       const handler = vi.fn().mockResolvedValue(undefined);
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = createCodePipelineEvent({ userParameters: 'plain-string' });
@@ -737,9 +684,7 @@ suite('CodePipelineRouter', () => {
     });
 
     test('passes continuationToken from event to handler request', async ({ context }) => {
-      const router = createCodePipelineRouter();
       const handler = vi.fn().mockResolvedValue(undefined);
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = createCodePipelineEvent({ continuationToken: 'my-token' });

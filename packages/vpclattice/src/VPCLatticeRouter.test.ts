@@ -3,6 +3,12 @@ import { createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 import { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
 
 suite('VPCLatticeRouter', () => {
+  let router: VPCLatticeRouter;
+
+  beforeEach(() => {
+    router = new VPCLatticeRouter();
+  });
+
   suite('createVPCLatticeRouter', () => {
     test('creates a VPCLatticeRouter instance', () => {
       const router = createVPCLatticeRouter();
@@ -11,12 +17,6 @@ suite('VPCLatticeRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: VPCLatticeRouter;
-
-    beforeEach(() => {
-      router = new VPCLatticeRouter();
-    });
-
     test('returns true for a valid VPC Lattice V2 event', () => {
       const event = createVPCLatticeV2Event();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -38,7 +38,6 @@ suite('VPCLatticeRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new VPCLatticeRouter();
       const definition = defineRoute({
         method: 'GET',
         path: '/items',
@@ -58,8 +57,6 @@ suite('VPCLatticeRouter', () => {
       { method: 'patch' as const, path: '/items/:id', handler: async () => Ok({ patched: true }) },
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
-      const router = new VPCLatticeRouter();
-
       // @ts-expect-error - calling union of method signatures
       const result = router[method]({ path, handler });
 
@@ -71,7 +68,6 @@ suite('VPCLatticeRouter', () => {
     test('calls the matched handler and returns a response with statusCode and body', async ({
       vpcLatticeV2HandlerEvent,
     }) => {
-      const router = new VPCLatticeRouter();
       router.get({
         path: '/',
         handler: async () => Ok({ message: 'hello' }),
@@ -89,7 +85,6 @@ suite('VPCLatticeRouter', () => {
     });
 
     test('returns 404 when no route matches', async ({ vpcLatticeV2HandlerEvent }) => {
-      const router = new VPCLatticeRouter();
       router.get({ path: '/items', handler: async () => Ok({}) });
 
       const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/unknown' } });
@@ -104,7 +99,6 @@ suite('VPCLatticeRouter', () => {
     });
 
     test('catches a generic Error and returns 500 with the error message', async ({ vpcLatticeV2HandlerEvent }) => {
-      const router = new VPCLatticeRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -124,7 +118,6 @@ suite('VPCLatticeRouter', () => {
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ vpcLatticeV2HandlerEvent }) => {
-      const router = new VPCLatticeRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -148,7 +141,6 @@ suite('VPCLatticeRouter', () => {
     }) => {
       const handler = vi.fn();
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
-      const router = new VPCLatticeRouter();
       router.post({ path: '/', handler, bodySchema });
 
       const { event, context } = vpcLatticeV2HandlerEvent({
@@ -166,7 +158,6 @@ suite('VPCLatticeRouter', () => {
 
     test('passes extracted path params to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      const router = new VPCLatticeRouter();
       router.get({ path: '/items/:id', handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/items/42' } });
@@ -178,7 +169,6 @@ suite('VPCLatticeRouter', () => {
 
     test('passes query params to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      const router = new VPCLatticeRouter();
       router.get({ path: '/items', handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({
@@ -192,7 +182,6 @@ suite('VPCLatticeRouter', () => {
 
     test('passes parsed body to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      const router = new VPCLatticeRouter();
       router.post({ path: '/items', handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({

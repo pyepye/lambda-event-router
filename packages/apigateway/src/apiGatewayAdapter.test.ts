@@ -24,10 +24,7 @@ suite('apiGatewayAdapter', () => {
 
   suite('normalize', () => {
     test('delegates to V2 adapter for V2 events', () => {
-      const event = createApiGatewayV2Event({
-        rawPath: '/v2-path',
-        requestContext: { http: { method: 'GET' } },
-      });
+      const event = createApiGatewayV2Event({ rawPath: '/v2-path', requestContext: { http: { method: 'GET' } } });
 
       const normalized = apiGatewayAdapter.normalize(event);
 
@@ -36,10 +33,7 @@ suite('apiGatewayAdapter', () => {
     });
 
     test('delegates to V1 adapter for V1 events', () => {
-      const event = createApiGatewayV1Event({
-        path: '/v1-path',
-        httpMethod: 'POST',
-      });
+      const event = createApiGatewayV1Event({ path: '/v1-path', httpMethod: 'POST' });
 
       const normalized = apiGatewayAdapter.normalize(event);
 

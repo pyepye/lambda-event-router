@@ -4,6 +4,12 @@ import { createRabbitMQRouter, defineRabbitMQRoute, RabbitMQRouter } from './Rab
 import type { RabbitMQFilterInput, RabbitMQRequest } from './rabbitMQTypes.js';
 
 suite('RabbitMQRouter', () => {
+  let router: RabbitMQRouter;
+
+  beforeEach(() => {
+    router = new RabbitMQRouter();
+  });
+
   suite('createRabbitMQRouter', () => {
     test('creates a RabbitMQRouter instance', () => {
       const router = createRabbitMQRouter();
@@ -46,12 +52,6 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: RabbitMQRouter;
-
-    beforeEach(() => {
-      router = new RabbitMQRouter();
-    });
-
     test('returns true for a valid RabbitMQ event', () => {
       const event = createRabbitMQEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -77,7 +77,6 @@ suite('RabbitMQRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new RabbitMQRouter();
       const definition = defineRabbitMQRoute({
         filters: {},
       }).handle(async () => {});
@@ -89,12 +88,6 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: RabbitMQRouter;
-
-    beforeEach(() => {
-      router = createRabbitMQRouter();
-    });
-
     test('matches route by eventSourceArns', ({ rabbitMQMessage }) => {
       const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
       router.route(
@@ -303,12 +296,6 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('parseJsonBody', () => {
-    let router: RabbitMQRouter;
-
-    beforeEach(() => {
-      router = new RabbitMQRouter();
-    });
-
     test('parses valid JSON string into an object', () => {
       // @ts-expect-error - testing private method directly
       const result = router.parseJsonBody('{"action":"process"}');
@@ -325,12 +312,6 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('validateBody', () => {
-    let router: RabbitMQRouter;
-
-    beforeEach(() => {
-      router = new RabbitMQRouter();
-    });
-
     test('returns pre-parsed body when no schema', () => {
       const body = { action: 'process' };
 
@@ -359,9 +340,7 @@ suite('RabbitMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not-json', schema)).toThrow(
-        'Body validation failed',
-      );
+      expect(() => router.validateBody('not-json', schema)).toThrow('Body validation failed');
     });
 
     test('throws on schema validation failure', () => {
@@ -370,9 +349,7 @@ suite('RabbitMQRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({ valid: 'json' }, schema)).toThrow(
-        'Body validation failed',
-      );
+      expect(() => router.validateBody({ valid: 'json' }, schema)).toThrow('Body validation failed');
     });
   });
 
@@ -381,7 +358,6 @@ suite('RabbitMQRouter', () => {
       rabbitMQMessage,
       rabbitMQHandlerEvent,
     }) => {
-      const router = createRabbitMQRouter();
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -401,7 +377,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('decodes base64 message data', async ({ rabbitMQMessage, context }) => {
-      const router = createRabbitMQRouter();
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -422,7 +397,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('parses queue name from queueName::virtualHost format', async ({ rabbitMQMessage, context }) => {
-      const router = createRabbitMQRouter();
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -436,7 +410,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('uses full key as queue name when no :: separator', async ({ rabbitMQMessage, context }) => {
-      const router = createRabbitMQRouter();
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -450,14 +423,11 @@ suite('RabbitMQRouter', () => {
     });
 
     test('throws when no route matches', async ({ rabbitMQHandlerEvent }) => {
-      const router = createRabbitMQRouter();
-
       const { event, context } = rabbitMQHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler errors', async ({ rabbitMQHandlerEvent }) => {
-      const router = createRabbitMQRouter();
       router.route(
         defineRabbitMQRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -469,7 +439,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('returns undefined on success', async ({ rabbitMQHandlerEvent }) => {
-      const router = createRabbitMQRouter();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(async () => {}));
 
       const { event, context } = rabbitMQHandlerEvent();
@@ -479,7 +448,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('processes messages sequentially across queues', async ({ rabbitMQMessage, context }) => {
-      const router = createRabbitMQRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -501,7 +469,6 @@ suite('RabbitMQRouter', () => {
     });
 
     test('processes messages from multiple queues', async ({ rabbitMQMessage, context }) => {
-      const router = createRabbitMQRouter();
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -520,7 +487,6 @@ suite('RabbitMQRouter', () => {
       const ordersHandler = vi.fn();
       const usersHandler = vi.fn();
 
-      const router = createRabbitMQRouter();
       router.route(defineRabbitMQRoute({ filters: { queues: ['orders'] } }).handle(ordersHandler));
       router.route(defineRabbitMQRoute({ filters: { queues: ['users'] } }).handle(usersHandler));
 
@@ -538,7 +504,6 @@ suite('RabbitMQRouter', () => {
       const jsonHandler = vi.fn();
       const xmlHandler = vi.fn();
 
-      const router = createRabbitMQRouter();
       router.route(defineRabbitMQRoute({ filters: { contentTypes: ['application/json'] } }).handle(jsonHandler));
       router.route(defineRabbitMQRoute({ filters: { contentTypes: ['application/xml'] } }).handle(xmlHandler));
 
@@ -557,7 +522,6 @@ suite('RabbitMQRouter', () => {
     test('catch-all route handles all messages', async ({ rabbitMQMessage, context }) => {
       const handler = vi.fn();
 
-      const router = createRabbitMQRouter();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
       const event = createRabbitMQEvent({

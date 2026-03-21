@@ -3,6 +3,12 @@ import { createSNSEvent, test } from '@lambda-event-router/testing';
 import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
 import type { SNSFilterInput, SNSMessageAttributes, SNSRequest } from './types.js';
 
+let router: SNSRouter;
+
+beforeEach(() => {
+  router = new SNSRouter();
+});
+
 suite('SNSRouter', () => {
   suite('createSNSRouter', () => {
     test('creates an SNSRouter instance', () => {
@@ -12,12 +18,6 @@ suite('SNSRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = new SNSRouter();
-    });
-
     test('returns true for a valid SNS event', () => {
       const event = createSNSEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -89,7 +89,6 @@ suite('SNSRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new SNSRouter();
       const definition = defineRoute({
         filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
       }).handle(async () => {});
@@ -101,12 +100,6 @@ suite('SNSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = createSNSRouter();
-    });
-
     test('matches route by topicArns', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
@@ -494,7 +487,6 @@ suite('SNSRouter', () => {
     test('selects the first matching route when multiple routes match', ({ snsRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
@@ -518,16 +510,16 @@ suite('SNSRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ snsRecord, snsHandlerEvent }) => {
-      const router = new SNSRouter();
       const handler = vi.fn();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const body = { action: 'processOrder', orderId: '12345' };
+
       const definition = defineRoute({
         filters: { topicArns: [topicArn] },
       }).handle(handler);
       router.route(definition);
 
       const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
+      const body = { action: 'processOrder', orderId: '12345' }; // Move this?
       const record = snsRecord({
         Sns: {
           TopicArn: topicArn,
@@ -549,7 +541,6 @@ suite('SNSRouter', () => {
     });
 
     test('returns undefined when all records succeed', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -565,14 +556,11 @@ suite('SNSRouter', () => {
     });
 
     test('throws when no route matches', async ({ snsHandlerEvent }) => {
-      const router = createSNSRouter();
-
       const { event, context } = snsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler error when batchItemFailures is disabled', async ({ snsHandlerEvent }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -587,10 +575,8 @@ suite('SNSRouter', () => {
     });
 
     test('calls the handler for every matching record', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -609,10 +595,8 @@ suite('SNSRouter', () => {
     });
 
     test('handler receives raw string when SNS message is not JSON', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -627,10 +611,8 @@ suite('SNSRouter', () => {
     });
 
     test('processes records in parallel', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const callOrder: string[] = [];
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -654,8 +636,13 @@ suite('SNSRouter', () => {
   });
 
   suite('handleEvent - batchItemFailures', () => {
+    let router: SNSRouter;
+
+    beforeAll(() => {
+      router = new SNSRouter({ batchItemFailures: true });
+    });
+
     test('returns undefined when all records succeed', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter({ batchItemFailures: true });
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -675,9 +662,7 @@ suite('SNSRouter', () => {
     });
 
     test('does not throw when handler fails', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter({ batchItemFailures: true });
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -694,8 +679,6 @@ suite('SNSRouter', () => {
     });
 
     test('does not throw when no route matches', async ({ snsHandlerEvent }) => {
-      const router = createSNSRouter({ batchItemFailures: true });
-
       const { event, context } = snsHandlerEvent();
       const result = await router.handleEvent(event, context);
 
@@ -703,7 +686,6 @@ suite('SNSRouter', () => {
     });
 
     test('returns undefined even when records fail', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter({ batchItemFailures: true });
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const failingRecord = snsRecord({ Sns: { TopicArn: topicArn } });
 
@@ -729,12 +711,10 @@ suite('SNSRouter', () => {
     });
 
     test('does not throw when schema validation fails', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter({ batchItemFailures: true });
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const bodySchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -752,14 +732,12 @@ suite('SNSRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated body from bodySchema', async ({ snsRecord, snsEvent, context }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
       const transformedBody = { action: 'processOrder', orderId: '12345', validated: true };
       const bodySchema: Schema<typeof transformedBody> = {
         safeParse: () => ({ success: true, data: transformedBody }),
       };
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -784,12 +762,10 @@ suite('SNSRouter', () => {
       snsEvent,
       context,
     }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const bodySchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -808,14 +784,12 @@ suite('SNSRouter', () => {
       snsEvent,
       context,
     }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
       const validatedAttributes = { eventType: 'order.created', extra: 'field' };
       const messageAttributesSchema: Schema<SNSMessageAttributes> = {
         safeParse: () => ({ success: true, data: validatedAttributes }),
       };
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -841,12 +815,10 @@ suite('SNSRouter', () => {
       snsEvent,
       context,
     }) => {
-      const router = createSNSRouter();
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const messageAttributesSchema: Schema<SNSMessageAttributes> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -868,12 +840,6 @@ suite('SNSRouter', () => {
   });
 
   suite('parseJsonBody', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = new SNSRouter();
-    });
-
     test('parses valid JSON body from record.Sns.Message', ({ snsRecord }) => {
       const record = snsRecord({ Sns: { Message: '{"greeting":"hello"}' } });
 
@@ -894,12 +860,6 @@ suite('SNSRouter', () => {
   });
 
   suite('convertMessageAttributes', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = new SNSRouter();
-    });
-
     test('converts raw attributes to plain key-value pairs', () => {
       const raw = {
         eventType: { Type: 'String', Value: 'order.created' },
@@ -926,20 +886,14 @@ suite('SNSRouter', () => {
   });
 
   suite('validateBody', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = new SNSRouter();
-    });
-
     test('returns validated data when bodySchema succeeds', ({ snsRecord }) => {
-      const record = snsRecord();
       const body = { action: 'processOrder', orderId: '12345' };
       const validatedData = { ...body, validated: true };
       const schema: Schema<typeof validatedData> = {
         safeParse: () => ({ success: true, data: validatedData }),
       };
 
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
       const result = router.validateBody(body, schema, record.Sns.MessageId);
 
@@ -947,11 +901,11 @@ suite('SNSRouter', () => {
     });
 
     test('throws when bodySchema validation fails', ({ snsRecord }) => {
-      const record = snsRecord();
       const schema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid body') }),
       };
 
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
       expect(() => router.validateBody({}, schema, record.Sns.MessageId)).toThrow(
         `Body validation failed for record ${record.Sns.MessageId}`,
@@ -982,20 +936,14 @@ suite('SNSRouter', () => {
   });
 
   suite('validateMessageAttributes', () => {
-    let router: SNSRouter;
-
-    beforeEach(() => {
-      router = new SNSRouter();
-    });
-
     test('returns validated attributes when messageAttributesSchema succeeds', ({ snsRecord }) => {
-      const record = snsRecord();
       const messageAttributes = { eventType: 'order.created' };
       const validatedAttributes = { eventType: 'order.created', extra: 'field' };
       const schema: Schema<SNSMessageAttributes> = {
         safeParse: () => ({ success: true, data: validatedAttributes }),
       };
 
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
       const result = router.validateMessageAttributes(messageAttributes, schema, record.Sns.MessageId);
 
@@ -1003,11 +951,11 @@ suite('SNSRouter', () => {
     });
 
     test('throws when messageAttributesSchema validation fails', ({ snsRecord }) => {
-      const record = snsRecord();
       const schema: Schema<SNSMessageAttributes> = {
         safeParse: () => ({ success: false, error: new Error('invalid attributes') }),
       };
 
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
       expect(() => router.validateMessageAttributes({}, schema, record.Sns.MessageId)).toThrow(
         `Message attributes validation failed for record ${record.Sns.MessageId}`,
@@ -1034,7 +982,6 @@ suite('SNSRouter', () => {
       const receivedCreateRequests: SNSRequest[] = [];
       const receivedDeleteRequests: SNSRequest[] = [];
 
-      const router = createSNSRouter();
       const orderRoute = defineRoute({
         filters: {
           messageAttributes: { eventType: ['order.created'] },

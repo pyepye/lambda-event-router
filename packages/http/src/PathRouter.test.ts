@@ -1,8 +1,13 @@
 import { PathRouter } from './PathRouter.js';
 
 suite('PathRouter', () => {
+  let router: PathRouter;
+
+  beforeEach(() => {
+    router = new PathRouter();
+  });
+
   test('returns the router instance for chaining', () => {
-    const router = new PathRouter();
     const config = { path: '/items', handler: vi.fn() };
 
     expect(router.get(config)).toBe(router);
@@ -16,8 +21,6 @@ suite('PathRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new PathRouter();
-
       const result = router.route({
         method: 'GET',
         path: '/items',
@@ -28,8 +31,6 @@ suite('PathRouter', () => {
     });
 
     test('registers routes with a lowercase method', () => {
-      const router = new PathRouter();
-
       router.route({
         method: 'get',
         path: '/items',
@@ -42,8 +43,6 @@ suite('PathRouter', () => {
 
   suite('compilePath', () => {
     test('returns empty paramNames and an exact-match pattern for a static path', () => {
-      const router = new PathRouter();
-
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items');
 
@@ -53,8 +52,6 @@ suite('PathRouter', () => {
     });
 
     test('extracts a single param name and matches dynamic segments', () => {
-      const router = new PathRouter();
-
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items/:id');
 
@@ -63,8 +60,6 @@ suite('PathRouter', () => {
     });
 
     test('extracts multiple param names in order', () => {
-      const router = new PathRouter();
-
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items/:itemId/sub/:subId');
 
@@ -73,8 +68,6 @@ suite('PathRouter', () => {
     });
 
     test('anchors the pattern so it does not match partial paths', () => {
-      const router = new PathRouter();
-
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items');
 
@@ -85,7 +78,6 @@ suite('PathRouter', () => {
 
   suite('addRoute', () => {
     test('stores route with all schemas, handler, compiled pattern, and paramNames', () => {
-      const router = new PathRouter();
       const handler = vi.fn();
       const pathSchema = { safeParse: vi.fn() };
       const querySchema = { safeParse: vi.fn() };
@@ -116,7 +108,6 @@ suite('PathRouter', () => {
 
   suite('match', () => {
     test('matches a static path', () => {
-      const router = new PathRouter();
       const handler = vi.fn();
       router.get({ path: '/items', handler });
 
@@ -128,7 +119,6 @@ suite('PathRouter', () => {
     });
 
     test('returns null when no route matches', () => {
-      const router = new PathRouter();
       router.get({ path: '/items', handler: vi.fn() });
 
       const result = router.match('GET', '/unknown');
@@ -137,7 +127,6 @@ suite('PathRouter', () => {
     });
 
     test('returns null when method does not match', () => {
-      const router = new PathRouter();
       router.get({ path: '/items', handler: vi.fn() });
 
       const result = router.match('POST', '/items');
@@ -146,7 +135,6 @@ suite('PathRouter', () => {
     });
 
     test('extracts a single path parameter', () => {
-      const router = new PathRouter();
       router.get({ path: '/items/:id', handler: vi.fn() });
 
       const result = router.match('GET', '/items/abc-123');
@@ -156,7 +144,6 @@ suite('PathRouter', () => {
     });
 
     test('extracts multiple path parameters', () => {
-      const router = new PathRouter();
       router.get({ path: '/items/:itemId/sub/:subId', handler: vi.fn() });
 
       const result = router.match('GET', '/items/item-1/sub/sub-2');
@@ -166,7 +153,6 @@ suite('PathRouter', () => {
     });
 
     test('does not match a partial path', () => {
-      const router = new PathRouter();
       router.get({ path: '/items', handler: vi.fn() });
 
       const result = router.match('GET', '/items/extra');
@@ -175,7 +161,6 @@ suite('PathRouter', () => {
     });
 
     test('does not match a shorter path', () => {
-      const router = new PathRouter();
       router.get({ path: '/items/:id', handler: vi.fn() });
 
       const result = router.match('GET', '/items');
@@ -184,7 +169,6 @@ suite('PathRouter', () => {
     });
 
     test('matches the correct method when multiple routes share the same path', () => {
-      const router = new PathRouter();
       const getHandler = vi.fn();
       const postHandler = vi.fn();
       router.get({ path: '/items', handler: getHandler });
@@ -198,7 +182,6 @@ suite('PathRouter', () => {
     });
 
     test('returns the first match when multiple routes could match the same path', () => {
-      const router = new PathRouter();
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.get({ path: '/items/:id', handler: firstHandler });
@@ -210,7 +193,6 @@ suite('PathRouter', () => {
     });
 
     test('returns the handler reference from the matched route', () => {
-      const router = new PathRouter();
       const handler = vi.fn();
       router.post({ path: '/items', handler });
 
@@ -220,7 +202,6 @@ suite('PathRouter', () => {
     });
 
     test('matches all HTTP methods', () => {
-      const router = new PathRouter();
       router.get({ path: '/a', handler: vi.fn() });
       router.head({ path: '/b', handler: vi.fn() });
       router.delete({ path: '/c', handler: vi.fn() });

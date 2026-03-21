@@ -1,9 +1,15 @@
 import type { Schema } from '@lambda-event-router/base';
 import { createDynamoDBEvent, test } from '@lambda-event-router/testing';
-import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
+import { createDynamoDBRouter, defineRoute, DynamoDBRouter } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBInsertRequest } from './types.js';
 
 suite('DynamoDBRouter', () => {
+  let router: DynamoDBRouter;
+
+  beforeEach(() => {
+    router = new DynamoDBRouter();
+  });
+
   suite('createDynamoDBRouter', () => {
     test('creates a DynamoDBRouter instance', () => {
       const router = createDynamoDBRouter();
@@ -12,12 +18,6 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: DynamoDBRouter;
-
-    beforeEach(() => {
-      router = new DynamoDBRouter();
-    });
-
     test('returns true for a valid DynamoDB stream event', () => {
       const event = createDynamoDBEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -87,7 +87,6 @@ suite('DynamoDBRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new DynamoDBRouter();
       const definition = defineRoute({
         filters: { eventNames: ['INSERT'] },
       }).handle(async () => {});
@@ -100,8 +99,6 @@ suite('DynamoDBRouter', () => {
 
   suite('insert', () => {
     test('returns the router instance for chaining', () => {
-      const router = new DynamoDBRouter();
-
       const result = router.insert({
         filters: {},
         handler: async () => {},
@@ -111,7 +108,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('only matches INSERT records', ({ dynamoDBInsertRecord }) => {
-      const router = createDynamoDBRouter();
       router.insert({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -130,8 +126,6 @@ suite('DynamoDBRouter', () => {
 
   suite('modify', () => {
     test('returns the router instance for chaining', () => {
-      const router = new DynamoDBRouter();
-
       const result = router.modify({
         filters: {},
         handler: async () => {},
@@ -141,7 +135,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('only matches MODIFY records', ({ dynamoDBModifyRecord }) => {
-      const router = createDynamoDBRouter();
       router.modify({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
@@ -160,8 +153,6 @@ suite('DynamoDBRouter', () => {
 
   suite('remove', () => {
     test('returns the router instance for chaining', () => {
-      const router = new DynamoDBRouter();
-
       const result = router.remove({
         filters: {},
         handler: async () => {},
@@ -171,7 +162,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('only matches REMOVE records', ({ dynamoDBRemoveRecord }) => {
-      const router = createDynamoDBRouter();
       router.remove({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBRemoveRecord();
@@ -189,12 +179,6 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: DynamoDBRouter;
-
-    beforeEach(() => {
-      router = createDynamoDBRouter();
-    });
-
     test('matches route by eventNames', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
@@ -433,7 +417,6 @@ suite('DynamoDBRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ dynamoDBStreamHandlerEvent }) => {
-      const router = new DynamoDBRouter();
       const handler = vi.fn();
       router.insert({
         filters: {},
@@ -459,7 +442,6 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       router.remove({ filters: {}, handler });
 
@@ -481,7 +463,6 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       router.insert({ filters: {}, handler });
 
@@ -498,14 +479,11 @@ suite('DynamoDBRouter', () => {
     });
 
     test('throws when no route matches and batchItemFailures is disabled', async ({ dynamoDBStreamHandlerEvent }) => {
-      const router = createDynamoDBRouter();
-
       const { event, context } = dynamoDBStreamHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler errors', async ({ dynamoDBStreamHandlerEvent }) => {
-      const router = createDynamoDBRouter();
       router.insert({
         filters: {},
         handler: async () => {
@@ -518,7 +496,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('returns undefined on success when batchItemFailures is disabled', async ({ dynamoDBStreamHandlerEvent }) => {
-      const router = createDynamoDBRouter();
       router.insert({ filters: {}, handler: async () => {} });
 
       const { event, context } = dynamoDBStreamHandlerEvent();
@@ -528,7 +505,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('processes records sequentially', async ({ dynamoDBInsertRecord, dynamoDBStreamEvent, context }) => {
-      const router = createDynamoDBRouter();
       const callOrder: string[] = [];
 
       router.insert({
@@ -557,12 +533,17 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('handleEvent - batchItemFailures', () => {
+    let router: DynamoDBRouter;
+
+    beforeEach(() => {
+      router = new DynamoDBRouter({ batchItemFailures: true });
+    });
+
     test('returns undefined when all records succeed', async ({
       dynamoDBInsertRecord,
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
       router.insert({ filters: {}, handler: async () => {} });
 
       const records = [dynamoDBInsertRecord(), dynamoDBInsertRecord(), dynamoDBInsertRecord()];
@@ -577,7 +558,6 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
       const failingRecord = dynamoDBInsertRecord();
 
       router.insert({
@@ -602,12 +582,10 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
       const recordA = dynamoDBInsertRecord();
       const failingRecord = dynamoDBInsertRecord();
       const recordC = dynamoDBInsertRecord();
       const recordD = dynamoDBInsertRecord();
-
       router.insert({
         filters: {},
         handler: async (request: DynamoDBInsertRequest) => {
@@ -630,8 +608,6 @@ suite('DynamoDBRouter', () => {
     });
 
     test('returns batchItemFailures when no route matches', async ({ dynamoDBStreamHandlerEvent }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
-
       const { event, context } = dynamoDBStreamHandlerEvent();
       const result = await router.handleEvent(event, context);
 
@@ -645,11 +621,11 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
-      const handler = vi.fn();
+      const recordA = dynamoDBInsertRecord();
+      const recordC = dynamoDBInsertRecord();
       const failingRecord = dynamoDBInsertRecord();
 
-      handler.mockImplementation(async (request: DynamoDBInsertRequest) => {
+      const handler = vi.fn().mockImplementation(async (request: DynamoDBInsertRequest) => {
         if (request.record.eventID === failingRecord.eventID) {
           throw new Error('processing failed');
         }
@@ -657,8 +633,6 @@ suite('DynamoDBRouter', () => {
 
       router.insert({ filters: {}, handler });
 
-      const recordA = dynamoDBInsertRecord();
-      const recordC = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([recordA, failingRecord, recordC]);
       await router.handleEvent(event, context());
 
@@ -671,8 +645,6 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
-
       router.insert({
         filters: {},
         handler: async () => {
@@ -700,7 +672,8 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
+      const recordA = dynamoDBInsertRecord();
+      const recordB = dynamoDBInsertRecord();
       const lastRecord = dynamoDBInsertRecord();
 
       router.insert({
@@ -712,8 +685,6 @@ suite('DynamoDBRouter', () => {
         },
       });
 
-      const recordA = dynamoDBInsertRecord();
-      const recordB = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([recordA, recordB, lastRecord]);
       const result = await router.handleEvent(event, context());
 
@@ -729,13 +700,11 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       const transformedKeys = { pk: 'pk-123', sk: 'sk-123', validated: true };
       const keysSchema: Schema<typeof transformedKeys> = {
         safeParse: () => ({ success: true, data: transformedKeys }),
       };
-
       router.insert({ filters: {}, keysSchema, handler });
 
       const record = dynamoDBInsertRecord();
@@ -750,11 +719,9 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const keysSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.insert({ filters: {}, keysSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -767,11 +734,10 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
+      const router = new DynamoDBRouter({ batchItemFailures: true });
       const keysSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.insert({ filters: {}, keysSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -788,13 +754,11 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       const transformedImage = { pk: 'pk-123', sk: 'sk-123', name: 'Test Item', validated: true };
       const newImageSchema: Schema<typeof transformedImage> = {
         safeParse: () => ({ success: true, data: transformedImage }),
       };
-
       router.insert({ filters: {}, newImageSchema, handler });
 
       const record = dynamoDBInsertRecord();
@@ -809,11 +773,9 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const newImageSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.insert({ filters: {}, newImageSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -826,11 +788,10 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
+      const router = new DynamoDBRouter({ batchItemFailures: true });
       const newImageSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.insert({ filters: {}, newImageSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -847,13 +808,11 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       const transformedOldImage = { pk: 'pk-123', sk: 'sk-123', name: 'Old Item', validated: true };
       const oldImageSchema: Schema<typeof transformedOldImage> = {
         safeParse: () => ({ success: true, data: transformedOldImage }),
       };
-
       router.modify({ filters: {}, oldImageSchema, handler });
 
       const record = dynamoDBModifyRecord();
@@ -868,11 +827,9 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const oldImageSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.modify({ filters: {}, oldImageSchema, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
@@ -885,11 +842,10 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter({ batchItemFailures: true });
+      const router = new DynamoDBRouter({ batchItemFailures: true });
       const oldImageSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.modify({ filters: {}, oldImageSchema, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
@@ -906,10 +862,8 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const router = createDynamoDBRouter();
       const handler = vi.fn();
       const safeParseSpy = vi.fn(() => ({ success: false as const, error: new Error('should not be called') }));
-
       router.route({
         filters: { eventNames: ['REMOVE'] },
         newImageSchema: { safeParse: safeParseSpy },
@@ -926,12 +880,6 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('validateImage', () => {
-    let router: DynamoDBRouter;
-
-    beforeEach(() => {
-      router = new DynamoDBRouter();
-    });
-
     test('returns validated data on success', () => {
       const data = { pk: 'pk-123', sk: 'sk-123' };
       const transformedData = { pk: 'pk-123', sk: 'sk-123', validated: true };
@@ -988,7 +936,6 @@ suite('DynamoDBRouter', () => {
       const modifyHandler = vi.fn();
       const removeHandler = vi.fn();
 
-      const router = createDynamoDBRouter();
       router.insert({ filters: {}, handler: insertHandler });
       router.modify({ filters: {}, handler: modifyHandler });
       router.remove({ filters: {}, handler: removeHandler });
@@ -1015,7 +962,6 @@ suite('DynamoDBRouter', () => {
       const ordersHandler = vi.fn();
       const usersHandler = vi.fn();
 
-      const router = createDynamoDBRouter();
       router.insert({ filters: { eventSourceArns: [ordersArn] }, handler: ordersHandler });
       router.insert({ filters: { eventSourceArns: [usersArn] }, handler: usersHandler });
 
@@ -1037,7 +983,6 @@ suite('DynamoDBRouter', () => {
     }) => {
       const handler = vi.fn();
 
-      const router = createDynamoDBRouter();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = dynamoDBStreamEvent([dynamoDBInsertRecord(), dynamoDBModifyRecord(), dynamoDBRemoveRecord()]);

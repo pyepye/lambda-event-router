@@ -8,6 +8,12 @@ import {
 } from './ConfigScheduledRouter.js';
 
 suite('ConfigScheduledRouter', () => {
+  let router: ConfigScheduledRouter;
+
+  beforeEach(() => {
+    router = new ConfigScheduledRouter();
+  });
+
   suite('createConfigScheduledRouter', () => {
     test('creates a ConfigScheduledRouter instance', () => {
       const router = createConfigScheduledRouter();
@@ -16,12 +22,6 @@ suite('ConfigScheduledRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: ConfigScheduledRouter;
-
-    beforeEach(() => {
-      router = new ConfigScheduledRouter();
-    });
-
     test('returns false for non-object events', () => {
       expect(router.canHandleEvent(null)).toBe(false);
       expect(router.canHandleEvent(undefined)).toBe(false);
@@ -65,7 +65,6 @@ suite('ConfigScheduledRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ConfigScheduledRouter();
       const definition = defineConfigScheduledRoute({ filters: {} }).handle(async () => {});
 
       const result = router.route(definition);
@@ -75,12 +74,6 @@ suite('ConfigScheduledRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: ConfigScheduledRouter;
-
-    beforeEach(() => {
-      router = new ConfigScheduledRouter();
-    });
-
     test('matches when no filters set', () => {
       router.route(defineConfigScheduledRoute({ filters: {} }).handle(async () => {}));
 
@@ -148,12 +141,6 @@ suite('ConfigScheduledRouter', () => {
   });
 
   suite('validateSchema', () => {
-    let router: ConfigScheduledRouter;
-
-    beforeEach(() => {
-      router = new ConfigScheduledRouter();
-    });
-
     test('returns data unchanged when no schema provided', () => {
       const data = { key: 'value' };
 
@@ -210,9 +197,7 @@ suite('ConfigScheduledRouter', () => {
     }
 
     test('calls handler with correct fields', async ({ context }) => {
-      const router = new ConfigScheduledRouter();
       const handler = vi.fn();
-
       router.route(defineConfigScheduledRoute({ filters: {} }).handle(handler));
 
       const event = createScheduledConfigEvent({
@@ -235,9 +220,7 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('defaults ruleParameters to empty object when empty string', async ({ context }) => {
-      const router = new ConfigScheduledRouter();
       const handler = vi.fn();
-
       router.route(defineConfigScheduledRoute({ filters: {} }).handle(handler));
 
       const event = createScheduledConfigEvent();
@@ -248,7 +231,6 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('throws when no route matches', async ({ context }) => {
-      const router = new ConfigScheduledRouter();
       router.route(
         defineConfigScheduledRoute({ filters: { configRuleNames: ['specific-rule'] } }).handle(async () => {}),
       );
@@ -260,13 +242,11 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('validates ruleParameters schema', async ({ context }) => {
-      const router = new ConfigScheduledRouter();
       const handler = vi.fn();
       const validatedParams = { env: 'prod-validated' };
       const ruleParametersSchema: Schema<typeof validatedParams> = {
         safeParse: () => ({ success: true, data: validatedParams }),
       };
-
       router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(handler));
 
       const event = createScheduledConfigEvent({ ruleParameters: { env: 'prod' } });
@@ -276,11 +256,9 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('throws when ruleParameters schema validation fails', async ({ context }) => {
-      const router = new ConfigScheduledRouter();
       const ruleParametersSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(async () => {}));
 
       const event = createScheduledConfigEvent({ ruleParameters: { bad: 'data' } });

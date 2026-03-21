@@ -3,6 +3,12 @@ import { createS3Router, defineRoute, S3Router } from './S3Router.js';
 import type { S3FilterInput } from './types/index.js';
 
 suite('S3Router', () => {
+  let router: S3Router;
+
+  beforeEach(() => {
+    router = new S3Router();
+  });
+
   suite('createS3Router', () => {
     test('creates an S3Router instance', () => {
       const router = createS3Router();
@@ -11,12 +17,6 @@ suite('S3Router', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = new S3Router();
-    });
-
     test('returns true for a valid S3 event', () => {
       const event = createS3Event();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -95,7 +95,6 @@ suite('S3Router', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new S3Router();
       const definition = defineRoute({
         filters: { buckets: ['my-bucket'] },
       }).handle(async () => {});
@@ -108,8 +107,6 @@ suite('S3Router', () => {
 
   suite('batchOperation', () => {
     test('returns the router instance for chaining', () => {
-      const router = new S3Router();
-
       const result = router.batchOperation({
         handler: async () => ({ resultCode: 'Succeeded' as const }),
       });
@@ -144,11 +141,9 @@ suite('S3Router', () => {
       { method: 'intelligentTiering', eventName: 's3:IntelligentTiering' },
       { method: 'testEvent', eventName: 's3:TestEvent' },
     ])('$method sets eventName filter to $eventName', ({ method, eventName }) => {
-      const router = new S3Router();
       const handler = vi.fn();
       // @ts-expect-error - dynamic method access for convenience method testing
       router[method]({ handler });
-
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute({}, 'my-bucket', 'uploads/test.txt', eventName);
 
@@ -156,12 +151,10 @@ suite('S3Router', () => {
     });
 
     test('merges user-provided filters with auto-set eventName', ({ s3Record }) => {
-      const router = new S3Router();
       const handler = vi.fn();
       router.objectCreatedPut({ filters: { buckets: ['specific-bucket'], prefixes: ['uploads/'] }, handler });
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
-
       // @ts-expect-error - testing private method directly
       const matchingResult = router.matchRoute(record, 'specific-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
       expect(matchingResult).toBeDefined();
@@ -173,12 +166,6 @@ suite('S3Router', () => {
   });
 
   suite('matchRoute', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = createS3Router();
-    });
-
     test('matches route by exact eventName', ({ s3Record }) => {
       router.route(
         defineRoute({
@@ -460,7 +447,6 @@ suite('S3Router', () => {
     test('selects the first matching route when multiple routes match', ({ s3Record }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineRoute({ filters: { buckets: ['my-bucket'] } }).handle(firstHandler));
       router.route(defineRoute({ filters: { buckets: ['my-bucket'] } }).handle(secondHandler));
 
@@ -476,7 +462,6 @@ suite('S3Router', () => {
 
   suite('handleEvent', () => {
     test('calls matched handler with built request for ObjectCreated event', async ({ s3Record, s3HandlerEvent }) => {
-      const router = new S3Router();
       const handler = vi.fn();
       router.route(
         defineRoute({
@@ -500,7 +485,6 @@ suite('S3Router', () => {
     });
 
     test('processes records sequentially', async ({ s3Record, s3HandlerEvent }) => {
-      const router = new S3Router();
       const callOrder: string[] = [];
 
       router.route(
@@ -520,7 +504,6 @@ suite('S3Router', () => {
     });
 
     test('routes S3 Batch event to batch handler and wraps result', async ({ s3BatchHandlerEvent }) => {
-      const router = new S3Router();
       router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const, resultString: 'ok' }) });
 
       const { event, context } = s3BatchHandlerEvent();
@@ -536,12 +519,6 @@ suite('S3Router', () => {
   });
 
   suite('handleBatchEvent', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = new S3Router();
-    });
-
     test('parses bucket name from ARN', async ({ s3BatchEvent, context }) => {
       const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
       router.batchOperation({ handler });
@@ -549,7 +526,6 @@ suite('S3Router', () => {
       const event = s3BatchEvent({
         tasks: [createS3BatchTask({ s3BucketArn: 'arn:aws:s3:::my-special-bucket' })],
       });
-
       // @ts-expect-error - testing private method directly
       await router.handleBatchEvent(event, context());
 
@@ -563,7 +539,6 @@ suite('S3Router', () => {
       const event = s3BatchEvent({
         tasks: [createS3BatchTask({ s3Key: 'uploads/my+file%20name.txt' })],
       });
-
       // @ts-expect-error - testing private method directly
       await router.handleBatchEvent(event, context());
 
@@ -585,7 +560,6 @@ suite('S3Router', () => {
       });
       const event = s3BatchEvent({ tasks: [task] });
       const ctx = context();
-
       // @ts-expect-error - testing private method directly
       await router.handleBatchEvent(event, ctx);
 
@@ -602,7 +576,6 @@ suite('S3Router', () => {
 
     test('throws when no batch handler registered', async ({ s3BatchEvent, context }) => {
       const event = s3BatchEvent();
-
       // @ts-expect-error - testing private method directly
       await expect(router.handleBatchEvent(event, context())).rejects.toThrow('No batch operation handler registered');
     });
@@ -611,7 +584,6 @@ suite('S3Router', () => {
       router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const, resultString: 'done' }) });
 
       const event = s3BatchEvent();
-
       // @ts-expect-error - testing private method directly
       const result = await router.handleBatchEvent(event, context());
 
@@ -631,7 +603,6 @@ suite('S3Router', () => {
       });
 
       const event = s3BatchEvent();
-
       // @ts-expect-error - testing private method directly
       await expect(router.handleBatchEvent(event, context())).rejects.toThrow('something broke');
     });
@@ -644,7 +615,6 @@ suite('S3Router', () => {
       });
 
       const event = s3BatchEvent();
-
       // @ts-expect-error - testing private method directly
       const result = await router.handleBatchEvent(event, context());
 
@@ -658,12 +628,6 @@ suite('S3Router', () => {
   });
 
   suite('matchEventName', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = new S3Router();
-    });
-
     test('returns true for exact match', () => {
       // @ts-expect-error - testing private method directly
       const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:Put']);
@@ -691,12 +655,10 @@ suite('S3Router', () => {
 
   suite('processRecord', () => {
     test('URL-decodes key from record', async ({ s3Record, context }) => {
-      const router = new S3Router();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const record = s3Record({ s3: { object: { key: 'uploads/my+file%20name.txt' } } });
-
       // @ts-expect-error - testing private method directly
       await router.processRecord(record, context());
 
@@ -704,7 +666,6 @@ suite('S3Router', () => {
     });
 
     test('throws when no route matched', async ({ s3Record, context }) => {
-      const router = new S3Router();
       const record = s3Record();
 
       // @ts-expect-error - testing private method directly
@@ -715,18 +676,11 @@ suite('S3Router', () => {
   });
 
   suite('buildRequest', () => {
-    let router: S3Router;
-
-    beforeEach(() => {
-      router = new S3Router();
-    });
-
     test('ObjectCreated events include objectSize and eTag', ({ s3Record, context }) => {
       const record = s3Record({
         eventName: 's3:ObjectCreated:Put',
         s3: { object: { size: 2048, eTag: 'abc123' } },
       });
-
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, context(), 'my-bucket', 'uploads/test.txt');
 
@@ -742,7 +696,6 @@ suite('S3Router', () => {
         eventName: 's3:ObjectRestore:Completed',
         glacierEventData: { restoreEventData },
       });
-
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, context(), 'my-bucket', 'uploads/test.txt');
 
@@ -751,7 +704,6 @@ suite('S3Router', () => {
 
     test('other events return base request only', ({ s3Record, context }) => {
       const record = s3Record({ eventName: 's3:ObjectRemoved:Delete' });
-
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, context(), 'my-bucket', 'uploads/test.txt');
 
@@ -766,7 +718,6 @@ suite('S3Router', () => {
     }) => {
       const record = s3Record({ eventName: 's3:ObjectRemoved:Delete' });
       const ctx = context();
-
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, ctx, 'my-bucket', 'uploads/test.txt');
 
@@ -788,8 +739,6 @@ suite('S3Router', () => {
     test('routes records to different handlers based on event name filters', async ({ s3Record, s3HandlerEvent }) => {
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
-
-      const router = createS3Router();
       router.objectCreated({ handler: createHandler });
       router.objectRemoved({ handler: deleteHandler });
 
@@ -811,8 +760,6 @@ suite('S3Router', () => {
     }) => {
       const uploadsHandler = vi.fn();
       const imagesHandler = vi.fn();
-
-      const router = createS3Router();
       router.route(
         defineRoute({
           filters: { buckets: ['my-bucket'], prefixes: ['uploads/'] },

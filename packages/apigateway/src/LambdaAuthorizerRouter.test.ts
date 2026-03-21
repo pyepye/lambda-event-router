@@ -12,6 +12,12 @@ import {
 } from './LambdaAuthorizerRouter.js';
 
 suite('LambdaAuthorizerRouter', () => {
+  let router: LambdaAuthorizerRouter;
+
+  beforeEach(() => {
+    router = new LambdaAuthorizerRouter();
+  });
+
   suite('createLambdaAuthorizerRouter', () => {
     test('creates a LambdaAuthorizerRouter instance', () => {
       const router = createLambdaAuthorizerRouter();
@@ -20,12 +26,6 @@ suite('LambdaAuthorizerRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: LambdaAuthorizerRouter;
-
-    beforeEach(() => {
-      router = new LambdaAuthorizerRouter();
-    });
-
     test('returns true for a valid TOKEN event', () => {
       const event = createApiGatewayLambdaAuthorizerTokenEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -78,7 +78,6 @@ suite('LambdaAuthorizerRouter', () => {
 
   suite('route (chaining)', () => {
     test('returns the router instance for chaining', () => {
-      const router = new LambdaAuthorizerRouter();
       const definition = defineLambdaAuthorizerRoute({
         filters: { type: 'TOKEN' },
       }).handle(async () => generatePolicy('user', 'Allow', 'arn:...'));
@@ -91,19 +90,16 @@ suite('LambdaAuthorizerRouter', () => {
 
   suite('token / request (chaining)', () => {
     test('token() returns the router instance for chaining', () => {
-      const router = new LambdaAuthorizerRouter();
       const result = router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
       expect(result).toBe(router);
     });
 
     test('request() returns the router instance for chaining', () => {
-      const router = new LambdaAuthorizerRouter();
       const result = router.request({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
       expect(result).toBe(router);
     });
 
     test('request() with method returns the router instance for chaining', () => {
-      const router = new LambdaAuthorizerRouter();
       const result = router.request({
         method: 'GET',
         handler: async () => generatePolicy('user', 'Allow', 'arn:...'),
@@ -175,7 +171,6 @@ suite('LambdaAuthorizerRouter', () => {
     }) => {
       const policy = generatePolicy('user', 'Allow', 'arn:...');
       const handler = vi.fn().mockResolvedValue(policy);
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
@@ -189,7 +184,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerTokenHandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent({
@@ -213,7 +207,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerTokenHandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
@@ -225,7 +218,6 @@ suite('LambdaAuthorizerRouter', () => {
     test('calls matched REQUEST handler for V1 event', async ({ apiGatewayLambdaAuthorizerRequestV1HandlerEvent }) => {
       const policy = generatePolicy('user', 'Allow', 'arn:...');
       const handler = vi.fn().mockResolvedValue(policy);
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent();
@@ -239,7 +231,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
@@ -266,7 +257,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
@@ -287,7 +277,6 @@ suite('LambdaAuthorizerRouter', () => {
     test('calls matched REQUEST handler for V2 event', async ({ apiGatewayLambdaAuthorizerRequestV2HandlerEvent }) => {
       const policy = generatePolicy('user', 'Allow', 'arn:...');
       const handler = vi.fn().mockResolvedValue(policy);
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
@@ -301,7 +290,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent({
@@ -328,7 +316,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(true);
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
@@ -341,7 +328,6 @@ suite('LambdaAuthorizerRouter', () => {
       apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(false);
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
@@ -351,8 +337,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('throws when no route matches', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
-      const router = new LambdaAuthorizerRouter();
-
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
 
       await expect(router.handleEvent(event, context)).rejects.toThrow(
@@ -362,7 +346,6 @@ suite('LambdaAuthorizerRouter', () => {
 
     test('throws when boolean returned for non-V2 event', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(true);
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
@@ -375,7 +358,6 @@ suite('LambdaAuthorizerRouter', () => {
     test('catches and returns thrown authorizer response', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
       const thrownPolicy = generatePolicy('user-1', 'Deny', 'arn:aws:execute-api:*:*:*');
       const handler = vi.fn().mockRejectedValue(thrownPolicy);
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler });
 
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
@@ -389,7 +371,7 @@ suite('LambdaAuthorizerRouter', () => {
     }) => {
       const getHandler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
       const postHandler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
-      const router = new LambdaAuthorizerRouter();
+
       router.request({ method: 'GET', handler: getHandler });
       router.request({ method: 'POST', handler: postHandler });
 
@@ -405,7 +387,6 @@ suite('LambdaAuthorizerRouter', () => {
     test('does not match request route when method differs', async ({
       apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
     }) => {
-      const router = new LambdaAuthorizerRouter();
       router.request({ method: 'DELETE', handler: vi.fn() });
 
       const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
@@ -418,7 +399,6 @@ suite('LambdaAuthorizerRouter', () => {
 
   suite('extractFilterInput (private)', () => {
     test('returns { type: "TOKEN" } for TOKEN events', () => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerTokenEvent();
 
       // @ts-expect-error - testing private method
@@ -428,7 +408,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns { type: "REQUEST", method } for V1 events', () => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV1Event({ httpMethod: 'GET' });
 
       // @ts-expect-error - testing private method
@@ -438,7 +417,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns { type: "REQUEST", method } for V2 events from requestContext.http.method', () => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV2Event({
         requestContext: { http: { method: 'POST' } },
       });
@@ -450,7 +428,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('throws for unrecognised event format', () => {
-      const router = new LambdaAuthorizerRouter();
       const event = { type: 'REQUEST' };
 
       // @ts-expect-error - testing private method with invalid event
@@ -460,7 +437,6 @@ suite('LambdaAuthorizerRouter', () => {
 
   suite('buildRequest (private)', () => {
     test('builds token request with authorizationToken and methodArn as resourceArn', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerTokenEvent({
         authorizationToken: 'Bearer secret',
         methodArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/GET/items',
@@ -480,7 +456,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('builds V1 request with lowercased headers, path, query, methodArn as resourceArn', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV1Event({
         path: '/users',
         httpMethod: 'POST',
@@ -506,7 +481,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('builds V2 request with headers, rawPath as path, query, routeArn as resourceArn', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV2Event({
         rawPath: '/items',
         headers: { authorization: 'Bearer token' },
@@ -532,7 +506,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('includes event and context in all request types', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerTokenEvent();
       const mockContext = context();
 
@@ -544,7 +517,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns empty object for null headers in V1', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: null });
       const mockContext = context();
 
@@ -555,7 +527,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns empty object for null query in V1', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV1Event({ queryStringParameters: null });
       const mockContext = context();
 
@@ -566,7 +537,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns empty object for undefined headers in V2', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV2Event({ headers: undefined });
       const mockContext = context();
 
@@ -577,7 +547,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('returns empty object for undefined query in V2', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const event = createApiGatewayLambdaAuthorizerRequestV2Event({ queryStringParameters: undefined });
       const mockContext = context();
 
@@ -588,7 +557,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('throws for unrecognized event format', ({ context }) => {
-      const router = new LambdaAuthorizerRouter();
       const mockContext = context();
 
       // @ts-expect-error - testing with invalid event that bypasses type guards
@@ -600,7 +568,6 @@ suite('LambdaAuthorizerRouter', () => {
 
   suite('matchRoute (private)', () => {
     test('matches route with matching type filter', () => {
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
@@ -610,7 +577,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('does not match route with different type filter', () => {
-      const router = new LambdaAuthorizerRouter();
       router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
@@ -620,7 +586,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('matches route with matching method filter', () => {
-      const router = new LambdaAuthorizerRouter();
       router.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
@@ -630,7 +595,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('does not match route with different method filter', () => {
-      const router = new LambdaAuthorizerRouter();
       router.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
@@ -640,7 +604,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('route without type filter matches any type', () => {
-      const router = new LambdaAuthorizerRouter();
       const definition = defineLambdaAuthorizerRoute({ filters: {} }).handle(async () =>
         generatePolicy('user', 'Allow', 'arn:...'),
       );
@@ -653,7 +616,6 @@ suite('LambdaAuthorizerRouter', () => {
     });
 
     test('route without method filter matches any method', () => {
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
@@ -665,7 +627,6 @@ suite('LambdaAuthorizerRouter', () => {
     test('returns first matching route when multiple match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-      const router = new LambdaAuthorizerRouter();
       router.request({ handler: firstHandler });
       router.request({ handler: secondHandler });
 

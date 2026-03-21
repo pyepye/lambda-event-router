@@ -16,6 +16,7 @@ function createRoute(overrides: Partial<InternalRoute> = {}): InternalRoute {
 }
 
 function createNormalizedEvent(overrides: Partial<NormalizedHTTPEvent> = {}): NormalizedHTTPEvent {
+  // TODO: Should support body stringify etc
   return {
     method: 'GET',
     path: '/',
@@ -36,10 +37,8 @@ suite('Request', () => {
         path: '/items',
         method: 'POST',
       });
-      const context = createMockContext();
-      const route = createRoute();
 
-      const request = new Request(normalizedEvent, {}, context, route, {});
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
       expect(request.headers).toEqual({ 'content-type': 'application/json' });
       expect(request.method).toBe('POST');
@@ -49,7 +48,7 @@ suite('Request', () => {
 
   suite('body', () => {
     test('parses a JSON body', () => {
-      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ name: 'test' }) });
+      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ name: 'test' }) }); // TODO: Fixture should stringify
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
       expect(request.body).toEqual({ name: 'test' });
@@ -238,7 +237,9 @@ suite('Request', () => {
     });
 
     test('throws UnprocessableContent when body is a string and bodySchema rejects it', () => {
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'expected object, received string' }) };
+      const bodySchema = {
+        safeParse: vi.fn().mockReturnValue({ success: false, error: 'expected object, received string' }),
+      };
       const route = createRoute({ bodySchema });
       const normalizedEvent = createNormalizedEvent({ body: 'not valid json' });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});

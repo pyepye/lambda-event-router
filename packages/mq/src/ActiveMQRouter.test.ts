@@ -4,6 +4,12 @@ import { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './Act
 import type { ActiveMQFilterInput, ActiveMQRequest } from './activeMQTypes.js';
 
 suite('ActiveMQRouter', () => {
+  let router: ActiveMQRouter;
+
+  beforeEach(() => {
+    router = new ActiveMQRouter();
+  });
+
   suite('createActiveMQRouter', () => {
     test('creates an ActiveMQRouter instance', () => {
       const router = createActiveMQRouter();
@@ -46,12 +52,6 @@ suite('ActiveMQRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: ActiveMQRouter;
-
-    beforeEach(() => {
-      router = new ActiveMQRouter();
-    });
-
     test('returns true for a valid ActiveMQ event', () => {
       const event = createActiveMQEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -77,7 +77,6 @@ suite('ActiveMQRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ActiveMQRouter();
       const definition = defineActiveMQRoute({
         filters: {},
       }).handle(async () => {});
@@ -90,8 +89,6 @@ suite('ActiveMQRouter', () => {
 
   suite('textMessage', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ActiveMQRouter();
-
       const result = router.textMessage({
         filters: {},
         handler: async () => {},
@@ -101,7 +98,6 @@ suite('ActiveMQRouter', () => {
     });
 
     test('only matches jms/text-message type messages', ({ activeMQMessage }) => {
-      const router = createActiveMQRouter();
       router.textMessage({ filters: {}, handler: async () => {} });
 
       const event = createActiveMQEvent();
@@ -120,8 +116,6 @@ suite('ActiveMQRouter', () => {
 
   suite('bytesMessage', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ActiveMQRouter();
-
       const result = router.bytesMessage({
         filters: {},
         handler: async () => {},
@@ -131,7 +125,6 @@ suite('ActiveMQRouter', () => {
     });
 
     test('only matches jms/bytes-message type messages', ({ activeMQMessage }) => {
-      const router = createActiveMQRouter();
       router.bytesMessage({ filters: {}, handler: async () => {} });
 
       const event = createActiveMQEvent();
@@ -149,12 +142,6 @@ suite('ActiveMQRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: ActiveMQRouter;
-
-    beforeEach(() => {
-      router = createActiveMQRouter();
-    });
-
     test('matches route by eventSourceArns', ({ activeMQMessage }) => {
       const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
       router.route(
@@ -349,7 +336,6 @@ suite('ActiveMQRouter', () => {
     test('selects the first matching route when multiple routes match', ({ activeMQMessage }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineActiveMQRoute({ filters: {} }).handle(firstHandler));
       router.route(defineActiveMQRoute({ filters: {} }).handle(secondHandler));
 
@@ -366,12 +352,6 @@ suite('ActiveMQRouter', () => {
   });
 
   suite('parseJsonBody', () => {
-    let router: ActiveMQRouter;
-
-    beforeEach(() => {
-      router = new ActiveMQRouter();
-    });
-
     test('parses valid JSON string into an object', () => {
       // @ts-expect-error - testing private method directly
       const result = router.parseJsonBody('{"action":"process"}');
@@ -388,12 +368,6 @@ suite('ActiveMQRouter', () => {
   });
 
   suite('validateBody', () => {
-    let router: ActiveMQRouter;
-
-    beforeEach(() => {
-      router = new ActiveMQRouter();
-    });
-
     test('returns pre-parsed body when no schema', () => {
       const body = { action: 'process' };
 
@@ -444,7 +418,6 @@ suite('ActiveMQRouter', () => {
       activeMQMessage,
       activeMQHandlerEvent,
     }) => {
-      const router = createActiveMQRouter();
       const handler = vi.fn();
       router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
 
@@ -466,7 +439,6 @@ suite('ActiveMQRouter', () => {
     });
 
     test('decodes base64 message data', async ({ activeMQMessage, context }) => {
-      const router = createActiveMQRouter();
       const handler = vi.fn();
       router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
 
@@ -487,14 +459,11 @@ suite('ActiveMQRouter', () => {
     });
 
     test('throws when no route matches', async ({ activeMQHandlerEvent }) => {
-      const router = createActiveMQRouter();
-
       const { event, context } = activeMQHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler errors', async ({ activeMQHandlerEvent }) => {
-      const router = createActiveMQRouter();
       router.route(
         defineActiveMQRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -506,7 +475,6 @@ suite('ActiveMQRouter', () => {
     });
 
     test('returns undefined on success', async ({ activeMQHandlerEvent }) => {
-      const router = createActiveMQRouter();
       router.route(defineActiveMQRoute({ filters: {} }).handle(async () => {}));
 
       const { event, context } = activeMQHandlerEvent();
@@ -516,7 +484,6 @@ suite('ActiveMQRouter', () => {
     });
 
     test('processes messages sequentially', async ({ activeMQMessage, context }) => {
-      const router = createActiveMQRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -547,7 +514,6 @@ suite('ActiveMQRouter', () => {
       const textHandler = vi.fn();
       const bytesHandler = vi.fn();
 
-      const router = createActiveMQRouter();
       router.textMessage({ filters: {}, handler: textHandler });
       router.bytesMessage({ filters: {}, handler: bytesHandler });
 
@@ -567,7 +533,6 @@ suite('ActiveMQRouter', () => {
       const brokerAHandler = vi.fn();
       const brokerBHandler = vi.fn();
 
-      const router = createActiveMQRouter();
       router.route(defineActiveMQRoute({ filters: { eventSourceArns: [brokerAArn] } }).handle(brokerAHandler));
       router.route(defineActiveMQRoute({ filters: { eventSourceArns: [brokerBArn] } }).handle(brokerBHandler));
 
@@ -587,7 +552,6 @@ suite('ActiveMQRouter', () => {
     test('catch-all route handles all message types', async ({ activeMQMessage, context }) => {
       const handler = vi.fn();
 
-      const router = createActiveMQRouter();
       router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
 
       const event = createActiveMQEvent([

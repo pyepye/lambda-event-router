@@ -3,6 +3,12 @@ import { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './S
 import type { StepFunctionsFilterInput } from './types.js';
 
 suite('StepFunctionsRouter', () => {
+  let router: StepFunctionsRouter;
+
+  beforeEach(() => {
+    router = new StepFunctionsRouter();
+  });
+
   suite('createStepFunctionsRouter', () => {
     test('creates a StepFunctionsRouter instance', () => {
       const router = createStepFunctionsRouter();
@@ -11,12 +17,6 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: StepFunctionsRouter;
-
-    beforeEach(() => {
-      router = new StepFunctionsRouter();
-    });
-
     test('returns true for a plain object event', () => {
       expect(router.canHandleEvent({ action: 'process', data: 123 })).toBe(true);
     });
@@ -164,7 +164,6 @@ suite('StepFunctionsRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new StepFunctionsRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -176,12 +175,6 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: StepFunctionsRouter;
-
-    beforeEach(() => {
-      router = new StepFunctionsRouter();
-    });
-
     test('matches a route with taskToken filter when event has a TaskToken string', () => {
       router.route(
         defineRoute({
@@ -348,7 +341,6 @@ suite('StepFunctionsRouter', () => {
     test('selects the first matching route when multiple routes match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
@@ -370,7 +362,6 @@ suite('StepFunctionsRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with the event and returns the result', async () => {
-      const router = new StepFunctionsRouter();
       const handler = vi.fn().mockResolvedValue({ status: 'done' });
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -382,15 +373,12 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('throws when no route matches', async () => {
-      const router = createStepFunctionsRouter();
-
       await expect(router.handleEvent({ action: 'unknown' })).rejects.toThrow(
         'No route matched for Step Functions event',
       );
     });
 
     test('extracts TaskToken and passes { taskToken, input } to a task token handler', async () => {
-      const router = new StepFunctionsRouter();
       const handler = vi.fn().mockResolvedValue({ sent: true });
       router.route(
         defineRoute({
@@ -410,7 +398,6 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('propagates handler errors', async () => {
-      const router = new StepFunctionsRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -423,7 +410,6 @@ suite('StepFunctionsRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated event from eventSchema for a regular route', async () => {
-      const router = new StepFunctionsRouter();
       const handler = vi.fn();
       const validatedData = { action: 'process', validated: true };
       const eventSchema: Schema<typeof validatedData> = {
@@ -443,11 +429,9 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('throws when eventSchema validation fails for a regular route', async () => {
-      const router = new StepFunctionsRouter();
       const eventSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: {},
@@ -459,7 +443,6 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('passes raw event to handler when no eventSchema is provided', async () => {
-      const router = new StepFunctionsRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -470,13 +453,11 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('validates input (not TaskToken) with eventSchema for a task token route', async () => {
-      const router = new StepFunctionsRouter();
       const handler = vi.fn();
       const validatedInput = { orderId: '123', validated: true };
       const eventSchema: Schema<typeof validatedInput> = {
         safeParse: () => ({ success: true, data: validatedInput }),
       };
-
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -494,11 +475,9 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('throws when eventSchema validation fails for a task token route', async () => {
-      const router = new StepFunctionsRouter();
       const eventSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid input') }),
       };
-
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -513,12 +492,6 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('validateEvent', () => {
-    let router: StepFunctionsRouter;
-
-    beforeEach(() => {
-      router = new StepFunctionsRouter();
-    });
-
     test('returns the event unchanged when no schema is provided', () => {
       const event = { action: 'process' };
 
@@ -554,8 +527,6 @@ suite('StepFunctionsRouter', () => {
     test('routes to different handlers via customFilter', async () => {
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
-
-      const router = createStepFunctionsRouter();
       router.route(
         defineRoute({
           filters: {
@@ -589,8 +560,6 @@ suite('StepFunctionsRouter', () => {
     test('same router handles both task token and regular events', async () => {
       const taskTokenHandler = vi.fn().mockResolvedValue({ sent: true });
       const regularHandler = vi.fn().mockResolvedValue({ processed: true });
-
-      const router = createStepFunctionsRouter();
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -619,8 +588,6 @@ suite('StepFunctionsRouter', () => {
     test('catch-all handles non-matching events', async () => {
       const specificHandler = vi.fn();
       const catchAllHandler = vi.fn().mockResolvedValue({ fallback: true });
-
-      const router = createStepFunctionsRouter();
       router.route(
         defineRoute({
           filters: {

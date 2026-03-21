@@ -3,6 +3,12 @@ import { createKinesisEvent, test } from '@lambda-event-router/testing';
 import { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
 import type { KinesisFilterInput } from './types.js';
 
+let router: KinesisRouter;
+
+beforeEach(() => {
+  router = new KinesisRouter();
+});
+
 suite('KinesisRouter', () => {
   suite('createKinesisRouter', () => {
     test('creates a KinesisRouter instance', () => {
@@ -12,12 +18,6 @@ suite('KinesisRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: KinesisRouter;
-
-    beforeEach(() => {
-      router = new KinesisRouter();
-    });
-
     test('returns true for a valid Kinesis event', () => {
       const event = createKinesisEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -85,7 +85,6 @@ suite('KinesisRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new KinesisRouter();
       const definition = defineRoute({
         filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
       }).handle(async () => {});
@@ -97,12 +96,6 @@ suite('KinesisRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: KinesisRouter;
-
-    beforeEach(() => {
-      router = createKinesisRouter();
-    });
-
     test('matches route by eventSourceArns', ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
@@ -211,7 +204,6 @@ suite('KinesisRouter', () => {
     test('selects first matching route when multiple match', ({ kinesisRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
@@ -299,7 +291,6 @@ suite('KinesisRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler with the parsed request', async ({ kinesisRecord, kinesisHandlerEvent }) => {
-      const router = new KinesisRouter();
       const handler = vi.fn();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
 
@@ -334,14 +325,11 @@ suite('KinesisRouter', () => {
     });
 
     test('throws when no route matches', async ({ kinesisHandlerEvent }) => {
-      const router = createKinesisRouter();
-
       const { event, context } = kinesisHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
     test('propagates handler error', async ({ kinesisHandlerEvent }) => {
-      const router = createKinesisRouter();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
@@ -356,7 +344,6 @@ suite('KinesisRouter', () => {
     });
 
     test('processes records sequentially', async ({ kinesisRecord, kinesisEvent, context }) => {
-      const router = createKinesisRouter();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const callOrder: string[] = [];
 
@@ -386,7 +373,6 @@ suite('KinesisRouter', () => {
     });
 
     test('returns undefined on success', async ({ kinesisHandlerEvent }) => {
-      const router = createKinesisRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -401,9 +387,13 @@ suite('KinesisRouter', () => {
   });
 
   suite('handleEvent - batchItemFailures', () => {
-    test('returns batchItemFailure when no route matches', async ({ kinesisHandlerEvent }) => {
-      const router = createKinesisRouter({ batchItemFailures: true });
+    let router: KinesisRouter;
 
+    beforeEach(() => {
+      router = new KinesisRouter({ batchItemFailures: true });
+    });
+
+    test('returns batchItemFailure when no route matches', async ({ kinesisHandlerEvent }) => {
       const { event, context } = kinesisHandlerEvent();
       const result = await router.handleEvent(event, context);
 
@@ -413,7 +403,6 @@ suite('KinesisRouter', () => {
     });
 
     test('returns undefined when all records succeed', async ({ kinesisRecord, kinesisEvent, context }) => {
-      const router = createKinesisRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
@@ -437,7 +426,6 @@ suite('KinesisRouter', () => {
       kinesisEvent,
       context,
     }) => {
-      const router = createKinesisRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const handler = vi.fn();
 
@@ -476,12 +464,6 @@ suite('KinesisRouter', () => {
   });
 
   suite('parseData', () => {
-    let router: KinesisRouter;
-
-    beforeEach(() => {
-      router = new KinesisRouter();
-    });
-
     test('parses valid JSON data', () => {
       // @ts-expect-error - testing private method directly
       const result = router.parseData('{"greeting":"hello"}');
@@ -498,20 +480,14 @@ suite('KinesisRouter', () => {
   });
 
   suite('validateData', () => {
-    let router: KinesisRouter;
-
-    beforeEach(() => {
-      router = new KinesisRouter();
-    });
-
     test('returns validated data when schema succeeds', ({ kinesisRecord }) => {
-      const record = kinesisRecord();
       const data = { action: 'processOrder', orderId: '12345' };
       const validatedData = { ...data, validated: true };
       const schema: Schema<typeof validatedData> = {
         safeParse: () => ({ success: true, data: validatedData }),
       };
 
+      const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
       const result = router.validateData(data, schema, record);
 
@@ -519,11 +495,11 @@ suite('KinesisRouter', () => {
     });
 
     test('throws when schema validation fails', ({ kinesisRecord }) => {
-      const record = kinesisRecord();
       const schema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid data') }),
       };
 
+      const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
       expect(() => router.validateData({}, schema, record)).toThrow(
         `Data validation failed for record ${record.eventID}`,
@@ -541,10 +517,11 @@ suite('KinesisRouter', () => {
     });
 
     test('throws when data is a string and schema is provided', ({ kinesisRecord }) => {
-      const record = kinesisRecord();
       const schema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
       };
+
+      const record = kinesisRecord();
 
       // @ts-expect-error - testing private method directly
       expect(() => router.validateData('not valid json', schema, record)).toThrow(
@@ -555,14 +532,12 @@ suite('KinesisRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated data from dataSchema', async ({ kinesisRecord, kinesisEvent, context }) => {
-      const router = createKinesisRouter();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const handler = vi.fn();
       const transformedData = { action: 'processOrder', orderId: '12345', validated: true };
       const dataSchema: Schema<typeof transformedData> = {
         safeParse: () => ({ success: true, data: transformedData }),
       };
-
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -586,7 +561,6 @@ suite('KinesisRouter', () => {
       kinesisEvent,
       context,
     }) => {
-      const router = createKinesisRouter();
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const dataSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
@@ -609,7 +583,7 @@ suite('KinesisRouter', () => {
       kinesisEvent,
       context,
     }) => {
-      const router = createKinesisRouter({ batchItemFailures: true });
+      const router = new KinesisRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const dataSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
@@ -640,7 +614,6 @@ suite('KinesisRouter', () => {
       const streamAArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/stream-a';
       const streamBArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/stream-b';
 
-      const router = createKinesisRouter();
       router.route(
         defineRoute({
           filters: { eventSourceArns: [streamAArn] },

@@ -3,6 +3,12 @@ import { test } from '@lambda-event-router/testing';
 import { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
 import type { KafkaFilterInput, KafkaRequest } from './types.js';
 
+let router: KafkaRouter;
+
+beforeEach(() => {
+  router = new KafkaRouter();
+});
+
 describe('createKafkaRouter', () => {
   it('creates a KafkaRouter instance', () => {
     const router = createKafkaRouter();
@@ -32,8 +38,6 @@ describe('defineRoute', () => {
 });
 
 describe('canHandleEvent', () => {
-  const router = createKafkaRouter();
-
   test('returns true for valid MSK event', ({ kafkaMSKEvent }) => {
     const event = kafkaMSKEvent();
     expect(router.canHandleEvent(event)).toBe(true);
@@ -65,7 +69,6 @@ describe('canHandleEvent', () => {
 
 describe('route', () => {
   it('returns router instance for chaining', () => {
-    const router = createKafkaRouter();
     const result = router.route(defineRoute({ filters: {} }).handle(async () => {}));
     expect(result).toBe(router);
   });
@@ -73,7 +76,6 @@ describe('route', () => {
 
 describe('matchRoute', () => {
   test('matches by topics filter', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
 
     const record = kafkaRecord({ topic: 'orders' });
@@ -85,7 +87,6 @@ describe('matchRoute', () => {
   });
 
   test('does not match when topics do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
 
     const record = kafkaRecord({ topic: 'users' });
@@ -98,7 +99,6 @@ describe('matchRoute', () => {
 
   test('matches by eventSourceArns', ({ kafkaRecord, kafkaMSKEvent }) => {
     const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: { eventSourceArns: [arn] } }).handle(async () => {}));
 
     const record = kafkaRecord();
@@ -110,7 +110,6 @@ describe('matchRoute', () => {
   });
 
   test('does not match when eventSourceArns do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({ filters: { eventSourceArns: ['arn:aws:kafka:us-east-1:000000000000:cluster/Other/xyz'] } }).handle(
         async () => {},
@@ -126,7 +125,6 @@ describe('matchRoute', () => {
   });
 
   test('does not match eventSourceArns filter for SelfManagedKafka event', ({ kafkaRecord, kafkaSelfManagedEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({
         filters: { eventSourceArns: ['arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123'] },
@@ -142,7 +140,6 @@ describe('matchRoute', () => {
   });
 
   test('matches by bootstrapServers', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: { bootstrapServers: ['broker1.example.com:9092'] } }).handle(async () => {}));
 
     const record = kafkaRecord();
@@ -154,7 +151,6 @@ describe('matchRoute', () => {
   });
 
   test('does not match when bootstrapServers do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({ filters: { bootstrapServers: ['other-broker.example.com:9092'] } }).handle(async () => {}),
     );
@@ -168,7 +164,6 @@ describe('matchRoute', () => {
   });
 
   test('matches by customFilter', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({
         filters: { customFilter: ({ topic }: KafkaFilterInput): boolean => topic === 'test-topic' },
@@ -184,7 +179,6 @@ describe('matchRoute', () => {
   });
 
   test('does not match when customFilter returns false', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({
         filters: { customFilter: (): boolean => false },
@@ -200,9 +194,7 @@ describe('matchRoute', () => {
   });
 
   test('customFilter receives correct KafkaFilterInput', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     let receivedInput: KafkaFilterInput | undefined;
-
     router.route(
       defineRoute({
         filters: {
@@ -229,9 +221,7 @@ describe('matchRoute', () => {
   });
 
   test('customFilter is not called when preceding filter rejects', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     const customFilter = vi.fn(() => true);
-
     router.route(
       defineRoute({
         filters: { topics: ['orders'], customFilter },
@@ -248,7 +238,6 @@ describe('matchRoute', () => {
   });
 
   test('empty filters as catch-all', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
     const record = kafkaRecord({ topic: 'anything' });
@@ -260,10 +249,8 @@ describe('matchRoute', () => {
   });
 
   test('first matching route wins when multiple match', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
-
     router.route(defineRoute({ filters: {} }).handle(firstHandler));
     router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
@@ -278,7 +265,6 @@ describe('matchRoute', () => {
 
 describe('flattenRecords', () => {
   test('flattens records from multiple topics into single array', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     const recordA = kafkaRecord({ topic: 'topic-a' });
     const recordB = kafkaRecord({ topic: 'topic-b' });
     const recordC = kafkaRecord({ topic: 'topic-a' });
@@ -294,7 +280,6 @@ describe('flattenRecords', () => {
   });
 
   test('handles single topic', ({ kafkaRecord, kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
     const record = kafkaRecord();
 
     const event = kafkaMSKEvent({ 'test-topic': [record] });
@@ -305,8 +290,6 @@ describe('flattenRecords', () => {
   });
 
   test('returns empty array for empty records', ({ kafkaMSKEvent }) => {
-    const router = createKafkaRouter();
-
     const event = kafkaMSKEvent({});
 
     // @ts-expect-error testing private method
@@ -317,7 +300,6 @@ describe('flattenRecords', () => {
 
 describe('decodeHeaders', () => {
   it('decodes header byte arrays to UTF-8 strings', () => {
-    const router = createKafkaRouter();
     // "application/json" as byte array
     const contentTypeBytes = Array.from(Buffer.from('application/json', 'utf-8'));
     const headers = [{ 'content-type': contentTypeBytes }];
@@ -328,7 +310,6 @@ describe('decodeHeaders', () => {
   });
 
   it('handles multiple headers', () => {
-    const router = createKafkaRouter();
     const headers = [
       { 'content-type': Array.from(Buffer.from('application/json', 'utf-8')) },
       { 'x-correlation-id': Array.from(Buffer.from('abc-123', 'utf-8')) },
@@ -340,8 +321,6 @@ describe('decodeHeaders', () => {
   });
 
   it('handles empty headers array', () => {
-    const router = createKafkaRouter();
-
     // @ts-expect-error testing private method
     const result = router.decodeHeaders([]);
     expect(result).toEqual([]);
@@ -350,14 +329,12 @@ describe('decodeHeaders', () => {
 
 describe('parseValue', () => {
   it('parses valid JSON string', () => {
-    const router = createKafkaRouter();
     // @ts-expect-error testing private method
     const result = router.parseValue('{"name":"test"}');
     expect(result).toEqual({ name: 'test' });
   });
 
   it('returns raw string for non-JSON value', () => {
-    const router = createKafkaRouter();
     // @ts-expect-error testing private method
     const result = router.parseValue('plain text');
     expect(result).toBe('plain text');
@@ -366,7 +343,6 @@ describe('parseValue', () => {
 
 describe('validateValue', () => {
   test('returns data when no schema', ({ kafkaRecord }) => {
-    const router = createKafkaRouter();
     const data = { name: 'test' };
     const record = kafkaRecord({ topic: 'test', partition: 0 });
 
@@ -376,7 +352,6 @@ describe('validateValue', () => {
   });
 
   test('returns validated data on schema success', ({ kafkaRecord }) => {
-    const router = createKafkaRouter();
     const data = { name: 'test' };
     const schema: Schema<{ name: string }> = {
       safeParse: (input: { name: string }) => ({ success: true, data: input }),
@@ -389,7 +364,6 @@ describe('validateValue', () => {
   });
 
   test('throws on schema validation failure', ({ kafkaRecord }) => {
-    const router = createKafkaRouter();
     const schema: Schema<unknown> = {
       safeParse: () => ({ success: false, error: new Error('invalid') }),
     };
@@ -402,7 +376,6 @@ describe('validateValue', () => {
   });
 
   test('throws when value is a string and schema is provided', ({ kafkaRecord }) => {
-    const router = createKafkaRouter();
     const schema: Schema<unknown> = {
       safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
     };
@@ -417,7 +390,6 @@ describe('validateValue', () => {
 
 describe('handleEvent', () => {
   test('calls handler with correct KafkaRequest shape', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     let receivedRequest: KafkaRequest | undefined;
 
     router.route(
@@ -445,9 +417,7 @@ describe('handleEvent', () => {
   });
 
   test('decodes base64 key and value', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     let receivedRequest: KafkaRequest | undefined;
-
     router.route(
       defineRoute({ filters: {} }).handle(async (request) => {
         receivedRequest = request;
@@ -464,9 +434,7 @@ describe('handleEvent', () => {
   });
 
   test('parses JSON value', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     let receivedRequest: KafkaRequest | undefined;
-
     router.route(
       defineRoute({ filters: {} }).handle(async (request) => {
         receivedRequest = request;
@@ -482,9 +450,7 @@ describe('handleEvent', () => {
   });
 
   test('handles non-JSON value', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     let receivedRequest: KafkaRequest | undefined;
-
     router.route(
       defineRoute({ filters: {} }).handle(async (request) => {
         receivedRequest = request;
@@ -500,7 +466,6 @@ describe('handleEvent', () => {
   });
 
   test('throws when no route matches', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
 
     const record = kafkaRecord({ topic: 'users', partition: 0, offset: 0 });
@@ -512,7 +477,6 @@ describe('handleEvent', () => {
   });
 
   test('propagates handler errors', async ({ kafkaHandlerEvent }) => {
-    const router = createKafkaRouter();
     router.route(
       defineRoute({ filters: {} }).handle(async () => {
         throw new Error('handler exploded');
@@ -524,7 +488,6 @@ describe('handleEvent', () => {
   });
 
   test('returns undefined on success', async ({ kafkaHandlerEvent }) => {
-    const router = createKafkaRouter();
     router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
     const { event, context } = kafkaHandlerEvent();
@@ -534,7 +497,6 @@ describe('handleEvent', () => {
   });
 
   test('processes records sequentially', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     const callOrder: string[] = [];
 
     router.route(
@@ -557,12 +519,17 @@ describe('handleEvent', () => {
 });
 
 describe('handleEvent with batchItemFailures', () => {
+  let router: KafkaRouter;
+
+  beforeEach(() => {
+    router = new KafkaRouter({ batchItemFailures: true });
+  });
+
   test('returns batchItemFailures with itemIdentifier format topic-partition-offset', async ({
     kafkaRecord,
     kafkaMSKEvent,
     context,
   }) => {
-    const router = createKafkaRouter({ batchItemFailures: true });
     const failingRecord = kafkaRecord({ topic: 'orders', partition: 2, offset: 5 });
 
     router.route(
@@ -583,7 +550,6 @@ describe('handleEvent with batchItemFailures', () => {
   });
 
   test('returns undefined when all records succeed', async ({ kafkaHandlerEvent }) => {
-    const router = createKafkaRouter({ batchItemFailures: true });
     router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
     const { event, context } = kafkaHandlerEvent();
@@ -593,8 +559,6 @@ describe('handleEvent with batchItemFailures', () => {
   });
 
   test('marks failed record and all remaining records as failures', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter({ batchItemFailures: true });
-
     const recordA = kafkaRecord({ topic: 'orders', partition: 0, offset: 0 });
     const failingRecord = kafkaRecord({ topic: 'orders', partition: 0, offset: 1 });
     const recordC = kafkaRecord({ topic: 'orders', partition: 0, offset: 2 });
@@ -622,7 +586,6 @@ describe('handleEvent with batchItemFailures', () => {
   });
 
   test('stops processing after first failure', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter({ batchItemFailures: true });
     const processedOffsets: number[] = [];
 
     router.route(
@@ -649,7 +612,6 @@ describe('handleEvent with schema validation', () => {
     kafkaMSKEvent,
     context,
   }) => {
-    const router = createKafkaRouter();
     const transformedData = { name: 'validated' };
     const schema: Schema<{ name: string }> = {
       safeParse: () => ({ success: true, data: transformedData }),
@@ -671,7 +633,6 @@ describe('handleEvent with schema validation', () => {
   });
 
   test('throws when value fails schema validation', async ({ kafkaHandlerEvent }) => {
-    const router = createKafkaRouter();
     const schema: Schema<unknown> = {
       safeParse: () => ({ success: false, error: new Error('invalid') }),
     };
@@ -685,7 +646,6 @@ describe('handleEvent with schema validation', () => {
 
 describe('full event processing', () => {
   test('routes records to different handlers by topic', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     const orderHandler = vi.fn();
     const userHandler = vi.fn();
 
@@ -703,7 +663,6 @@ describe('full event processing', () => {
   });
 
   test('routes MSK event by eventSourceArn', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     const handler = vi.fn();
     const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
 
@@ -718,9 +677,7 @@ describe('full event processing', () => {
   });
 
   test('routes SelfManagedKafka event by bootstrapServers', async ({ kafkaRecord, kafkaSelfManagedEvent, context }) => {
-    const router = createKafkaRouter();
     const handler = vi.fn();
-
     router.route(defineRoute({ filters: { bootstrapServers: ['broker1.example.com:9092'] } }).handle(handler));
 
     const record = kafkaRecord();
@@ -732,9 +689,7 @@ describe('full event processing', () => {
   });
 
   test('catch-all route handles all records', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     const handler = vi.fn();
-
     router.route(defineRoute({ filters: {} }).handle(handler));
 
     const recordA = kafkaRecord({ topic: 'orders' });
@@ -748,10 +703,8 @@ describe('full event processing', () => {
   });
 
   test('multiple topics in single event routed correctly', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-    const router = createKafkaRouter();
     const orderHandler = vi.fn();
     const catchAllHandler = vi.fn();
-
     router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(orderHandler));
     router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
 

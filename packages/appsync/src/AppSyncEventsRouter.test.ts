@@ -1,6 +1,12 @@
 import { createAppSyncEventsEvent, createMockContext, test } from '@lambda-event-router/testing';
 import { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
 
+let router: AppSyncEventsRouter;
+
+beforeEach(() => {
+  router = new AppSyncEventsRouter();
+});
+
 suite('AppSyncEventsRouter', () => {
   suite('createAppSyncEventsRouter', () => {
     test('creates an AppSyncEventsRouter instance', () => {
@@ -10,12 +16,6 @@ suite('AppSyncEventsRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: AppSyncEventsRouter;
-
-    beforeEach(() => {
-      router = new AppSyncEventsRouter();
-    });
-
     test('returns true for a valid AppSync events event', () => {
       const event = createAppSyncEventsEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -108,8 +108,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('route', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncEventsRouter();
-
       const result = router.route({
         filters: { operations: ['PUBLISH'] },
         handler: vi.fn(),
@@ -121,8 +119,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('publish', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncEventsRouter();
-
       const result = router.publish({
         channelNamespace: '/default/*',
         handler: vi.fn(),
@@ -134,8 +130,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('subscribe', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncEventsRouter();
-
       const result = router.subscribe({
         channelNamespace: '/default/*',
         handler: vi.fn(),
@@ -146,12 +140,6 @@ suite('AppSyncEventsRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: AppSyncEventsRouter;
-
-    beforeEach(() => {
-      router = new AppSyncEventsRouter();
-    });
-
     test('matches by operations', () => {
       const handler = vi.fn();
       router.route({ filters: { operations: ['PUBLISH'] }, handler });
@@ -311,7 +299,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('handleEvent', () => {
     test('builds complete AppSyncEventsRequest and calls handler', async () => {
-      const router = new AppSyncEventsRouter();
       const handler = vi.fn().mockResolvedValue({ success: true });
 
       router.route({
@@ -353,7 +340,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('throws when no route matches', async () => {
-      const router = new AppSyncEventsRouter();
       const event = createAppSyncEventsEvent({
         info: { operation: 'PUBLISH', channel: { path: '/unknown/channel' } },
       });
@@ -365,7 +351,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('defaults null events to empty array', async () => {
-      const router = new AppSyncEventsRouter();
       const handler = vi.fn().mockResolvedValue(null);
 
       router.route({ filters: {}, handler });
@@ -381,7 +366,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('customFilter via shorthand methods', () => {
     test('publish passes customFilter to route filters', async () => {
-      const router = new AppSyncEventsRouter();
       const customFilter = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
 
@@ -401,7 +385,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('publish rejects when customFilter returns false', async () => {
-      const router = new AppSyncEventsRouter();
       const customFilter = vi.fn().mockReturnValue(false);
 
       router.publish({
@@ -417,7 +400,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('subscribe passes customFilter to route filters', async () => {
-      const router = new AppSyncEventsRouter();
       const customFilter = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
 
@@ -437,7 +419,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('subscribe rejects when customFilter returns false', async () => {
-      const router = new AppSyncEventsRouter();
       const customFilter = vi.fn().mockReturnValue(false);
 
       router.subscribe({
@@ -455,7 +436,6 @@ suite('AppSyncEventsRouter', () => {
 
   suite('handleEvent via shorthand methods', () => {
     test('routes PUBLISH events through publish()', async () => {
-      const router = new AppSyncEventsRouter();
       const handler = vi.fn().mockResolvedValue('publish-result');
 
       router.publish({ channelNamespace: '/default/*', handler });
@@ -468,7 +448,6 @@ suite('AppSyncEventsRouter', () => {
     });
 
     test('routes SUBSCRIBE events through subscribe()', async () => {
-      const router = new AppSyncEventsRouter();
       const handler = vi.fn().mockResolvedValue('subscribe-result');
 
       router.subscribe({ channelNamespace: '/default/*', handler });

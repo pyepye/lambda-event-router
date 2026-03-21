@@ -3,6 +3,12 @@ import { createSecretsManagerRouter, defineRoute, SecretsManagerRouter } from '.
 import type { SecretsManagerFilterInput, SecretsManagerFilters } from './types.js';
 
 suite('SecretsManagerRouter', () => {
+  let router: SecretsManagerRouter;
+
+  beforeEach(() => {
+    router = new SecretsManagerRouter();
+  });
+
   suite('createSecretsManagerRouter', () => {
     test('creates a SecretsManagerRouter instance', () => {
       const router = createSecretsManagerRouter();
@@ -11,12 +17,6 @@ suite('SecretsManagerRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: SecretsManagerRouter;
-
-    beforeEach(() => {
-      router = new SecretsManagerRouter();
-    });
-
     test.each([
       'createSecret',
       'setSecret',
@@ -101,7 +101,6 @@ suite('SecretsManagerRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new SecretsManagerRouter();
       const definition = defineRoute({
         filters: { secretIds: ['arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret'] },
       }).handle(async () => {});
@@ -119,7 +118,6 @@ suite('SecretsManagerRouter', () => {
       'testSecret',
       'finishSecret',
     ] as const)('%s adds route with correct step filter', (step) => {
-      const router = new SecretsManagerRouter();
       const handler = vi.fn();
 
       router[step]({ filters: {}, handler });
@@ -135,7 +133,6 @@ suite('SecretsManagerRouter', () => {
     });
 
     test('preserves other filters alongside injected steps', () => {
-      const router = new SecretsManagerRouter();
       const handler = vi.fn();
       const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
 
@@ -161,7 +158,6 @@ suite('SecretsManagerRouter', () => {
     });
 
     test('returns this for chaining', () => {
-      const router = new SecretsManagerRouter();
       const handler = vi.fn();
 
       const result = router.createSecret({ filters: {}, handler });
@@ -171,12 +167,6 @@ suite('SecretsManagerRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: SecretsManagerRouter;
-
-    beforeEach(() => {
-      router = createSecretsManagerRouter();
-    });
-
     suite('secretIds', () => {
       test('matches when secretId is in the list', () => {
         const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
@@ -605,7 +595,6 @@ suite('SecretsManagerRouter', () => {
 
   suite('handleEvent', () => {
     test('calls matched handler with the parsed request', async ({ secretsManagerHandlerEvent }) => {
-      const router = createSecretsManagerRouter();
       const handler = vi.fn();
       const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
       router.route(defineRoute({ filters: { secretIds: [secretId] } }).handle(handler));
@@ -625,7 +614,6 @@ suite('SecretsManagerRouter', () => {
     });
 
     test('returns undefined on success', async ({ secretsManagerHandlerEvent }) => {
-      const router = createSecretsManagerRouter();
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const { event, context } = secretsManagerHandlerEvent();
@@ -635,8 +623,6 @@ suite('SecretsManagerRouter', () => {
     });
 
     test('throws when no route matches', async ({ secretsManagerHandlerEvent }) => {
-      const router = createSecretsManagerRouter();
-
       const { event, context } = secretsManagerHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow(
         `No route matched for Secrets Manager rotation event (step: ${event.Step}, secretId: ${event.SecretId})`,
@@ -644,7 +630,6 @@ suite('SecretsManagerRouter', () => {
     });
 
     test('propagates handler errors', async ({ secretsManagerHandlerEvent }) => {
-      const router = createSecretsManagerRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -660,7 +645,6 @@ suite('SecretsManagerRouter', () => {
     test('routes to different handlers based on step filters', async ({ secretsManagerHandlerEvent }) => {
       const createHandler = vi.fn();
       const setHandler = vi.fn();
-      const router = createSecretsManagerRouter();
 
       router.route(defineRoute({ filters: { steps: ['createSecret'] } }).handle(createHandler));
       router.route(defineRoute({ filters: { steps: ['setSecret'] } }).handle(setHandler));
@@ -681,7 +665,6 @@ suite('SecretsManagerRouter', () => {
       const secretBHandler = vi.fn();
       const secretA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a';
       const secretB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b';
-      const router = createSecretsManagerRouter();
 
       router.route(defineRoute({ filters: { secretIds: [secretA] } }).handle(secretAHandler));
       router.route(defineRoute({ filters: { secretIds: [secretB] } }).handle(secretBHandler));
@@ -700,7 +683,6 @@ suite('SecretsManagerRouter', () => {
     test('catch-all route handles unmatched events', async ({ secretsManagerHandlerEvent }) => {
       const specificHandler = vi.fn();
       const catchAllHandler = vi.fn();
-      const router = createSecretsManagerRouter();
 
       router.route(defineRoute({ filters: { steps: ['createSecret'] } }).handle(specificHandler));
       router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
@@ -716,7 +698,6 @@ suite('SecretsManagerRouter', () => {
     test('step convenience methods with other filters work together', async ({ secretsManagerHandlerEvent }) => {
       const handler = vi.fn();
       const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
-      const router = createSecretsManagerRouter();
 
       router.createSecret({ filters: { secretIds: [secretId] }, handler });
 

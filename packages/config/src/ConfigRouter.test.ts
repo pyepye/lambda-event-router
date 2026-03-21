@@ -3,6 +3,12 @@ import { createConfigurationItem, createConfigurationItemSummary, test } from '@
 import { ConfigRouter, createConfigRouter, defineRoute } from './ConfigRouter.js';
 
 suite('ConfigRouter', () => {
+  let router: ConfigRouter;
+
+  beforeEach(() => {
+    router = new ConfigRouter();
+  });
+
   suite('createConfigRouter', () => {
     test('creates a ConfigRouter instance', () => {
       const router = createConfigRouter();
@@ -11,12 +17,6 @@ suite('ConfigRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: ConfigRouter;
-
-    beforeEach(() => {
-      router = new ConfigRouter();
-    });
-
     test('returns false for non-object events', () => {
       expect(router.canHandleEvent(null)).toBe(false);
       expect(router.canHandleEvent(undefined)).toBe(false);
@@ -65,7 +65,6 @@ suite('ConfigRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new ConfigRouter();
       const definition = defineRoute({
         filters: {},
       }).handle(async () => {});
@@ -76,7 +75,6 @@ suite('ConfigRouter', () => {
     });
 
     test('adds multiple routes', () => {
-      const router = new ConfigRouter();
       const definitionA = defineRoute({ filters: { configRuleNames: ['rule-a'] } }).handle(async () => {});
       const definitionB = defineRoute({ filters: { configRuleNames: ['rule-b'] } }).handle(async () => {});
 
@@ -93,12 +91,6 @@ suite('ConfigRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: ConfigRouter;
-
-    beforeEach(() => {
-      router = new ConfigRouter();
-    });
-
     test('matches when no filters set', () => {
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
@@ -249,7 +241,6 @@ suite('ConfigRouter', () => {
     test('returns first matching route when multiple routes exist', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineRoute({ filters: { configRuleNames: ['my-rule'] } }).handle(firstHandler));
       router.route(defineRoute({ filters: { configRuleNames: ['my-rule'] } }).handle(secondHandler));
 
@@ -263,12 +254,6 @@ suite('ConfigRouter', () => {
   });
 
   suite('validateSchema', () => {
-    let router: ConfigRouter;
-
-    beforeEach(() => {
-      router = new ConfigRouter();
-    });
-
     test('returns data unchanged when no schema provided', () => {
       const data = { key: 'value' };
 
@@ -315,12 +300,10 @@ suite('ConfigRouter', () => {
 
   suite('handleEvent', () => {
     test('normal change notification calls handler with correct fields', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
-      const configItem = createConfigurationItem();
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
+      const configItem = createConfigurationItem();
       const event = configEvent({
         invokingEvent: {
           messageType: 'ConfigurationItemChangeNotification',
@@ -348,12 +331,10 @@ suite('ConfigRouter', () => {
       configEvent,
       context,
     }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
-      const configItem = createConfigurationItem({ configuration: undefined });
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
+      const configItem = createConfigurationItem({ configuration: undefined });
       const event = configEvent({
         invokingEvent: {
           messageType: 'ConfigurationItemChangeNotification',
@@ -373,12 +354,10 @@ suite('ConfigRouter', () => {
       configEvent,
       context,
     }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
-      const summary = createConfigurationItemSummary();
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
+      const summary = createConfigurationItemSummary();
       const event = configEvent({
         invokingEvent: {
           messageType: 'OversizedConfigurationItemChangeNotification',
@@ -401,9 +380,7 @@ suite('ConfigRouter', () => {
     });
 
     test('parses ruleParameters from JSON string', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = configEvent({ ruleParameters: { env: 'prod', region: 'us-east-1' } });
@@ -415,9 +392,7 @@ suite('ConfigRouter', () => {
     });
 
     test('defaults ruleParameters to empty object when empty string', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = configEvent();
@@ -428,7 +403,6 @@ suite('ConfigRouter', () => {
     });
 
     test('throws when no route matches', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       router.route(defineRoute({ filters: { configRuleNames: ['specific-rule'] } }).handle(async () => {}));
 
       const event = configEvent({ configRuleName: 'unknown-rule' });
@@ -438,13 +412,11 @@ suite('ConfigRouter', () => {
     });
 
     test('validates ruleParameters schema when provided', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
       const validatedParams = { env: 'prod-validated' };
       const ruleParametersSchema: Schema<typeof validatedParams> = {
         safeParse: () => ({ success: true, data: validatedParams }),
       };
-
       router.route(defineRoute({ filters: {}, ruleParametersSchema }).handle(handler));
 
       const event = configEvent({ ruleParameters: { env: 'prod' } });
@@ -454,11 +426,9 @@ suite('ConfigRouter', () => {
     });
 
     test('throws when ruleParameters schema validation fails', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const ruleParametersSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(defineRoute({ filters: {}, ruleParametersSchema }).handle(async () => {}));
 
       const event = configEvent({ ruleParameters: { bad: 'data' } });
@@ -466,13 +436,11 @@ suite('ConfigRouter', () => {
     });
 
     test('validates configuration schema for normal events', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
       const validatedConfig = { instanceType: 't3.large', validated: true };
       const configurationSchema: Schema<typeof validatedConfig> = {
         safeParse: () => ({ success: true, data: validatedConfig }),
       };
-
       router.route(defineRoute({ filters: {}, configurationSchema }).handle(handler));
 
       const event = configEvent({
@@ -492,11 +460,9 @@ suite('ConfigRouter', () => {
     });
 
     test('throws when configuration schema validation fails', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const configurationSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid config') }),
       };
-
       router.route(defineRoute({ filters: {}, configurationSchema }).handle(async () => {}));
 
       const event = configEvent({
@@ -510,12 +476,10 @@ suite('ConfigRouter', () => {
     });
 
     test('skips configuration schema validation for oversized events', async ({ configEvent, context }) => {
-      const router = new ConfigRouter();
       const handler = vi.fn();
       const configurationSchema: Schema<unknown> = {
         safeParse: vi.fn(() => ({ success: false as const, error: new Error('should not be called') })),
       };
-
       router.route(defineRoute({ filters: {}, configurationSchema }).handle(handler));
 
       const event = configEvent({
@@ -540,7 +504,6 @@ suite('ConfigRouter', () => {
 
     test('preserves filters, schemas, and handler in the definition', () => {
       const handler = vi.fn();
-      const filters = { configRuleNames: ['my-rule'], resourceTypes: ['AWS::EC2::Instance'] };
       const ruleParametersSchema: Schema<{ env: string }> = {
         safeParse: () => ({ success: true, data: { env: 'prod' } }),
       };
@@ -548,6 +511,7 @@ suite('ConfigRouter', () => {
         safeParse: () => ({ success: true, data: { instanceType: 't2.micro' } }),
       };
 
+      const filters = { configRuleNames: ['my-rule'], resourceTypes: ['AWS::EC2::Instance'] };
       const definition = defineRoute({ filters, ruleParametersSchema, configurationSchema }).handle(handler);
 
       expect(definition).toEqual({

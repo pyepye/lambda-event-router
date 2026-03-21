@@ -2,6 +2,12 @@ import { createWebSocketEvent, test } from '@lambda-event-router/testing';
 import { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
 
 suite('WebSocketRouter', () => {
+  let router: WebSocketRouter;
+
+  beforeEach(() => {
+    router = new WebSocketRouter();
+  });
+
   suite('createWebSocketRouter', () => {
     test('creates a WebSocketRouter instance', () => {
       const router = createWebSocketRouter();
@@ -10,12 +16,6 @@ suite('WebSocketRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: WebSocketRouter;
-
-    beforeEach(() => {
-      router = new WebSocketRouter();
-    });
-
     test('returns true for a valid WebSocket event', () => {
       const event = createWebSocketEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -88,7 +88,6 @@ suite('WebSocketRouter', () => {
 
   suite('route (chaining)', () => {
     test('returns the router instance for chaining', () => {
-      const router = new WebSocketRouter();
       const definition = defineWebSocketRoute({
         filters: { eventType: 'MESSAGE' },
       }).handle(async () => undefined);
@@ -101,19 +100,16 @@ suite('WebSocketRouter', () => {
 
   suite('connect / disconnect / message (chaining)', () => {
     test('connect returns the router instance for chaining', () => {
-      const router = new WebSocketRouter();
       const result = router.connect({ handler: async () => ({ statusCode: 200 }) });
       expect(result).toBe(router);
     });
 
     test('disconnect returns the router instance for chaining', () => {
-      const router = new WebSocketRouter();
       const result = router.disconnect({ handler: async () => {} });
       expect(result).toBe(router);
     });
 
     test('message returns the router instance for chaining', () => {
-      const router = new WebSocketRouter();
       const result = router.message({ handler: async () => {} });
       expect(result).toBe(router);
     });
@@ -147,7 +143,6 @@ suite('WebSocketRouter', () => {
   suite('handleEvent', () => {
     test('calls matched CONNECT handler and returns { statusCode: 200 }', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue({ statusCode: 200 });
-      const router = new WebSocketRouter();
       router.connect({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -161,7 +156,6 @@ suite('WebSocketRouter', () => {
 
     test('calls matched DISCONNECT handler and returns { statusCode: 200 }', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.disconnect({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -175,7 +169,6 @@ suite('WebSocketRouter', () => {
 
     test('calls matched MESSAGE handler and returns { statusCode: 200 }', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent();
@@ -186,8 +179,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('throws when no route matches', async ({ webSocketHandlerEvent }) => {
-      const router = new WebSocketRouter();
-
       const { event, context } = webSocketHandlerEvent({
         event: { requestContext: { eventType: 'MESSAGE', routeKey: 'unknown' } },
       });
@@ -201,7 +192,6 @@ suite('WebSocketRouter', () => {
       webSocketHandlerEvent,
     }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -230,7 +220,6 @@ suite('WebSocketRouter', () => {
 
     test('passes queryStringParameters from event to handler', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -243,7 +232,6 @@ suite('WebSocketRouter', () => {
 
     test('passes event and context on the request object', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent();
@@ -254,7 +242,6 @@ suite('WebSocketRouter', () => {
 
     test('passes parsed JSON body to MESSAGE handler', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -267,7 +254,6 @@ suite('WebSocketRouter', () => {
 
     test('returns raw string body when JSON parsing fails', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -280,7 +266,6 @@ suite('WebSocketRouter', () => {
 
     test('returns undefined body when body is absent', async ({ webSocketHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ handler });
 
       const { event, context } = webSocketHandlerEvent({ event: { body: '' } });
@@ -294,11 +279,10 @@ suite('WebSocketRouter', () => {
       const parsedData = { action: 'test' };
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }) };
       const handler = vi.fn().mockResolvedValue(undefined);
-      const router = new WebSocketRouter();
       router.message({ bodySchema, handler });
 
       const { event, context } = webSocketHandlerEvent({
-        event: { body: JSON.stringify(parsedData) },
+        event: { body: parsedData },
       });
       await router.handleEvent(event, context);
 
@@ -311,7 +295,6 @@ suite('WebSocketRouter', () => {
     }) => {
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid' }) };
       const handler = vi.fn();
-      const router = new WebSocketRouter();
       router.message({ bodySchema, handler });
 
       const { event, context } = webSocketHandlerEvent({
@@ -323,7 +306,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('catches error with statusCode property and returns it', async ({ webSocketHandlerEvent }) => {
-      const router = new WebSocketRouter();
       router.message({
         handler: async () => {
           throw { statusCode: 403 };
@@ -337,7 +319,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('re-throws errors without statusCode', async ({ webSocketHandlerEvent }) => {
-      const router = new WebSocketRouter();
       router.message({
         handler: async () => {
           throw new Error('unexpected error');
@@ -350,7 +331,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('handler returning undefined normalizes to { statusCode: 200 }', async ({ webSocketHandlerEvent }) => {
-      const router = new WebSocketRouter();
       router.message({ handler: async () => undefined });
 
       const { event, context } = webSocketHandlerEvent();
@@ -360,7 +340,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('handler returning { statusCode: number } passes through', async ({ webSocketHandlerEvent }) => {
-      const router = new WebSocketRouter();
       router.connect({ handler: async () => ({ statusCode: 403 }) });
 
       const { event, context } = webSocketHandlerEvent({
@@ -374,7 +353,6 @@ suite('WebSocketRouter', () => {
 
   suite('matchRoute (private)', () => {
     test('matches route with matching eventType', () => {
-      const router = new WebSocketRouter();
       router.connect({ handler: async () => ({ statusCode: 200 }) });
 
       // @ts-expect-error - testing private method
@@ -384,7 +362,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('does not match route with different eventType', () => {
-      const router = new WebSocketRouter();
       router.connect({ handler: async () => ({ statusCode: 200 }) });
 
       // @ts-expect-error - testing private method
@@ -394,7 +371,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('matches route with matching routeKey', () => {
-      const router = new WebSocketRouter();
       router.message({ routeKey: 'sendMessage', handler: async () => {} });
 
       // @ts-expect-error - testing private method
@@ -404,7 +380,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('does not match route with different routeKey', () => {
-      const router = new WebSocketRouter();
       router.message({ routeKey: 'sendMessage', handler: async () => {} });
 
       // @ts-expect-error - testing private method
@@ -414,7 +389,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('route without eventType filter matches any eventType', () => {
-      const router = new WebSocketRouter();
       const definition = defineWebSocketRoute({ filters: {} }).handle(async () => undefined);
       router.route(definition);
 
@@ -425,7 +399,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('route without routeKey filter matches any routeKey', () => {
-      const router = new WebSocketRouter();
       router.message({ handler: async () => {} });
 
       // @ts-expect-error - testing private method
@@ -435,7 +408,6 @@ suite('WebSocketRouter', () => {
     });
 
     test('route without any filters matches everything', () => {
-      const router = new WebSocketRouter();
       const definition = defineWebSocketRoute({ filters: {} }).handle(async () => undefined);
       router.route(definition);
 
@@ -448,7 +420,6 @@ suite('WebSocketRouter', () => {
     test('returns first matching route when multiple match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-      const router = new WebSocketRouter();
       router.message({ handler: firstHandler });
       router.message({ handler: secondHandler });
 
@@ -461,25 +432,21 @@ suite('WebSocketRouter', () => {
 
   suite('parseBody (private)', () => {
     test('returns undefined for undefined body', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.parseBody(undefined)).toBeUndefined();
     });
 
     test('returns undefined for empty string body', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.parseBody('')).toBeUndefined();
     });
 
     test('parses valid JSON string', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.parseBody('{"key":"value"}')).toEqual({ key: 'value' });
     });
 
     test('returns raw string for invalid JSON', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.parseBody('not-json')).toBe('not-json');
     });
@@ -487,7 +454,6 @@ suite('WebSocketRouter', () => {
 
   suite('validateBody (private)', () => {
     test('returns body as-is when no schema', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.validateBody({ key: 'value' }, undefined)).toEqual({ key: 'value' });
     });
@@ -495,7 +461,6 @@ suite('WebSocketRouter', () => {
     test('returns parsed data on successful validation', () => {
       const parsedData = { key: 'validated' };
       const schema = { safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }) };
-      const router = new WebSocketRouter();
 
       // @ts-expect-error - testing private method
       const result = router.validateBody({ key: 'raw' }, schema);
@@ -505,7 +470,6 @@ suite('WebSocketRouter', () => {
 
     test('throws on failed validation', () => {
       const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'bad' }) };
-      const router = new WebSocketRouter();
 
       // @ts-expect-error - testing private method
       expect(() => router.validateBody({ key: 'bad' }, schema)).toThrow('Body validation failed for WebSocket body');
@@ -513,36 +477,29 @@ suite('WebSocketRouter', () => {
 
     test('throws when body is a string and schema is provided', () => {
       const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: new Error('expected object') }) };
-      const router = new WebSocketRouter();
 
       // @ts-expect-error - testing private method
-      expect(() => router.validateBody('not valid json', schema)).toThrow(
-        'Body validation failed for WebSocket body',
-      );
+      expect(() => router.validateBody('not valid json', schema)).toThrow('Body validation failed for WebSocket body');
     });
   });
 
   suite('buildResult (private)', () => {
     test('returns { statusCode: 200 } for undefined response', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.buildResult(undefined)).toEqual({ statusCode: 200 });
     });
 
     test('returns { statusCode: 200 } for null response', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.buildResult(null)).toEqual({ statusCode: 200 });
     });
 
     test('returns response as-is when it has a numeric statusCode', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.buildResult({ statusCode: 403 })).toEqual({ statusCode: 403 });
     });
 
     test('returns { statusCode: 200 } for unexpected response shape', () => {
-      const router = new WebSocketRouter();
       // @ts-expect-error - testing private method
       expect(router.buildResult('unexpected')).toEqual({ statusCode: 200 });
     });

@@ -3,6 +3,12 @@ import { createAppSyncResolverEvent, createMockContext, test } from '@lambda-eve
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
 
 suite('AppSyncRouter', () => {
+  let router: AppSyncRouter;
+
+  beforeEach(() => {
+    router = new AppSyncRouter();
+  });
+
   suite('createAppSyncRouter', () => {
     test('creates an AppSyncRouter instance', () => {
       const router = createAppSyncRouter();
@@ -11,12 +17,6 @@ suite('AppSyncRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: AppSyncRouter;
-
-    beforeEach(() => {
-      router = new AppSyncRouter();
-    });
-
     test('returns true for a valid AppSync resolver event', () => {
       const event = createAppSyncResolverEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -86,7 +86,6 @@ suite('AppSyncRouter', () => {
 
   suite('route', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncRouter();
       const handler = vi.fn();
 
       const result = router.route({
@@ -100,8 +99,6 @@ suite('AppSyncRouter', () => {
 
   suite('query', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncRouter();
-
       const result = router.query({
         fieldName: 'getUser',
         handler: vi.fn(),
@@ -113,8 +110,6 @@ suite('AppSyncRouter', () => {
 
   suite('mutation', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncRouter();
-
       const result = router.mutation({
         fieldName: 'createUser',
         handler: vi.fn(),
@@ -126,8 +121,6 @@ suite('AppSyncRouter', () => {
 
   suite('subscription', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncRouter();
-
       const result = router.subscription({
         fieldName: 'onUserCreated',
         handler: vi.fn(),
@@ -138,12 +131,6 @@ suite('AppSyncRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: AppSyncRouter;
-
-    beforeEach(() => {
-      router = new AppSyncRouter();
-    });
-
     test('matches by parentTypeNames', () => {
       const handler = vi.fn();
       router.route({ filters: { parentTypeNames: ['Query'] }, handler });
@@ -259,12 +246,6 @@ suite('AppSyncRouter', () => {
   });
 
   suite('validateArguments', () => {
-    let router: AppSyncRouter;
-
-    beforeEach(() => {
-      router = new AppSyncRouter();
-    });
-
     test('returns args unchanged when no schema is provided', () => {
       const args = { id: '123' };
 
@@ -298,9 +279,7 @@ suite('AppSyncRouter', () => {
 
   suite('handleEvent', () => {
     test('builds complete AppSyncResolverRequest and calls handler', async () => {
-      const router = new AppSyncRouter();
       const handler = vi.fn().mockResolvedValue({ id: '123', name: 'Test' });
-
       router.route({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
         handler,
@@ -335,7 +314,6 @@ suite('AppSyncRouter', () => {
     });
 
     test('throws when no route matches', async () => {
-      const router = new AppSyncRouter();
       const event = createAppSyncResolverEvent({
         info: { parentTypeName: 'Query', fieldName: 'unknownField' },
       });
@@ -345,13 +323,11 @@ suite('AppSyncRouter', () => {
     });
 
     test('validates arguments with schema before calling handler', async () => {
-      const router = new AppSyncRouter();
       const parsedArgs = { id: '123', validated: true };
       const schema: Schema<{ id: string; validated: boolean }> = {
         safeParse: vi.fn().mockReturnValue({ success: true, data: parsedArgs }),
       };
       const handler = vi.fn().mockResolvedValue('ok');
-
       router.route({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
         argumentsSchema: schema,
@@ -371,11 +347,9 @@ suite('AppSyncRouter', () => {
     });
 
     test('throws when schema validation fails', async () => {
-      const router = new AppSyncRouter();
       const schema: Schema<unknown> = {
         safeParse: vi.fn().mockReturnValue({ success: false }),
       };
-
       router.route({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
         argumentsSchema: schema,
@@ -393,10 +367,8 @@ suite('AppSyncRouter', () => {
 
   suite('customFilter via shorthand methods', () => {
     test('query passes customFilter to route filters', async () => {
-      const router = new AppSyncRouter();
       const customFilter = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
-
       router.query({
         fieldName: 'getUser',
         filters: { customFilter },
@@ -415,8 +387,6 @@ suite('AppSyncRouter', () => {
     });
 
     test('query rejects when customFilter returns false', async () => {
-      const router = new AppSyncRouter();
-
       router.query({
         fieldName: 'getUser',
         filters: { customFilter: () => false },
@@ -432,10 +402,8 @@ suite('AppSyncRouter', () => {
     });
 
     test('mutation passes customFilter to route filters', async () => {
-      const router = new AppSyncRouter();
       const customFilter = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
-
       router.mutation({
         fieldName: 'createUser',
         filters: { customFilter },
@@ -454,8 +422,6 @@ suite('AppSyncRouter', () => {
     });
 
     test('mutation rejects when customFilter returns false', async () => {
-      const router = new AppSyncRouter();
-
       router.mutation({
         fieldName: 'createUser',
         filters: { customFilter: () => false },
@@ -471,10 +437,8 @@ suite('AppSyncRouter', () => {
     });
 
     test('subscription passes customFilter to route filters', async () => {
-      const router = new AppSyncRouter();
       const customFilter = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
-
       router.subscription({
         fieldName: 'onUserCreated',
         filters: { customFilter },
@@ -493,8 +457,6 @@ suite('AppSyncRouter', () => {
     });
 
     test('subscription rejects when customFilter returns false', async () => {
-      const router = new AppSyncRouter();
-
       router.subscription({
         fieldName: 'onUserCreated',
         filters: { customFilter: () => false },
@@ -512,9 +474,7 @@ suite('AppSyncRouter', () => {
 
   suite('handleEvent via shorthand methods', () => {
     test('routes Query events through query()', async () => {
-      const router = new AppSyncRouter();
       const handler = vi.fn().mockResolvedValue('query-result');
-
       router.query({ fieldName: 'getUser', handler });
 
       const event = createAppSyncResolverEvent({
@@ -527,9 +487,7 @@ suite('AppSyncRouter', () => {
     });
 
     test('routes Mutation events through mutation()', async () => {
-      const router = new AppSyncRouter();
       const handler = vi.fn().mockResolvedValue('mutation-result');
-
       router.mutation({ fieldName: 'createUser', handler });
 
       const event = createAppSyncResolverEvent({
@@ -542,9 +500,7 @@ suite('AppSyncRouter', () => {
     });
 
     test('routes Subscription events through subscription()', async () => {
-      const router = new AppSyncRouter();
       const handler = vi.fn().mockResolvedValue('subscription-result');
-
       router.subscription({ fieldName: 'onUserCreated', handler });
 
       const event = createAppSyncResolverEvent({

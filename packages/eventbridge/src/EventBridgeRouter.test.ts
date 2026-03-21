@@ -4,6 +4,12 @@ import { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './Event
 import type { EventBridgeFilterInput, EventBridgeRequest } from './types.js';
 
 suite('EventBridgeRouter', () => {
+  let router: EventBridgeRouter;
+
+  beforeEach(() => {
+    router = new EventBridgeRouter();
+  });
+
   suite('createEventBridgeRouter', () => {
     test('creates an EventBridgeRouter instance', () => {
       const router = createEventBridgeRouter();
@@ -12,12 +18,6 @@ suite('EventBridgeRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: EventBridgeRouter;
-
-    beforeEach(() => {
-      router = new EventBridgeRouter();
-    });
-
     test('returns true for an EventBridge envelope event', () => {
       const event = createEventBridgeEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -74,7 +74,6 @@ suite('EventBridgeRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new EventBridgeRouter();
       const definition = defineRoute({
         filters: { sources: ['my.app'] },
       }).handle(async () => {});
@@ -86,12 +85,6 @@ suite('EventBridgeRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: EventBridgeRouter;
-
-    beforeEach(() => {
-      router = createEventBridgeRouter();
-    });
-
     test('matches route by sources filter', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
@@ -391,7 +384,6 @@ suite('EventBridgeRouter', () => {
 
     test('passes correct filterInput to customFilter', ({ eventBridgeEvent }) => {
       const customFilter = vi.fn().mockReturnValue(true);
-
       router.route(
         defineRoute({
           filters: { customFilter },
@@ -414,7 +406,6 @@ suite('EventBridgeRouter', () => {
 
   suite('handleEvent', () => {
     test('calls handler with complete EventBridgeRequest properties', async ({ eventBridgeEvent, context }) => {
-      const router = new EventBridgeRouter();
       const handler = vi.fn();
       const definition = defineRoute({
         filters: { sources: ['my.app'] },
@@ -446,8 +437,6 @@ suite('EventBridgeRouter', () => {
         eventBridgeEvent,
         context,
       }) => {
-        const router = createEventBridgeRouter();
-
         const event = eventBridgeEvent({
           source: 'payment.service',
           'detail-type': 'PaymentFailed',
@@ -461,13 +450,11 @@ suite('EventBridgeRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated detail from detailSchema', async ({ eventBridgeEvent, context }) => {
-      const router = createEventBridgeRouter();
       const handler = vi.fn();
       const transformedDetail = { orderId: '12345', validated: true };
       const detailSchema: Schema<typeof transformedDetail> = {
         safeParse: () => ({ success: true, data: transformedDetail }),
       };
-
       router.route(
         defineRoute({
           filters: { sources: ['my.app'] },
@@ -482,11 +469,9 @@ suite('EventBridgeRouter', () => {
     });
 
     test('throws when detailSchema validation fails', async ({ eventBridgeEvent, context }) => {
-      const router = createEventBridgeRouter();
       const detailSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid detail') }),
       };
-
       router.route(
         defineRoute({
           filters: { sources: ['my.app'] },
@@ -500,12 +485,6 @@ suite('EventBridgeRouter', () => {
   });
 
   suite('validateSchema', () => {
-    let router: EventBridgeRouter;
-
-    beforeEach(() => {
-      router = new EventBridgeRouter();
-    });
-
     test('returns data unchanged when no schema is provided', () => {
       const data = { orderId: '12345' };
 
@@ -534,9 +513,7 @@ suite('EventBridgeRouter', () => {
       };
 
       // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema, 'abc-123')).toThrow(
-        'Schema validation failed for event abc-123',
-      );
+      expect(() => router.validateSchema({}, schema, 'abc-123')).toThrow('Schema validation failed for event abc-123');
     });
   });
 
@@ -544,8 +521,6 @@ suite('EventBridgeRouter', () => {
     test('routes EventBridge events based on source filters', async ({ eventBridgeEvent, context }) => {
       const receivedOrderRequests: EventBridgeRequest[] = [];
       const receivedPaymentRequests: EventBridgeRequest[] = [];
-
-      const router = createEventBridgeRouter();
       router.route(
         defineRoute({
           filters: { sources: ['order.service'] },
@@ -582,8 +557,6 @@ suite('EventBridgeRouter', () => {
     test('routes events to different handlers based on detailType filters', async ({ eventBridgeEvent, context }) => {
       const orderPlacedHandler = vi.fn();
       const orderShippedHandler = vi.fn();
-
-      const router = createEventBridgeRouter();
       router.route(
         defineRoute({
           filters: { detailTypes: ['OrderPlaced'] },

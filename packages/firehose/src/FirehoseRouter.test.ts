@@ -5,6 +5,12 @@ import { Dropped, Failed, Ok } from './response.js';
 import type { FirehoseFilterInput } from './types.js';
 
 suite('FirehoseRouter', () => {
+  let router: FirehoseRouter;
+
+  beforeEach(() => {
+    router = new FirehoseRouter();
+  });
+
   suite('createFirehoseRouter', () => {
     test('creates a FirehoseRouter instance', () => {
       const router = createFirehoseRouter();
@@ -13,12 +19,6 @@ suite('FirehoseRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: FirehoseRouter;
-
-    beforeEach(() => {
-      router = new FirehoseRouter();
-    });
-
     test('returns true for a valid Firehose event', () => {
       const event = createFirehoseEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -92,7 +92,6 @@ suite('FirehoseRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new FirehoseRouter();
       const definition = defineRoute({
         filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream'] },
       }).handle(async () => Ok());
@@ -104,12 +103,6 @@ suite('FirehoseRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: FirehoseRouter;
-
-    beforeEach(() => {
-      router = createFirehoseRouter();
-    });
-
     test('matches by deliveryStreamArns', ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(
@@ -374,7 +367,6 @@ suite('FirehoseRouter', () => {
 
   suite('processRecord', () => {
     test('returns ProcessingFailed when no route matches', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       const record = firehoseRecord();
       const event = createFirehoseEvent([record]);
 
@@ -389,7 +381,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns ProcessingFailed when handler throws non-response error', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -412,7 +403,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns mapped result when handler throws a FirehoseResponse', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -435,9 +425,7 @@ suite('FirehoseRouter', () => {
     });
 
     test('calls handler with correct request shape', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
-
       router.route(
         defineRoute({
           filters: {},
@@ -465,9 +453,7 @@ suite('FirehoseRouter', () => {
     });
 
     test('includes kinesisRecordMetadata in request when present on record', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
-
       router.route(
         defineRoute({
           filters: {},
@@ -496,12 +482,6 @@ suite('FirehoseRouter', () => {
   });
 
   suite('mapResponseToResult', () => {
-    let router: FirehoseRouter;
-
-    beforeEach(() => {
-      router = new FirehoseRouter();
-    });
-
     test('maps Ok response without data (uses original record data)', ({ firehoseRecord }) => {
       const record = firehoseRecord();
       // @ts-expect-error - testing private method directly
@@ -583,12 +563,6 @@ suite('FirehoseRouter', () => {
   });
 
   suite('parseData', () => {
-    let router: FirehoseRouter;
-
-    beforeEach(() => {
-      router = new FirehoseRouter();
-    });
-
     test('parses valid JSON data', () => {
       // @ts-expect-error - testing private method directly
       const result = router.parseData('{"greeting":"hello"}');
@@ -612,12 +586,6 @@ suite('FirehoseRouter', () => {
   });
 
   suite('validateData', () => {
-    let router: FirehoseRouter;
-
-    beforeEach(() => {
-      router = new FirehoseRouter();
-    });
-
     test('returns validated data when schema succeeds', ({ firehoseRecord }) => {
       const record = firehoseRecord();
       const data = { action: 'processOrder', orderId: '12345' };
@@ -669,7 +637,6 @@ suite('FirehoseRouter', () => {
 
   suite('handleEvent', () => {
     test('calls matched handler with parsed request', async ({ firehoseRecord, firehoseHandlerEvent }) => {
-      const router = new FirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
 
@@ -698,8 +665,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns ProcessingFailed result when no route matches', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
-
       const { event, context } = firehoseHandlerEvent();
       const result = await router.handleEvent(event, context);
 
@@ -707,7 +672,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns ProcessingFailed when handler throws', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -723,7 +687,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns mapped result from Ok handler response', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -737,7 +700,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns mapped result from Dropped handler response', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -751,7 +713,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns mapped result from Failed handler response', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -765,7 +726,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('processes records sequentially', async ({ firehoseRecord, firehoseEvent, context }) => {
-      const router = createFirehoseRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -793,9 +753,7 @@ suite('FirehoseRouter', () => {
       firehoseEvent,
       context,
     }) => {
-      const router = createFirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const rawText = 'plain text log line'; // This get automatically base64 encoded by firehoseRecord
@@ -807,7 +765,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns results for all records', async ({ firehoseRecord, firehoseEvent, context }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: {},
@@ -824,7 +781,6 @@ suite('FirehoseRouter', () => {
 
   suite('handleEvent - Ok response data handling', () => {
     test('Ok() with no data returns Ok result with original data', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(defineRoute({ filters: {} }).handle(async () => Ok()));
 
       const { event, context } = firehoseHandlerEvent();
@@ -836,7 +792,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('Ok(data) returns Ok result with new base64-encoded data', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       const transformedBody = { action: 'transformed' };
       router.route(defineRoute({ filters: {} }).handle(async () => Ok(transformedBody)));
 
@@ -850,7 +805,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('Ok(data, metadata) returns Ok result with data and metadata', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       const metadata = { partitionKeys: { key: 'value' } };
       router.route(defineRoute({ filters: {} }).handle(async () => Ok('hello', metadata)));
 
@@ -865,13 +819,11 @@ suite('FirehoseRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated data from dataSchema', async ({ firehoseRecord, firehoseEvent, context }) => {
-      const router = createFirehoseRouter();
       const handler = vi.fn().mockResolvedValue(Ok());
       const transformedData = { action: 'processOrder', orderId: '12345', validated: true };
       const dataSchema: Schema<typeof transformedData> = {
         safeParse: () => ({ success: true, data: transformedData }),
       };
-
       router.route(
         defineRoute({
           filters: {},
@@ -888,11 +840,9 @@ suite('FirehoseRouter', () => {
     });
 
     test('returns ProcessingFailed when dataSchema fails', async ({ firehoseRecord, firehoseEvent, context }) => {
-      const router = createFirehoseRouter();
       const dataSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(
         defineRoute({
           filters: {},
@@ -910,7 +860,6 @@ suite('FirehoseRouter', () => {
 
   suite('handleEvent - error handling', () => {
     test('thrown FirehoseResponse is caught and mapped to result', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw Dropped();
@@ -924,7 +873,6 @@ suite('FirehoseRouter', () => {
     });
 
     test('thrown non-response error results in ProcessingFailed', async ({ firehoseHandlerEvent }) => {
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('unexpected');
@@ -949,7 +897,6 @@ suite('FirehoseRouter', () => {
       const streamAArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/stream-a';
       const streamBArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/stream-b';
 
-      const router = createFirehoseRouter();
       router.route(
         defineRoute({
           filters: { deliveryStreamArns: [streamAArn] },
@@ -972,10 +919,8 @@ suite('FirehoseRouter', () => {
     });
 
     test('multiple records with mixed match and no-match', async ({ firehoseRecord, context }) => {
-      const router = createFirehoseRouter();
       const matchingArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/match';
       const handler = vi.fn().mockResolvedValue(Ok());
-
       router.route(
         defineRoute({
           filters: { deliveryStreamArns: [matchingArn] },

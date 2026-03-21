@@ -7,10 +7,16 @@ import {
   createDocumentDBUpdateEntry,
   test,
 } from '@lambda-event-router/testing';
-import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
+import { createDocumentDBRouter, defineRoute, DocumentDBRouter } from './DocumentDBRouter.js';
 import type { DocumentDBFilterInput } from './types.js';
 
 suite('DocumentDBRouter', () => {
+  let router: DocumentDBRouter;
+
+  beforeEach(() => {
+    router = new DocumentDBRouter();
+  });
+
   suite('createDocumentDBRouter', () => {
     test('creates a DocumentDBRouter instance', () => {
       const router = createDocumentDBRouter();
@@ -19,12 +25,6 @@ suite('DocumentDBRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: DocumentDBRouter;
-
-    beforeEach(() => {
-      router = new DocumentDBRouter();
-    });
-
     test('returns true for a valid DocumentDB event', () => {
       const event = createDocumentDBEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -99,7 +99,6 @@ suite('DocumentDBRouter', () => {
   });
 
   test('route, insert, update, replace, and delete return the router instance for chaining', () => {
-    const router = new DocumentDBRouter();
     const definition = defineRoute({
       filters: { eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster'] },
     }).handle(async () => {});
@@ -113,7 +112,6 @@ suite('DocumentDBRouter', () => {
   });
 
   test('insert only matches insert operations', () => {
-    const router = new DocumentDBRouter();
     router.insert({ filters: {}, handler: async () => {} });
 
     const insertEvent = createDocumentDBInsertEntry().event;
@@ -128,7 +126,6 @@ suite('DocumentDBRouter', () => {
   });
 
   test('update only matches update operations', () => {
-    const router = new DocumentDBRouter();
     router.update({ filters: {}, handler: async () => {} });
 
     const updateEvent = createDocumentDBUpdateEntry().event;
@@ -143,7 +140,6 @@ suite('DocumentDBRouter', () => {
   });
 
   test('replace only matches replace operations', () => {
-    const router = new DocumentDBRouter();
     router.replace({ filters: {}, handler: async () => {} });
 
     const replaceEvent = createDocumentDBReplaceEntry().event;
@@ -158,7 +154,6 @@ suite('DocumentDBRouter', () => {
   });
 
   test('delete only matches delete operations', () => {
-    const router = new DocumentDBRouter();
     router.delete({ filters: {}, handler: async () => {} });
 
     const deleteEvent = createDocumentDBDeleteEntry().event;
@@ -173,12 +168,6 @@ suite('DocumentDBRouter', () => {
   });
 
   suite('matchRoute', () => {
-    let router: DocumentDBRouter;
-
-    beforeEach(() => {
-      router = createDocumentDBRouter();
-    });
-
     test('matches route by operationTypes', () => {
       router.route(
         defineRoute({
@@ -373,7 +362,6 @@ suite('DocumentDBRouter', () => {
     test('selects the first matching route when multiple routes match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
@@ -429,7 +417,6 @@ suite('DocumentDBRouter', () => {
 
   suite('handleEvent', () => {
     test('calls handler with correct request fields', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -451,8 +438,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('throws when no route matches', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
-
       const entry = createDocumentDBInsertEntry();
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       const { event, context } = documentDBHandlerEvent({ entries: [entry], eventSourceArn });
@@ -461,7 +446,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('propagates handler errors', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       router.route(
         defineRoute({ filters: {} }).handle(async () => {
           throw new Error('handler exploded');
@@ -473,7 +457,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('returns undefined', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent();
@@ -483,7 +466,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('processes entries sequentially', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const callOrder: string[] = [];
 
       router.route(
@@ -503,7 +485,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('fullDocument is undefined on delete', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -514,7 +495,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('updateDescription is present on update', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -530,7 +510,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('fullDocument is present on update when using updateLookup', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -548,13 +527,11 @@ suite('DocumentDBRouter', () => {
 
   suite('handleEvent - schema validation', () => {
     test('handler receives validated documentKey from documentKeySchema', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       const validatedKey = { _id: 'validated-key' };
       const documentKeySchema: Schema<typeof validatedKey> = {
         safeParse: () => ({ success: true, data: validatedKey }),
       };
-
       router.route(defineRoute({ filters: {}, documentKeySchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent();
@@ -564,11 +541,9 @@ suite('DocumentDBRouter', () => {
     });
 
     test('throws when documentKeySchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const documentKeySchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(defineRoute({ filters: {}, documentKeySchema }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent();
@@ -576,13 +551,11 @@ suite('DocumentDBRouter', () => {
     });
 
     test('handler receives validated fullDocument from fullDocumentSchema', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       const validatedDoc = { name: 'Validated', extra: true };
       const fullDocumentSchema: Schema<typeof validatedDoc> = {
         safeParse: () => ({ success: true, data: validatedDoc }),
       };
-
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
@@ -592,7 +565,6 @@ suite('DocumentDBRouter', () => {
     });
 
     test('throws when fullDocumentSchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const fullDocumentSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
@@ -606,13 +578,11 @@ suite('DocumentDBRouter', () => {
     test('handler receives validated fullDocumentBeforeChange from fullDocumentBeforeChangeSchema', async ({
       documentDBHandlerEvent,
     }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       const validatedBeforeDoc = { name: 'Before Change', validated: true };
       const fullDocumentBeforeChangeSchema: Schema<typeof validatedBeforeDoc> = {
         safeParse: () => ({ success: true, data: validatedBeforeDoc }),
       };
-
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(handler));
 
       const entry = createDocumentDBUpdateEntry({
@@ -625,29 +595,27 @@ suite('DocumentDBRouter', () => {
     });
 
     test('throws when fullDocumentBeforeChangeSchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const fullDocumentBeforeChangeSchema: Schema<unknown> = {
         safeParse: () => ({ success: false, error: new Error('invalid') }),
       };
-
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(async () => {}));
 
       const entry = createDocumentDBUpdateEntry({
         fullDocumentBeforeChange: { name: 'Before Change' },
       });
       const { event, context } = documentDBHandlerEvent({ entries: [entry] });
-      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed on fullDocumentBeforeChange');
+      await expect(router.handleEvent(event, context)).rejects.toThrow(
+        'Schema validation failed on fullDocumentBeforeChange',
+      );
     });
 
     test('skips fullDocument validation when fullDocument is undefined (delete)', async ({
       documentDBHandlerEvent,
     }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       const fullDocumentSchema: Schema<unknown> = {
         safeParse: vi.fn(() => ({ success: true as const, data: {} })),
       };
-
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBDeleteEntry()] });
@@ -660,12 +628,10 @@ suite('DocumentDBRouter', () => {
     test('skips fullDocumentBeforeChange validation when fullDocumentBeforeChange is undefined (insert)', async ({
       documentDBHandlerEvent,
     }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn();
       const fullDocumentBeforeChangeSchema: Schema<unknown> = {
         safeParse: vi.fn(() => ({ success: true as const, data: {} })),
       };
-
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
@@ -677,12 +643,6 @@ suite('DocumentDBRouter', () => {
   });
 
   suite('validateSchema', () => {
-    let router: DocumentDBRouter;
-
-    beforeEach(() => {
-      router = new DocumentDBRouter();
-    });
-
     test('returns validated data on success', () => {
       const validatedData = { _id: 'validated' };
       const schema: Schema<typeof validatedData> = {
@@ -731,12 +691,10 @@ suite('DocumentDBRouter', () => {
 
   suite('full event processing', () => {
     test('routes 4 operation types to respective handlers', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const insertHandler = vi.fn();
       const updateHandler = vi.fn();
       const replaceHandler = vi.fn();
       const deleteHandler = vi.fn();
-
       router
         .insert({ filters: {}, handler: insertHandler })
         .update({ filters: {}, handler: updateHandler })
@@ -759,10 +717,8 @@ suite('DocumentDBRouter', () => {
     });
 
     test('routes by collection filter', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const usersHandler = vi.fn();
       const ordersHandler = vi.fn();
-
       router
         .route(defineRoute({ filters: { collections: ['users'] } }).handle(usersHandler))
         .route(defineRoute({ filters: { collections: ['orders'] } }).handle(ordersHandler));
@@ -780,9 +736,7 @@ suite('DocumentDBRouter', () => {
     });
 
     test('catch-all route handles all operation types', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const catchAllHandler = vi.fn();
-
       router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
 
       const entries = [
@@ -798,13 +752,11 @@ suite('DocumentDBRouter', () => {
     });
 
     test('error in one entry prevents subsequent entries from being processed', async ({ documentDBHandlerEvent }) => {
-      const router = createDocumentDBRouter();
       const handler = vi.fn().mockImplementation(async (request) => {
         if (request.operationType === 'update') {
           throw new Error('update failed');
         }
       });
-
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const entries = [createDocumentDBInsertEntry(), createDocumentDBUpdateEntry(), createDocumentDBReplaceEntry()];

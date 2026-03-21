@@ -3,6 +3,12 @@ import { createApiGatewayV2Event, test } from '@lambda-event-router/testing';
 import { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
 
 suite('APIGatewayRouter', () => {
+  let router: APIGatewayRouter;
+
+  beforeEach(() => {
+    router = new APIGatewayRouter();
+  });
+
   suite('createAPIGatewayRouter', () => {
     test('creates an APIGatewayRouter instance', () => {
       const router = createAPIGatewayRouter();
@@ -11,12 +17,6 @@ suite('APIGatewayRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: APIGatewayRouter;
-
-    beforeEach(() => {
-      router = new APIGatewayRouter();
-    });
-
     test('returns true for a valid API Gateway V2 event', () => {
       const event = createApiGatewayV2Event();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -81,7 +81,6 @@ suite('APIGatewayRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new APIGatewayRouter();
       const definition = defineRoute({
         method: 'GET',
         path: '/items',
@@ -101,8 +100,6 @@ suite('APIGatewayRouter', () => {
       { method: 'patch' as const, path: '/items/:id', handler: async () => Ok({ patched: true }) },
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
-      const router = new APIGatewayRouter();
-
       // @ts-expect-error - calling union of method signatures
       const result = router[method]({ path, handler });
 
@@ -151,7 +148,6 @@ suite('APIGatewayRouter', () => {
     test('calls the matched handler and returns a response with statusCode and body', async ({
       apiGatewayV2HandlerEvent,
     }) => {
-      const router = new APIGatewayRouter();
       router.get({
         path: '/',
         handler: async () => Ok({ message: 'hello' }),
@@ -169,7 +165,6 @@ suite('APIGatewayRouter', () => {
     });
 
     test('returns 404 when no route matches', async ({ apiGatewayV2HandlerEvent }) => {
-      const router = new APIGatewayRouter();
       router.get({ path: '/items', handler: async () => Ok({}) });
 
       const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/unknown' } });
@@ -184,7 +179,6 @@ suite('APIGatewayRouter', () => {
     });
 
     // test('catches a thrown HTTPResponse and returns it as the response', async ({ apiGatewayV2HandlerEvent }) => {
-    //   const router = new APIGatewayRouter();
     //   router.get({
     //     path: '/',
     //     handler: async () => {
@@ -204,7 +198,6 @@ suite('APIGatewayRouter', () => {
     // });
 
     test('catches a generic Error and returns 500 with the error message', async ({ apiGatewayV2HandlerEvent }) => {
-      const router = new APIGatewayRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -224,7 +217,6 @@ suite('APIGatewayRouter', () => {
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ apiGatewayV2HandlerEvent }) => {
-      const router = new APIGatewayRouter();
       router.get({
         path: '/',
         handler: async () => {
@@ -248,7 +240,6 @@ suite('APIGatewayRouter', () => {
     }) => {
       const handler = vi.fn();
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
-      const router = new APIGatewayRouter();
       router.post({ path: '/', handler, bodySchema });
 
       const { event, context } = apiGatewayV2HandlerEvent({
@@ -266,7 +257,6 @@ suite('APIGatewayRouter', () => {
 
     test('passes extracted path params to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      const router = new APIGatewayRouter();
       router.get({ path: '/items/:id', handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/items/42' } });
@@ -278,7 +268,6 @@ suite('APIGatewayRouter', () => {
 
     test('passes query params to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      const router = new APIGatewayRouter();
       router.get({ path: '/items', handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({
@@ -292,7 +281,6 @@ suite('APIGatewayRouter', () => {
 
     test('passes parsed body to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      const router = new APIGatewayRouter();
       router.post({ path: '/items', handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({

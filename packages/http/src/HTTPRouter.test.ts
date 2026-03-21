@@ -52,13 +52,13 @@ function createMockEvent(overrides: Partial<MockEvent> = {}): MockEvent {
 }
 
 suite('HTTPRouter', () => {
+  let router: HTTPRouter<MockEvent, MockResult>;
+
+  beforeEach(() => {
+    router = new HTTPRouter(mockAdapter);
+  });
+
   suite('canHandleEvent', () => {
-    let router: HTTPRouter<MockEvent, MockResult>;
-
-    beforeEach(() => {
-      router = new HTTPRouter(mockAdapter);
-    });
-
     test('returns true for a valid mock event', () => {
       expect(router.canHandleEvent(createMockEvent())).toBe(true);
     });
@@ -82,7 +82,6 @@ suite('HTTPRouter', () => {
 
   suite('route', () => {
     test('returns the router instance for chaining', () => {
-      const router = new HTTPRouter(mockAdapter);
       const definition = defineRoute({
         method: 'GET',
         path: '/items',
@@ -102,8 +101,6 @@ suite('HTTPRouter', () => {
       { method: 'patch' as const, path: '/items/:id', handler: async () => Ok({ patched: true }) },
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
-      const router = new HTTPRouter(mockAdapter);
-
       // @ts-expect-error - calling union of method signatures
       const result = router[method]({ path, handler });
 
@@ -150,7 +147,6 @@ suite('HTTPRouter', () => {
 
   suite('handleEvent', () => {
     test('calls the matched handler and returns a response', async () => {
-      const router = new HTTPRouter(mockAdapter);
       router.get({
         path: '/',
         handler: async () => Ok({ message: 'hello' }),
@@ -169,7 +165,6 @@ suite('HTTPRouter', () => {
     });
 
     test('returns 404 when no route matches', async () => {
-      const router = new HTTPRouter(mockAdapter);
       router.get({ path: '/items', handler: async () => Ok({}) });
 
       const event = createMockEvent({ path: '/unknown' });
@@ -185,7 +180,6 @@ suite('HTTPRouter', () => {
     });
 
     test('catches a generic Error and returns 500 with the error message', async () => {
-      const router = new HTTPRouter(mockAdapter);
       router.get({
         path: '/',
         handler: async () => {
@@ -206,7 +200,6 @@ suite('HTTPRouter', () => {
     });
 
     test('catches a non-Error throw and returns 500 with default message', async () => {
-      const router = new HTTPRouter(mockAdapter);
       router.get({
         path: '/',
         handler: async () => {
@@ -228,7 +221,6 @@ suite('HTTPRouter', () => {
 
     test('passes extracted path params to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      const router = new HTTPRouter(mockAdapter);
       router.get({ path: '/items/:id', handler });
 
       const event = createMockEvent({ path: '/items/42' });
@@ -241,7 +233,6 @@ suite('HTTPRouter', () => {
 
     test('passes query params to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      const router = new HTTPRouter(mockAdapter);
       router.get({ path: '/items', handler });
 
       const event = createMockEvent({ path: '/items', query: { page: '2', limit: '10' } });
@@ -254,7 +245,6 @@ suite('HTTPRouter', () => {
 
     test('passes parsed body to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      const router = new HTTPRouter(mockAdapter);
       router.post({ path: '/items', handler });
 
       const event = createMockEvent({
@@ -272,7 +262,6 @@ suite('HTTPRouter', () => {
     test('validates the request before calling handler and returns 422 for body schema failure', async () => {
       const handler = vi.fn();
       const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
-      const router = new HTTPRouter(mockAdapter);
       router.post({ path: '/', handler, bodySchema });
 
       const event = createMockEvent({

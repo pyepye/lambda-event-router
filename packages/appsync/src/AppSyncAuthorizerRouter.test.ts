@@ -5,6 +5,12 @@ import {
   defineAuthorizerRoute,
 } from './AppSyncAuthorizerRouter.js';
 
+let router: AppSyncAuthorizerRouter;
+
+beforeEach(() => {
+  router = new AppSyncAuthorizerRouter();
+});
+
 suite('AppSyncAuthorizerRouter', () => {
   suite('createAppSyncAuthorizerRouter', () => {
     test('creates an AppSyncAuthorizerRouter instance', () => {
@@ -14,12 +20,6 @@ suite('AppSyncAuthorizerRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    let router: AppSyncAuthorizerRouter;
-
-    beforeEach(() => {
-      router = new AppSyncAuthorizerRouter();
-    });
-
     test('returns true for a valid AppSync authorizer event', () => {
       const event = createAppSyncAuthorizerEvent();
       expect(router.canHandleEvent(event)).toBe(true);
@@ -115,7 +115,6 @@ suite('AppSyncAuthorizerRouter', () => {
 
   suite('route', () => {
     test('returns this for chaining', () => {
-      const router = new AppSyncAuthorizerRouter();
       const handler = vi.fn();
 
       const result = router.route({ handler });
@@ -125,7 +124,6 @@ suite('AppSyncAuthorizerRouter', () => {
 
   suite('handleEvent', () => {
     test('throws when no route is registered', async () => {
-      const router = new AppSyncAuthorizerRouter();
       const event = createAppSyncAuthorizerEvent();
       const context = createMockContext();
 
@@ -133,7 +131,6 @@ suite('AppSyncAuthorizerRouter', () => {
     });
 
     test('returns the response when handler throws an AppSyncAuthorizerResponse', async () => {
-      const router = new AppSyncAuthorizerRouter();
       const thrownResponse = { isAuthorized: false, deniedFields: ['secret'] };
       const handler = vi.fn().mockRejectedValue(thrownResponse);
 
@@ -147,9 +144,7 @@ suite('AppSyncAuthorizerRouter', () => {
     });
 
     test('re-throws when handler throws a non-response error', async () => {
-      const router = new AppSyncAuthorizerRouter();
       const handler = vi.fn().mockRejectedValue(new Error('unexpected failure'));
-
       router.route({ handler });
 
       const event = createAppSyncAuthorizerEvent();
@@ -159,9 +154,7 @@ suite('AppSyncAuthorizerRouter', () => {
     });
 
     test('builds complete AppSyncAuthorizerRequest and calls handler', async () => {
-      const router = new AppSyncAuthorizerRouter();
       const handler = vi.fn().mockResolvedValue({ isAuthorized: true });
-
       router.route({ handler });
 
       const event = createAppSyncAuthorizerEvent({

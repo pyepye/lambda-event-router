@@ -68,6 +68,7 @@ suite('apiGatewayV1Adapter', () => {
 
     test('handles null multiValueHeaders', () => {
       const event = createApiGatewayV1Event();
+      // @ts-expect-error - AWS does not allow null here, do we need this test
       event.multiValueHeaders = null;
 
       const normalized = apiGatewayV1Adapter.normalize(event);
