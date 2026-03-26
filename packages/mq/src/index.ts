@@ -1,4 +1,3 @@
-export type { Schema } from '@lambda-event-router/base';
 export { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './ActiveMQRouter.js';
 export type {
   ActiveMQBytesMessageRequest,

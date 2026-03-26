@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   EventBridgeEventEnvelope,
@@ -12,12 +13,12 @@ import type {
 
 interface InternalEventBridgeRoute {
   filters: EventBridgeRouteDefinition['filters'];
-  detailSchema?: Schema<unknown>;
+  detailSchema?: StandardSchemaV1;
   handler: EventBridgeHandler<unknown>;
 }
 
 interface EventBridgeRouteInput<
-  TDetailSchema extends Schema<unknown> | undefined = undefined,
+  TDetailSchema extends StandardSchemaV1 | undefined = undefined,
   TSources extends readonly string[] | undefined = undefined,
   TDetailTypes extends readonly string[] | undefined = undefined,
 > {
@@ -37,11 +38,11 @@ interface EventBridgeRouteBuilder<TDetail> {
 }
 
 export function defineRoute<
-  TDetailSchema extends Schema<unknown> | undefined = undefined,
+  TDetailSchema extends StandardSchemaV1 | undefined = undefined,
   const TSources extends readonly string[] | undefined = undefined,
   const TDetailTypes extends readonly string[] | undefined = undefined,
-  TDetail = TDetailSchema extends Schema<unknown>
-    ? InferSchema<TDetailSchema>
+  TDetail = TDetailSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TDetailSchema>
     : LookupDetailType<TSources, TDetailTypes>,
 >(config: EventBridgeRouteInput<TDetailSchema, TSources, TDetailTypes>): EventBridgeRouteBuilder<TDetail> {
   return {
@@ -84,7 +85,11 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       throw new Error(`No route matched for EventBridge event: ${event.source} / ${event['detail-type']}`);
     }
 
-    const detail = this.validateSchema(event.detail, route.detailSchema, event.id);
+    const detail = await validateSchema(
+      event.detail,
+      route.detailSchema,
+      `Schema validation failed for event ${event.id}`,
+    );
 
     const request: EventBridgeRequest = {
       source: event.source,
@@ -138,18 +143,6 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
 
       return true;
     });
-  }
-
-  private validateSchema(data: unknown, schema: Schema<unknown> | undefined, eventId: string): unknown {
-    if (!schema) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Schema validation failed for event ${eventId}`, { cause: result.error });
-    }
-    return result.data;
   }
 }
 

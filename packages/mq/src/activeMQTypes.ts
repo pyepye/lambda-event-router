@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
@@ -85,19 +85,19 @@ type ActiveMQRecordHandler<TBody = unknown> =
 
 export interface ActiveMQRouteDefinition<TBody = unknown> {
   filters: ActiveMQFilters;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: ActiveMQRecordHandler<TBody>;
 }
 
 export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
   filters: ActiveMQMessageTypeFilters;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: (request: ActiveMQTextMessageRequest<TBody>) => Promise<void>;
 }
 
 export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
   filters: ActiveMQMessageTypeFilters;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: (request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>;
 }
 
@@ -105,7 +105,7 @@ export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
 
 export interface ActiveMQInternalRoute {
   filters: ActiveMQFilters;
-  bodySchema?: Schema<unknown>;
+  bodySchema?: StandardSchemaV1;
   handler: (request: ActiveMQRequest) => Promise<void>;
 }
 
@@ -121,7 +121,7 @@ type MessageTypeToRequest<
     : ActiveMQRequest<TBody>;
 
 export interface ActiveMQRouteInput<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageTypes extends readonly ActiveMQMessageType[] | undefined = undefined,
 > {
   filters: {

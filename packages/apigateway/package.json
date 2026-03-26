@@ -34,7 +34,6 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
     "@lambda-event-router/http": "workspace:*"
   },
   "peerDependencies": {

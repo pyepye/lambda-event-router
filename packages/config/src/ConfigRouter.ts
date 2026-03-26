@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   ConfigOversizedRequest,
@@ -18,10 +19,14 @@ import type {
 } from './types.js';
 
 export function defineRoute<
-  TParamsSchema extends Schema<unknown> | undefined = undefined,
-  TConfigSchema extends Schema<unknown> | undefined = undefined,
-  TParams = TParamsSchema extends Schema<unknown> ? InferSchema<TParamsSchema> : Record<string, string>,
-  TConfig = TConfigSchema extends Schema<unknown> ? InferSchema<TConfigSchema> : Record<string, unknown>,
+  TParamsSchema extends StandardSchemaV1 | undefined = undefined,
+  TConfigSchema extends StandardSchemaV1 | undefined = undefined,
+  TParams = TParamsSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TParamsSchema>
+    : Record<string, string>,
+  TConfig = TConfigSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TConfigSchema>
+    : Record<string, unknown>,
 >(config: ConfigRouteInput<TParamsSchema, TConfigSchema>): ConfigRouteBuilder<TConfig, TParams> {
   return {
     handle(
@@ -29,8 +34,8 @@ export function defineRoute<
     ): ConfigRouteDefinition<TConfig, TParams> {
       return {
         filters: config.filters,
-        ruleParametersSchema: config.ruleParametersSchema as Schema<TParams> | undefined,
-        configurationSchema: config.configurationSchema as Schema<TConfig> | undefined,
+        ruleParametersSchema: config.ruleParametersSchema as StandardSchemaV1<unknown, TParams> | undefined,
+        configurationSchema: config.configurationSchema as StandardSchemaV1<unknown, TConfig> | undefined,
         handler,
       };
     },
@@ -91,7 +96,11 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       throw new Error(`No route matched for config rule ${event.configRuleName}`);
     }
 
-    const validatedParams = this.validateSchema(ruleParameters, route.ruleParametersSchema, 'ruleParameters');
+    const validatedParams = (await validateSchema(
+      ruleParameters,
+      route.ruleParametersSchema,
+      'Schema validation failed for ruleParameters',
+    )) as Record<string, string>;
 
     const handler = route.handler as (request: ConfigRequest | ConfigOversizedRequest) => Promise<void>;
 
@@ -109,11 +118,11 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       return;
     }
 
-    const validatedConfiguration = this.validateSchema(
+    const validatedConfiguration = (await validateSchema(
       configurationItem?.configuration,
       route.configurationSchema,
-      'configuration',
-    );
+      'Schema validation failed for configuration',
+    )) as Record<string, unknown> | undefined; // TODO: Fix / improve typing so `as` isn't needed
 
     /* v8 ignore next 3 -- @preserve - Non-oversized ConfigurationItemChangeNotification events always have configurationItem */
     if (!configurationItem) {
@@ -172,18 +181,6 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
 
       return true;
     });
-  }
-
-  private validateSchema<T>(data: T, schema: Schema<unknown> | undefined, name: string): T {
-    if (!schema || data === undefined) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Schema validation failed for ${name}`, { cause: result.error });
-    }
-    return result.data as T;
   }
 }
 

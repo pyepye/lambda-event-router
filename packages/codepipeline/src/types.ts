@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lambda';
 
 export interface CodePipelineJobRequest<TUserParameters = unknown> {
@@ -41,6 +41,6 @@ export interface CodePipelineFilters {
 
 export interface CodePipelineRouteDefinition<TUserParameters = unknown> {
   filters: CodePipelineFilters;
-  userParametersSchema?: Schema<TUserParameters>;
+  userParametersSchema?: StandardSchemaV1<unknown, TUserParameters>;
   handler: CodePipelineJobHandler<TUserParameters>;
 }

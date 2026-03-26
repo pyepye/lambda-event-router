@@ -1,4 +1,4 @@
-import type { InferSchema, Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { ALBEvent, Context } from 'aws-lambda';
 
 // HTTP method types - more restrictive than aws-lambda's string for better type safety
@@ -17,7 +17,7 @@ type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${inf
 // Clean up the extracted params into a proper object type
 export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;
 
-export type { InferSchema, Schema };
+export type { StandardSchemaV1 };
 
 // TODO: Does this need to be more dynamic based on the type?
 //       If not these types should all come from the actual interfaces like targetGroupArn
@@ -95,8 +95,8 @@ export interface RouteDefinition<
   method: AnyHttpMethod;
   path: TPathString;
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  pathSchema?: Schema<TPath>;
-  querySchema?: Schema<TQuery>;
-  bodySchema?: Schema<TBody>;
-  responseSchema?: Schema<TResponse>;
+  pathSchema?: StandardSchemaV1<unknown, TPath>;
+  querySchema?: StandardSchemaV1<unknown, TQuery>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
+  responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }

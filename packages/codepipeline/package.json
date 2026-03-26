@@ -20,8 +20,8 @@
     "build": "tsc -p tsconfig.build.json --noEmit && tsup",
     "dev": "tsup --watch",
     "test": "tsc --noEmit && vitest run",
-    "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
     "lint": "biome check src",
     "lint:fix": "biome check --write src",
     "clean": "rm -rf dist"
@@ -32,9 +32,11 @@
     "serverless"
   ],
   "license": "UNLICENSED",
-  "peerDependencies": {
-    "@aws-sdk/client-codepipeline": "^3.0.0",
+  "dependencies": {
     "@lambda-event-router/base": "workspace:*"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-codepipeline": "^3.0.0"
   },
   "devDependencies": {
     "@lambda-event-router/testing": "workspace:*",

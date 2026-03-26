@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   APIGatewayEventWebsocketRequestContextV2,
   APIGatewayProxyWebsocketEventV2WithRequestContext,
@@ -60,6 +60,6 @@ export type WebSocketHandler<TBody = unknown> = (request: WebSocketRequest<TBody
 
 export interface WebSocketRouteDefinition<TBody = unknown> {
   filters: WebSocketFilters;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: WebSocketHandler<TBody>;
 }

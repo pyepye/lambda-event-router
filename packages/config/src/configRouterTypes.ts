@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type { ConfigEvent, ConfigurationItem, ConfigurationItemSummary } from './types.js';
 
@@ -35,15 +35,15 @@ export interface ConfigChangeFilters {
 
 export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParams = Record<string, string>> {
   filters: ConfigChangeFilters;
-  ruleParametersSchema?: Schema<TParams>;
-  configurationSchema?: Schema<TConfig>;
+  ruleParametersSchema?: StandardSchemaV1<unknown, TParams>;
+  configurationSchema?: StandardSchemaV1<unknown, TConfig>;
   handler: ConfigChangeHandler<TConfig, TParams>;
 }
 
 export interface InternalConfigRoute {
   filters: ConfigChangeFilters;
-  ruleParametersSchema?: Schema<unknown>;
-  configurationSchema?: Schema<unknown>;
+  ruleParametersSchema?: StandardSchemaV1;
+  configurationSchema?: StandardSchemaV1;
   handler: ConfigChangeHandler;
 }
 
@@ -54,8 +54,8 @@ export interface ConfigRouteBuilder<TConfig, TParams> {
 }
 
 export interface ConfigRouteInput<
-  TParamsSchema extends Schema<unknown> | undefined = undefined,
-  TConfigSchema extends Schema<unknown> | undefined = undefined,
+  TParamsSchema extends StandardSchemaV1 | undefined = undefined,
+  TConfigSchema extends StandardSchemaV1 | undefined = undefined,
 > {
   filters: ConfigChangeFilters;
   ruleParametersSchema?: TParamsSchema;

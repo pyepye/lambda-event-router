@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
 import type {
   SQSFilters,
@@ -12,14 +13,14 @@ import type {
 
 interface InternalRoute {
   filters: SQSFilters;
-  bodySchema?: Schema<unknown>;
-  messageAttributesSchema?: Schema<SQSMessageAttributes>;
+  bodySchema?: StandardSchemaV1;
+  messageAttributesSchema?: StandardSchemaV1;
   handler: SQSRecordHandler;
 }
 
 interface RouteInput<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TMessageAttributesSchema extends Schema<unknown> | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
 > {
   filters: SQSFilters;
   bodySchema?: TBodySchema;
@@ -31,11 +32,11 @@ interface RouteBuilder<TBody, TMessageAttributes extends SQSMessageAttributes> {
 }
 
 export function defineRoute<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TMessageAttributesSchema extends Schema<unknown> | undefined = undefined,
-  TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
-  TMessageAttributes extends SQSMessageAttributes = TMessageAttributesSchema extends Schema<unknown>
-    ? InferSchema<TMessageAttributesSchema> & SQSMessageAttributes
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TMessageAttributes extends SQSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SQSMessageAttributes
     : SQSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
@@ -230,33 +231,6 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     }
   }
 
-  private validateBody(body: unknown, schema: Schema<unknown> | undefined, messageId: string): unknown {
-    if (!schema) {
-      return body;
-    }
-
-    const result = schema.safeParse(body);
-    if (!result.success) {
-      throw new Error(`Body validation failed for record ${messageId}`, { cause: result.error });
-    }
-    return result.data;
-  }
-
-  private validateMessageAttributes(
-    messageAttributes: SQSMessageAttributes,
-    schema: Schema<SQSMessageAttributes> | undefined,
-    messageId: string,
-  ): SQSMessageAttributes {
-    if (!schema) {
-      return messageAttributes;
-    }
-    const result = schema.safeParse(messageAttributes);
-    if (!result.success) {
-      throw new Error(`Message attributes validation failed for record ${messageId}`, { cause: result.error });
-    }
-    return result.data;
-  }
-
   private async processRecord(record: AWSSQSRecord, context: Context): Promise<void> {
     const parsedBody = this.parseJsonBody(record);
     const convertedAttributes = this.convertMessageAttributes(record.messageAttributes);
@@ -266,12 +240,16 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       throw new Error(`No route matched for record from ${record.eventSourceARN}`);
     }
 
-    const body = this.validateBody(parsedBody, route.bodySchema, record.messageId);
-    const messageAttributes = this.validateMessageAttributes(
+    const body = await validateSchema(
+      parsedBody,
+      route.bodySchema,
+      `Body validation failed for record ${record.messageId}`,
+    );
+    const messageAttributes = (await validateSchema(
       convertedAttributes,
       route.messageAttributesSchema,
-      record.messageId,
-    );
+      `Message attributes validation failed for record ${record.messageId}`,
+    )) as SQSMessageAttributes; // TODO: Fix / improve typing so `as` isn't needed
 
     const request: SQSRequest = {
       body,

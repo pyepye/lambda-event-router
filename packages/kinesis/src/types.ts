@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, KinesisStreamRecord } from 'aws-lambda';
 
 export interface KinesisFilterInput {
@@ -26,7 +26,7 @@ export type KinesisResponse = undefined;
 
 export interface KinesisRouteDefinition<TData = unknown> {
   filters: KinesisFilters;
-  dataSchema?: Schema<TData>;
+  dataSchema?: StandardSchemaV1<unknown, TData>;
   handler: (request: KinesisRequest<TData>) => Promise<void>;
 }
 

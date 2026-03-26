@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, SNSEvent, SNSEventRecord } from 'aws-lambda';
 import type {
   SNSFilters,
@@ -13,14 +14,14 @@ import type {
 
 interface InternalRoute {
   filters: SNSFilters;
-  bodySchema?: Schema<unknown>;
-  messageAttributesSchema?: Schema<SNSMessageAttributes>;
+  bodySchema?: StandardSchemaV1;
+  messageAttributesSchema?: StandardSchemaV1<unknown, SNSMessageAttributes>;
   handler: SNSRecordHandler;
 }
 
 interface RouteInput<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TMessageAttributesSchema extends Schema<unknown> | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
 > {
   filters: SNSFilters;
   bodySchema?: TBodySchema;
@@ -32,11 +33,11 @@ interface RouteBuilder<TBody, TMessageAttributes extends SNSMessageAttributes> {
 }
 
 export function defineRoute<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TMessageAttributesSchema extends Schema<unknown> | undefined = undefined,
-  TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
-  TMessageAttributes extends SNSMessageAttributes = TMessageAttributesSchema extends Schema<unknown>
-    ? InferSchema<TMessageAttributesSchema> & SNSMessageAttributes
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TMessageAttributes extends SNSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SNSMessageAttributes
     : SNSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
@@ -142,33 +143,6 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     }
   }
 
-  private validateBody(body: unknown, schema: Schema<unknown> | undefined, messageId: string): unknown {
-    if (!schema) {
-      return body;
-    }
-
-    const result = schema.safeParse(body);
-    if (!result.success) {
-      throw new Error(`Body validation failed for record ${messageId}`, { cause: result.error });
-    }
-    return result.data;
-  }
-
-  private validateMessageAttributes(
-    messageAttributes: SNSMessageAttributes,
-    schema: Schema<SNSMessageAttributes> | undefined,
-    messageId: string,
-  ): SNSMessageAttributes {
-    if (!schema) {
-      return messageAttributes;
-    }
-    const result = schema.safeParse(messageAttributes);
-    if (!result.success) {
-      throw new Error(`Message attributes validation failed for record ${messageId}`, { cause: result.error });
-    }
-    return result.data;
-  }
-
   private async processRecord(record: SNSEventRecord, context: Context): Promise<void> {
     const parsedBody = this.parseJsonBody(record);
     const rawMessageAttributes = record.Sns.MessageAttributes;
@@ -177,14 +151,15 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     if (!route) {
       throw new Error(`No route matched for record from ${record.Sns.TopicArn}`);
     }
+    const bodyValidationError = `Body validation failed for record ${record.Sns.MessageId}`;
+    const body = await validateSchema(parsedBody, route.bodySchema, bodyValidationError);
 
-    const body = this.validateBody(parsedBody, route.bodySchema, record.Sns.MessageId);
     const convertedAttributes = this.convertMessageAttributes(rawMessageAttributes);
-    const validatedMessageAttributes = this.validateMessageAttributes(
+    const validatedMessageAttributes = (await validateSchema(
       convertedAttributes,
       route.messageAttributesSchema,
-      record.Sns.MessageId,
-    );
+      `Message attributes validation failed for record ${record.Sns.MessageId}`,
+    )) as SNSMessageAttributes; // TODO: Fix / improve typing so `as` isn't needed
 
     const request: SNSRequest = {
       body,

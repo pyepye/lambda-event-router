@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SNSMessageAttributes as AWSSNSMessageAttributes, Context, SNSEventRecord } from 'aws-lambda';
 
 export type SNSRawMessageAttributes = AWSSNSMessageAttributes;
@@ -36,8 +36,8 @@ export interface SNSRouteDefinition<
   TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes,
 > {
   filters: SNSFilters;
-  bodySchema?: Schema<TBody>;
-  messageAttributesSchema?: Schema<TMessageAttributes>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
+  messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;
   handler: SNSRecordHandler<TBody, TMessageAttributes>;
 }
 

@@ -1,4 +1,3 @@
-export type { Schema } from '@lambda-event-router/base';
 export { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
 export type {
   DocumentDBChangeEvent,

@@ -1,15 +1,17 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
 import type { KinesisFilters, KinesisRequest, KinesisRouteDefinition, KinesisRouterOptions } from './types.js';
 
 interface InternalRoute {
   filters: KinesisFilters;
-  dataSchema?: Schema<unknown>;
+  dataSchema?: StandardSchemaV1;
   handler: (request: KinesisRequest) => Promise<void>;
 }
 
-interface RouteInput<TDataSchema extends Schema<unknown> | undefined = undefined> {
+interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: KinesisFilters;
   dataSchema?: TDataSchema;
 }
@@ -19,14 +21,14 @@ interface RouteBuilder<TData> {
 }
 
 export function defineRoute<
-  TDataSchema extends Schema<unknown> | undefined = undefined,
-  TData = TDataSchema extends Schema<unknown> ? InferSchema<TDataSchema> : unknown,
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
 >(config: RouteInput<TDataSchema>): RouteBuilder<TData> {
   return {
     handle(handler: (request: KinesisRequest<TData>) => Promise<void>): KinesisRouteDefinition<TData> {
       return {
         filters: config.filters as KinesisFilters,
-        dataSchema: config.dataSchema as Schema<TData> | undefined,
+        dataSchema: config.dataSchema as StandardSchemaV1<unknown, TData> | undefined,
         handler: handler as (request: KinesisRequest<TData>) => Promise<void>,
       };
     },
@@ -102,7 +104,8 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
 
-    const validatedData = this.validateData(data, route.dataSchema, record);
+    const validationErrorMessage = `Data validation failed for record ${record.eventID}`;
+    const validatedData = validateSchema(data, route.dataSchema, validationErrorMessage);
 
     const request: KinesisRequest = {
       data: validatedData,
@@ -142,18 +145,6 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     } catch {
       return rawData;
     }
-  }
-
-  private validateData(data: unknown, schema: Schema<unknown> | undefined, record: KinesisStreamRecord): unknown {
-    if (!schema) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Data validation failed for record ${record.eventID}`, { cause: result.error });
-    }
-    return result.data;
   }
 }
 

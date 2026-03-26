@@ -1,6 +1,7 @@
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEvent } from 'aws-lambda';
 import type { DynamoDBFilters, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -17,14 +18,18 @@ import type {
 type UnmarshallInput = Parameters<typeof unmarshall>[0];
 
 export function defineRoute<
-  TKeysSchema extends Schema<unknown> | undefined = undefined,
-  TNewImageSchema extends Schema<unknown> | undefined = undefined,
-  TOldImageSchema extends Schema<unknown> | undefined = undefined,
+  TKeysSchema extends StandardSchemaV1 | undefined = undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
   const TEventNames extends readonly DynamoDBEventName[] | undefined = undefined,
   const TViewTypes extends readonly DynamoDBViewType[] | undefined = undefined,
-  TKeys = TKeysSchema extends Schema<unknown> ? InferSchema<TKeysSchema> : Record<string, unknown>,
-  TNewItem = TNewImageSchema extends Schema<unknown> ? InferSchema<TNewImageSchema> : Record<string, unknown>,
-  TOldItem = TOldImageSchema extends Schema<unknown> ? InferSchema<TOldImageSchema> : Record<string, unknown>,
+  TKeys = TKeysSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TKeysSchema> : Record<string, unknown>,
+  TNewItem = TNewImageSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TNewImageSchema>
+    : Record<string, unknown>,
+  TOldItem = TOldImageSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TOldImageSchema>
+    : Record<string, unknown>,
 >(
   config: RouteInput<TKeysSchema, TNewImageSchema, TOldImageSchema, TEventNames, TViewTypes>,
 ): RouteBuilder<TKeys, TNewItem, TOldItem, TEventNames> {
@@ -33,9 +38,9 @@ export function defineRoute<
     handle(handler): DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem> {
       return {
         filters: config.filters as DynamoDBFilters,
-        keysSchema: config.keysSchema as Schema<TKeys> | undefined,
-        newImageSchema: config.newImageSchema as Schema<TNewItem> | undefined,
-        oldImageSchema: config.oldImageSchema as Schema<TOldItem> | undefined,
+        keysSchema: config.keysSchema as StandardSchemaV1<unknown, TKeys> | undefined,
+        newImageSchema: config.newImageSchema as StandardSchemaV1<unknown, TNewItem> | undefined,
+        oldImageSchema: config.oldImageSchema as StandardSchemaV1<unknown, TOldItem> | undefined,
         handler: handler as (request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>,
       };
     },
@@ -148,18 +153,32 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     const newImage = record.dynamodb?.NewImage ? unmarshall(record.dynamodb.NewImage as UnmarshallInput) : undefined;
     const oldImage = record.dynamodb?.OldImage ? unmarshall(record.dynamodb.OldImage as UnmarshallInput) : undefined;
 
-    const validatedKeys = this.validateImage(keys, route.keysSchema, 'Keys', record.eventID);
-    const validatedNewImage = this.validateImage(newImage, route.newImageSchema, 'NewImage', record.eventID);
-    const validatedOldImage = this.validateImage(oldImage, route.oldImageSchema, 'OldImage', record.eventID);
+    const validatedKeys = (await validateSchema(
+      keys,
+      route.keysSchema,
+      `Image validation failed for Keys on record ${record.eventID}`,
+    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
 
-    const request = {
+    const validatedNewImage = (await validateSchema(
+      newImage,
+      route.newImageSchema,
+      `Image validation failed for NewImage on record ${record.eventID}`,
+    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
+
+    const validatedOldImage = (await validateSchema(
+      oldImage,
+      route.oldImageSchema,
+      `Image validation failed for OldImage on record ${record.eventID}`,
+    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
+
+    const request: DynamoDBRequest = {
       keys: validatedKeys,
       newImage: validatedNewImage,
       oldImage: validatedOldImage,
       eventName,
       record,
       context,
-    } as DynamoDBRequest;
+    } as DynamoDBRequest; // TODO: Fix / improve typing so `as` isn't needed;
 
     await route.handler(request);
   }
@@ -194,23 +213,6 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
 
       return true;
     });
-  }
-
-  private validateImage<T extends Record<string, unknown> | undefined>(
-    data: T,
-    schema: Schema<unknown> | undefined,
-    imageName: string,
-    recordId: string | undefined,
-  ): T {
-    if (!schema || data === undefined) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Image validation failed for ${imageName} on record ${recordId}`, { cause: result.error });
-    }
-    return result.data as T;
   }
 }
 

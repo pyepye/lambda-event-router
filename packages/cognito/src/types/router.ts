@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   CreateAuthChallengeTriggerEvent,
   CustomEmailSenderTriggerEvent,
@@ -89,7 +89,7 @@ export type CognitoRequest<TUserAttributes extends UserAttributes = UserAttribut
 // Handlers receive a cloned event, modify it, and return it
 export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> {
   filters?: CognitoFilters;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: (request: CognitoRequest<TUserAttributes>) => Promise<CognitoEvent>;
 }
 
@@ -143,7 +143,7 @@ export interface TypedRouteDefinition<
   TUserAttributes extends UserAttributes = UserAttributes,
 > {
   filters?: CognitoFilters<TTrigger>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: (request: RequestForTrigger<TTrigger, TUserAttributes>) => Promise<EventForTrigger<TTrigger>>;
 }
 
@@ -158,7 +158,7 @@ export interface RouteInputFilters<TTrigger extends CognitoTriggerSource> {
 // Input for defineRoute
 export interface RouteInput<
   TTrigger extends CognitoTriggerSource,
-  TUserAttributesSchema extends Schema<unknown> | undefined = undefined,
+  TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
 > {
   filters?: RouteInputFilters<TTrigger>;
   userAttributesSchema?: TUserAttributesSchema;

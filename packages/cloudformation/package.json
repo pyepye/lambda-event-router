@@ -32,7 +32,7 @@
     "serverless"
   ],
   "license": "UNLICENSED",
-  "peerDependencies": {
+  "dependencies": {
     "@lambda-event-router/base": "workspace:*"
   },
   "devDependencies": {

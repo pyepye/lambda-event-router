@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, CustomMessageTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
 
@@ -25,6 +25,6 @@ export type CustomMessageHandler<TUserAttributes extends UserAttributes = UserAt
 // CustomMessage route definition
 export interface CustomMessageRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomMessageTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: CustomMessageHandler<TUserAttributes>;
 }

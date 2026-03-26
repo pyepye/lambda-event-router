@@ -10,7 +10,6 @@ export type {
   NormalizedHTTPEvent,
   PathParams,
   RouteDefinition,
-  Schema,
 } from '@lambda-event-router/http';
 export {
   BadRequest,

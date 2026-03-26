@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   DocumentDBEventEntry,
   DocumentDBFilterInput,
@@ -33,9 +33,9 @@ export interface InternalRequest {
 
 export interface InternalRoute {
   filters: DocumentDBFilters;
-  documentKeySchema?: Schema<unknown>;
-  fullDocumentSchema?: Schema<unknown>;
-  fullDocumentBeforeChangeSchema?: Schema<unknown>;
+  documentKeySchema?: StandardSchemaV1;
+  fullDocumentSchema?: StandardSchemaV1;
+  fullDocumentBeforeChangeSchema?: StandardSchemaV1;
   handler: (request: InternalRequest) => Promise<void>;
 }
 
@@ -105,7 +105,7 @@ type FullDocumentBeforeChangeFilterDeclared<T extends readonly DocumentDBFullDoc
 // Prevent fullDocumentSchema when all operations are delete
 type FullDocumentSchemaOption<
   TOperationTypes extends readonly DocumentDBOperationType[] | undefined,
-  TFullDocumentSchema extends Schema<unknown> | undefined,
+  TFullDocumentSchema extends StandardSchemaV1 | undefined,
 > = TOperationTypes extends readonly DocumentDBOperationType[]
   ? NoneHaveFullDocument<TOperationTypes> extends true
     ? { fullDocumentSchema?: never }
@@ -115,7 +115,7 @@ type FullDocumentSchemaOption<
 // Prevent fullDocumentBeforeChangeSchema when all operations are insert
 type FullDocumentBeforeChangeSchemaOption<
   TOperationTypes extends readonly DocumentDBOperationType[] | undefined,
-  TFullDocumentBeforeChangeSchema extends Schema<unknown> | undefined,
+  TFullDocumentBeforeChangeSchema extends StandardSchemaV1 | undefined,
 > = TOperationTypes extends readonly DocumentDBOperationType[]
   ? NoneHaveFullDocumentBeforeChange<TOperationTypes> extends true
     ? { fullDocumentBeforeChangeSchema?: never }
@@ -179,9 +179,9 @@ export type FiltersToRequest<
   : DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>;
 
 export type RouteInput<
-  TDocumentKeySchema extends Schema<unknown> | undefined = undefined,
-  TFullDocumentSchema extends Schema<unknown> | undefined = undefined,
-  TFullDocumentBeforeChangeSchema extends Schema<unknown> | undefined = undefined,
+  TDocumentKeySchema extends StandardSchemaV1 | undefined = undefined,
+  TFullDocumentSchema extends StandardSchemaV1 | undefined = undefined,
+  TFullDocumentBeforeChangeSchema extends StandardSchemaV1 | undefined = undefined,
   TFilters extends RouteInputFilters = RouteInputFilters,
 > = {
   filters: TFilters;

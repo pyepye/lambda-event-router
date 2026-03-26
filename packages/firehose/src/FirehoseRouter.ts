@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   FirehoseTransformationEvent,
@@ -13,11 +14,11 @@ import type { FirehoseFilters, FirehoseRequest, FirehoseResponse, FirehoseRouteD
 
 interface InternalRoute {
   filters: FirehoseFilters;
-  dataSchema?: Schema<unknown>;
+  dataSchema?: StandardSchemaV1;
   handler: (request: FirehoseRequest) => Promise<FirehoseResponse>;
 }
 
-interface RouteInput<TDataSchema extends Schema<unknown> | undefined = undefined> {
+interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: FirehoseFilters;
   dataSchema?: TDataSchema;
 }
@@ -27,14 +28,14 @@ interface RouteBuilder<TData> {
 }
 
 export function defineRoute<
-  TDataSchema extends Schema<unknown> | undefined = undefined,
-  TData = TDataSchema extends Schema<unknown> ? InferSchema<TDataSchema> : unknown,
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
 >(config: RouteInput<TDataSchema>): RouteBuilder<TData> {
   return {
     handle(handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>): FirehoseRouteDefinition<TData> {
       return {
         filters: config.filters as FirehoseFilters,
-        dataSchema: config.dataSchema as Schema<TData> | undefined,
+        dataSchema: config.dataSchema as StandardSchemaV1<unknown, TData> | undefined,
         handler: handler as (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>,
       };
     },
@@ -85,7 +86,11 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
         return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
       }
 
-      const validatedData = this.validateData(data, route.dataSchema, record.recordId);
+      const validatedData = await validateSchema(
+        data,
+        route.dataSchema,
+        `Data validation failed for record ${record.recordId}`,
+      );
 
       const request: FirehoseRequest = {
         data: validatedData,
@@ -173,18 +178,6 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     } catch {
       return rawData;
     }
-  }
-
-  private validateData(data: unknown, schema: Schema<unknown> | undefined, recordId: string): unknown {
-    if (!schema) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Data validation failed for record ${recordId}`, { cause: result.error });
-    }
-    return result.data;
   }
 }
 

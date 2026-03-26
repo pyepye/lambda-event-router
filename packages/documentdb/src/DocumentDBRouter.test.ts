@@ -7,7 +7,7 @@ import {
   createDocumentDBUpdateEntry,
   test,
 } from '@lambda-event-router/testing';
-import { createDocumentDBRouter, defineRoute, DocumentDBRouter } from './DocumentDBRouter.js';
+import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
 import type { DocumentDBFilterInput } from './types.js';
 
 suite('DocumentDBRouter', () => {

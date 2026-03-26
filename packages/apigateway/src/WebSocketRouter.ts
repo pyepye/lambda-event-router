@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import { isWebSocketResponse } from './webSocketResponse.js';
 import type {
@@ -16,14 +17,14 @@ import type {
 
 interface InternalRoute {
   filters: WebSocketFilters;
-  bodySchema?: Schema<unknown>;
+  bodySchema?: StandardSchemaV1;
   handler: WebSocketHandler;
 }
 
 interface RouteInput<
   TEventType extends WebSocketEventType | undefined = undefined,
   TRouteKey extends string | undefined = undefined,
-  TBodySchema extends Schema<unknown> | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
 > {
   filters: { eventType?: TEventType; routeKey?: TRouteKey };
   bodySchema?: TBodySchema;
@@ -39,8 +40,8 @@ interface RouteBuilder<TBody, TQueryString> {
 export function defineWebSocketRoute<
   TEventType extends WebSocketEventType | undefined = undefined,
   TRouteKey extends string | undefined = undefined,
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
   TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
 >(config: RouteInput<TEventType, TRouteKey, TBodySchema>): RouteBuilder<TBody, TQueryString> {
   return {
@@ -61,7 +62,7 @@ interface DisconnectInput {
 
 interface MessageInput<TBody = unknown> {
   routeKey?: string;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: (request: WebSocketRequest<TBody>) => Promise<void>;
 }
 
@@ -85,8 +86,8 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   route<
     TEventType extends WebSocketEventType | undefined = undefined,
     TRouteKey extends string | undefined = undefined,
-    TBodySchema extends Schema<unknown> | undefined = undefined,
-    TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
+    TBodySchema extends StandardSchemaV1 | undefined = undefined,
+    TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
     TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
   >(definition: {
     filters: { eventType?: TEventType; routeKey?: TRouteKey };
@@ -97,8 +98,8 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   route<
     TEventType extends WebSocketEventType | undefined = undefined,
     TRouteKey extends string | undefined = undefined,
-    TBodySchema extends Schema<unknown> | undefined = undefined,
-    TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
+    TBodySchema extends StandardSchemaV1 | undefined = undefined,
+    TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
     TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
   >(definition: {
     filters: { eventType?: TEventType; routeKey?: TRouteKey };
@@ -108,7 +109,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
 
   route(definition: {
     filters: { eventType?: WebSocketEventType; routeKey?: string };
-    bodySchema?: Schema<unknown>;
+    bodySchema?: StandardSchemaV1;
     handler: (...args: never[]) => Promise<unknown>;
   }): this {
     this.routes.push({
@@ -158,7 +159,11 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     }
 
     const parsedBody = this.parseBody(event.body);
-    const validatedBody = this.validateBody(parsedBody, route.bodySchema);
+    const validatedBody = await validateSchema(
+      parsedBody,
+      route.bodySchema,
+      'Body validation failed for WebSocket body',
+    );
 
     const request: WebSocketRequest = {
       connectionId,
@@ -207,16 +212,6 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     } catch {
       return body;
     }
-  }
-
-  private validateBody(body: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (!schema) return body;
-
-    const result = schema.safeParse(body);
-    if (!result.success) {
-      throw new Error('Body validation failed for WebSocket body', { cause: result.error });
-    }
-    return result.data;
   }
 
   private buildResult(response: WebSocketConnectResponse): WebSocketResult {

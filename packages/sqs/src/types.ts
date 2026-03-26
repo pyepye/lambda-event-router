@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context } from 'aws-lambda';
 
 export type SQSMessageAttributeValue = string | number | Buffer;
@@ -35,8 +35,8 @@ export interface SQSRouteDefinition<
   TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
 > {
   filters: SQSFilters;
-  bodySchema?: Schema<TBody>;
-  messageAttributesSchema?: Schema<TMessageAttributes>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
+  messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;
   handler: SQSRecordHandler<TBody, TMessageAttributes>;
 }
 

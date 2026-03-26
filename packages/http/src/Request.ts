@@ -1,9 +1,9 @@
+import type { ValidationResult } from '@lambda-event-router/base';
+import { validateSchemaResult } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
-import type { ApiRequest, Auth, NormalizedHTTPEvent, Schema } from './types.js';
-
-type ValidationResult<T> = { success: true; data: T } | { success: false; error: unknown };
+import type { ApiRequest, Auth, NormalizedHTTPEvent } from './types.js';
 
 export class Request {
   readonly headers: Record<string, string | undefined>;
@@ -55,20 +55,20 @@ export class Request {
     return this.normalizedEvent.query;
   }
 
-  validate(): void {
-    const pathValidation = this.validatePath();
+  async validate(): Promise<void> {
+    const pathValidation = await this.validatePath();
     if (!pathValidation.success) {
-      throw Response.NotFound(pathValidation.error);
+      throw Response.NotFound(pathValidation.issues);
     }
 
-    const queryValidation = this.validateQuery();
+    const queryValidation = await this.validateQuery();
     if (!queryValidation.success) {
-      throw Response.BadRequest(queryValidation.error);
+      throw Response.BadRequest(queryValidation.issues);
     }
 
-    const bodyValidation = this.validateBody();
+    const bodyValidation = await this.validateBody();
     if (!bodyValidation.success) {
-      throw Response.UnprocessableContent(bodyValidation.error);
+      throw Response.UnprocessableContent(bodyValidation.issues);
     }
   }
 
@@ -84,26 +84,15 @@ export class Request {
     };
   }
 
-  private validatePath(): ValidationResult<Record<string, string>> {
-    return this.validateSchema<Record<string, string>>(this.route.pathSchema, this.pathParams);
+  private validatePath(): Promise<ValidationResult<Record<string, string>>> {
+    return validateSchemaResult(this.pathParams, this.route.pathSchema);
   }
 
-  private validateQuery(): ValidationResult<Record<string, string | undefined>> {
-    return this.validateSchema<Record<string, string | undefined>>(this.route.querySchema, this.queryParams);
+  private validateQuery(): Promise<ValidationResult<Record<string, string | undefined>>> {
+    return validateSchemaResult(this.queryParams, this.route.querySchema);
   }
 
-  private validateBody(): ValidationResult<unknown> {
-    return this.validateSchema<unknown>(this.route.bodySchema, this.body);
-  }
-
-  private validateSchema<T>(schema: Schema<unknown> | undefined, data: unknown): ValidationResult<T> {
-    if (!schema) {
-      return { success: true, data: data as T };
-    }
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      return { success: false, error: result.error };
-    }
-    return { success: true, data: result.data as T };
+  private validateBody(): Promise<ValidationResult<unknown>> {
+    return validateSchemaResult(this.body, this.route.bodySchema);
   }
 }

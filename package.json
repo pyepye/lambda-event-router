@@ -9,7 +9,6 @@
     "lint": "biome check packages",
     "lint:fix": "biome check --write packages",
     "format": "biome format --write packages",
-
     "clean": "pnpm -r clean",
     "knip": "knip"
   },

@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   ConfigScheduledRequest,
@@ -11,8 +12,10 @@ import type {
 import type { ConfigEvent, ConfigResponse } from './types.js';
 
 export function defineConfigScheduledRoute<
-  TParamsSchema extends Schema<unknown> | undefined = undefined,
-  TParams = TParamsSchema extends Schema<unknown> ? InferSchema<TParamsSchema> : Record<string, string>,
+  TParamsSchema extends StandardSchemaV1 | undefined = undefined,
+  TParams = TParamsSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TParamsSchema>
+    : Record<string, string>,
 >(config: ConfigScheduledRouteInput<TParamsSchema>): ConfigScheduledRouteBuilder<TParams> {
   return {
     handle(
@@ -20,7 +23,7 @@ export function defineConfigScheduledRoute<
     ): ConfigScheduledRouteDefinition<TParams> {
       return {
         filters: config.filters,
-        ruleParametersSchema: config.ruleParametersSchema as Schema<TParams> | undefined,
+        ruleParametersSchema: config.ruleParametersSchema as StandardSchemaV1<unknown, TParams> | undefined,
         handler,
       };
     },
@@ -58,7 +61,11 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
       throw new Error(`No route matched for scheduled config rule ${event.configRuleName}`);
     }
 
-    const validatedParams = this.validateSchema(ruleParameters, route.ruleParametersSchema, 'ruleParameters');
+    const validatedParams = (await validateSchema(
+      ruleParameters,
+      route.ruleParametersSchema,
+      'Schema validation failed for ruleParameters',
+    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
 
     const request: ConfigScheduledRequest = {
       resultToken: event.resultToken,
@@ -86,18 +93,6 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
 
       return true;
     });
-  }
-
-  private validateSchema<T>(data: T, schema: Schema<unknown> | undefined, name: string): T {
-    if (!schema || data === undefined) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Schema validation failed for ${name}`, { cause: result.error });
-    }
-    return result.data as T;
   }
 }
 

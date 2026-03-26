@@ -1,16 +1,18 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type { EventFilterInput, EventFilters, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
-import type { EventTypeRouter, InferSchema, Schema } from './types.js';
+import type { EventTypeRouter } from './types.js';
 import { isObject } from './types.js';
+import { validateSchema } from './validateSchema.js';
 
 interface InternalEventRoute {
   filters: { customFilter?: (input: EventFilterInput) => boolean };
-  eventSchema?: Schema<unknown>;
+  eventSchema?: StandardSchemaV1;
   handler: EventHandler<unknown>;
 }
 
-interface EventRouteInput<TEventSchema extends Schema<unknown> | undefined = undefined> {
-  filters: EventFilters<TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : unknown>;
+interface EventRouteInput<TEventSchema extends StandardSchemaV1 | undefined = undefined> {
+  filters: EventFilters<TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown>;
   eventSchema?: TEventSchema;
 }
 
@@ -169,7 +171,7 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
       throw new Error('No route matched for event');
     }
 
-    const validatedEvent = this.validateSchema(event, route.eventSchema);
+    const validatedEvent = await validateSchema(event, route.eventSchema, 'Schema validation failed for event');
     await route.handler({ event: validatedEvent, context });
   }
 
@@ -186,24 +188,12 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
       return true;
     });
   }
-
-  private validateSchema(data: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (!schema) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error('Schema validation failed for event', { cause: result.error });
-    }
-    return result.data;
-  }
 }
 
-export function defineEventRoute<TPayload = unknown, TEventSchema extends Schema<unknown> | undefined = undefined>(
+export function defineEventRoute<TPayload = unknown, TEventSchema extends StandardSchemaV1 | undefined = undefined>(
   config: EventRouteInput<TEventSchema>,
-): EventRouteBuilder<TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : TPayload> {
-  type ResolvedPayload = TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : TPayload;
+): EventRouteBuilder<TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload> {
+  type ResolvedPayload = TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload;
   return {
     handle(handler: EventHandler<ResolvedPayload>): EventRouteDefinition<ResolvedPayload> {
       // Cast needed: generic type narrowing from builder input to route definition

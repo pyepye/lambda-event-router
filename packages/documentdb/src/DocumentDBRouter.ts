@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   DocumentDBFilters,
@@ -24,16 +25,18 @@ import type {
 } from './types.js';
 
 export function defineRoute<
-  TDocumentKeySchema extends Schema<unknown> | undefined = undefined,
-  TFullDocumentSchema extends Schema<unknown> | undefined = undefined,
-  TFullDocumentBeforeChangeSchema extends Schema<unknown> | undefined = undefined,
+  TDocumentKeySchema extends StandardSchemaV1 | undefined = undefined,
+  TFullDocumentSchema extends StandardSchemaV1 | undefined = undefined,
+  TFullDocumentBeforeChangeSchema extends StandardSchemaV1 | undefined = undefined,
   const TFilters extends RouteInputFilters = RouteInputFilters,
-  TDocumentKey = TDocumentKeySchema extends Schema<unknown> ? InferSchema<TDocumentKeySchema> : Record<string, unknown>,
-  TFullDocument = TFullDocumentSchema extends Schema<unknown>
-    ? InferSchema<TFullDocumentSchema>
+  TDocumentKey = TDocumentKeySchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TDocumentKeySchema>
     : Record<string, unknown>,
-  TFullDocumentBeforeChange = TFullDocumentBeforeChangeSchema extends Schema<unknown>
-    ? InferSchema<TFullDocumentBeforeChangeSchema>
+  TFullDocument = TFullDocumentSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TFullDocumentSchema>
+    : Record<string, unknown>,
+  TFullDocumentBeforeChange = TFullDocumentBeforeChangeSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TFullDocumentBeforeChangeSchema>
     : Record<string, unknown>,
 >(
   config: RouteInput<TDocumentKeySchema, TFullDocumentSchema, TFullDocumentBeforeChangeSchema, TFilters>,
@@ -46,10 +49,10 @@ export function defineRoute<
     ): DocumentDBRouteDefinition<TDocumentKey, TFullDocument, TFullDocumentBeforeChange> {
       return {
         filters: config.filters as DocumentDBFilters,
-        documentKeySchema: config.documentKeySchema as Schema<TDocumentKey> | undefined,
-        fullDocumentSchema: config.fullDocumentSchema as Schema<TFullDocument> | undefined,
+        documentKeySchema: config.documentKeySchema as StandardSchemaV1<unknown, TDocumentKey> | undefined,
+        fullDocumentSchema: config.fullDocumentSchema as StandardSchemaV1<unknown, TFullDocument> | undefined,
         fullDocumentBeforeChangeSchema: config.fullDocumentBeforeChangeSchema as
-          | Schema<TFullDocumentBeforeChange>
+          | StandardSchemaV1<unknown, TFullDocumentBeforeChange>
           | undefined,
         handler: handler as (
           request: DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>,
@@ -134,30 +137,27 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       throw new Error(`documentKey is not an object for record from ${eventSourceArn}`);
     }
 
-    const documentKey = this.validateSchema(
+    const documentKeyErrorMessage = `Schema validation failed on documentKey for record ${JSON.stringify(changeEvent.documentKey)}`;
+    const documentKey = (await validateSchema(
       changeEvent.documentKey,
       route.documentKeySchema,
-      'documentKey',
-      changeEvent.documentKey,
-    );
+      documentKeyErrorMessage,
+    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
 
     const fullDocumentObject = isObject(changeEvent.fullDocument) ? changeEvent.fullDocument : undefined;
-    const fullDocument = this.validateSchema(
+    const fullDocumentErrorMessage = `Schema validation failed on fullDocument for record ${JSON.stringify(changeEvent.documentKey)}`;
+    const fullDocument = (await validateSchema(
       fullDocumentObject,
       route.fullDocumentSchema,
-      'fullDocument',
-      changeEvent.documentKey,
-    );
+      fullDocumentErrorMessage,
+    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
 
-    const fullDocumentBeforeChangeObject = isObject(changeEvent.fullDocumentBeforeChange)
-      ? changeEvent.fullDocumentBeforeChange
-      : undefined;
-    const fullDocumentBeforeChange = this.validateSchema(
-      fullDocumentBeforeChangeObject,
+    const fullDocumentBeforeChangeErrorMessage = `Schema validation failed on fullDocumentBeforeChange for record ${JSON.stringify(changeEvent.documentKey)}`;
+    const fullDocumentBeforeChange = (await validateSchema(
+      changeEvent.fullDocumentBeforeChange,
       route.fullDocumentBeforeChangeSchema,
-      'fullDocumentBeforeChange',
-      changeEvent.documentKey,
-    );
+      fullDocumentBeforeChangeErrorMessage,
+    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed;
 
     const request: InternalRequest = {
       operationType: changeEvent.operationType,
@@ -203,25 +203,6 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
 
       return true;
     });
-  }
-
-  private validateSchema<T extends Record<string, unknown> | undefined>(
-    data: T,
-    schema: Schema<unknown> | undefined,
-    fieldName: string,
-    eventId: Record<string, unknown>,
-  ): T {
-    if (!schema || data === undefined) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Schema validation failed on ${fieldName} for record ${JSON.stringify(eventId)}`, {
-        cause: result.error,
-      });
-    }
-    return result.data as T;
   }
 }
 

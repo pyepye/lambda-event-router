@@ -34,15 +34,13 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
     "@lambda-event-router/http": "workspace:*"
   },
   "devDependencies": {
     "@lambda-event-router/testing": "workspace:*",
-    "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
-    "tsup": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "tsup": "catalog:",
     "vitest": "catalog:"
   }
 }

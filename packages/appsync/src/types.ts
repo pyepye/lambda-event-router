@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   AppSyncAuthorizerEvent,
   AppSyncAuthorizerResult,
@@ -42,7 +42,7 @@ export interface AppSyncResolverFilters {
 
 export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>> {
   filters: AppSyncResolverFilters;
-  argumentsSchema?: Schema<TArgs>;
+  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
@@ -53,27 +53,27 @@ export interface AppSyncResolverFieldFilters {
 export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
-  argumentsSchema?: Schema<TArgs>;
+  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 export interface AppSyncMutationInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
-  argumentsSchema?: Schema<TArgs>;
+  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 export interface AppSyncSubscriptionInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
-  argumentsSchema?: Schema<TArgs>;
+  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 // ─── Resolver Route Builder Types ────────────────────────────────────────────
 
-export interface AppSyncResolverRouteInput<TArgumentsSchema extends Schema<unknown> | undefined = undefined> {
+export interface AppSyncResolverRouteInput<TArgumentsSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: AppSyncResolverFilters;
   argumentsSchema?: TArgumentsSchema;
 }
@@ -86,7 +86,7 @@ export interface AppSyncResolverRouteBuilder<TArgs> {
 
 export interface InternalResolverRoute {
   filters: AppSyncResolverFilters;
-  argumentsSchema?: Schema<unknown>;
+  argumentsSchema?: StandardSchemaV1;
   handler: (request: AppSyncResolverRequest) => Promise<unknown>;
 }
 

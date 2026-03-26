@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { DynamoDBRecord } from 'aws-lambda';
 import type {
   DynamoDBEventName,
@@ -17,9 +17,9 @@ export interface DynamoDBFilters {
 
 export interface InternalRoute {
   filters: DynamoDBFilters;
-  keysSchema?: Schema<unknown>;
-  newImageSchema?: Schema<unknown>;
-  oldImageSchema?: Schema<unknown>;
+  keysSchema?: StandardSchemaV1;
+  newImageSchema?: StandardSchemaV1;
+  oldImageSchema?: StandardSchemaV1;
   handler: (request: DynamoDBRequest) => Promise<void>;
 }
 
@@ -56,7 +56,7 @@ type NoneHaveOldImage<T extends readonly DynamoDBEventName[]> = T[number] extend
 // Conditionally allow newImageSchema only if events can have newImage
 type NewImageSchemaOption<
   TEventNames extends readonly DynamoDBEventName[] | undefined,
-  TNewImageSchema extends Schema<unknown> | undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined,
 > = TEventNames extends readonly DynamoDBEventName[]
   ? NoneHaveNewImage<TEventNames> extends true
     ? { newImageSchema?: never }
@@ -66,7 +66,7 @@ type NewImageSchemaOption<
 // Conditionally allow oldImageSchema only if events can have oldImage
 type OldImageSchemaOption<
   TEventNames extends readonly DynamoDBEventName[] | undefined,
-  TOldImageSchema extends Schema<unknown> | undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined,
 > = TEventNames extends readonly DynamoDBEventName[]
   ? NoneHaveOldImage<TEventNames> extends true
     ? { oldImageSchema?: never }
@@ -74,9 +74,9 @@ type OldImageSchemaOption<
   : { oldImageSchema?: TOldImageSchema };
 
 export type RouteInput<
-  TKeysSchema extends Schema<unknown> | undefined = undefined,
-  TNewImageSchema extends Schema<unknown> | undefined = undefined,
-  TOldImageSchema extends Schema<unknown> | undefined = undefined,
+  TKeysSchema extends StandardSchemaV1 | undefined = undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
   TEventNames extends readonly DynamoDBEventName[] | undefined = undefined,
   TViewTypes extends readonly DynamoDBViewType[] | undefined = undefined,
 > = {

@@ -1,5 +1,5 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
-import type { Schema } from './types.js';
 
 export interface EventFilterInput<TPayload = unknown> {
   event: TPayload;
@@ -16,7 +16,7 @@ export interface EventRequest<TPayload = unknown> {
 
 export interface EventRouteDefinition<TPayload = unknown> {
   filters: EventFilters<TPayload>;
-  eventSchema?: Schema<TPayload>;
+  eventSchema?: StandardSchemaV1<unknown, TPayload>;
   handler: EventHandler<TPayload>;
 }
 

@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
@@ -62,7 +62,7 @@ export interface RabbitMQFilters {
 
 export interface RabbitMQRouteDefinition<TBody = unknown> {
   filters: RabbitMQFilters;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: (request: RabbitMQRequest<TBody>) => Promise<void>;
 }
 
@@ -70,13 +70,13 @@ export interface RabbitMQRouteDefinition<TBody = unknown> {
 
 export interface RabbitMQInternalRoute {
   filters: RabbitMQFilters;
-  bodySchema?: Schema<unknown>;
+  bodySchema?: StandardSchemaV1;
   handler: (request: RabbitMQRequest) => Promise<void>;
 }
 
 // --- Route Builder Types ---
 
-export interface RabbitMQRouteInput<TBodySchema extends Schema<unknown> | undefined = undefined> {
+export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undefined = undefined> {
   filters: {
     eventSourceArns?: string[];
     queues?: string[];

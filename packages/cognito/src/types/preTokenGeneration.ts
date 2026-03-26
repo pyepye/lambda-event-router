@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, PreTokenGenerationTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
 
@@ -25,6 +25,6 @@ export type PreTokenGenerationHandler<TUserAttributes extends UserAttributes = U
 // PreTokenGeneration route definition
 export interface PreTokenGenerationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreTokenGenerationTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: PreTokenGenerationHandler<TUserAttributes>;
 }

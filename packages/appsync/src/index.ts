@@ -1,4 +1,3 @@
-export type { Schema } from '@lambda-event-router/base';
 export {
   AppSyncAuthorizerRouter,
   createAppSyncAuthorizerRouter,

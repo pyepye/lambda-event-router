@@ -4,8 +4,9 @@ import {
   PutJobFailureResultCommand,
   PutJobSuccessResultCommand,
 } from '@aws-sdk/client-codepipeline';
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { CodePipelineEvent, Context } from 'aws-lambda';
 import type {
   CodePipelineFilterInput,
@@ -18,11 +19,11 @@ import type {
 
 interface InternalRoute {
   filters: CodePipelineFilters;
-  userParametersSchema?: Schema<unknown>;
+  userParametersSchema?: StandardSchemaV1;
   handler: CodePipelineJobHandler;
 }
 
-interface RouteInput<TUserParametersSchema extends Schema<unknown> | undefined = undefined> {
+interface RouteInput<TUserParametersSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: CodePipelineFilters;
   userParametersSchema?: TUserParametersSchema;
 }
@@ -35,8 +36,10 @@ interface RouteBuilder<TUserParameters> {
 }
 
 export function defineRoute<
-  TUserParametersSchema extends Schema<unknown> | undefined = undefined,
-  TUserParameters = TUserParametersSchema extends Schema<unknown> ? InferSchema<TUserParametersSchema> : unknown,
+  TUserParametersSchema extends StandardSchemaV1 | undefined = undefined,
+  TUserParameters = TUserParametersSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TUserParametersSchema>
+    : unknown,
 >(config: RouteInput<TUserParametersSchema>): RouteBuilder<TUserParameters> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
@@ -108,10 +111,10 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
       }
 
       const parsedUserParameters = this.parseUserParameters(rawUserParameters);
-      const validatedUserParameters = this.validateUserParameters(
+      const validatedUserParameters = await validateSchema(
         parsedUserParameters,
         route.userParametersSchema,
-        jobId,
+        `UserParameters validation failed for job ${jobId}`,
       );
 
       const request: CodePipelineJobRequest = {
@@ -175,17 +178,6 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     } catch {
       return raw;
     }
-  }
-
-  private validateUserParameters(userParameters: unknown, schema: Schema<unknown> | undefined, jobId: string): unknown {
-    if (schema) {
-      const result = schema.safeParse(userParameters);
-      if (!result.success) {
-        throw new Error(`UserParameters validation failed for job ${jobId}`, { cause: result.error });
-      }
-      return result.data;
-    }
-    return userParameters;
   }
 
   private async reportSuccess(jobId: string, response: CodePipelineResponse): Promise<void> {

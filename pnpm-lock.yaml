@@ -9,6 +9,9 @@ catalogs:
     '@biomejs/biome':
       specifier: ^2.3.14
       version: 2.3.14
+    '@standard-schema/spec':
+      specifier: ^1.1.0
+      version: 1.1.0
     '@types/aws-lambda':
       specifier: ^8.10.145
       version: 8.10.160
@@ -181,6 +184,9 @@ importers:
       '@lambda-event-router/http':
         specifier: workspace:*
         version: link:../http
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@aws-sdk/client-apigatewaymanagementapi':
         specifier: ^3.1000.0
@@ -209,6 +215,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -230,6 +239,10 @@ importers:
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
   packages/base:
+    dependencies:
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -333,6 +346,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -358,6 +374,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -383,6 +402,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -433,6 +455,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -461,6 +486,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -486,6 +514,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -511,6 +542,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -536,6 +570,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -586,6 +623,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -611,6 +651,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -661,6 +704,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -761,6 +807,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -786,6 +835,9 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
@@ -811,13 +863,13 @@ importers:
       '@lambda-event-router/base':
         specifier: workspace:*
         version: link:../base
+      '@standard-schema/spec':
+        specifier: 'catalog:'
+        version: 1.1.0
     devDependencies:
       '@lambda-event-router/testing':
         specifier: workspace:*
         version: link:../testing
-      '@types/aws-lambda':
-        specifier: 'catalog:'
-        version: 8.10.160
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
@@ -865,9 +917,6 @@ importers:
       '@lambda-event-router/testing':
         specifier: workspace:*
         version: link:../testing
-      '@types/aws-lambda':
-        specifier: 'catalog:'
-        version: 8.10.160
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13

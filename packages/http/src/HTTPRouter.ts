@@ -1,29 +1,21 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';
-import type {
-  AnyHttpMethod,
-  ApiRequest,
-  ApiResponse,
-  HTTPAdapter,
-  InferSchema,
-  PathParams,
-  RouteDefinition,
-  Schema,
-} from './types.js';
+import type { AnyHttpMethod, ApiRequest, ApiResponse, HTTPAdapter, PathParams, RouteDefinition } from './types.js';
 
 // Compute response type from schema - if no schema provided, body must be undefined or null
-type ResponseType<TResponseSchema> = TResponseSchema extends Schema<infer R> ? R : undefined | null;
+type ResponseType<TResponseSchema> = TResponseSchema extends StandardSchemaV1<unknown, infer R> ? R : undefined | null;
 
 // Config without handler (for builder pattern)
 interface RouteInput<
   TPathString extends string,
-  TPathSchema extends Schema<unknown> | undefined,
-  TQuerySchema extends Schema<unknown> | undefined,
-  TBodySchema extends Schema<unknown> | undefined,
-  TResponseSchema extends Schema<unknown> | undefined,
+  TPathSchema extends StandardSchemaV1 | undefined,
+  TQuerySchema extends StandardSchemaV1 | undefined,
+  TBodySchema extends StandardSchemaV1 | undefined,
+  TResponseSchema extends StandardSchemaV1 | undefined,
 > {
   method: AnyHttpMethod;
   path: TPathString;
@@ -42,13 +34,15 @@ interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TRespon
 
 export function defineRoute<
   TPathString extends string,
-  TPathSchema extends Schema<unknown> | undefined = undefined,
-  TQuerySchema extends Schema<unknown> | undefined = undefined,
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TResponseSchema extends Schema<unknown> | undefined = undefined,
-  TPath = TPathSchema extends Schema<unknown> ? InferSchema<TPathSchema> : PathParams<TPathString>,
-  TQuery = TQuerySchema extends Schema<unknown> ? InferSchema<TQuerySchema> : Record<string, string | undefined>,
-  TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
+  TPathSchema extends StandardSchemaV1 | undefined = undefined,
+  TQuerySchema extends StandardSchemaV1 | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TResponseSchema extends StandardSchemaV1 | undefined = undefined,
+  TPath = TPathSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TPathSchema> : PathParams<TPathString>,
+  TQuery = TQuerySchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TQuerySchema>
+    : Record<string, string | undefined>,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
   TResponse = ResponseType<TResponseSchema>,
 >(
   config: RouteInput<TPathString, TPathSchema, TQuerySchema, TBodySchema, TResponseSchema>,
@@ -121,7 +115,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     const request = new Request(normalizedEvent, event, context, route, params);
 
     try {
-      request.validate();
+      await request.validate();
       const requestData = request.buildApiRequest();
       const handlerResponse = await route.handler(requestData);
       const finalizedResponse = this.response.create(handlerResponse);

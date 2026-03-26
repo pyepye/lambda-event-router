@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
 // DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
@@ -143,8 +143,8 @@ export interface DocumentDBInsertRouteDefinition<
   TFullDocument = Record<string, unknown>,
 > {
   filters: DocumentDBEventFilters;
-  documentKeySchema?: Schema<TDocumentKey>;
-  fullDocumentSchema?: Schema<TFullDocument>;
+  documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
+  fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   handler: (request: DocumentDBInsertRequest<TDocumentKey, TFullDocument>) => Promise<void>;
 }
 
@@ -154,9 +154,9 @@ export interface DocumentDBUpdateRouteDefinition<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
   filters: DocumentDBEventFilters;
-  documentKeySchema?: Schema<TDocumentKey>;
-  fullDocumentSchema?: Schema<TFullDocument>;
-  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
+  fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
+  fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
   handler: (request: DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -166,9 +166,9 @@ export interface DocumentDBReplaceRouteDefinition<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
   filters: DocumentDBEventFilters;
-  documentKeySchema?: Schema<TDocumentKey>;
-  fullDocumentSchema?: Schema<TFullDocument>;
-  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
+  fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
+  fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
   handler: (request: DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -177,8 +177,8 @@ export interface DocumentDBDeleteRouteDefinition<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
   filters: DocumentDBEventFilters;
-  documentKeySchema?: Schema<TDocumentKey>;
-  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
+  fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
   handler: (request: DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -188,9 +188,9 @@ export interface DocumentDBRouteDefinition<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
   filters: DocumentDBFilters;
-  documentKeySchema?: Schema<TDocumentKey>;
-  fullDocumentSchema?: Schema<TFullDocument>;
-  fullDocumentBeforeChangeSchema?: Schema<TFullDocumentBeforeChange>;
+  documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
+  fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
+  fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
   handler: DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>;
 }
 

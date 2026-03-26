@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { AppSyncResolverEvent, Context } from 'aws-lambda';
 import type {
   AppSyncMutationInput,
@@ -12,12 +13,14 @@ import type {
   InternalResolverRoute,
 } from './types.js';
 
-export function defineRoute<TArgumentsSchema extends Schema<unknown> | undefined = undefined>(
+export function defineRoute<TArgumentsSchema extends StandardSchemaV1 | undefined = undefined>(
   config: AppSyncResolverRouteInput<TArgumentsSchema>,
 ): AppSyncResolverRouteBuilder<
-  TArgumentsSchema extends Schema<unknown> ? InferSchema<TArgumentsSchema> : Record<string, unknown>
+  TArgumentsSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TArgumentsSchema> : Record<string, unknown>
 > {
-  type TArgs = TArgumentsSchema extends Schema<unknown> ? InferSchema<TArgumentsSchema> : Record<string, unknown>;
+  type TArgs = TArgumentsSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TArgumentsSchema>
+    : Record<string, unknown>;
 
   return {
     handle(
@@ -25,7 +28,7 @@ export function defineRoute<TArgumentsSchema extends Schema<unknown> | undefined
     ): AppSyncResolverRouteDefinition<TArgs> {
       return {
         filters: config.filters,
-        argumentsSchema: config.argumentsSchema as Schema<TArgs> | undefined,
+        argumentsSchema: config.argumentsSchema as StandardSchemaV1<unknown, TArgs> | undefined,
         handler,
       };
     },
@@ -95,14 +98,14 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
       throw new Error(`No route matched for ${parentTypeName}.${fieldName}`);
     }
 
-    const validatedArguments = this.validateArguments(
+    const validatedArguments = await validateSchema(
       event.arguments,
       route.argumentsSchema,
-      parentTypeName,
-      fieldName,
+      `Arguments validation failed for ${parentTypeName}.${fieldName}`,
     );
 
     const request: AppSyncResolverRequest = {
+      // @ts-expect-error - validateSchema returns unknown but arguments are validated Record<string, unknown>
       arguments: validatedArguments,
       identity: event.identity,
       source: event.source,
@@ -140,23 +143,6 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
 
       return true;
     });
-  }
-
-  private validateArguments<T>(
-    args: T,
-    schema: Schema<unknown> | undefined,
-    parentTypeName: string,
-    fieldName: string,
-  ): T {
-    if (!schema) {
-      return args;
-    }
-
-    const result = schema.safeParse(args);
-    if (!result.success) {
-      throw new Error(`Arguments validation failed for ${parentTypeName}.${fieldName}`, { cause: result.error });
-    }
-    return result.data as T;
   }
 }
 

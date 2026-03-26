@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, FirehoseRecordMetadata, FirehoseTransformationEventRecord } from 'aws-lambda';
 import type { FirehoseResponseResult } from './response.js';
 
@@ -29,6 +29,6 @@ export type FirehoseResponse = FirehoseResponseResult;
 
 export interface FirehoseRouteDefinition<TData = unknown> {
   filters: FirehoseFilters;
-  dataSchema?: Schema<TData>;
+  dataSchema?: StandardSchemaV1<unknown, TData>;
   handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>;
 }

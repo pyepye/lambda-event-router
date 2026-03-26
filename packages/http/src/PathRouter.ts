@@ -1,4 +1,5 @@
-import type { ApiHandler, HttpMethod, PathParams, RouteDefinition, Schema } from './types.js';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+import type { ApiHandler, HttpMethod, PathParams, RouteDefinition } from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -9,18 +10,18 @@ export interface InternalRoute {
   pattern: RegExp;
   paramNames: string[];
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
-  pathSchema?: Schema<unknown>;
-  querySchema?: Schema<unknown>;
-  bodySchema?: Schema<unknown>;
-  responseSchema?: Schema<unknown>;
+  pathSchema?: StandardSchemaV1;
+  querySchema?: StandardSchemaV1;
+  bodySchema?: StandardSchemaV1;
+  responseSchema?: StandardSchemaV1;
 }
 
 // Base config shared by all route types
 interface BaseRouteConfig<TPathString extends string, TPath, TQuery, TResponse> {
   path: TPathString;
-  pathSchema?: Schema<TPath>;
-  querySchema?: Schema<TQuery>;
-  responseSchema?: Schema<TResponse>;
+  pathSchema?: StandardSchemaV1<unknown, TPath>;
+  querySchema?: StandardSchemaV1<unknown, TQuery>;
+  responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }
 
 // Config for HTTP methods that don't support a request body (GET, HEAD, DELETE, OPTIONS)
@@ -33,7 +34,7 @@ interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse
 interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse>
   extends BaseRouteConfig<TPathString, TPath, TQuery, TResponse> {
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  bodySchema?: Schema<TBody>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
 // Method signature for route (takes full RouteDefinition with method)

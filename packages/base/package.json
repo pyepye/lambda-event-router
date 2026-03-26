@@ -32,8 +32,11 @@
     "@lambda-event-router/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
-    "tsup": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "tsup": "catalog:",
     "vitest": "catalog:"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "catalog:"
   }
 }

@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 export interface StepFunctionsFilterInput {
   event: unknown;
@@ -25,12 +25,12 @@ export type StepFunctionsTaskTokenHandler<TInput = unknown> = (
 
 export interface StepFunctionsRouteDefinition<TInput = unknown> {
   filters: StepFunctionsFilters;
-  eventSchema?: Schema<TInput>;
+  eventSchema?: StandardSchemaV1<unknown, TInput>;
   handler: StepFunctionsHandler<TInput>;
 }
 
 export interface StepFunctionsTaskTokenRouteDefinition<TInput = unknown> {
   filters: StepFunctionsFilters & { taskToken: true };
-  eventSchema?: Schema<TInput>;
+  eventSchema?: StandardSchemaV1<unknown, TInput>;
   handler: StepFunctionsTaskTokenHandler<TInput>;
 }

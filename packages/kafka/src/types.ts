@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   MSKEvent,
@@ -43,7 +43,7 @@ export type KafkaResponse = undefined;
 
 export interface KafkaRouteDefinition<TValue = unknown> {
   filters: KafkaFilters;
-  valueSchema?: Schema<TValue>;
+  valueSchema?: StandardSchemaV1<unknown, TValue>;
   handler: (request: KafkaRequest<TValue>) => Promise<void>;
 }
 

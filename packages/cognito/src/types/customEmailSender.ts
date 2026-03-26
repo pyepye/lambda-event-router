@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, CustomEmailSenderTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
 
@@ -25,6 +25,6 @@ export type CustomEmailSenderHandler<TUserAttributes extends UserAttributes = Us
 // CustomEmailSender route definition
 export interface CustomEmailSenderRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomEmailSenderTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: CustomEmailSenderHandler<TUserAttributes>;
 }

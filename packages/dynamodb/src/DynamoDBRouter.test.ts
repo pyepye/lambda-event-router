@@ -1,6 +1,6 @@
 import type { Schema } from '@lambda-event-router/base';
 import { createDynamoDBEvent, test } from '@lambda-event-router/testing';
-import { createDynamoDBRouter, defineRoute, DynamoDBRouter } from './DynamoDBRouter.js';
+import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBInsertRequest } from './types.js';
 
 suite('DynamoDBRouter', () => {

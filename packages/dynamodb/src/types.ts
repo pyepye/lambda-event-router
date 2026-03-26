@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBRecord, StreamRecord } from 'aws-lambda';
 
 // Derive event name type from aws-lambda (excludes undefined)
@@ -80,8 +80,8 @@ interface DynamoDBEventFilters {
 
 export interface DynamoDBInsertRouteDefinition<TKeys = Record<string, unknown>, TNewItem = Record<string, unknown>> {
   filters: DynamoDBEventFilters;
-  keysSchema?: Schema<TKeys>;
-  newImageSchema?: Schema<TNewItem>;
+  keysSchema?: StandardSchemaV1<unknown, TKeys>;
+  newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
   handler: (request: DynamoDBInsertRequest<TKeys, TNewItem>) => Promise<void>;
 }
 
@@ -91,16 +91,16 @@ export interface DynamoDBModifyRouteDefinition<
   TOldItem = Record<string, unknown>,
 > {
   filters: DynamoDBEventFilters;
-  keysSchema?: Schema<TKeys>;
-  newImageSchema?: Schema<TNewItem>;
-  oldImageSchema?: Schema<TOldItem>;
+  keysSchema?: StandardSchemaV1<unknown, TKeys>;
+  newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
+  oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
   handler: (request: DynamoDBModifyRequest<TKeys, TNewItem, TOldItem>) => Promise<void>;
 }
 
 export interface DynamoDBRemoveRouteDefinition<TKeys = Record<string, unknown>, TOldItem = Record<string, unknown>> {
   filters: DynamoDBEventFilters;
-  keysSchema?: Schema<TKeys>;
-  oldImageSchema?: Schema<TOldItem>;
+  keysSchema?: StandardSchemaV1<unknown, TKeys>;
+  oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
   handler: (request: DynamoDBRemoveRequest<TKeys, TOldItem>) => Promise<void>;
 }
 
@@ -110,9 +110,9 @@ export interface DynamoDBRouteDefinition<
   TOldItem = Record<string, unknown>,
 > {
   filters: DynamoDBFilters;
-  keysSchema?: Schema<TKeys>;
-  newImageSchema?: Schema<TNewItem>;
-  oldImageSchema?: Schema<TOldItem>;
+  keysSchema?: StandardSchemaV1<unknown, TKeys>;
+  newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
+  oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
   handler: DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>;
 }
 

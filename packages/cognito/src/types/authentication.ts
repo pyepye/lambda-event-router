@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   CreateAuthChallengeTriggerEvent,
@@ -39,7 +39,7 @@ export type PreAuthenticationHandler<TUserAttributes extends UserAttributes = Us
 
 export interface PreAuthenticationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreAuthenticationTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: PreAuthenticationHandler<TUserAttributes>;
 }
 
@@ -63,7 +63,7 @@ export type PostAuthenticationHandler<TUserAttributes extends UserAttributes = U
 
 export interface PostAuthenticationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PostAuthenticationTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: PostAuthenticationHandler<TUserAttributes>;
 }
 
@@ -87,7 +87,7 @@ export type DefineAuthChallengeHandler<TUserAttributes extends UserAttributes = 
 
 export interface DefineAuthChallengeRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<DefineAuthChallengeTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: DefineAuthChallengeHandler<TUserAttributes>;
 }
 
@@ -111,7 +111,7 @@ export type CreateAuthChallengeHandler<TUserAttributes extends UserAttributes = 
 
 export interface CreateAuthChallengeRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CreateAuthChallengeTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: CreateAuthChallengeHandler<TUserAttributes>;
 }
 
@@ -135,6 +135,6 @@ export type VerifyAuthChallengeResponseHandler<TUserAttributes extends UserAttri
 
 export interface VerifyAuthChallengeResponseRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<VerifyAuthChallengeResponseTriggerSource>;
-  userAttributesSchema?: Schema<TUserAttributes>;
+  userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   handler: VerifyAuthChallengeResponseHandler<TUserAttributes>;
 }

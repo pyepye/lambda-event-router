@@ -1,8 +1,8 @@
 <svg viewBox="0 0 220 139" xmlns="http://www.w3.org/2000/svg">
   <style>
     .lambda1 { fill: #0d1117; fill-rule: evenodd; }
-    .lambda2 { fill: #3a3f45; }
-    .lambda3 { fill: #7f848a; }
+    .lambda2 { fill: #86888b; }
+    .lambda3 { fill: #cfcfd1; }
     @media (prefers-color-scheme: dark) {
       .lambda1 { fill: #f0f6fc; }
       .lambda2 { fill: #7f848a; }

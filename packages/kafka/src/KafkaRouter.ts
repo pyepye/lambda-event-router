@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, MSKEvent } from 'aws-lambda';
 import type { InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -14,15 +15,15 @@ import type {
 } from './types.js';
 
 export function defineRoute<
-  TValueSchema extends Schema<unknown> | undefined = undefined,
-  TValue = TValueSchema extends Schema<unknown> ? InferSchema<TValueSchema> : unknown,
+  TValueSchema extends StandardSchemaV1 | undefined = undefined,
+  TValue = TValueSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TValueSchema> : unknown,
 >(config: RouteInput<TValueSchema>): RouteBuilder<TValue> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): KafkaRouteDefinition<TValue> {
       return {
         filters: config.filters,
-        valueSchema: config.valueSchema as Schema<TValue> | undefined,
+        valueSchema: config.valueSchema as StandardSchemaV1<unknown, TValue> | undefined,
         handler: handler as (request: KafkaRequest<TValue>) => Promise<void>,
       };
     },
@@ -127,7 +128,11 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     const rawValue = Buffer.from(record.value, 'base64').toString('utf-8');
     const parsedValue = this.parseValue(rawValue);
 
-    const validatedValue = this.validateValue(parsedValue, route.valueSchema, record);
+    const validatedValue = await validateSchema(
+      parsedValue,
+      route.valueSchema,
+      `Value validation failed for record on topic ${record.topic} partition ${record.partition}`,
+    );
 
     const request: KafkaRequest = {
       value: validatedValue,
@@ -187,20 +192,6 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     } catch {
       return rawValue;
     }
-  }
-
-  private validateValue(data: unknown, schema: Schema<unknown> | undefined, record: KafkaRecord): unknown {
-    if (!schema) {
-      return data;
-    }
-
-    const result = schema.safeParse(data);
-    if (!result.success) {
-      throw new Error(`Value validation failed for record on topic ${record.topic} partition ${record.partition}`, {
-        cause: result.error,
-      });
-    }
-    return result.data;
   }
 }
 

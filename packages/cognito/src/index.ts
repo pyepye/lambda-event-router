@@ -1,7 +1,5 @@
 // Router exports
 
-// Re-export Schema for convenience
-export type { Schema } from '@lambda-event-router/base';
 export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoRouter.js';
 export { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 

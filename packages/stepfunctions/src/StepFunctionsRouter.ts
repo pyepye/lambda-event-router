@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   StepFunctionsFilters,
   StepFunctionsHandler,
@@ -11,7 +12,7 @@ import type {
 
 interface InternalRoute {
   filters: StepFunctionsFilters;
-  eventSchema?: Schema<unknown>;
+  eventSchema?: StandardSchemaV1;
   handler: (input: unknown) => Promise<unknown>;
   isTaskTokenRoute: boolean;
 }
@@ -26,8 +27,8 @@ interface RegularRouteBuilder<TInput> {
 
 // TaskToken route - when filters include taskToken: true
 export function defineRoute<
-  TEventSchema extends Schema<unknown> | undefined = undefined,
-  TInput = TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : unknown,
+  TEventSchema extends StandardSchemaV1 | undefined = undefined,
+  TInput = TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown,
 >(config: {
   filters: StepFunctionsFilters & { taskToken: true };
   eventSchema?: TEventSchema;
@@ -35,13 +36,13 @@ export function defineRoute<
 
 // Regular route
 export function defineRoute<
-  TEventSchema extends Schema<unknown> | undefined = undefined,
-  TInput = TEventSchema extends Schema<unknown> ? InferSchema<TEventSchema> : unknown,
+  TEventSchema extends StandardSchemaV1 | undefined = undefined,
+  TInput = TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown,
 >(config: { filters: StepFunctionsFilters; eventSchema?: TEventSchema }): RegularRouteBuilder<TInput>;
 
 export function defineRoute(config: {
   filters: StepFunctionsFilters;
-  eventSchema?: Schema<unknown>;
+  eventSchema?: StandardSchemaV1;
 }): TaskTokenRouteBuilder<unknown> | RegularRouteBuilder<unknown> {
   return {
     handle(
@@ -124,11 +125,11 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
       return this.handleTaskTokenRoute(event, route);
     }
 
-    const validatedEvent = this.validateEvent(event, route.eventSchema);
+    const validatedEvent = await validateSchema(event, route.eventSchema, 'Event validation failed');
     return route.handler(validatedEvent);
   }
 
-  private handleTaskTokenRoute(event: unknown, route: InternalRoute): Promise<unknown> {
+  private async handleTaskTokenRoute(event: unknown, route: InternalRoute): Promise<unknown> {
     /* v8 ignore next -- @preserve - Guard is for TS. matchRoute already verified event is an object with TaskToken */
     if (!isObject(event)) {
       throw new Error('Expected object event for TaskToken route');
@@ -140,7 +141,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
       throw new Error('Expected TaskToken in event but none found');
     }
 
-    const validatedInput = this.validateEvent(input, route.eventSchema);
+    const validatedInput = await validateSchema(input, route.eventSchema, 'Event validation failed');
     const request: StepFunctionsTaskTokenRequest = {
       taskToken: TaskToken,
       input: validatedInput,
@@ -166,18 +167,6 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
 
       return true;
     });
-  }
-
-  private validateEvent(event: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (!schema) {
-      return event;
-    }
-
-    const result = schema.safeParse(event);
-    if (!result.success) {
-      throw new Error(`Event validation failed`, { cause: result.error });
-    }
-    return result.data;
   }
 }
 

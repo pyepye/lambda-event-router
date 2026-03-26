@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   CreateAuthChallengeTriggerEvent,
@@ -72,9 +73,9 @@ export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } fro
 // Handlers modify the cloned event and return it
 export function defineRoute<
   const TTrigger extends CognitoTriggerSource,
-  TUserAttributesSchema extends Schema<unknown> | undefined = undefined,
-  TUserAttributes extends UserAttributes = TUserAttributesSchema extends Schema<unknown>
-    ? InferSchema<TUserAttributesSchema> & UserAttributes
+  TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TUserAttributes extends UserAttributes = TUserAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TUserAttributesSchema> & UserAttributes
     : UserAttributes,
 >(config: RouteInput<TTrigger, TUserAttributesSchema>): RouteBuilder<TTrigger, TUserAttributes> {
   return {
@@ -82,7 +83,7 @@ export function defineRoute<
     handle(handler): TypedRouteDefinition<TTrigger, TUserAttributes> {
       return {
         filters: config.filters as CognitoFilters<TTrigger> | undefined,
-        userAttributesSchema: config.userAttributesSchema as Schema<TUserAttributes> | undefined,
+        userAttributesSchema: config.userAttributesSchema as StandardSchemaV1<unknown, TUserAttributes> | undefined,
         handler: handler as (
           request: RequestForTrigger<TTrigger, TUserAttributes>,
         ) => Promise<EventForTrigger<TTrigger>>,
@@ -168,13 +169,13 @@ function hasUserAttributes(request: object): request is { userAttributes: UserAt
 
 interface InternalRoute {
   filters: CognitoFilters;
-  userAttributesSchema?: Schema<unknown>;
+  userAttributesSchema?: StandardSchemaV1;
   handler: (request: CognitoRequest) => Promise<CognitoEvent>;
 }
 
 interface InternalRouteInput {
   filters?: CognitoFilters;
-  userAttributesSchema?: Schema<unknown>;
+  userAttributesSchema?: StandardSchemaV1;
   handler: unknown;
 }
 
@@ -536,9 +537,14 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
 
     // UserMigration events don't have userAttributes on request (user doesn't exist yet)
     const rawUserAttributes = hasUserAttributes(eventClone.request) ? eventClone.request.userAttributes : {};
-    const userAttributes = this.validateUserAttributes(rawUserAttributes, route.userAttributesSchema, triggerSource);
+    const userAttributes = await validateSchema(
+      rawUserAttributes,
+      route.userAttributesSchema,
+      `User attributes validation failed for trigger ${triggerSource}`,
+    );
 
-    const request = { triggerSource, userAttributes, event: eventClone, context } as CognitoRequest;
+    // TODO: Fix / improve typing so `as` isn't needed
+    const request: CognitoRequest = { triggerSource, userAttributes, event: eventClone, context } as CognitoRequest;
     // Handler modifies the cloned event and returns it
     return await route.handler(request);
   }
@@ -595,21 +601,6 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     if (typeof filter === 'function') return filter(value);
     /* v8 ignore next -- @preserve - Guard is for TS. All UserAttributeFilter variants handled above */
     return false;
-  }
-
-  private validateUserAttributes(
-    userAttributes: UserAttributes,
-    schema: Schema<unknown> | undefined,
-    triggerSource: CognitoTriggerSource,
-  ): UserAttributes {
-    if (!schema) {
-      return userAttributes;
-    }
-    const result = schema.safeParse(userAttributes);
-    if (!result.success) {
-      throw new Error(`User attributes validation failed for trigger ${triggerSource}`, { cause: result.error });
-    }
-    return result.data as UserAttributes;
   }
 }
 

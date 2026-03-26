@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   S3ObjectCreatedNotificationEventDetail,
@@ -96,6 +96,6 @@ export interface EventBridgeFilters {
 
 export interface EventBridgeRouteDefinition<TDetail = unknown> {
   filters: EventBridgeFilters;
-  detailSchema?: Schema<TDetail>;
+  detailSchema?: StandardSchemaV1<unknown, TDetail>;
   handler: EventBridgeHandler<TDetail>;
 }

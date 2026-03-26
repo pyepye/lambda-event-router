@@ -1,5 +1,6 @@
-import type { EventTypeRouter, InferSchema, Schema } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   RabbitMQEvent,
@@ -14,15 +15,15 @@ import type {
 } from './rabbitMQTypes.js';
 
 export function defineRabbitMQRoute<
-  TBodySchema extends Schema<unknown> | undefined = undefined,
-  TBody = TBodySchema extends Schema<unknown> ? InferSchema<TBodySchema> : unknown,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
 >(config: RabbitMQRouteInput<TBodySchema>): RabbitMQRouteBuilder<TBody> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): RabbitMQRouteDefinition<TBody> {
       return {
         filters: config.filters as RabbitMQFilters,
-        bodySchema: config.bodySchema as Schema<TBody> | undefined,
+        bodySchema: config.bodySchema as StandardSchemaV1<unknown, TBody> | undefined,
         handler: handler as (request: RabbitMQRequest<TBody>) => Promise<void>,
       };
     },
@@ -60,7 +61,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         }
 
         const parsedBody = this.parseJsonBody(decodedData);
-        const body = this.validateBody(parsedBody, route.bodySchema);
+        const body = await validateSchema(parsedBody, route.bodySchema, 'Body validation failed');
 
         const request: RabbitMQRequest = {
           message: decodedMessage,
@@ -114,18 +115,6 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     } catch {
       return data;
     }
-  }
-
-  private validateBody(body: unknown, schema: Schema<unknown> | undefined): unknown {
-    if (!schema) {
-      return body;
-    }
-
-    const result = schema.safeParse(body);
-    if (!result.success) {
-      throw new Error(`Body validation failed`, { cause: result.error });
-    }
-    return result.data;
   }
 }
 
