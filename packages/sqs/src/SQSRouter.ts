@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
 import type {
@@ -222,17 +222,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     });
   }
 
-  private parseJsonBody(record: AWSSQSRecord): unknown {
-    try {
-      return JSON.parse(record.body);
-    } catch {
-      // Keep raw string if not valid JSON
-      return record.body;
-    }
-  }
-
   private async processRecord(record: AWSSQSRecord, context: Context): Promise<void> {
-    const parsedBody = this.parseJsonBody(record);
+    const parsedBody = safeJsonParse(record.body);
     const convertedAttributes = this.convertMessageAttributes(record.messageAttributes);
 
     const route = this.matchRoute(record, parsedBody, convertedAttributes);

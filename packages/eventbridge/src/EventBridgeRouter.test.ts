@@ -1,7 +1,10 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createEventBridgeEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createEventBridgeEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './EventBridgeRouter.js';
 import type { EventBridgeFilterInput, EventBridgeRequest } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('EventBridgeRouter', () => {
   let router: EventBridgeRouter;
@@ -50,9 +53,7 @@ suite('EventBridgeRouter', () => {
 
   suite('defineRoute', () => {
     test('preserves filters, detailSchema, and handler in EventBridge definition', () => {
-      const detailSchema: Schema<{ orderId: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { orderId: string } }),
-      };
+      const detailSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         sources: ['order.service'],
@@ -64,11 +65,9 @@ suite('EventBridgeRouter', () => {
         detailSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        detailSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.detailSchema).toBe(detailSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -274,7 +273,6 @@ suite('EventBridgeRouter', () => {
               return detail.orderId === '12345';
             },
           },
-          detailSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
         }).handle(async () => {}),
       );
 
@@ -291,7 +289,6 @@ suite('EventBridgeRouter', () => {
           filters: {
             customFilter: (): boolean => false,
           },
-          detailSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
         }).handle(async () => {}),
       );
 
@@ -322,8 +319,7 @@ suite('EventBridgeRouter', () => {
       const result = router.matchRoute(event);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('matches when standard filters and customFilter both pass', ({ eventBridgeEvent }) => {
@@ -336,7 +332,6 @@ suite('EventBridgeRouter', () => {
               return detail.orderId === '12345';
             },
           },
-          detailSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
         }).handle(async () => {}),
       );
 
@@ -354,7 +349,6 @@ suite('EventBridgeRouter', () => {
             sources: ['my.app'],
             customFilter: (): boolean => false,
           },
-          detailSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
         }).handle(async () => {}),
       );
 
@@ -387,7 +381,6 @@ suite('EventBridgeRouter', () => {
       router.route(
         defineRoute({
           filters: { customFilter },
-          detailSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
         }).handle(async () => {}),
       );
 
@@ -451,10 +444,7 @@ suite('EventBridgeRouter', () => {
   suite('handleEvent - schema validation', () => {
     test('handler receives validated detail from detailSchema', async ({ eventBridgeEvent, context }) => {
       const handler = vi.fn();
-      const transformedDetail = { orderId: '12345', validated: true };
-      const detailSchema: Schema<typeof transformedDetail> = {
-        safeParse: () => ({ success: true, data: transformedDetail }),
-      };
+      const detailSchema = createMockSchema();
       router.route(
         defineRoute({
           filters: { sources: ['my.app'] },
@@ -463,15 +453,15 @@ suite('EventBridgeRouter', () => {
       );
 
       const event = eventBridgeEvent();
-      await router.handleEvent(event, context());
+      const mockContext = context();
+      await router.handleEvent(event, mockContext);
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: transformedDetail }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(event.detail, detailSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ detail: event.detail }));
     });
 
     test('throws when detailSchema validation fails', async ({ eventBridgeEvent, context }) => {
-      const detailSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid detail') }),
-      };
+      const detailSchema = createMockSchema({ issues: [{ message: 'invalid detail' }] });
       router.route(
         defineRoute({
           filters: { sources: ['my.app'] },
@@ -481,39 +471,6 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       await expect(router.handleEvent(event, context())).rejects.toThrow('Schema validation failed for event');
-    });
-  });
-
-  suite('validateSchema', () => {
-    test('returns data unchanged when no schema is provided', () => {
-      const data = { orderId: '12345' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'event-123');
-
-      expect(result).toBe(data);
-    });
-
-    test('returns validated data when schema succeeds', () => {
-      const data = { orderId: '12345' };
-      const transformedData = { orderId: '12345', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, schema, 'event-123');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with error context when schema fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid data') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema, 'abc-123')).toThrow('Schema validation failed for event abc-123');
     });
   });
 

@@ -1,7 +1,11 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createSNSEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema, createSNSEvent, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
-import type { SNSFilterInput, SNSMessageAttributes, SNSRequest } from './types.js';
+import type { SNSFilterInput, SNSRequest } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 let router: SNSRouter;
 
@@ -60,12 +64,8 @@ suite('SNSRouter', () => {
     });
 
     test('preserves filters, schemas, and handler in the definition', () => {
-      const bodySchema: Schema<{ action: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
-      };
-      const messageAttributesSchema: Schema<SNSMessageAttributes> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as SNSMessageAttributes }),
-      };
+      const bodySchema = createMockSchema();
+      const messageAttributesSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'],
@@ -78,12 +78,10 @@ suite('SNSRouter', () => {
         messageAttributesSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        bodySchema,
-        messageAttributesSchema,
-        handler,
-      });
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.messageAttributesSchema).toBe(messageAttributesSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -503,8 +501,7 @@ suite('SNSRouter', () => {
       const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -712,9 +709,7 @@ suite('SNSRouter', () => {
 
     test('does not throw when schema validation fails', async ({ snsRecord, snsEvent, context }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const bodySchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -734,10 +729,8 @@ suite('SNSRouter', () => {
     test('handler receives validated body from bodySchema', async ({ snsRecord, snsEvent, context }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
-      const transformedBody = { action: 'processOrder', orderId: '12345', validated: true };
-      const bodySchema: Schema<typeof transformedBody> = {
-        safeParse: () => ({ success: true, data: transformedBody }),
-      };
+      const bodySchema = createMockSchema();
+
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -745,16 +738,18 @@ suite('SNSRouter', () => {
         }).handle(handler),
       );
 
+      const body = { action: 'processOrder', orderId: '12345' };
       const record = snsRecord({
         Sns: {
           TopicArn: topicArn,
-          Message: JSON.stringify({ action: 'processOrder', orderId: '12345' }),
+          Message: JSON.stringify(body),
         },
       });
       const event = snsEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: transformedBody }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
     });
 
     test('throws when bodySchema validation fails and batchItemFailures is disabled', async ({
@@ -763,9 +758,7 @@ suite('SNSRouter', () => {
       context,
     }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const bodySchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -786,10 +779,8 @@ suite('SNSRouter', () => {
     }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const handler = vi.fn();
-      const validatedAttributes = { eventType: 'order.created', extra: 'field' };
-      const messageAttributesSchema: Schema<SNSMessageAttributes> = {
-        safeParse: () => ({ success: true, data: validatedAttributes }),
-      };
+      const messageAttributesSchema = createMockSchema();
+
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -807,7 +798,14 @@ suite('SNSRouter', () => {
       const event = snsEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ messageAttributes: validatedAttributes }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { eventType: 'order.created' },
+        messageAttributesSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ messageAttributes: { eventType: 'order.created' } }),
+      );
     });
 
     test('throws when messageAttributesSchema validation fails and batchItemFailures is disabled', async ({
@@ -816,9 +814,7 @@ suite('SNSRouter', () => {
       context,
     }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const messageAttributesSchema: Schema<SNSMessageAttributes> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { topicArns: [topicArn] },
@@ -839,23 +835,55 @@ suite('SNSRouter', () => {
     });
   });
 
-  suite('parseJsonBody', () => {
-    test('parses valid JSON body from record.Sns.Message', ({ snsRecord }) => {
-      const record = snsRecord({ Sns: { Message: '{"greeting":"hello"}' } });
+  suite('handleEvent - jsonParse', () => {
+    test('passes SNS message to safeJsonParse', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { topicArns: [topicArn] },
+        }).handle(handler),
+      );
 
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody(record);
+      const message = JSON.stringify({ action: 'processOrder', orderId: '12345' });
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: message } });
+      const event = snsEvent([record]);
+      await router.handleEvent(event, context());
 
-      expect(result).toEqual({ greeting: 'hello' });
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(message);
     });
 
-    test('returns raw string when Message is not valid JSON', ({ snsRecord }) => {
-      const record = snsRecord({ Sns: { Message: 'plain text message' } });
+    test('handler receives parsed object when message is valid JSON', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { topicArns: [topicArn] },
+        }).handle(handler),
+      );
 
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody(record);
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: JSON.stringify(body) } });
+      const event = snsEvent([record]);
+      await router.handleEvent(event, context());
 
-      expect(result).toBe('plain text message');
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when message is not valid JSON', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { topicArns: [topicArn] },
+        }).handle(handler),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: 'not-json' } });
+      const event = snsEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
     });
   });
 
@@ -882,94 +910,6 @@ suite('SNSRouter', () => {
       const result = router.convertMessageAttributes({});
 
       expect(result).toEqual({});
-    });
-  });
-
-  suite('validateBody', () => {
-    test('returns validated data when bodySchema succeeds', ({ snsRecord }) => {
-      const body = { action: 'processOrder', orderId: '12345' };
-      const validatedData = { ...body, validated: true };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, schema, record.Sns.MessageId);
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws when bodySchema validation fails', ({ snsRecord }) => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid body') }),
-      };
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({}, schema, record.Sns.MessageId)).toThrow(
-        `Body validation failed for record ${record.Sns.MessageId}`,
-      );
-    });
-
-    test('returns body unchanged when no schema is provided', ({ snsRecord }) => {
-      const record = snsRecord();
-      const body = { action: 'processOrder' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, undefined, record.Sns.MessageId);
-
-      expect(result).toBe(body);
-    });
-
-    test('throws when body is a string and schema is provided', ({ snsRecord }) => {
-      const record = snsRecord();
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not valid json', schema, record.Sns.MessageId)).toThrow(
-        `Body validation failed for record ${record.Sns.MessageId}`,
-      );
-    });
-  });
-
-  suite('validateMessageAttributes', () => {
-    test('returns validated attributes when messageAttributesSchema succeeds', ({ snsRecord }) => {
-      const messageAttributes = { eventType: 'order.created' };
-      const validatedAttributes = { eventType: 'order.created', extra: 'field' };
-      const schema: Schema<SNSMessageAttributes> = {
-        safeParse: () => ({ success: true, data: validatedAttributes }),
-      };
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(messageAttributes, schema, record.Sns.MessageId);
-
-      expect(result).toEqual(validatedAttributes);
-    });
-
-    test('throws when messageAttributesSchema validation fails', ({ snsRecord }) => {
-      const schema: Schema<SNSMessageAttributes> = {
-        safeParse: () => ({ success: false, error: new Error('invalid attributes') }),
-      };
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateMessageAttributes({}, schema, record.Sns.MessageId)).toThrow(
-        `Message attributes validation failed for record ${record.Sns.MessageId}`,
-      );
-    });
-
-    test('returns messageAttributes unchanged when no schema is provided', ({ snsRecord }) => {
-      const record = snsRecord();
-      const messageAttributes = { eventType: 'order.created' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(messageAttributes, undefined, record.Sns.MessageId);
-
-      expect(result).toBe(messageAttributes);
     });
   });
 

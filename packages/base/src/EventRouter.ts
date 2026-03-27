@@ -1,9 +1,8 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
+import { isObject, validateSchema } from './data.js';
 import type { EventFilterInput, EventFilters, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
 import type { EventTypeRouter } from './types.js';
-import { isObject } from './types.js';
-import { validateSchema } from './validateSchema.js';
 
 interface InternalEventRoute {
   filters: { customFilter?: (input: EventFilterInput) => boolean };

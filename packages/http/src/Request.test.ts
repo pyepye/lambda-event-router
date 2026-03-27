@@ -1,8 +1,13 @@
-import { createMockContext } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import type { InternalRoute } from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';
 import type { NormalizedHTTPEvent } from './types.js';
+
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
+const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
 
 function createRoute(overrides: Partial<InternalRoute> = {}): InternalRoute {
   return {
@@ -48,10 +53,12 @@ suite('Request', () => {
 
   suite('body', () => {
     test('parses a JSON body', () => {
-      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ name: 'test' }) }); // TODO: Fixture should stringify
+      const body = JSON.stringify({ name: 'test' });
+      const normalizedEvent = createNormalizedEvent({ body }); // TODO: Fixture should stringify
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
       expect(request.body).toEqual({ name: 'test' });
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(body);
     });
 
     test('returns null when body is absent', () => {
@@ -112,40 +119,6 @@ suite('Request', () => {
     });
   });
 
-  suite('validateSchema', () => {
-    test('returns success with original data when no schema is provided', () => {
-      const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
-      const originalData = { id: '1' };
-
-      // @ts-expect-error - testing private method directly
-      const result = request.validateSchema(undefined, originalData);
-
-      expect(result).toEqual({ success: true, data: originalData });
-    });
-
-    test('returns success with transformed data when schema passes', () => {
-      const transformedData = { id: 1 };
-      const schema = { safeParse: vi.fn().mockReturnValue({ success: true, data: transformedData }) };
-      const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
-
-      // @ts-expect-error - testing private method directly
-      const result = request.validateSchema(schema, { id: '1' });
-
-      expect(result).toEqual({ success: true, data: transformedData });
-    });
-
-    test('returns failure with error when schema fails', () => {
-      const schemaError = { message: 'invalid' };
-      const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: schemaError }) };
-      const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
-
-      // @ts-expect-error - testing private method directly
-      const result = request.validateSchema(schema, { bad: 'data' });
-
-      expect(result).toEqual({ success: false, error: schemaError });
-    });
-  });
-
   suite('queryParams', () => {
     test('returns query parameters from the normalized event', () => {
       const normalizedEvent = createNormalizedEvent({ query: { page: '1', limit: '10' } });
@@ -163,69 +136,66 @@ suite('Request', () => {
   });
 
   suite('validate', () => {
-    test('does not throw when no schemas are defined', () => {
+    test('does not throw when no schemas are defined', async () => {
       const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
 
-      expect(() => request.validate()).not.toThrow();
+      await expect(request.validate()).resolves.toBeUndefined();
     });
 
-    test('throws a NotFound response when path validation fails', () => {
-      const pathSchema = {
-        safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid path' }),
-      };
+    test('throws a NotFound response when path validation fails', async () => {
+      const pathSchema = createMockSchema({ issues: [{ message: 'invalid path' }] });
       const route = createRoute({ pathSchema });
       const request = new Request(createNormalizedEvent(), {}, createMockContext(), route, { id: 'bad' });
 
       try {
-        request.validate();
+        await request.validate();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
         // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
         expect(thrown.statusCode).toBe(404);
       }
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: 'bad' }, pathSchema);
     });
 
-    test('throws a BadRequest response when query validation fails', () => {
-      const querySchema = {
-        safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid query' }),
-      };
+    test('throws a BadRequest response when query validation fails', async () => {
+      const querySchema = createMockSchema({ issues: [{ message: 'invalid query' }] });
       const route = createRoute({ querySchema });
       const normalizedEvent = createNormalizedEvent({ query: { bad: 'param' } });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        request.validate();
+        await request.validate();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
         // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
         expect(thrown.statusCode).toBe(400);
       }
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ bad: 'param' }, querySchema);
     });
 
-    test('throws an UnprocessableContent response when body validation fails', () => {
-      const bodySchema = {
-        safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }),
-      };
+    test('throws an UnprocessableContent response when body validation fails', async () => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
       const route = createRoute({ bodySchema });
       const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ invalid: true }) });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        request.validate();
+        await request.validate();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
         // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
         expect(thrown.statusCode).toBe(422);
       }
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ invalid: true }, bodySchema);
     });
 
-    test('does not throw when all schemas pass', () => {
-      const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { id: '1' } }) };
-      const querySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { page: '1' } }) };
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { name: 'test' } }) };
+    test('does not throw when all schemas pass', async () => {
+      const pathSchema = createMockSchema();
+      const querySchema = createMockSchema();
+      const bodySchema = createMockSchema();
       const route = createRoute({ pathSchema, querySchema, bodySchema });
       const normalizedEvent = createNormalizedEvent({
         body: JSON.stringify({ name: 'test' }),
@@ -233,32 +203,33 @@ suite('Request', () => {
       });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: '1' });
 
-      expect(() => request.validate()).not.toThrow();
+      await expect(request.validate()).resolves.toBeUndefined();
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: '1' }, pathSchema);
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '1' }, querySchema);
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ name: 'test' }, bodySchema);
     });
 
-    test('throws UnprocessableContent when body is a string and bodySchema rejects it', () => {
-      const bodySchema = {
-        safeParse: vi.fn().mockReturnValue({ success: false, error: 'expected object, received string' }),
-      };
+    test('throws UnprocessableContent when body is a string and bodySchema rejects it', async () => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'expected object, received string' }] });
       const route = createRoute({ bodySchema });
       const normalizedEvent = createNormalizedEvent({ body: 'not valid json' });
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        request.validate();
+        await request.validate();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
         // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
         expect(thrown.statusCode).toBe(422);
       }
-      expect(bodySchema.safeParse).toHaveBeenCalled();
+      expect(bodySchema['~standard'].validate).toHaveBeenCalled();
     });
 
-    test('short-circuits on path failure without calling query or body schemas', () => {
-      const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid path' }) };
-      const querySchema = { safeParse: vi.fn() };
-      const bodySchema = { safeParse: vi.fn() };
+    test('short-circuits on path failure without calling query or body schemas', async () => {
+      const pathSchema = createMockSchema({ issues: [{ message: 'invalid path' }] });
+      const querySchema = createMockSchema();
+      const bodySchema = createMockSchema();
       const route = createRoute({ pathSchema, querySchema, bodySchema });
       const normalizedEvent = createNormalizedEvent({
         body: JSON.stringify({ name: 'test' }),
@@ -267,19 +238,20 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: 'bad' });
 
       try {
-        request.validate();
+        await request.validate();
+        expect.unreachable('should have thrown');
       } catch {
         // expected
       }
 
-      expect(querySchema.safeParse).not.toHaveBeenCalled();
-      expect(bodySchema.safeParse).not.toHaveBeenCalled();
+      expect(querySchema['~standard'].validate).not.toHaveBeenCalled();
+      expect(bodySchema['~standard'].validate).not.toHaveBeenCalled();
     });
 
-    test('short-circuits on query failure without calling body schema', () => {
-      const pathSchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: { id: '1' } }) };
-      const querySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid query' }) };
-      const bodySchema = { safeParse: vi.fn() };
+    test('short-circuits on query failure without calling body schema', async () => {
+      const pathSchema = createMockSchema();
+      const querySchema = createMockSchema({ issues: [{ message: 'invalid query' }] });
+      const bodySchema = createMockSchema();
       const route = createRoute({ pathSchema, querySchema, bodySchema });
       const normalizedEvent = createNormalizedEvent({
         body: JSON.stringify({ name: 'test' }),
@@ -288,12 +260,13 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: '1' });
 
       try {
-        request.validate();
+        await request.validate();
+        expect.unreachable('should have thrown');
       } catch {
         // expected
       }
 
-      expect(bodySchema.safeParse).not.toHaveBeenCalled();
+      expect(bodySchema['~standard'].validate).not.toHaveBeenCalled();
     });
   });
 

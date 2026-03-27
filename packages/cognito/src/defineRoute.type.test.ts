@@ -1,4 +1,4 @@
-import type { Schema } from '@lambda-event-router/base';
+import { createMockSchema } from '@lambda-event-router/testing';
 import type {
   CreateAuthChallengeTriggerEvent,
   CustomEmailSenderTriggerEvent,
@@ -413,8 +413,7 @@ suite('defineRoute type inference', () => {
     test('narrows user attributes when schema is provided', () => {
       type CustomAttributes = { email: string; name: string } & Record<string, string>;
 
-      // @ts-expect-error - empty object is fine for type-level testing
-      const mockSchema: Schema<CustomAttributes> = {};
+      const mockSchema = createMockSchema<CustomAttributes>();
 
       const builder = defineRoute({
         filters: { triggerSources: ['PreSignUp_SignUp'] },
@@ -424,7 +423,7 @@ suite('defineRoute type inference', () => {
       type Handler = Parameters<typeof builder.handle>[0];
       type Request = Parameters<Handler>[0];
 
-      expectTypeOf<Request['userAttributes']>().toMatchTypeOf<{ email: string; name: string }>();
+      expectTypeOf<Request['userAttributes']>().toEqualTypeOf<CustomAttributes>();
     });
   });
 });

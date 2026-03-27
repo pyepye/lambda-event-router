@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, SNSEvent, SNSEventRecord } from 'aws-lambda';
 import type {
@@ -135,16 +135,8 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     });
   }
 
-  private parseJsonBody(record: SNSEventRecord): unknown {
-    try {
-      return JSON.parse(record.Sns.Message);
-    } catch {
-      return record.Sns.Message;
-    }
-  }
-
   private async processRecord(record: SNSEventRecord, context: Context): Promise<void> {
-    const parsedBody = this.parseJsonBody(record);
+    const parsedBody = safeJsonParse(record.Sns.Message);
     const rawMessageAttributes = record.Sns.MessageAttributes;
 
     const route = this.matchRoute(record, parsedBody, rawMessageAttributes);

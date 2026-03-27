@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
@@ -60,7 +60,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           throw new Error(`No route matched for message on queue ${queueName} from ${event.eventSourceArn}`);
         }
 
-        const parsedBody = this.parseJsonBody(decodedData);
+        const parsedBody = safeJsonParse(decodedData);
         const body = await validateSchema(parsedBody, route.bodySchema, 'Body validation failed');
 
         const request: RabbitMQRequest = {
@@ -107,14 +107,6 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
 
       return true;
     });
-  }
-
-  private parseJsonBody(data: string): unknown {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return data;
-    }
   }
 }
 

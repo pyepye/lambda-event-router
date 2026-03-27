@@ -455,8 +455,7 @@ suite('S3Router', () => {
       const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 

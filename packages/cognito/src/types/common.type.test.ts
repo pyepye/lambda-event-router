@@ -50,15 +50,15 @@ suite('UserAttributes', () => {
 
 suite('UserAttributeFilter', () => {
   test('accepts string', () => {
-    expectTypeOf<string>().toMatchTypeOf<UserAttributeFilter>();
+    expectTypeOf<string>().toExtend<UserAttributeFilter>();
   });
 
   test('accepts RegExp', () => {
-    expectTypeOf<RegExp>().toMatchTypeOf<UserAttributeFilter>();
+    expectTypeOf<RegExp>().toExtend<UserAttributeFilter>();
   });
 
   test('accepts function', () => {
-    expectTypeOf<(value: string) => boolean>().toMatchTypeOf<UserAttributeFilter>();
+    expectTypeOf<(value: string) => boolean>().toExtend<UserAttributeFilter>();
   });
 
   test('is union of string, RegExp, and function', () => {

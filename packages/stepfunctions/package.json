@@ -35,6 +35,9 @@
   "dependencies": {
     "@lambda-event-router/base": "workspace:*"
   },
+  "peerDependencies": {
+    "@standard-schema/spec": "catalog:"
+  },
   "devDependencies": {
     "@lambda-event-router/testing": "workspace:*",
     "@types/node": "catalog:",

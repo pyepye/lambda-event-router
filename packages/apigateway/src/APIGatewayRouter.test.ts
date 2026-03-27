@@ -1,5 +1,5 @@
 import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
-import { createApiGatewayV2Event, test } from '@lambda-event-router/testing';
+import { createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 import { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
 
 suite('APIGatewayRouter', () => {
@@ -239,7 +239,7 @@ suite('APIGatewayRouter', () => {
       apiGatewayV2HandlerEvent,
     }) => {
       const handler = vi.fn();
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
       router.post({ path: '/', handler, bodySchema });
 
       const { event, context } = apiGatewayV2HandlerEvent({

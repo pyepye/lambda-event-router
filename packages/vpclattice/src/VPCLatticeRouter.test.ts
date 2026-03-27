@@ -1,5 +1,5 @@
 import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
-import { createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
+import { createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 import { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
 
 suite('VPCLatticeRouter', () => {
@@ -140,7 +140,7 @@ suite('VPCLatticeRouter', () => {
       vpcLatticeV2HandlerEvent,
     }) => {
       const handler = vi.fn();
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
       router.post({ path: '/', handler, bodySchema });
 
       const { event, context } = vpcLatticeV2HandlerEvent({

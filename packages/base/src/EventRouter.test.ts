@@ -1,7 +1,10 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createMockContext } from '@lambda-event-router/testing';
+import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
+import * as data from './data.js';
 import { createEventRouter, defineEventRoute, EventRouter } from './EventRouter.js';
 import type { EventFilterInput } from './eventRouterTypes.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(data, 'validateSchema');
 
 suite('EventRouter', () => {
   let router: EventRouter;
@@ -295,9 +298,7 @@ suite('EventRouter', () => {
 
   suite('defineEventRoute', () => {
     test('preserves filters, eventSchema, and handler', () => {
-      const eventSchema: Schema<{ taskId: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { taskId: string } }),
-      };
+      const eventSchema = createMockSchema();
       const handler = vi.fn();
       const filters = { customFilter: () => true };
 
@@ -314,12 +315,17 @@ suite('EventRouter', () => {
     });
 
     test('customFilter receives typed event when eventSchema is provided', () => {
-      const eventSchema: Schema<{ taskId: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { taskId: string } }),
-      };
-      const definition = defineEventRoute({
+      const eventSchema = createMockSchema();
+      const isTaskEvent = (event: unknown): event is { taskId: string } =>
+        typeof event === 'object' &&
+        event !== null &&
+        'taskId' in event &&
+        typeof (event as { taskId?: unknown }).taskId === 'string';
+
+      const definition = defineEventRoute<{ taskId: string }>({
         filters: {
-          customFilter: ({ event }: EventFilterInput<{ taskId: string }>) => event.taskId === 'task-123',
+          customFilter: ({ event }: EventFilterInput<{ taskId: string }>) =>
+            isTaskEvent(event) && event.taskId === 'task-123',
         },
         eventSchema,
       }).handle(async () => {});
@@ -423,8 +429,7 @@ suite('EventRouter', () => {
       const result = router.matchRoute(event);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -434,15 +439,15 @@ suite('EventRouter', () => {
       router.route(
         defineEventRoute({
           filters: {},
-          eventSchema: { safeParse: (data: unknown) => ({ success: true as const, data }) },
+          eventSchema: createMockSchema(),
         }).handle(handler),
       );
 
-      const customEvent = { taskId: 'task-123', payload: 'data' };
+      const event = { taskId: 'task-123', payload: 'data' };
       const context = createMockContext();
-      await router.handleEvent(customEvent, context);
+      await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith({ event: customEvent, context });
+      expect(handler).toHaveBeenCalledWith({ event, context });
     });
 
     test('throws when no route matches', async () => {
@@ -453,10 +458,7 @@ suite('EventRouter', () => {
 
     test('handler receives validated event from eventSchema in request object', async () => {
       const handler = vi.fn();
-      const transformedEvent = { taskId: 'task-123', validated: true };
-      const eventSchema: Schema<typeof transformedEvent> = {
-        safeParse: () => ({ success: true, data: transformedEvent }),
-      };
+      const eventSchema = createMockSchema();
       router.route(
         defineEventRoute({
           filters: {},
@@ -464,60 +466,25 @@ suite('EventRouter', () => {
         }).handle(handler),
       );
 
+      const event = { taskId: 'task-123' };
       const context = createMockContext();
-      await router.handleEvent({ taskId: 'task-123' }, context);
+      await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith({ event: transformedEvent, context });
+      expect(validateSchemaSpy).toHaveBeenCalledWith(event, eventSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith({ event, context });
     });
 
     test('throws when eventSchema validation fails', async () => {
-      const eventSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid event') }),
-      };
-
       router.route(
         defineEventRoute({
           filters: {},
-          eventSchema,
+          eventSchema: createMockSchema({ issues: [{ message: 'invalid event' }] }),
         }).handle(async () => {}),
       );
 
       await expect(router.handleEvent({ taskId: 'task-123' }, createMockContext())).rejects.toThrow(
         'Schema validation failed for event',
       );
-    });
-  });
-
-  suite('validateSchema', () => {
-    test('returns data unchanged when no schema is provided', () => {
-      const data = { taskId: 'task-123' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined);
-
-      expect(result).toBe(data);
-    });
-
-    test('returns validated data when schema succeeds', () => {
-      const data = { taskId: 'task-123' };
-      const transformedData = { taskId: 'task-123', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, schema);
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with error context when schema fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid data') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({}, schema)).toThrow('Schema validation failed for event');
     });
   });
 });

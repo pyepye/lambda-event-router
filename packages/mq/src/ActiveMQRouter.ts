@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
@@ -74,7 +74,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
         throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
       }
 
-      const parsedBody = this.parseJsonBody(decodedData);
+      const parsedBody = safeJsonParse(decodedData);
       const body = await validateSchema(
         parsedBody,
         route.bodySchema,
@@ -121,14 +121,6 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
 
       return true;
     });
-  }
-
-  private parseJsonBody(data: string): unknown {
-    try {
-      return JSON.parse(data);
-    } catch {
-      return data;
-    }
   }
 }
 

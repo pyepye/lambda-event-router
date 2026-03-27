@@ -1,6 +1,10 @@
-import type { Schema } from '@lambda-event-router/base';
-import { test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
+import type { UserAttributes } from './types/common.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('CognitoRouter', () => {
   let router: CognitoRouter;
@@ -78,17 +82,15 @@ suite('CognitoRouter', () => {
 
     test('handle returns a definition with filters, userAttributesSchema, and handler', () => {
       const handler = vi.fn().mockImplementation(async ({ event }) => event);
-      const schema: Schema<{ email: string }> = {
-        safeParse: () => ({ success: true, data: { email: 'test@example.com' } }),
-      };
+      const userAttributesSchema = createMockSchema();
 
       const definition = defineRoute({
         filters: { triggerSources: ['PreSignUp_SignUp'] },
-        userAttributesSchema: schema,
+        userAttributesSchema,
       }).handle(handler);
 
       expect(definition.filters?.triggerSources).toEqual(['PreSignUp_SignUp']);
-      expect(definition.userAttributesSchema).toBe(schema);
+      expect(definition.userAttributesSchema).toBe(userAttributesSchema);
       expect(definition.handler).toBe(handler);
     });
   });
@@ -522,19 +524,21 @@ suite('CognitoRouter', () => {
 
     test('handler receives validated userAttributes when schema passes', async ({ cognitoPreSignUpEvent, context }) => {
       const handler = vi.fn();
-      const transformedAttributes = { email: 'test@example.com', source: 'validated' };
-      const schema: Schema<typeof transformedAttributes> = {
-        safeParse: () => ({ success: true, data: transformedAttributes }),
-      };
+      const userAttributesSchema = createMockSchema<UserAttributes>();
 
-      router.route({ userAttributesSchema: schema, handler });
+      router.route({ userAttributesSchema, handler });
 
       const event = cognitoPreSignUpEvent();
       await router.handleEvent(event, context());
 
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        event.request.userAttributes,
+        userAttributesSchema,
+        expect.any(String),
+      );
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          userAttributes: transformedAttributes,
+          userAttributes: event.request.userAttributes,
         }),
       );
     });
@@ -544,11 +548,9 @@ suite('CognitoRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
-      const schema: Schema<Record<string, string>> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const userAttributesSchema = createMockSchema<UserAttributes>({ issues: [{ message: 'invalid' }] });
 
-      router.route({ userAttributesSchema: schema, handler });
+      router.route({ userAttributesSchema, handler });
 
       const event = cognitoPreSignUpEvent();
       await expect(router.handleEvent(event, context())).rejects.toThrow(
@@ -673,42 +675,6 @@ suite('CognitoRouter', () => {
     test('returns false when value is undefined', () => {
       // @ts-expect-error - testing private method directly
       expect(router.matchUserAttribute(undefined, 'test')).toBe(false);
-    });
-  });
-
-  suite('validateUserAttributes', () => {
-    test('returns userAttributes unchanged when no schema is provided', () => {
-      const userAttributes = { email: 'test@example.com' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserAttributes(userAttributes, undefined, 'PreSignUp_SignUp');
-
-      expect(result).toBe(userAttributes);
-    });
-
-    test('returns validated data on schema success', () => {
-      const userAttributes = { email: 'test@example.com' };
-      const transformedData = { email: 'test@example.com', source: 'validated' };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with triggerSource in message on schema failure', () => {
-      const userAttributes = { email: 'bad' };
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      expect(() => {
-        // @ts-expect-error - testing private method directly
-        router.validateUserAttributes(userAttributes, schema, 'PreSignUp_SignUp');
-      }).toThrow('User attributes validation failed for trigger PreSignUp_SignUp');
     });
   });
 });

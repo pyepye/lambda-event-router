@@ -1,14 +1,18 @@
-import type { Schema } from '@lambda-event-router/base';
+import * as base from '@lambda-event-router/base';
 import {
   createDocumentDBDeleteEntry,
   createDocumentDBEvent,
   createDocumentDBInsertEntry,
   createDocumentDBReplaceEntry,
   createDocumentDBUpdateEntry,
+  createMockSchema,
   test,
 } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
 import type { DocumentDBFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('DocumentDBRouter', () => {
   let router: DocumentDBRouter;
@@ -66,15 +70,9 @@ suite('DocumentDBRouter', () => {
     });
 
     test('preserves filters, schemas, and handler in the definition', () => {
-      const documentKeySchema: Schema<{ _id: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { _id: string } }),
-      };
-      const fullDocumentSchema: Schema<{ name: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { name: string } }),
-      };
-      const fullDocumentBeforeChangeSchema: Schema<{ name: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { name: string } }),
-      };
+      const documentKeySchema = createMockSchema();
+      const fullDocumentSchema = createMockSchema();
+      const fullDocumentBeforeChangeSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster'],
@@ -88,13 +86,11 @@ suite('DocumentDBRouter', () => {
         fullDocumentBeforeChangeSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        documentKeySchema,
-        fullDocumentSchema,
-        fullDocumentBeforeChangeSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.documentKeySchema).toBe(documentKeySchema);
+      expect(definition.fullDocumentSchema).toBe(fullDocumentSchema);
+      expect(definition.fullDocumentBeforeChangeSchema).toBe(fullDocumentBeforeChangeSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -370,8 +366,7 @@ suite('DocumentDBRouter', () => {
       const result = router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('matches when all combined filters match', () => {
@@ -528,22 +523,19 @@ suite('DocumentDBRouter', () => {
   suite('handleEvent - schema validation', () => {
     test('handler receives validated documentKey from documentKeySchema', async ({ documentDBHandlerEvent }) => {
       const handler = vi.fn();
-      const validatedKey = { _id: 'validated-key' };
-      const documentKeySchema: Schema<typeof validatedKey> = {
-        safeParse: () => ({ success: true, data: validatedKey }),
-      };
+      const documentKeySchema = createMockSchema();
       router.route(defineRoute({ filters: {}, documentKeySchema }).handle(handler));
 
-      const { event, context } = documentDBHandlerEvent();
+      const entry = createDocumentDBInsertEntry();
+      const { event, context } = documentDBHandlerEvent({ entries: [entry] });
       await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ documentKey: validatedKey }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(entry.event.documentKey, documentKeySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ documentKey: entry.event.documentKey }));
     });
 
     test('throws when documentKeySchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const documentKeySchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const documentKeySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineRoute({ filters: {}, documentKeySchema }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent();
@@ -552,23 +544,19 @@ suite('DocumentDBRouter', () => {
 
     test('handler receives validated fullDocument from fullDocumentSchema', async ({ documentDBHandlerEvent }) => {
       const handler = vi.fn();
-      const validatedDoc = { name: 'Validated', extra: true };
-      const fullDocumentSchema: Schema<typeof validatedDoc> = {
-        safeParse: () => ({ success: true, data: validatedDoc }),
-      };
+      const fullDocumentSchema = createMockSchema();
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(handler));
 
-      const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
+      const entry = createDocumentDBInsertEntry();
+      const { event, context } = documentDBHandlerEvent({ entries: [entry] });
       await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ fullDocument: validatedDoc }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(entry.event.fullDocument, fullDocumentSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ fullDocument: entry.event.fullDocument }));
     });
 
     test('throws when fullDocumentSchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const fullDocumentSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
+      const fullDocumentSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(async () => {}));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
@@ -579,10 +567,7 @@ suite('DocumentDBRouter', () => {
       documentDBHandlerEvent,
     }) => {
       const handler = vi.fn();
-      const validatedBeforeDoc = { name: 'Before Change', validated: true };
-      const fullDocumentBeforeChangeSchema: Schema<typeof validatedBeforeDoc> = {
-        safeParse: () => ({ success: true, data: validatedBeforeDoc }),
-      };
+      const fullDocumentBeforeChangeSchema = createMockSchema();
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(handler));
 
       const entry = createDocumentDBUpdateEntry({
@@ -591,13 +576,18 @@ suite('DocumentDBRouter', () => {
       const { event, context } = documentDBHandlerEvent({ entries: [entry] });
       await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ fullDocumentBeforeChange: validatedBeforeDoc }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { name: 'Before Change' },
+        fullDocumentBeforeChangeSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ fullDocumentBeforeChange: { name: 'Before Change' } }),
+      );
     });
 
     test('throws when fullDocumentBeforeChangeSchema validation fails', async ({ documentDBHandlerEvent }) => {
-      const fullDocumentBeforeChangeSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const fullDocumentBeforeChangeSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(async () => {}));
 
       const entry = createDocumentDBUpdateEntry({
@@ -609,83 +599,30 @@ suite('DocumentDBRouter', () => {
       );
     });
 
-    test('skips fullDocument validation when fullDocument is undefined (delete)', async ({
-      documentDBHandlerEvent,
-    }) => {
+    test('passes undefined fullDocument through validation on delete', async ({ documentDBHandlerEvent }) => {
       const handler = vi.fn();
-      const fullDocumentSchema: Schema<unknown> = {
-        safeParse: vi.fn(() => ({ success: true as const, data: {} })),
-      };
+      const fullDocumentSchema = createMockSchema();
       router.route(defineRoute({ filters: {}, fullDocumentSchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBDeleteEntry()] });
       await router.handleEvent(event, context);
 
-      expect(fullDocumentSchema.safeParse).not.toHaveBeenCalled();
+      expect(validateSchemaSpy).toHaveBeenCalledWith(undefined, fullDocumentSchema, expect.any(String));
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ fullDocument: undefined }));
     });
 
-    test('skips fullDocumentBeforeChange validation when fullDocumentBeforeChange is undefined (insert)', async ({
+    test('passes undefined fullDocumentBeforeChange through validation on insert', async ({
       documentDBHandlerEvent,
     }) => {
       const handler = vi.fn();
-      const fullDocumentBeforeChangeSchema: Schema<unknown> = {
-        safeParse: vi.fn(() => ({ success: true as const, data: {} })),
-      };
+      const fullDocumentBeforeChangeSchema = createMockSchema();
       router.route(defineRoute({ filters: {}, fullDocumentBeforeChangeSchema }).handle(handler));
 
       const { event, context } = documentDBHandlerEvent({ entries: [createDocumentDBInsertEntry()] });
       await router.handleEvent(event, context);
 
-      expect(fullDocumentBeforeChangeSchema.safeParse).not.toHaveBeenCalled();
+      expect(validateSchemaSpy).toHaveBeenCalledWith(undefined, fullDocumentBeforeChangeSchema, expect.any(String));
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ fullDocumentBeforeChange: undefined }));
-    });
-  });
-
-  suite('validateSchema', () => {
-    test('returns validated data on success', () => {
-      const validatedData = { _id: 'validated' };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema({ _id: 'raw' }, schema, 'documentKey', { _id: 'event-id' });
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws with fieldName and eventId on failure', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-      const eventId = { _id: 'event-123' };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({ _id: 'raw' }, schema, 'fullDocument', eventId)).toThrow(
-        `Schema validation failed on fullDocument for record ${JSON.stringify(eventId)}`,
-      );
-    });
-
-    test('returns data unchanged when no schema is provided', () => {
-      const data = { _id: 'raw' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'documentKey', { _id: 'event-id' });
-
-      expect(result).toBe(data);
-    });
-
-    test('returns undefined when data is undefined', () => {
-      const schema: Schema<unknown> = {
-        safeParse: vi.fn(() => ({ success: true as const, data: {} })),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(undefined, schema, 'fullDocument', { _id: 'event-id' });
-
-      expect(result).toBeUndefined();
-      expect(schema.safeParse).not.toHaveBeenCalled();
     });
   });
 

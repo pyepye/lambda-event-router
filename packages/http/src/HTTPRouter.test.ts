@@ -1,6 +1,11 @@
+import * as base from '@lambda-event-router/base';
+import { createMockSchema } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
 import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
+
+const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
 
 interface MockEvent {
   method: string;
@@ -261,7 +266,7 @@ suite('HTTPRouter', () => {
 
     test('validates the request before calling handler and returns 422 for body schema failure', async () => {
       const handler = vi.fn();
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
       router.post({ path: '/', handler, bodySchema });
 
       const event = createMockEvent({
@@ -278,6 +283,31 @@ suite('HTTPRouter', () => {
         }),
       );
       expect(handler).not.toHaveBeenCalled();
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ bad: 'data' }, bodySchema);
+    });
+
+    test('calls validateSchemaResult with path params and pathSchema', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
+      const pathSchema = createMockSchema();
+      router.get({ path: '/items/:id', handler, pathSchema });
+
+      const event = createMockEvent({ path: '/items/42' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      await router.handleEvent(event, context);
+
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: '42' }, pathSchema);
+    });
+
+    test('calls validateSchemaResult with query params and querySchema', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
+      const querySchema = createMockSchema();
+      router.get({ path: '/items', handler, querySchema });
+
+      const event = createMockEvent({ path: '/items', query: { page: '2', limit: '10' } });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      await router.handleEvent(event, context);
+
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '2', limit: '10' }, querySchema);
     });
   });
 });

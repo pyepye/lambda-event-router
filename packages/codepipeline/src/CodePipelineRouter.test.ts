@@ -1,7 +1,11 @@
-import { createCodePipelineEvent, test } from '@lambda-event-router/testing';
-import type { Mock } from 'vitest';
+import * as base from '@lambda-event-router/base';
+import { createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { Mock, MockInstance } from 'vitest';
 import { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
 import type { CodePipelineFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 const mockSend: Mock = vi.hoisted(() => vi.fn());
 
@@ -122,13 +126,13 @@ suite('CodePipelineRouter', () => {
     test('preserves filters, userParametersSchema, and handler in the definition', () => {
       const handler = vi.fn();
       const filters = { functionNames: ['my-function'] };
-      const userParametersSchema = {
-        safeParse: vi.fn(),
-      };
+      const userParametersSchema = createMockSchema();
 
       const definition = defineRoute({ filters, userParametersSchema }).handle(handler);
 
-      expect(definition).toEqual({ filters, userParametersSchema, handler });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.userParametersSchema).toBe(userParametersSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -434,71 +438,7 @@ suite('CodePipelineRouter', () => {
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
-    });
-  });
-
-  suite('parseUserParameters', () => {
-    test('parses valid JSON object', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseUserParameters('{"key":"value"}');
-      expect(result).toEqual({ key: 'value' });
-    });
-
-    test('returns raw string for non-JSON', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseUserParameters('not-json');
-      expect(result).toBe('not-json');
-    });
-
-    test('parses JSON number', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseUserParameters('42');
-      expect(result).toBe(42);
-    });
-
-    test('parses JSON array', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseUserParameters('[1,2,3]');
-      expect(result).toEqual([1, 2, 3]);
-    });
-
-    test('parses JSON boolean', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseUserParameters('true');
-      expect(result).toBe(true);
-    });
-  });
-
-  suite('validateUserParameters', () => {
-    test('returns params unchanged when no schema', () => {
-      const params = { key: 'value' };
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserParameters(params, undefined, 'job-1');
-      expect(result).toBe(params);
-    });
-
-    test('returns schema.data when validation passes', () => {
-      const parsedData = { key: 'validated' };
-      const schema = {
-        safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateUserParameters({ key: 'value' }, schema, 'job-1');
-      expect(result).toBe(parsedData);
-    });
-
-    test('throws when validation fails', () => {
-      const schema = {
-        safeParse: vi.fn().mockReturnValue({ success: false }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateUserParameters('bad', schema, 'job-1')).toThrow(
-        'UserParameters validation failed for job job-1',
-      );
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -636,29 +576,37 @@ suite('CodePipelineRouter', () => {
     });
 
     test('validates userParameters against schema', async ({ context }) => {
-      const validatedData = { env: 'staging' };
-      const schema = {
-        safeParse: vi.fn().mockReturnValue({ success: true, data: validatedData }),
-      };
       const handler = vi.fn().mockResolvedValue(undefined);
+      const schema = createMockSchema();
+
       router.route(defineRoute({ filters: {}, userParametersSchema: schema }).handle(handler));
 
       const event = createCodePipelineEvent({ userParameters: '{"env":"staging"}' });
       const ctx = context();
       await router.handleEvent(event, ctx);
 
-      expect(schema.safeParse).toHaveBeenCalledWith({ env: 'staging' });
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ userParameters: validatedData }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ env: 'staging' }, schema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ userParameters: { env: 'staging' } }));
     });
 
     test('throws when schema validation fails', async ({ codePipelineHandlerEvent }) => {
-      const schema = {
-        safeParse: vi.fn().mockReturnValue({ success: false }),
-      };
+      const schema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineRoute({ filters: {}, userParametersSchema: schema }).handle(async () => undefined));
 
       const { event, context } = codePipelineHandlerEvent({ event: { id: 'test-job-id' } });
       await expect(router.handleEvent(event, context)).rejects.toThrow('UserParameters validation failed');
+    });
+
+    test('passes userParameters to safeJsonParse', async ({ context }) => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const userParameters = '{"action":"deploy"}';
+      const event = createCodePipelineEvent({ userParameters });
+      const ctx = context();
+      await router.handleEvent(event, ctx);
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(userParameters);
     });
 
     test('handles JSON userParameters', async ({ context }) => {

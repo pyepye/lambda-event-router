@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
@@ -97,7 +97,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
 
   private async processRecord(record: KinesisStreamRecord, context: Context): Promise<void> {
     const rawData = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
-    const data = this.parseData(rawData);
+    const data = safeJsonParse(rawData);
 
     const route = this.matchRoute(record, data);
     if (!route) {
@@ -105,7 +105,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     }
 
     const validationErrorMessage = `Data validation failed for record ${record.eventID}`;
-    const validatedData = validateSchema(data, route.dataSchema, validationErrorMessage);
+    const validatedData = await validateSchema(data, route.dataSchema, validationErrorMessage);
 
     const request: KinesisRequest = {
       data: validatedData,
@@ -137,14 +137,6 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
 
       return true;
     });
-  }
-
-  private parseData(rawData: string): unknown {
-    try {
-      return JSON.parse(rawData);
-    } catch {
-      return rawData;
-    }
   }
 }
 

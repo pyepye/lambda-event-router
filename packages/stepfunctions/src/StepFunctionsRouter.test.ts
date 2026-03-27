@@ -1,6 +1,10 @@
-import type { Schema } from '@lambda-event-router/base';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
 import type { StepFunctionsFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('StepFunctionsRouter', () => {
   let router: StepFunctionsRouter;
@@ -120,9 +124,7 @@ suite('StepFunctionsRouter', () => {
     });
 
     test('preserves filters, eventSchema, and handler in a regular route definition', () => {
-      const eventSchema: Schema<{ action: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
-      };
+      const eventSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         customFilter: () => true,
@@ -133,17 +135,13 @@ suite('StepFunctionsRouter', () => {
         eventSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        eventSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.eventSchema).toBe(eventSchema);
+      expect(definition.handler).toBe(handler);
     });
 
     test('preserves filters, eventSchema, and handler in a task token route definition', () => {
-      const eventSchema: Schema<{ orderId: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { orderId: string } }),
-      };
+      const eventSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         taskToken: true as const,
@@ -154,11 +152,9 @@ suite('StepFunctionsRouter', () => {
         eventSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        eventSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.eventSchema).toBe(eventSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -348,8 +344,7 @@ suite('StepFunctionsRouter', () => {
       const result = router.matchRoute({ data: 'test' });
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('returns undefined when no routes are registered', () => {
@@ -411,11 +406,7 @@ suite('StepFunctionsRouter', () => {
   suite('handleEvent - schema validation', () => {
     test('handler receives validated event from eventSchema for a regular route', async () => {
       const handler = vi.fn();
-      const validatedData = { action: 'process', validated: true };
-      const eventSchema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
+      const eventSchema = createMockSchema();
       router.route(
         defineRoute({
           filters: {},
@@ -423,15 +414,15 @@ suite('StepFunctionsRouter', () => {
         }).handle(handler),
       );
 
-      await router.handleEvent({ action: 'process' });
+      const rawEvent = { action: 'process' };
+      await router.handleEvent(rawEvent);
 
-      expect(handler).toHaveBeenCalledWith(validatedData);
+      expect(validateSchemaSpy).toHaveBeenCalledWith(rawEvent, eventSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(rawEvent);
     });
 
     test('throws when eventSchema validation fails for a regular route', async () => {
-      const eventSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const eventSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: {},
@@ -439,7 +430,8 @@ suite('StepFunctionsRouter', () => {
         }).handle(async () => {}),
       );
 
-      await expect(router.handleEvent({ bad: 'data' })).rejects.toThrow('Event validation failed');
+      const rawEvent = { bad: 'data' };
+      await expect(router.handleEvent(rawEvent)).rejects.toThrow('Event validation failed');
     });
 
     test('passes raw event to handler when no eventSchema is provided', async () => {
@@ -454,10 +446,7 @@ suite('StepFunctionsRouter', () => {
 
     test('validates input (not TaskToken) with eventSchema for a task token route', async () => {
       const handler = vi.fn();
-      const validatedInput = { orderId: '123', validated: true };
-      const eventSchema: Schema<typeof validatedInput> = {
-        safeParse: () => ({ success: true, data: validatedInput }),
-      };
+      const eventSchema = createMockSchema();
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -465,19 +454,19 @@ suite('StepFunctionsRouter', () => {
         }).handle(handler),
       );
 
-      await router.handleEvent({ TaskToken: 'token-abc', orderId: '123' });
+      const rawEvent = { TaskToken: 'token-abc', orderId: '123' };
+      await router.handleEvent(rawEvent);
 
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '123' }, eventSchema, expect.any(String));
       expect(handler).toHaveBeenCalledWith({
         taskToken: 'token-abc',
-        input: validatedInput,
-        event: { TaskToken: 'token-abc', orderId: '123' },
+        input: { orderId: '123' },
+        event: rawEvent,
       });
     });
 
     test('throws when eventSchema validation fails for a task token route', async () => {
-      const eventSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid input') }),
-      };
+      const eventSchema = createMockSchema({ issues: [{ message: 'invalid input' }] });
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -488,38 +477,6 @@ suite('StepFunctionsRouter', () => {
       await expect(router.handleEvent({ TaskToken: 'token-abc', bad: 'data' })).rejects.toThrow(
         'Event validation failed',
       );
-    });
-  });
-
-  suite('validateEvent', () => {
-    test('returns the event unchanged when no schema is provided', () => {
-      const event = { action: 'process' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateEvent(event, undefined);
-
-      expect(result).toBe(event);
-    });
-
-    test('returns validated data when schema succeeds', () => {
-      const validatedData = { action: 'process', validated: true };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateEvent({ action: 'process' }, schema);
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws when schema validation fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('bad data') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateEvent({ bad: 'data' }, schema)).toThrow('Event validation failed');
     });
   });
 

@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, MSKEvent } from 'aws-lambda';
 import type { InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
@@ -126,7 +126,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
 
     const key = Buffer.from(record.key, 'base64').toString('utf-8');
     const rawValue = Buffer.from(record.value, 'base64').toString('utf-8');
-    const parsedValue = this.parseValue(rawValue);
+    const parsedValue = safeJsonParse(rawValue);
 
     const validatedValue = await validateSchema(
       parsedValue,
@@ -184,14 +184,6 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
 
       return true;
     });
-  }
-
-  private parseValue(rawValue: string): unknown {
-    try {
-      return JSON.parse(rawValue);
-    } catch {
-      return rawValue;
-    }
   }
 }
 

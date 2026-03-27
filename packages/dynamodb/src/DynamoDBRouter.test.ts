@@ -1,7 +1,10 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createDynamoDBEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBInsertRequest } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('DynamoDBRouter', () => {
   let router: DynamoDBRouter;
@@ -52,15 +55,9 @@ suite('DynamoDBRouter', () => {
     });
 
     test('preserves filters, schemas, and handler in the definition', () => {
-      const keysSchema: Schema<{ pk: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { pk: string } }),
-      };
-      const newImageSchema: Schema<{ name: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { name: string } }),
-      };
-      const oldImageSchema: Schema<{ name: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { name: string } }),
-      };
+      const keysSchema = createMockSchema();
+      const newImageSchema = createMockSchema();
+      const oldImageSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventNames: ['MODIFY' as const],
@@ -75,13 +72,11 @@ suite('DynamoDBRouter', () => {
         oldImageSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        keysSchema,
-        newImageSchema,
-        oldImageSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.keysSchema).toBe(keysSchema);
+      expect(definition.newImageSchema).toBe(newImageSchema);
+      expect(definition.oldImageSchema).toBe(oldImageSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -370,8 +365,7 @@ suite('DynamoDBRouter', () => {
       const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('does not match when eventNames matches but eventSourceArns does not', ({ dynamoDBInsertRecord }) => {
@@ -701,17 +695,15 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
-      const transformedKeys = { pk: 'pk-123', sk: 'sk-123', validated: true };
-      const keysSchema: Schema<typeof transformedKeys> = {
-        safeParse: () => ({ success: true, data: transformedKeys }),
-      };
+      const keysSchema = createMockSchema();
       router.insert({ filters: {}, keysSchema, handler });
 
       const record = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ keys: transformedKeys }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ pk: 'pk-123', sk: 'sk-123' }, keysSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ keys: { pk: 'pk-123', sk: 'sk-123' } }));
     });
 
     test('throws when keysSchema validation fails and batchItemFailures is disabled', async ({
@@ -719,9 +711,7 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const keysSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.insert({ filters: {}, keysSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -735,9 +725,7 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const router = new DynamoDBRouter({ batchItemFailures: true });
-      const keysSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.insert({ filters: {}, keysSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -755,17 +743,21 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
-      const transformedImage = { pk: 'pk-123', sk: 'sk-123', name: 'Test Item', validated: true };
-      const newImageSchema: Schema<typeof transformedImage> = {
-        safeParse: () => ({ success: true, data: transformedImage }),
-      };
+      const newImageSchema = createMockSchema();
       router.insert({ filters: {}, newImageSchema, handler });
 
       const record = dynamoDBInsertRecord();
       const event = dynamoDBStreamEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: transformedImage }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' },
+        newImageSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ newImage: { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' } }),
+      );
     });
 
     test('throws when newImageSchema validation fails and batchItemFailures is disabled', async ({
@@ -773,9 +765,7 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const newImageSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.insert({ filters: {}, newImageSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -789,9 +779,7 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const router = new DynamoDBRouter({ batchItemFailures: true });
-      const newImageSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.insert({ filters: {}, newImageSchema, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
@@ -809,17 +797,21 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const handler = vi.fn();
-      const transformedOldImage = { pk: 'pk-123', sk: 'sk-123', name: 'Old Item', validated: true };
-      const oldImageSchema: Schema<typeof transformedOldImage> = {
-        safeParse: () => ({ success: true, data: transformedOldImage }),
-      };
+      const oldImageSchema = createMockSchema();
       router.modify({ filters: {}, oldImageSchema, handler });
 
       const record = dynamoDBModifyRecord();
       const event = dynamoDBStreamEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ oldImage: transformedOldImage }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { pk: 'pk-123', sk: 'sk-123', name: 'Old Item' },
+        oldImageSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ oldImage: { pk: 'pk-123', sk: 'sk-123', name: 'Old Item' } }),
+      );
     });
 
     test('throws when oldImageSchema validation fails and batchItemFailures is disabled', async ({
@@ -827,9 +819,7 @@ suite('DynamoDBRouter', () => {
       dynamoDBStreamEvent,
       context,
     }) => {
-      const oldImageSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.modify({ filters: {}, oldImageSchema, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
@@ -843,9 +833,7 @@ suite('DynamoDBRouter', () => {
       context,
     }) => {
       const router = new DynamoDBRouter({ batchItemFailures: true });
-      const oldImageSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.modify({ filters: {}, oldImageSchema, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
@@ -857,16 +845,16 @@ suite('DynamoDBRouter', () => {
       });
     });
 
-    test('skips newImage validation when data is undefined on REMOVE', async ({
+    test('passes undefined newImage through validation on REMOVE', async ({
       dynamoDBRemoveRecord,
       dynamoDBStreamEvent,
       context,
     }) => {
       const handler = vi.fn();
-      const safeParseSpy = vi.fn(() => ({ success: false as const, error: new Error('should not be called') }));
+      const newImageSchema = createMockSchema();
       router.route({
         filters: { eventNames: ['REMOVE'] },
-        newImageSchema: { safeParse: safeParseSpy },
+        newImageSchema,
         handler,
       });
 
@@ -874,53 +862,7 @@ suite('DynamoDBRouter', () => {
       const event = dynamoDBStreamEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(safeParseSpy).not.toHaveBeenCalled();
-      expect(handler).toHaveBeenCalled();
-    });
-  });
-
-  suite('validateImage', () => {
-    test('returns validated data on success', () => {
-      const data = { pk: 'pk-123', sk: 'sk-123' };
-      const transformedData = { pk: 'pk-123', sk: 'sk-123', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateImage(data, schema, 'Keys', 'event-1');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws with imageName and recordId on failure', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateImage({ pk: 'test' }, schema, 'NewImage', 'event-42')).toThrow(
-        'Image validation failed for NewImage on record event-42',
-      );
-    });
-
-    test('returns data unchanged when no schema is provided', () => {
-      const data = { pk: 'pk-123', sk: 'sk-123' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateImage(data, undefined, 'Keys', 'event-1');
-
-      expect(result).toBe(data);
-    });
-
-    test('returns undefined when data is undefined even with schema present', () => {
-      const safeParseSpy = vi.fn(() => ({ success: false as const, error: new Error('should not be called') }));
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateImage(undefined, { safeParse: safeParseSpy }, 'NewImage', 'event-1');
-
-      expect(result).toBeUndefined();
-      expect(safeParseSpy).not.toHaveBeenCalled();
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: undefined }));
     });
   });
 

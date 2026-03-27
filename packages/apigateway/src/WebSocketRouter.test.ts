@@ -1,5 +1,10 @@
-import { createWebSocketEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 suite('WebSocketRouter', () => {
   let router: WebSocketRouter;
@@ -126,7 +131,7 @@ suite('WebSocketRouter', () => {
     });
 
     test('preserves filters, bodySchema, and handler in the definition', () => {
-      const bodySchema = { safeParse: vi.fn() };
+      const bodySchema = createMockSchema();
       const handler = vi.fn();
 
       const definition = defineWebSocketRoute({
@@ -276,24 +281,24 @@ suite('WebSocketRouter', () => {
     });
 
     test('validates body against schema when provided', async ({ webSocketHandlerEvent }) => {
-      const parsedData = { action: 'test' };
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }) };
+      const bodySchema = createMockSchema();
       const handler = vi.fn().mockResolvedValue(undefined);
       router.message({ bodySchema, handler });
 
+      const body = JSON.stringify({ action: 'test' });
       const { event, context } = webSocketHandlerEvent({
-        event: { body: parsedData },
+        event: { body },
       });
       await router.handleEvent(event, context);
 
-      expect(bodySchema.safeParse).toHaveBeenCalledExactlyOnceWith(parsedData);
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: parsedData }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ action: 'test' }, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: { action: 'test' } }));
     });
 
     test('throws "Body validation failed" and does not call handler when schema validation fails', async ({
       webSocketHandlerEvent,
     }) => {
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid' }) };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       const handler = vi.fn();
       router.message({ bodySchema, handler });
 
@@ -430,56 +435,40 @@ suite('WebSocketRouter', () => {
     });
   });
 
-  suite('parseBody (private)', () => {
-    test('returns undefined for undefined body', () => {
-      // @ts-expect-error - testing private method
-      expect(router.parseBody(undefined)).toBeUndefined();
+  suite('handleEvent - jsonParse', () => {
+    test('passes event body to safeJsonParse', async ({ webSocketHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.message({ handler });
+
+      const body = '{"action":"test"}';
+      const { event, context } = webSocketHandlerEvent({ event: { body } });
+      await router.handleEvent(event, context);
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(body);
     });
 
-    test('returns undefined for empty string body', () => {
-      // @ts-expect-error - testing private method
-      expect(router.parseBody('')).toBeUndefined();
+    test('handler receives parsed object when body is valid JSON', async ({ webSocketHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.message({ handler });
+
+      const { event, context } = webSocketHandlerEvent({
+        event: { body: '{"action":"test","data":42}' },
+      });
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: { action: 'test', data: 42 } }));
     });
 
-    test('parses valid JSON string', () => {
-      // @ts-expect-error - testing private method
-      expect(router.parseBody('{"key":"value"}')).toEqual({ key: 'value' });
-    });
+    test('handler receives raw string when body is not valid JSON', async ({ webSocketHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.message({ handler });
 
-    test('returns raw string for invalid JSON', () => {
-      // @ts-expect-error - testing private method
-      expect(router.parseBody('not-json')).toBe('not-json');
-    });
-  });
+      const { event, context } = webSocketHandlerEvent({
+        event: { body: 'not-json' },
+      });
+      await router.handleEvent(event, context);
 
-  suite('validateBody (private)', () => {
-    test('returns body as-is when no schema', () => {
-      // @ts-expect-error - testing private method
-      expect(router.validateBody({ key: 'value' }, undefined)).toEqual({ key: 'value' });
-    });
-
-    test('returns parsed data on successful validation', () => {
-      const parsedData = { key: 'validated' };
-      const schema = { safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }) };
-
-      // @ts-expect-error - testing private method
-      const result = router.validateBody({ key: 'raw' }, schema);
-
-      expect(result).toEqual(parsedData);
-    });
-
-    test('throws on failed validation', () => {
-      const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'bad' }) };
-
-      // @ts-expect-error - testing private method
-      expect(() => router.validateBody({ key: 'bad' }, schema)).toThrow('Body validation failed for WebSocket body');
-    });
-
-    test('throws when body is a string and schema is provided', () => {
-      const schema = { safeParse: vi.fn().mockReturnValue({ success: false, error: new Error('expected object') }) };
-
-      // @ts-expect-error - testing private method
-      expect(() => router.validateBody('not valid json', schema)).toThrow('Body validation failed for WebSocket body');
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
     });
   });
 

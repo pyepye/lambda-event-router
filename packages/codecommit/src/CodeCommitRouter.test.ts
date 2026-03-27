@@ -109,8 +109,7 @@ suite('CodeCommitRouter', () => {
       const result = router.matchRoute(route, record);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.references).toEqual([pushRef]);
+      expect(result?.references).toEqual([pushRef]);
     });
   });
 
@@ -140,8 +139,7 @@ suite('CodeCommitRouter', () => {
       const result = router.matchRoute(route, record);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.references).toEqual([createdRef]);
+      expect(result?.references).toEqual([createdRef]);
     });
   });
 
@@ -171,8 +169,7 @@ suite('CodeCommitRouter', () => {
       const result = router.matchRoute(route, record);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.references).toEqual([deletedRef]);
+      expect(result?.references).toEqual([deletedRef]);
     });
   });
 
@@ -557,8 +554,7 @@ suite('CodeCommitRouter', () => {
       const result = router.matchRoute(route, record);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.references).toEqual([pushRef]);
+      expect(result?.references).toEqual([pushRef]);
     });
 
     test('returns undefined when referenceFilter yields no matching references', ({

@@ -1,7 +1,11 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createActiveMQEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createActiveMQEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './ActiveMQRouter.js';
 import type { ActiveMQFilterInput, ActiveMQRequest } from './activeMQTypes.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 suite('ActiveMQRouter', () => {
   let router: ActiveMQRouter;
@@ -28,9 +32,7 @@ suite('ActiveMQRouter', () => {
     });
 
     test('preserves filters, bodySchema, and handler in the definition', () => {
-      const bodySchema: Schema<{ action: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
-      };
+      const bodySchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventSourceArns: ['arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234'],
@@ -43,11 +45,9 @@ suite('ActiveMQRouter', () => {
         bodySchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        bodySchema,
-        handler,
-      });
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -346,70 +346,7 @@ suite('ActiveMQRouter', () => {
       const result = router.matchRoute(event, message);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
-    });
-  });
-
-  suite('parseJsonBody', () => {
-    test('parses valid JSON string into an object', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody('{"action":"process"}');
-
-      expect(result).toEqual({ action: 'process' });
-    });
-
-    test('returns raw string when data is not valid JSON', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody('not-json');
-
-      expect(result).toBe('not-json');
-    });
-  });
-
-  suite('validateBody', () => {
-    test('returns pre-parsed body when no schema', () => {
-      const body = { action: 'process' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, undefined, 'msg-1');
-
-      expect(result).toBe(body);
-    });
-
-    test('returns validated data on schema success', () => {
-      const body = { action: 'process' };
-      const transformedData = { action: 'process', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, schema, 'msg-1');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws on schema failure when body is still a string', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not-json', schema, 'msg-42')).toThrow(
-        'Body validation failed for message msg-42',
-      );
-    });
-
-    test('throws on schema validation failure', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({ valid: 'json' }, schema, 'msg-42')).toThrow(
-        'Body validation failed for message msg-42',
-      );
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -456,6 +393,31 @@ suite('ActiveMQRouter', () => {
           body,
         }),
       );
+    });
+
+    test('validates body with schema and returns transformed data', async ({ activeMQMessage, context }) => {
+      const handler = vi.fn();
+      const bodySchema = createMockSchema();
+      router.route(defineActiveMQRoute({ filters: {}, bodySchema }).handle(handler));
+
+      const body = { action: 'process' };
+      const message = activeMQMessage({ data: body });
+      const event = createActiveMQEvent([message]);
+      await router.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('throws when body schema validation fails', async ({ activeMQMessage, context }) => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      router.route(defineActiveMQRoute({ filters: {}, bodySchema }).handle(vi.fn()));
+
+      const message = activeMQMessage({ data: { bad: 'data' } });
+      const event = createActiveMQEvent([message]);
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Body validation failed');
     });
 
     test('throws when no route matches', async ({ activeMQHandlerEvent }) => {
@@ -506,6 +468,43 @@ suite('ActiveMQRouter', () => {
         `start-${messageB.messageID}`,
         `end-${messageB.messageID}`,
       ]);
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes decoded message data to safeJsonParse', async ({ activeMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = activeMQMessage({ data: body });
+      const event = createActiveMQEvent([message]);
+      await router.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(JSON.stringify(body));
+    });
+
+    test('handler receives parsed object when data is valid JSON', async ({ activeMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = activeMQMessage({ data: body });
+      const event = createActiveMQEvent([message]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when data is not valid JSON', async ({ activeMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineActiveMQRoute({ filters: {} }).handle(handler));
+
+      const message = activeMQMessage({ data: 'not-json' });
+      const event = createActiveMQEvent([message]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
     });
   });
 

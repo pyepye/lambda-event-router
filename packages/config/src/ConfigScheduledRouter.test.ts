@@ -1,11 +1,14 @@
-import type { Schema } from '@lambda-event-router/base';
+import * as base from '@lambda-event-router/base';
 import type { ConfigEvent } from '@lambda-event-router/testing';
-import { createConfigEvent, test } from '@lambda-event-router/testing';
+import { createConfigEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import {
   ConfigScheduledRouter,
   createConfigScheduledRouter,
   defineConfigScheduledRoute,
 } from './ConfigScheduledRouter.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('ConfigScheduledRouter', () => {
   let router: ConfigScheduledRouter;
@@ -140,51 +143,6 @@ suite('ConfigScheduledRouter', () => {
     });
   });
 
-  suite('validateSchema', () => {
-    test('returns data unchanged when no schema provided', () => {
-      const data = { key: 'value' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(data, undefined, 'test');
-
-      expect(result).toBe(data);
-    });
-
-    test('returns data unchanged when data is undefined', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: true, data: {} }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema(undefined, schema, 'test');
-
-      expect(result).toBeUndefined();
-    });
-
-    test('returns validated data when schema passes', () => {
-      const transformedData = { key: 'validated' };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateSchema({ key: 'original' }, schema, 'test');
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws error when schema fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateSchema({ key: 'value' }, schema, 'ruleParameters')).toThrow(
-        'Schema validation failed for ruleParameters',
-      );
-    });
-  });
-
   suite('handleEvent', () => {
     function createScheduledConfigEvent(overrides: Parameters<typeof createConfigEvent>[0] = {}): ConfigEvent {
       return createConfigEvent({
@@ -243,22 +201,18 @@ suite('ConfigScheduledRouter', () => {
 
     test('validates ruleParameters schema', async ({ context }) => {
       const handler = vi.fn();
-      const validatedParams = { env: 'prod-validated' };
-      const ruleParametersSchema: Schema<typeof validatedParams> = {
-        safeParse: () => ({ success: true, data: validatedParams }),
-      };
+      const ruleParametersSchema = createMockSchema();
       router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(handler));
 
       const event = createScheduledConfigEvent({ ruleParameters: { env: 'prod' } });
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: validatedParams }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ env: 'prod' }, ruleParametersSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: { env: 'prod' } }));
     });
 
     test('throws when ruleParameters schema validation fails', async ({ context }) => {
-      const ruleParametersSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const ruleParametersSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(async () => {}));
 
       const event = createScheduledConfigEvent({ ruleParameters: { bad: 'data' } });

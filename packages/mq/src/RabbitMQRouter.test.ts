@@ -1,7 +1,11 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createRabbitMQEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema, createRabbitMQEvent, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createRabbitMQRouter, defineRabbitMQRoute, RabbitMQRouter } from './RabbitMQRouter.js';
 import type { RabbitMQFilterInput, RabbitMQRequest } from './rabbitMQTypes.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 suite('RabbitMQRouter', () => {
   let router: RabbitMQRouter;
@@ -28,9 +32,7 @@ suite('RabbitMQRouter', () => {
     });
 
     test('preserves filters, bodySchema, and handler in the definition', () => {
-      const bodySchema: Schema<{ action: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
-      };
+      const bodySchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventSourceArns: ['arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234'],
@@ -43,11 +45,9 @@ suite('RabbitMQRouter', () => {
         bodySchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        bodySchema,
-        handler,
-      });
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -290,66 +290,7 @@ suite('RabbitMQRouter', () => {
       const result = router.matchRoute(event, 'test-queue', message);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
-    });
-  });
-
-  suite('parseJsonBody', () => {
-    test('parses valid JSON string into an object', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody('{"action":"process"}');
-
-      expect(result).toEqual({ action: 'process' });
-    });
-
-    test('returns raw string when data is not valid JSON', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody('not-json');
-
-      expect(result).toBe('not-json');
-    });
-  });
-
-  suite('validateBody', () => {
-    test('returns pre-parsed body when no schema', () => {
-      const body = { action: 'process' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, undefined);
-
-      expect(result).toBe(body);
-    });
-
-    test('returns validated data on schema success', () => {
-      const body = { action: 'process' };
-      const transformedData = { action: 'process', validated: true };
-      const schema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, schema);
-
-      expect(result).toEqual(transformedData);
-    });
-
-    test('throws on schema failure when body is still a string', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not-json', schema)).toThrow('Body validation failed');
-    });
-
-    test('throws on schema validation failure', () => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({ valid: 'json' }, schema)).toThrow('Body validation failed');
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -394,6 +335,31 @@ suite('RabbitMQRouter', () => {
           body,
         }),
       );
+    });
+
+    test('validates body with schema and returns transformed data', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      const bodySchema = createMockSchema();
+      router.route(defineRabbitMQRoute({ filters: {}, bodySchema }).handle(handler));
+
+      const body = { action: 'process' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await router.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('throws when body schema validation fails', async ({ rabbitMQMessage, context }) => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      router.route(defineRabbitMQRoute({ filters: {}, bodySchema }).handle(vi.fn()));
+
+      const message = rabbitMQMessage({ data: { bad: 'data' } });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Body validation failed');
     });
 
     test('parses queue name from queueName::virtualHost format', async ({ rabbitMQMessage, context }) => {
@@ -479,6 +445,43 @@ suite('RabbitMQRouter', () => {
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes decoded message data to safeJsonParse', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await router.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(JSON.stringify(body));
+    });
+
+    test('handler receives parsed object when data is valid JSON', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when data is not valid JSON', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ data: 'not-json' });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
     });
   });
 

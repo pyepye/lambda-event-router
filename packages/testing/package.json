@@ -34,10 +34,11 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@aws-sdk/util-dynamodb": "^3.0.0"
+    "@aws-sdk/util-dynamodb": "catalog:",
+    "@standard-schema/spec": "catalog:"
   },
   "peerDependencies": {
-    "vitest": ">=2.0.0"
+    "vitest": "catalog:"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

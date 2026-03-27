@@ -1,7 +1,11 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createKinesisEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createKinesisEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
 import type { KinesisFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 let router: KinesisRouter;
 
@@ -60,10 +64,7 @@ suite('KinesisRouter', () => {
     });
 
     test('preserves filters, dataSchema, and handler in the definition', () => {
-      const dataSchema: Schema<{ action: string }> = {
-        // @ts-expect-error - mock schema always returns success with input data
-        safeParse: (data: unknown) => ({ success: true, data }),
-      };
+      const dataSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'],
@@ -75,11 +76,9 @@ suite('KinesisRouter', () => {
         dataSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        dataSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.dataSchema).toBe(dataSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -222,8 +221,7 @@ suite('KinesisRouter', () => {
       const result = router.matchRoute(record, {});
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('matches when both eventSourceArns and partitionKeys match', ({ kinesisRecord }) => {
@@ -463,81 +461,12 @@ suite('KinesisRouter', () => {
     });
   });
 
-  suite('parseData', () => {
-    test('parses valid JSON data', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseData('{"greeting":"hello"}');
-
-      expect(result).toEqual({ greeting: 'hello' });
-    });
-
-    test('returns raw string when data is not valid JSON', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseData('plain text message');
-
-      expect(result).toBe('plain text message');
-    });
-  });
-
-  suite('validateData', () => {
-    test('returns validated data when schema succeeds', ({ kinesisRecord }) => {
-      const data = { action: 'processOrder', orderId: '12345' };
-      const validatedData = { ...data, validated: true };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      const record = kinesisRecord();
-      // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, schema, record);
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws when schema validation fails', ({ kinesisRecord }) => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid data') }),
-      };
-
-      const record = kinesisRecord();
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateData({}, schema, record)).toThrow(
-        `Data validation failed for record ${record.eventID}`,
-      );
-    });
-
-    test('returns data unchanged when no schema provided', ({ kinesisRecord }) => {
-      const record = kinesisRecord();
-      const data = { action: 'processOrder' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, undefined, record);
-
-      expect(result).toBe(data);
-    });
-
-    test('throws when data is a string and schema is provided', ({ kinesisRecord }) => {
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      const record = kinesisRecord();
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateData('not valid json', schema, record)).toThrow(
-        `Data validation failed for record ${record.eventID}`,
-      );
-    });
-  });
-
   suite('handleEvent - schema validation', () => {
     test('handler receives validated data from dataSchema', async ({ kinesisRecord, kinesisEvent, context }) => {
-      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const handler = vi.fn();
-      const transformedData = { action: 'processOrder', orderId: '12345', validated: true };
-      const dataSchema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const dataSchema = createMockSchema();
+
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -553,7 +482,8 @@ suite('KinesisRouter', () => {
       const event = kinesisEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: transformedData }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, dataSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: body }));
     });
 
     test('throws when dataSchema fails and batchItemFailures disabled', async ({
@@ -562,9 +492,7 @@ suite('KinesisRouter', () => {
       context,
     }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
-      const dataSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const dataSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
 
       router.route(
         defineRoute({
@@ -585,9 +513,7 @@ suite('KinesisRouter', () => {
     }) => {
       const router = new KinesisRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
-      const dataSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const dataSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
 
       router.route(
         defineRoute({
@@ -603,6 +529,62 @@ suite('KinesisRouter', () => {
       expect(result).toEqual({
         batchItemFailures: [{ itemIdentifier: record.eventID }],
       });
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes decoded kinesis data to safeJsonParse', async ({ kinesisRecord, kinesisEvent, context }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn, kinesis: { data: body } });
+      const event = kinesisEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(JSON.stringify(body));
+    });
+
+    test('handler receives parsed object when data is valid JSON', async ({ kinesisRecord, kinesisEvent, context }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn, kinesis: { data: body } });
+      const event = kinesisEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: body }));
+    });
+
+    test('handler receives raw string when data is not valid JSON', async ({
+      kinesisRecord,
+      kinesisEvent,
+      context,
+    }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
+
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn, kinesis: { data: 'not-json' } });
+      const event = kinesisEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: 'not-json' }));
     });
   });
 

@@ -375,8 +375,7 @@ suite('SESRouter', () => {
       const result = router.matchRoute(record);
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('matches when both recipients and senders match', ({ sesRecord }) => {

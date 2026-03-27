@@ -39,13 +39,14 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     if (typeof event.configRuleName !== 'string') return false;
     if (typeof event.resultToken !== 'string') return false;
 
+    let invokingEvent: unknown;
     try {
-      const invokingEvent = JSON.parse(event.invokingEvent) as unknown;
-      if (!isObject(invokingEvent)) return false;
-      return invokingEvent.messageType === 'ScheduledNotification';
+      invokingEvent = JSON.parse(event.invokingEvent);
     } catch {
       return false;
     }
+    if (!isObject(invokingEvent)) return false;
+    return invokingEvent.messageType === 'ScheduledNotification';
   }
 
   route<TParams>(definition: ConfigScheduledRouteDefinition<TParams>): this {

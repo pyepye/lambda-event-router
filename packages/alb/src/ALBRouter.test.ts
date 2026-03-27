@@ -1,5 +1,5 @@
 import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
-import { createALBEvent, test } from '@lambda-event-router/testing';
+import { createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import { ALBRouter, createALBRouter } from './ALBRouter.js';
 
 suite('ALBRouter', () => {
@@ -125,7 +125,7 @@ suite('ALBRouter', () => {
       albHandlerEvent,
     }) => {
       const handler = vi.fn();
-      const bodySchema = { safeParse: vi.fn().mockReturnValue({ success: false, error: 'invalid body' }) };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
       router.post({ path: '/', handler, bodySchema });
 
       const { event, context } = albHandlerEvent({ event: { httpMethod: 'POST', body: { bad: 'data' } } });

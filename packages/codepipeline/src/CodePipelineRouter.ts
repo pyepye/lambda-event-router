@@ -5,7 +5,7 @@ import {
   PutJobSuccessResultCommand,
 } from '@aws-sdk/client-codepipeline';
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { CodePipelineEvent, Context } from 'aws-lambda';
 import type {
@@ -110,7 +110,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         throw new Error(`No route matched for CodePipeline job ${jobId} (function: ${functionName})`);
       }
 
-      const parsedUserParameters = this.parseUserParameters(rawUserParameters);
+      const parsedUserParameters = safeJsonParse(rawUserParameters);
       const validatedUserParameters = await validateSchema(
         parsedUserParameters,
         route.userParametersSchema,
@@ -170,14 +170,6 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
 
       return true;
     });
-  }
-
-  private parseUserParameters(raw: string): unknown {
-    try {
-      return JSON.parse(raw);
-    } catch {
-      return raw;
-    }
   }
 
   private async reportSuccess(jobId: string, response: CodePipelineResponse): Promise<void> {

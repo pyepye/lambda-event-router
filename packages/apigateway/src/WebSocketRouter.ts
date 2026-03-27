@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import { isWebSocketResponse } from './webSocketResponse.js';
@@ -158,7 +158,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       throw new Error(`No route matched for WebSocket event (eventType: ${eventType}, routeKey: ${routeKey})`);
     }
 
-    const parsedBody = this.parseBody(event.body);
+    const parsedBody = safeJsonParse(event.body);
     const validatedBody = await validateSchema(
       parsedBody,
       route.bodySchema,
@@ -202,16 +202,6 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
 
       return true;
     });
-  }
-
-  private parseBody(body: string | undefined): unknown {
-    if (!body) return undefined;
-
-    try {
-      return JSON.parse(body);
-    } catch {
-      return body;
-    }
   }
 
   private buildResult(response: WebSocketConnectResponse): WebSocketResult {

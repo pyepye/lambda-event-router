@@ -1,8 +1,12 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createFirehoseEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createFirehoseEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createFirehoseRouter, defineRoute, FirehoseRouter } from './FirehoseRouter.js';
 import { Dropped, Failed, Ok } from './response.js';
 import type { FirehoseFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 suite('FirehoseRouter', () => {
   let router: FirehoseRouter;
@@ -68,10 +72,7 @@ suite('FirehoseRouter', () => {
     });
 
     test('preserves filters, dataSchema, and handler in the definition', () => {
-      const dataSchema: Schema<{ action: string }> = {
-        // @ts-expect-error - mock schema always returns success with input data
-        safeParse: (data: unknown) => ({ success: true, data }),
-      };
+      const dataSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream'],
@@ -82,11 +83,9 @@ suite('FirehoseRouter', () => {
         dataSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        dataSchema,
-        handler,
-      });
+      expect(definition.filters).toEqual(filters);
+      expect(definition.dataSchema).toBe(dataSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -259,8 +258,7 @@ suite('FirehoseRouter', () => {
       const result = router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
 
     test('matches when both deliveryStreamArns and sourceKinesisStreamArns match', ({ firehoseRecord }) => {
@@ -562,79 +560,6 @@ suite('FirehoseRouter', () => {
     });
   });
 
-  suite('parseData', () => {
-    test('parses valid JSON data', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseData('{"greeting":"hello"}');
-
-      expect(result).toEqual({ greeting: 'hello' });
-    });
-
-    test('returns raw string when data is not valid JSON', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseData('plain text message');
-
-      expect(result).toBe('plain text message');
-    });
-
-    test('parses numeric JSON data', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.parseData('42');
-
-      expect(result).toBe(42);
-    });
-  });
-
-  suite('validateData', () => {
-    test('returns validated data when schema succeeds', ({ firehoseRecord }) => {
-      const record = firehoseRecord();
-      const data = { action: 'processOrder', orderId: '12345' };
-      const validatedData = { ...data, validated: true };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, schema, record.recordId);
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws when schema validation fails (message includes recordId)', ({ firehoseRecord }) => {
-      const record = firehoseRecord({ recordId: 'validation-fail-record' });
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid data') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateData({}, schema, record.recordId)).toThrow(
-        'Data validation failed for record validation-fail-record',
-      );
-    });
-
-    test('returns data unchanged when no schema provided', ({ firehoseRecord }) => {
-      const record = firehoseRecord();
-      const data = { action: 'processOrder' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateData(data, undefined, record.recordId);
-
-      expect(result).toBe(data);
-    });
-
-    test('throws when data is a string and schema is provided', ({ firehoseRecord }) => {
-      const record = firehoseRecord();
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateData('not valid json', schema, record.recordId)).toThrow(
-        `Data validation failed for record ${record.recordId}`,
-      );
-    });
-  });
-
   suite('handleEvent', () => {
     test('calls matched handler with parsed request', async ({ firehoseRecord, firehoseHandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok());
@@ -820,10 +745,8 @@ suite('FirehoseRouter', () => {
   suite('handleEvent - schema validation', () => {
     test('handler receives validated data from dataSchema', async ({ firehoseRecord, firehoseEvent, context }) => {
       const handler = vi.fn().mockResolvedValue(Ok());
-      const transformedData = { action: 'processOrder', orderId: '12345', validated: true };
-      const dataSchema: Schema<typeof transformedData> = {
-        safeParse: () => ({ success: true, data: transformedData }),
-      };
+      const dataSchema = createMockSchema();
+
       router.route(
         defineRoute({
           filters: {},
@@ -836,13 +759,12 @@ suite('FirehoseRouter', () => {
       const event = firehoseEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: transformedData }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, dataSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: body }));
     });
 
     test('returns ProcessingFailed when dataSchema fails', async ({ firehoseRecord, firehoseEvent, context }) => {
-      const dataSchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const dataSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: {},
@@ -855,6 +777,63 @@ suite('FirehoseRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result.records[0]?.result).toBe('ProcessingFailed');
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes decoded firehose data to safeJsonParse', async ({ firehoseRecord, firehoseEvent, context }) => {
+      const handler = vi.fn().mockResolvedValue(Ok());
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = firehoseRecord({ data: body });
+      const event = firehoseEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(JSON.stringify(body));
+    });
+
+    test('handler receives parsed object when data is valid JSON', async ({
+      firehoseRecord,
+      firehoseEvent,
+      context,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(Ok());
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = firehoseRecord({ data: body });
+      const event = firehoseEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: body }));
+    });
+
+    test('handler receives raw string when data is not valid JSON', async ({
+      firehoseRecord,
+      firehoseEvent,
+      context,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(Ok());
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(handler),
+      );
+
+      const record = firehoseRecord({ data: 'not-json' });
+      const event = firehoseEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ data: 'not-json' }));
     });
   });
 

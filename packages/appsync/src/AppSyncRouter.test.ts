@@ -1,6 +1,9 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createAppSyncResolverEvent, createMockContext, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createAppSyncResolverEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('AppSyncRouter', () => {
   let router: AppSyncRouter;
@@ -58,9 +61,7 @@ suite('AppSyncRouter', () => {
   suite('defineRoute', () => {
     test('preserves filters, argumentsSchema and handler', () => {
       const handler = vi.fn();
-      const argumentsSchema: Schema<{ id: string }> = {
-        safeParse: vi.fn(),
-      };
+      const argumentsSchema = createMockSchema();
 
       const definition = defineRoute({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
@@ -246,34 +247,27 @@ suite('AppSyncRouter', () => {
   });
 
   suite('validateArguments', () => {
-    test('returns args unchanged when no schema is provided', () => {
+    test('returns args unchanged when no schema is provided', async () => {
       const args = { id: '123' };
 
-      // @ts-expect-error - testing private method directly
-      const result = router.validateArguments(args, undefined, 'Query', 'getUser');
+      const result = await base.validateSchema(args, undefined, 'Query.getUser');
       expect(result).toBe(args);
     });
 
-    test('returns parsed data when schema validation succeeds', () => {
-      const parsedData = { id: '123', name: 'parsed' };
-      const schema: Schema<unknown> = {
-        safeParse: vi.fn().mockReturnValue({ success: true, data: parsedData }),
-      };
+    test('returns parsed data when schema validation succeeds', async () => {
+      const inputData = { id: '123' };
+      const schema = createMockSchema();
 
-      // @ts-expect-error - testing private method directly
-      const result = router.validateArguments({ id: '123' }, schema, 'Query', 'getUser');
-      expect(result).toBe(parsedData);
+      const result = await base.validateSchema(inputData, schema, 'Query.getUser');
+      expect(result).toEqual(inputData);
     });
 
-    test('throws when schema validation fails', () => {
-      const schema: Schema<unknown> = {
-        safeParse: vi.fn().mockReturnValue({ success: false }),
-      };
+    test('throws when schema validation fails', async () => {
+      const schema = createMockSchema({ issues: [{ message: 'invalid' }] });
 
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateArguments({ id: '123' }, schema, 'Query', 'getUser')).toThrow(
-        'Arguments validation failed for Query.getUser',
-      );
+      await expect(
+        base.validateSchema({ id: '123' }, schema, 'Arguments validation failed for Query.getUser'),
+      ).rejects.toThrow('Arguments validation failed for Query.getUser');
     });
   });
 
@@ -323,14 +317,11 @@ suite('AppSyncRouter', () => {
     });
 
     test('validates arguments with schema before calling handler', async () => {
-      const parsedArgs = { id: '123', validated: true };
-      const schema: Schema<{ id: string; validated: boolean }> = {
-        safeParse: vi.fn().mockReturnValue({ success: true, data: parsedArgs }),
-      };
       const handler = vi.fn().mockResolvedValue('ok');
+      const argumentsSchema = createMockSchema();
       router.route({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
-        argumentsSchema: schema,
+        argumentsSchema,
         handler,
       });
 
@@ -342,17 +333,15 @@ suite('AppSyncRouter', () => {
 
       await router.handleEvent(event, context);
 
-      expect(schema.safeParse).toHaveBeenCalledWith({ id: '123' });
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ arguments: parsedArgs }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(event.arguments, argumentsSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ arguments: { id: '123' } }));
     });
 
     test('throws when schema validation fails', async () => {
-      const schema: Schema<unknown> = {
-        safeParse: vi.fn().mockReturnValue({ success: false }),
-      };
+      const argumentsSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route({
         filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
-        argumentsSchema: schema,
+        argumentsSchema,
         handler: vi.fn(),
       });
 

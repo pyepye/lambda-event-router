@@ -1,5 +1,5 @@
 import type { ValidationResult } from '@lambda-event-router/base';
-import { validateSchemaResult } from '@lambda-event-router/base';
+import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
@@ -44,11 +44,7 @@ export class Request {
 
     const decoded = isBase64Encoded ? Buffer.from(body, 'base64').toString('utf-8') : body;
 
-    try {
-      return JSON.parse(decoded);
-    } catch {
-      return decoded;
-    }
+    return safeJsonParse(decoded);
   }
 
   get queryParams(): Record<string, string | undefined> {

@@ -1,7 +1,11 @@
-import type { Schema } from '@lambda-event-router/base';
-import { createSQSEvent, test } from '@lambda-event-router/testing';
+import * as base from '@lambda-event-router/base';
+import { createMockSchema, createSQSEvent, test } from '@lambda-event-router/testing';
+import type { MockInstance } from 'vitest';
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
-import type { SQSFilterInput, SQSMessageAttributes } from './types.js';
+import type { SQSFilterInput } from './types.js';
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 let router: SQSRouter;
 
@@ -60,12 +64,8 @@ suite('SQSRouter', () => {
     });
 
     test('preserves filters, schemas, and handler in the definition', () => {
-      const bodySchema: Schema<{ action: string }> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as { action: string } }),
-      };
-      const messageAttributesSchema: Schema<SQSMessageAttributes> = {
-        safeParse: (data: unknown) => ({ success: true, data: data as SQSMessageAttributes }),
-      };
+      const bodySchema = createMockSchema();
+      const messageAttributesSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
         eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'],
@@ -78,12 +78,10 @@ suite('SQSRouter', () => {
         messageAttributesSchema,
       }).handle(handler);
 
-      expect(definition).toEqual({
-        filters,
-        bodySchema,
-        messageAttributesSchema,
-        handler,
-      });
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.messageAttributesSchema).toBe(messageAttributesSchema);
+      expect(definition.handler).toBe(handler);
     });
   });
 
@@ -337,8 +335,7 @@ suite('SQSRouter', () => {
       const result = router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
-      // @ts-expect-error - result is asserted as defined above
-      expect(result.handler).toBe(firstHandler);
+      expect(result?.handler).toBe(firstHandler);
     });
   });
 
@@ -769,10 +766,7 @@ suite('SQSRouter', () => {
     test('handler receives validated body from bodySchema', async ({ sqsRecord, sqsEvent, context }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const handler = vi.fn();
-      const transformedBody = { action: 'processOrder', orderId: '12345', validated: true };
-      const bodySchema: Schema<typeof transformedBody> = {
-        safeParse: () => ({ success: true, data: transformedBody }),
-      };
+      const bodySchema = createMockSchema();
 
       router.route(
         defineRoute({
@@ -781,14 +775,16 @@ suite('SQSRouter', () => {
         }).handle(handler),
       );
 
+      const body = { action: 'processOrder', orderId: '12345' };
       const record = sqsRecord({
         eventSourceARN: eventSourceArn,
-        body: JSON.stringify({ action: 'processOrder', orderId: '12345' }), // TODO: Fixture should stringify
+        body: JSON.stringify(body),
       });
       const event = sqsEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: transformedBody }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
     });
 
     test('throws when bodySchema validation fails and batchItemFailures is disabled', async ({
@@ -797,9 +793,7 @@ suite('SQSRouter', () => {
       context,
     }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
-      const bodySchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -815,9 +809,7 @@ suite('SQSRouter', () => {
     test('returns batchItemFailure when bodySchema validation fails', async ({ sqsRecord, sqsEvent, context }) => {
       const router = new SQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
-      const bodySchema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -841,10 +833,8 @@ suite('SQSRouter', () => {
     }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       const handler = vi.fn();
-      const validatedAttributes = { eventType: 'order.created', extra: 'field' };
-      const messageAttributesSchema: Schema<SQSMessageAttributes> = {
-        safeParse: () => ({ success: true, data: validatedAttributes }),
-      };
+      const messageAttributesSchema = createMockSchema();
+
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -861,7 +851,14 @@ suite('SQSRouter', () => {
       const event = sqsEvent([record]);
       await router.handleEvent(event, context());
 
-      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ messageAttributes: validatedAttributes }));
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { eventType: 'order.created' },
+        messageAttributesSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ messageAttributes: { eventType: 'order.created' } }),
+      );
     });
 
     test('throws when messageAttributesSchema validation fails and batchItemFailures is disabled', async ({
@@ -870,9 +867,7 @@ suite('SQSRouter', () => {
       context,
     }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
-      const messageAttributesSchema: Schema<SQSMessageAttributes> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -897,9 +892,7 @@ suite('SQSRouter', () => {
     }) => {
       const router = new SQSRouter({ batchItemFailures: true });
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
-      const messageAttributesSchema: Schema<SQSMessageAttributes> = {
-        safeParse: () => ({ success: false, error: new Error('invalid') }),
-      };
+      const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
           filters: { eventSourceArns: [eventSourceArn] },
@@ -922,23 +915,55 @@ suite('SQSRouter', () => {
     });
   });
 
-  suite('parseJsonBody', () => {
-    test('parses valid JSON body into an object', ({ sqsRecord }) => {
-      const record = sqsRecord({ body: '{"greeting":"hello"}' });
+  suite('handleEvent - jsonParse', () => {
+    test('passes record body to safeJsonParse', async ({ sqsRecord, sqsEvent, context }) => {
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
 
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody(record);
+      const body = JSON.stringify({ action: 'processOrder', orderId: '12345' });
+      const record = sqsRecord({ eventSourceARN: eventSourceArn, body });
+      const event = sqsEvent([record]);
+      await router.handleEvent(event, context());
 
-      expect(result).toEqual({ greeting: 'hello' });
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(body);
     });
 
-    test('returns raw string when body is not valid JSON', ({ sqsRecord }) => {
-      const record = sqsRecord({ body: 'plain text message' });
+    test('handler receives parsed object when body is valid JSON', async ({ sqsRecord, sqsEvent, context }) => {
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
 
-      // @ts-expect-error - testing private method directly
-      const result = router.parseJsonBody(record);
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = sqsRecord({ eventSourceARN: eventSourceArn, body: JSON.stringify(body) });
+      const event = sqsEvent([record]);
+      await router.handleEvent(event, context());
 
-      expect(result).toBe('plain text message');
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when body is not valid JSON', async ({ sqsRecord, sqsEvent, context }) => {
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { eventSourceArns: [eventSourceArn] },
+        }).handle(handler),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn, body: 'not-json' });
+      const event = sqsEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
     });
   });
 
@@ -977,94 +1002,6 @@ suite('SQSRouter', () => {
       expect(Buffer.isBuffer(result.myBinary)).toBe(true);
       // @ts-expect-error - myBinary is a Buffer as asserted above
       expect(result.myBinary.toString()).toBe('binary-content');
-    });
-  });
-
-  suite('validateBody', () => {
-    test('returns validated data when bodySchema succeeds', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const body = { action: 'processOrder', orderId: '12345' };
-      const validatedData = { ...body, validated: true };
-      const schema: Schema<typeof validatedData> = {
-        safeParse: () => ({ success: true, data: validatedData }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, schema, record.messageId);
-
-      expect(result).toEqual(validatedData);
-    });
-
-    test('throws when bodySchema validation fails', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('invalid body') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody({}, schema, record.messageId)).toThrow(
-        `Body validation failed for record ${record.messageId}`,
-      );
-    });
-
-    test('returns body unchanged when no schema is provided', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const body = { action: 'processOrder' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateBody(body, undefined, record.messageId);
-
-      expect(result).toBe(body);
-    });
-
-    test('throws when body is a string and schema is provided', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const schema: Schema<unknown> = {
-        safeParse: () => ({ success: false, error: new Error('expected object, received string') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateBody('not valid json', schema, record.messageId)).toThrow(
-        `Body validation failed for record ${record.messageId}`,
-      );
-    });
-  });
-
-  suite('validateMessageAttributes', () => {
-    test('returns validated attributes when messageAttributesSchema succeeds', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const messageAttributes = { eventType: 'order.created' };
-      const validatedAttributes = { eventType: 'order.created', extra: 'field' };
-      const schema: Schema<SQSMessageAttributes> = {
-        safeParse: () => ({ success: true, data: validatedAttributes }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(messageAttributes, schema, record.messageId);
-
-      expect(result).toEqual(validatedAttributes);
-    });
-
-    test('throws when messageAttributesSchema validation fails', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const schema: Schema<SQSMessageAttributes> = {
-        safeParse: () => ({ success: false, error: new Error('invalid attributes') }),
-      };
-
-      // @ts-expect-error - testing private method directly
-      expect(() => router.validateMessageAttributes({}, schema, record.messageId)).toThrow(
-        `Message attributes validation failed for record ${record.messageId}`,
-      );
-    });
-
-    test('returns messageAttributes unchanged when no schema is provided', ({ sqsRecord }) => {
-      const record = sqsRecord();
-      const messageAttributes = { eventType: 'order.created' };
-
-      // @ts-expect-error - testing private method directly
-      const result = router.validateMessageAttributes(messageAttributes, undefined, record.messageId);
-
-      expect(result).toBe(messageAttributes);
     });
   });
 

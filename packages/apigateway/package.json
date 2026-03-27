@@ -34,13 +34,14 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@lambda-event-router/http": "workspace:*"
+    "@lambda-event-router/http": "workspace:*",
+    "@aws-sdk/client-apigatewaymanagementapi": "catalog:"
   },
   "peerDependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.0.0"
+    "@lambda-event-router/base": "workspace:*",
+    "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@aws-sdk/client-apigatewaymanagementapi": "^3.1000.0",
     "@lambda-event-router/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",

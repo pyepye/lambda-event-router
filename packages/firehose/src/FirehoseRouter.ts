@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
@@ -79,7 +79,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
   ): Promise<FirehoseTransformationResultRecord> {
     try {
       const rawData = Buffer.from(record.data, 'base64').toString('utf-8');
-      const data = this.parseData(rawData);
+      const data = safeJsonParse(rawData);
 
       const route = this.matchRoute(event, record, data);
       if (!route) {
@@ -170,14 +170,6 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
 
       return true;
     });
-  }
-
-  private parseData(rawData: string): unknown {
-    try {
-      return JSON.parse(rawData);
-    } catch {
-      return rawData;
-    }
   }
 }
 
