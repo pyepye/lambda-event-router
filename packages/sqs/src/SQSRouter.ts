@@ -236,11 +236,11 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       route.bodySchema,
       `Body validation failed for record ${record.messageId}`,
     );
-    const messageAttributes = (await validateSchema(
+    const messageAttributes = await validateSchema(
       convertedAttributes,
       route.messageAttributesSchema,
       `Message attributes validation failed for record ${record.messageId}`,
-    )) as SQSMessageAttributes; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
     const request: SQSRequest = {
       body,

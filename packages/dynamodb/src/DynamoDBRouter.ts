@@ -153,23 +153,23 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     const newImage = record.dynamodb?.NewImage ? unmarshall(record.dynamodb.NewImage as UnmarshallInput) : undefined;
     const oldImage = record.dynamodb?.OldImage ? unmarshall(record.dynamodb.OldImage as UnmarshallInput) : undefined;
 
-    const validatedKeys = (await validateSchema(
+    const validatedKeys = await validateSchema(
       keys,
       route.keysSchema,
       `Image validation failed for Keys on record ${record.eventID}`,
-    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
-    const validatedNewImage = (await validateSchema(
+    const validatedNewImage = await validateSchema(
       newImage,
       route.newImageSchema,
       `Image validation failed for NewImage on record ${record.eventID}`,
-    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
-    const validatedOldImage = (await validateSchema(
+    const validatedOldImage = await validateSchema(
       oldImage,
       route.oldImageSchema,
       `Image validation failed for OldImage on record ${record.eventID}`,
-    )) as Record<string, unknown>; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
     const request: DynamoDBRequest = {
       keys: validatedKeys,
@@ -178,7 +178,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       eventName,
       record,
       context,
-    } as DynamoDBRequest; // TODO: Fix / improve typing so `as` isn't needed;
+    } as DynamoDBRequest;
 
     await route.handler(request);
   }

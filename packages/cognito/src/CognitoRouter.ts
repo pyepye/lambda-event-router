@@ -543,7 +543,6 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
       `User attributes validation failed for trigger ${triggerSource}`,
     );
 
-    // TODO: Fix / improve typing so `as` isn't needed
     const request: CognitoRequest = { triggerSource, userAttributes, event: eventClone, context } as CognitoRequest;
     // Handler modifies the cloned event and returns it
     return await route.handler(request);

@@ -96,11 +96,11 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       throw new Error(`No route matched for config rule ${event.configRuleName}`);
     }
 
-    const validatedParams = (await validateSchema(
+    const validatedParams = await validateSchema(
       ruleParameters,
       route.ruleParametersSchema,
       'Schema validation failed for ruleParameters',
-    )) as Record<string, string>;
+    );
 
     const handler = route.handler as (request: ConfigRequest | ConfigOversizedRequest) => Promise<void>;
 
@@ -118,11 +118,11 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       return;
     }
 
-    const validatedConfiguration = (await validateSchema(
+    const validatedConfiguration = await validateSchema(
       configurationItem?.configuration,
       route.configurationSchema,
       'Schema validation failed for configuration',
-    )) as Record<string, unknown> | undefined; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
     /* v8 ignore next 3 -- @preserve - Non-oversized ConfigurationItemChangeNotification events always have configurationItem */
     if (!configurationItem) {

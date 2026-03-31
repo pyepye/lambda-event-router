@@ -17,13 +17,19 @@ export function safeJsonParse(rawData?: string): unknown {
   }
 }
 
-export async function validateSchema(
-  data: unknown,
-  schema: StandardSchemaV1 | undefined,
+type ValidateSchemaOutput<TData, TSchema extends StandardSchemaV1 | undefined> = TSchema extends StandardSchemaV1
+  ? unknown extends StandardSchemaV1.InferOutput<TSchema>
+    ? TData
+    : StandardSchemaV1.InferOutput<TSchema>
+  : TData;
+
+export async function validateSchema<TData, TSchema extends StandardSchemaV1 | undefined>(
+  data: TData,
+  schema: TSchema,
   customErrorMessage?: string,
-): Promise<unknown> {
+): Promise<ValidateSchemaOutput<TData, TSchema>> {
   if (!schema) {
-    return data;
+    return data as ValidateSchemaOutput<TData, TSchema>;
   }
 
   const result = await schema['~standard'].validate(data);
@@ -31,7 +37,7 @@ export async function validateSchema(
     const errorMessage = customErrorMessage ?? 'Schema validation failed';
     throw new Error(errorMessage, { cause: result.issues });
   }
-  return result.value;
+  return result.value as ValidateSchemaOutput<TData, TSchema>;
 }
 
 // TODO: Remove this type and replace with whatever StandardSchema returns

@@ -105,7 +105,6 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     );
 
     const request: AppSyncResolverRequest = {
-      // @ts-expect-error - validateSchema returns unknown but arguments are validated Record<string, unknown>
       arguments: validatedArguments,
       identity: event.identity,
       source: event.source,

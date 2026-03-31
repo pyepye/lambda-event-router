@@ -62,11 +62,11 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
       throw new Error(`No route matched for scheduled config rule ${event.configRuleName}`);
     }
 
-    const validatedParams = (await validateSchema(
+    const validatedParams = await validateSchema(
       ruleParameters,
       route.ruleParametersSchema,
       'Schema validation failed for ruleParameters',
-    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
     const request: ConfigScheduledRequest = {
       resultToken: event.resultToken,

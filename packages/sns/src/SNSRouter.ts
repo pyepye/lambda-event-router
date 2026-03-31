@@ -147,11 +147,11 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     const body = await validateSchema(parsedBody, route.bodySchema, bodyValidationError);
 
     const convertedAttributes = this.convertMessageAttributes(rawMessageAttributes);
-    const validatedMessageAttributes = (await validateSchema(
+    const validatedMessageAttributes = await validateSchema(
       convertedAttributes,
       route.messageAttributesSchema,
       `Message attributes validation failed for record ${record.Sns.MessageId}`,
-    )) as SNSMessageAttributes; // TODO: Fix / improve typing so `as` isn't needed
+    );
 
     const request: SNSRequest = {
       body,

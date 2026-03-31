@@ -138,26 +138,21 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     }
 
     const documentKeyErrorMessage = `Schema validation failed on documentKey for record ${JSON.stringify(changeEvent.documentKey)}`;
-    const documentKey = (await validateSchema(
-      changeEvent.documentKey,
-      route.documentKeySchema,
-      documentKeyErrorMessage,
-    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
+    const documentKey = await validateSchema(changeEvent.documentKey, route.documentKeySchema, documentKeyErrorMessage);
 
     const fullDocumentObject = isObject(changeEvent.fullDocument) ? changeEvent.fullDocument : undefined;
     const fullDocumentErrorMessage = `Schema validation failed on fullDocument for record ${JSON.stringify(changeEvent.documentKey)}`;
-    const fullDocument = (await validateSchema(
-      fullDocumentObject,
-      route.fullDocumentSchema,
-      fullDocumentErrorMessage,
-    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed
+    const fullDocument = await validateSchema(fullDocumentObject, route.fullDocumentSchema, fullDocumentErrorMessage);
 
+    const fullDocumentBeforeChangeObject = isObject(changeEvent.fullDocumentBeforeChange)
+      ? changeEvent.fullDocumentBeforeChange
+      : undefined;
     const fullDocumentBeforeChangeErrorMessage = `Schema validation failed on fullDocumentBeforeChange for record ${JSON.stringify(changeEvent.documentKey)}`;
-    const fullDocumentBeforeChange = (await validateSchema(
-      changeEvent.fullDocumentBeforeChange,
+    const fullDocumentBeforeChange = await validateSchema(
+      fullDocumentBeforeChangeObject,
       route.fullDocumentBeforeChangeSchema,
       fullDocumentBeforeChangeErrorMessage,
-    )) as Record<string, string>; // TODO: Fix / improve typing so `as` isn't needed;
+    );
 
     const request: InternalRequest = {
       operationType: changeEvent.operationType,
