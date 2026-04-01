@@ -315,14 +315,14 @@ suite('EventRouter', () => {
     });
 
     test('customFilter receives typed event when eventSchema is provided', () => {
-      const eventSchema = createMockSchema();
+      const eventSchema = createMockSchema<{ taskId: string }>();
       const isTaskEvent = (event: unknown): event is { taskId: string } =>
         typeof event === 'object' &&
         event !== null &&
         'taskId' in event &&
         typeof (event as { taskId?: unknown }).taskId === 'string';
 
-      const definition = defineEventRoute<{ taskId: string }>({
+      const definition = defineEventRoute({
         filters: {
           customFilter: ({ event }: EventFilterInput<{ taskId: string }>) =>
             isTaskEvent(event) && event.taskId === 'task-123',

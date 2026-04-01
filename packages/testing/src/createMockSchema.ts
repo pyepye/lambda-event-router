@@ -6,8 +6,8 @@ type MockSchema<TOutput = unknown> = StandardSchemaV1<unknown, TOutput> & {
 };
 
 export function createMockSchema<TOutput = unknown>(): MockSchema<TOutput>;
-export function createMockSchema<TOutput = unknown>(result: StandardSchemaV1.FailureResult): MockSchema<TOutput>;
-export function createMockSchema<TOutput = unknown>(result?: StandardSchemaV1.FailureResult): MockSchema<TOutput> {
+export function createMockSchema<TOutput = unknown>(result: StandardSchemaV1.Result<TOutput>): MockSchema<TOutput>;
+export function createMockSchema<TOutput = unknown>(result?: StandardSchemaV1.Result<TOutput>): MockSchema<TOutput> {
   return {
     '~standard': {
       version: 1,
