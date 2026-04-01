@@ -119,11 +119,11 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
   ): Promise<DynamoDBBatchResponse['batchItemFailures']> {
     const failures: DynamoDBBatchResponse['batchItemFailures'] = [];
 
-    for (const [i, record] of records.entries()) {
+    for (const [idx, record] of records.entries()) {
       try {
         await this.processRecord(record, context);
       } catch {
-        for (const remaining of records.slice(i)) {
+        for (const remaining of records.slice(idx)) {
           /* v8 ignore next -- @preserve - Guard is for TS. eventID is always present in AWS events but typed as optional */
           if (remaining.eventID) {
             failures.push({ itemIdentifier: remaining.eventID });

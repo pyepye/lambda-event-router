@@ -82,11 +82,11 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
   ): Promise<KinesisStreamBatchResponse['batchItemFailures']> {
     const failures: KinesisStreamBatchResponse['batchItemFailures'] = [];
 
-    for (const [i, record] of records.entries()) {
+    for (const [idx, record] of records.entries()) {
       try {
         await this.processRecord(record, context);
       } catch {
-        for (const remaining of records.slice(i)) {
+        for (const remaining of records.slice(idx)) {
           failures.push({ itemIdentifier: remaining.eventID });
         }
         break;
