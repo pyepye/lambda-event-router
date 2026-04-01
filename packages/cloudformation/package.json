@@ -17,8 +17,10 @@
     "dist"
   ],
   "scripts": {
+    "tsc": "tsc --noEmit",
     "build": "tsc -p tsconfig.build.json --noEmit && tsup",
     "dev": "tsup --watch",
+    "test:check": "#vitest run",
     "test": "#tsc --noEmit && vitest run",
     "test:watch": "#vitest",
     "test:coverage": "#vitest run --coverage",
