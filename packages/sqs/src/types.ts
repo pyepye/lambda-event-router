@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context } from 'aws-lambda';
 
@@ -18,6 +19,11 @@ export type SQSRecordHandler<
   TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
 > = (request: SQSRequest<TBody, TMessageAttributes>) => Promise<void>;
 
+export type SQSMiddleware<
+  TBody = unknown,
+  TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
+> = Middleware<SQSRequest<TBody, TMessageAttributes>, void>;
+
 export interface SQSFilterInput {
   body: unknown;
   messageAttributes: SQSMessageAttributes;
@@ -37,9 +43,11 @@ export interface SQSRouteDefinition<
   filters: SQSFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;
+  middleware?: SQSMiddleware<TBody, TMessageAttributes>[];
   handler: SQSRecordHandler<TBody, TMessageAttributes>;
 }
 
 export interface SQSRouterOptions {
   batchItemFailures?: boolean;
+  middleware?: SQSMiddleware[];
 }

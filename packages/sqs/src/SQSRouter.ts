@@ -1,5 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
 import type {
@@ -15,16 +15,22 @@ interface InternalRoute {
   filters: SQSFilters;
   bodySchema?: StandardSchemaV1;
   messageAttributesSchema?: StandardSchemaV1;
+  middleware: Middleware<SQSRequest, void>[];
   handler: SQSRecordHandler;
 }
 
 interface RouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TMessageAttributes extends SQSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SQSMessageAttributes
+    : SQSMessageAttributes,
 > {
   filters: SQSFilters;
   bodySchema?: TBodySchema;
   messageAttributesSchema?: TMessageAttributesSchema;
+  middleware?: Middleware<SQSRequest<TBody, TMessageAttributes>, void>[];
 }
 
 interface RouteBuilder<TBody, TMessageAttributes extends SQSMessageAttributes> {
@@ -50,9 +56,11 @@ export function defineRoute<
 export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatchResponse> {
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
+  private middleware: Middleware<SQSRequest, void>[];
 
   constructor(options?: SQSRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is SQSEvent {
@@ -72,6 +80,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       filters: definition.filters,
       bodySchema: definition.bodySchema,
       messageAttributesSchema: definition.messageAttributesSchema,
+      // Casts needed: storing typed middleware/handler in general storage (contravariance)
+      middleware: (definition.middleware ?? []) as unknown as Middleware<SQSRequest, void>[],
       handler: definition.handler as SQSRecordHandler,
     });
     return this;
@@ -111,9 +121,9 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     const results = await Promise.allSettled(recordPromises);
 
     const batchItemFailures: SQSBatchResponse['batchItemFailures'] = [];
-    for (const [i, result] of results.entries()) {
+    for (const [idx, result] of results.entries()) {
       if (result.status === 'rejected') {
-        const record = records[i];
+        const record = records[idx];
         /* v8 ignore next -- @preserve - Guard is for TS. Record will always exist as it has same length as results */
         if (record) {
           batchItemFailures.push({ itemIdentifier: record.messageId });
@@ -150,11 +160,11 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     context: Context,
   ): Promise<SQSBatchResponse['batchItemFailures']> {
     const failures: SQSBatchResponse['batchItemFailures'] = [];
-    for (const [i, record] of records.entries()) {
+    for (const [idx, record] of records.entries()) {
       try {
         await this.processRecord(record, context);
       } catch {
-        for (const remaining of records.slice(i)) {
+        for (const remaining of records.slice(idx)) {
           failures.push({ itemIdentifier: remaining.messageId });
         }
         break;
@@ -249,7 +259,12 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    if (allMiddleware.length > 0) {
+      await handleEventWithMiddleware(allMiddleware, request, route.handler);
+    } else {
+      await route.handler(request);
+    }
   }
 }
 

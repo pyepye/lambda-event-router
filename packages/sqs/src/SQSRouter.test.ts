@@ -2,7 +2,9 @@ import * as base from '@lambda-event-router/base';
 import { createMockSchema, createSQSEvent, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
-import type { SQSFilterInput } from './types.js';
+import type { SQSFilterInput, SQSRequest } from './types.js';
+
+type SQSNext = (request: SQSRequest) => Promise<void>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -1041,6 +1043,207 @@ suite('SQSRouter', () => {
       expect(result).toBeUndefined();
       expect(createHandler).toHaveBeenCalledTimes(2);
       expect(deleteHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler for each record', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createSQSRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-record for multi-record events', async ({ sqsRecord, context }) => {
+      const recordIds: string[] = [];
+
+      async function middleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        recordIds.push(request.record.messageId);
+        await next(request);
+      }
+
+      const router = createSQSRouter({ middleware: [middleware] });
+      router.route({ filters: {}, handler: async () => {} });
+
+      const event = createSQSEvent([sqsRecord({ messageId: 'msg-1' }), sqsRecord({ messageId: 'msg-2' })]);
+      await router.handleEvent(event, context());
+
+      expect(recordIds).toEqual(['msg-1', 'msg-2']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ sqsHandlerEvent, context }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: SQSRequest, _next: SQSNext): Promise<void> {
+        return;
+      }
+
+      const router = createSQSRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createSQSRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = new SQSRouter();
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({
+        filters: {},
+        middleware: [routeMiddleware],
+      }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      const router = new SQSRouter();
+      router.route(route);
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createSQSRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+  });
+
+  suite('batch item failures with middleware', () => {
+    test('middleware errors are tracked as batch item failures', async ({ sqsRecord, context }) => {
+      const handler = vi.fn();
+
+      async function failingMiddleware(_request: SQSRequest, _next: SQSNext): Promise<void> {
+        throw new Error('middleware error');
+      }
+
+      const router = createSQSRouter({ batchItemFailures: true, middleware: [failingMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const record = sqsRecord({ messageId: 'msg-1' });
+      const event = createSQSEvent([record]);
+      const result = await router.handleEvent(event, context());
+
+      expect(result).toEqual({ batchItemFailures: [{ itemIdentifier: 'msg-1' }] });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('middleware can skip records without causing batch failures', async ({ sqsRecord, context }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: SQSRequest, _next: SQSNext): Promise<void> {
+        return;
+      }
+
+      const router = createSQSRouter({ batchItemFailures: true, middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const event = createSQSEvent([sqsRecord({ messageId: 'msg-1' })]);
+      const result = await router.handleEvent(event, context());
+
+      expect(result).toBeUndefined();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });
