@@ -2,6 +2,9 @@ import * as base from '@lambda-event-router/base';
 import { createAppSyncResolverEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
+import type { AppSyncResolverRequest } from './types.js';
+
+type AppSyncNext = (request: AppSyncResolverRequest) => Promise<unknown>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
@@ -499,6 +502,162 @@ suite('AppSyncRouter', () => {
 
       const result = await router.handleEvent(event, context);
       expect(result).toBe('subscription-result');
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async () => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createAppSyncRouter({ middleware: [middleware] });
+      router.query({
+        fieldName: 'getUser',
+        handler: async () => {
+          callOrder.push('handler');
+          return { id: '1' };
+        },
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early return', async () => {
+      const handler = vi.fn().mockResolvedValue({ id: '1' });
+
+      async function blockingMiddleware(_request: AppSyncResolverRequest, _next: AppSyncNext): Promise<unknown> {
+        return { error: 'Unauthorized' };
+      }
+
+      const router = createAppSyncRouter({ middleware: [blockingMiddleware] });
+      router.query({ fieldName: 'getUser', handler });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result).toEqual({ error: 'Unauthorized' });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('allows middleware to modify the result', async () => {
+      async function middleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        const result = await next(request);
+        return { ...(result as Record<string, unknown>), cached: true };
+      }
+
+      const router = createAppSyncRouter({ middleware: [middleware] });
+      router.query({
+        fieldName: 'getUser',
+        handler: async () => ({ id: '1', name: 'Alice' }),
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result).toEqual({ id: '1', name: 'Alice', cached: true });
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware via query convenience method', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = new AppSyncRouter();
+      router.query({
+        fieldName: 'getUser',
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return { id: '1' };
+        },
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const route = defineRoute({
+        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        middleware: [routeMiddleware],
+      }).handle(async () => {
+        callOrder.push('handler');
+        return { id: '1' };
+      });
+
+      const router = new AppSyncRouter();
+      router.route(route);
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async () => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createAppSyncRouter({ middleware: [routerMiddleware] });
+      router.mutation({
+        fieldName: 'createUser',
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return { id: '1' };
+        },
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Mutation', fieldName: 'createUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
   });
 });

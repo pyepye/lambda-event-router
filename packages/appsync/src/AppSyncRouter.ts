@@ -1,10 +1,11 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { AppSyncResolverEvent, Context } from 'aws-lambda';
 import type {
   AppSyncMutationInput,
   AppSyncQueryInput,
+  AppSyncResolverMiddleware,
   AppSyncResolverRequest,
   AppSyncResolverRouteBuilder,
   AppSyncResolverRouteDefinition,
@@ -29,14 +30,24 @@ export function defineRoute<TArgumentsSchema extends StandardSchemaV1 | undefine
       return {
         filters: config.filters,
         argumentsSchema: config.argumentsSchema as StandardSchemaV1<unknown, TArgs> | undefined,
+        middleware: config.middleware as AppSyncResolverMiddleware<TArgs>[] | undefined,
         handler,
       };
     },
   };
 }
 
+interface AppSyncRouterOptions {
+  middleware?: Middleware<AppSyncResolverRequest, unknown>[];
+}
+
 export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Record<string, unknown>>, unknown> {
   private routes: InternalResolverRoute[] = [];
+  private middleware: Middleware<AppSyncResolverRequest, unknown>[];
+
+  constructor(options?: AppSyncRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is AppSyncResolverEvent<Record<string, unknown>> {
     if (!isObject(event)) return false;
@@ -50,7 +61,13 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   }
 
   route<TArgs>(definition: AppSyncResolverRouteDefinition<TArgs>): this {
-    this.routes.push(definition as InternalResolverRoute);
+    this.routes.push({
+      filters: definition.filters,
+      argumentsSchema: definition.argumentsSchema,
+      // Casts needed: storing typed middleware/handler in general storage (contravariance)
+      middleware: (definition.middleware ?? []) as unknown as Middleware<AppSyncResolverRequest, unknown>[],
+      handler: definition.handler as InternalResolverRoute['handler'],
+    });
     return this;
   }
 
@@ -62,6 +79,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
         fieldNames: [input.fieldName],
       },
       argumentsSchema: input.argumentsSchema,
+      middleware: input.middleware,
       handler: input.handler,
     });
   }
@@ -74,6 +92,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
         fieldNames: [input.fieldName],
       },
       argumentsSchema: input.argumentsSchema,
+      middleware: input.middleware,
       handler: input.handler,
     });
   }
@@ -86,6 +105,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
         fieldNames: [input.fieldName],
       },
       argumentsSchema: input.argumentsSchema,
+      middleware: input.middleware,
       handler: input.handler,
     });
   }
@@ -117,6 +137,10 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
       context,
     };
 
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    if (allMiddleware.length > 0) {
+      return handleEventWithMiddleware(allMiddleware, request, route.handler);
+    }
     return route.handler(request);
   }
 
@@ -145,6 +169,6 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   }
 }
 
-export function createAppSyncRouter(): AppSyncRouter {
-  return new AppSyncRouter();
+export function createAppSyncRouter(options?: AppSyncRouterOptions): AppSyncRouter {
+  return new AppSyncRouter(options);
 }

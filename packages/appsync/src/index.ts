@@ -23,6 +23,7 @@ export type {
   AppSyncResolverFieldFilters,
   AppSyncResolverFilterInput,
   AppSyncResolverFilters,
+  AppSyncResolverMiddleware,
   AppSyncResolverRequest,
   AppSyncResolverRouteDefinition,
   AppSyncSubscribeInput,

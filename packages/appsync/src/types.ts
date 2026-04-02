@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   AppSyncAuthorizerEvent,
@@ -40,9 +41,15 @@ export interface AppSyncResolverFilters {
   customFilter?: (input: AppSyncResolverFilterInput) => boolean;
 }
 
+export type AppSyncResolverMiddleware<TArgs = Record<string, unknown>> = Middleware<
+  AppSyncResolverRequest<TArgs>,
+  unknown
+>;
+
 export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>> {
   filters: AppSyncResolverFilters;
   argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
+  middleware?: AppSyncResolverMiddleware<TArgs>[];
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
@@ -54,6 +61,7 @@ export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
+  middleware?: AppSyncResolverMiddleware<TArgs>[];
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
@@ -61,6 +69,7 @@ export interface AppSyncMutationInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
+  middleware?: AppSyncResolverMiddleware<TArgs>[];
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
@@ -68,14 +77,21 @@ export interface AppSyncSubscriptionInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
+  middleware?: AppSyncResolverMiddleware<TArgs>[];
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
 // ─── Resolver Route Builder Types ────────────────────────────────────────────
 
-export interface AppSyncResolverRouteInput<TArgumentsSchema extends StandardSchemaV1 | undefined = undefined> {
+export interface AppSyncResolverRouteInput<
+  TArgumentsSchema extends StandardSchemaV1 | undefined = undefined,
+  TArgs = TArgumentsSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TArgumentsSchema>
+    : Record<string, unknown>,
+> {
   filters: AppSyncResolverFilters;
   argumentsSchema?: TArgumentsSchema;
+  middleware?: AppSyncResolverMiddleware<TArgs>[];
 }
 
 export interface AppSyncResolverRouteBuilder<TArgs> {
@@ -87,6 +103,7 @@ export interface AppSyncResolverRouteBuilder<TArgs> {
 export interface InternalResolverRoute {
   filters: AppSyncResolverFilters;
   argumentsSchema?: StandardSchemaV1;
+  middleware: Middleware<AppSyncResolverRequest, unknown>[];
   handler: (request: AppSyncResolverRequest) => Promise<unknown>;
 }
 
