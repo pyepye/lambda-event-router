@@ -1,4 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
@@ -6,20 +7,25 @@ import { Request } from './Request.js';
 import { Response } from './Response.js';
 import type { AnyHttpMethod, ApiRequest, ApiResponse, HTTPAdapter, PathParams, RouteDefinition } from './types.js';
 
-// Compute response type from schema - if no schema provided, body must be undefined or null
-type ResponseType<TResponseSchema> = TResponseSchema extends StandardSchemaV1<unknown, infer R> ? R : undefined | null;
+// Compute response type from schema - if no schema provided, body is untyped (unknown)
+type ResponseType<TResponseSchema> = TResponseSchema extends StandardSchemaV1<unknown, infer R> ? R : unknown;
 
 // Config without handler (for builder pattern)
 interface RouteInput<
   TPathString extends string,
-  TPathSchema extends StandardSchemaV1 | undefined,
   TQuerySchema extends StandardSchemaV1 | undefined,
   TBodySchema extends StandardSchemaV1 | undefined,
   TResponseSchema extends StandardSchemaV1 | undefined,
+  TPath = PathParams<TPathString>,
+  TQuery = TQuerySchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TQuerySchema>
+    : Record<string, string | undefined>,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TResponse = TResponseSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TResponseSchema> : unknown,
 > {
   method: AnyHttpMethod;
   path: TPathString;
-  pathSchema?: TPathSchema;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>[];
   querySchema?: TQuerySchema;
   bodySchema?: TBodySchema;
   responseSchema?: TResponseSchema;
@@ -34,18 +40,17 @@ interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TRespon
 
 export function defineRoute<
   TPathString extends string,
-  TPathSchema extends StandardSchemaV1 | undefined = undefined,
   TQuerySchema extends StandardSchemaV1 | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TResponseSchema extends StandardSchemaV1 | undefined = undefined,
-  TPath = TPathSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TPathSchema> : PathParams<TPathString>,
+  TPath = PathParams<TPathString>,
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
     : Record<string, string | undefined>,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
   TResponse = ResponseType<TResponseSchema>,
 >(
-  config: RouteInput<TPathString, TPathSchema, TQuerySchema, TBodySchema, TResponseSchema>,
+  config: RouteInput<TPathString, TQuerySchema, TBodySchema, TResponseSchema>,
 ): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
@@ -55,11 +60,26 @@ export function defineRoute<
   };
 }
 
+interface HTTPRouterOptions<TEvent, TResult> {
+  adapter: HTTPAdapter<TEvent, TResult>;
+  middleware?: Middleware<ApiRequest, ApiResponse>[];
+}
+
 export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
   private router = new PathRouter();
   private response = new Response();
+  private middleware: Middleware<ApiRequest, ApiResponse>[];
+  private adapter: HTTPAdapter<TEvent, TResult>;
 
-  constructor(private adapter: HTTPAdapter<TEvent, TResult>) {}
+  constructor(options: HTTPAdapter<TEvent, TResult> | HTTPRouterOptions<TEvent, TResult>) {
+    if ('canHandleEvent' in options) {
+      this.adapter = options;
+      this.middleware = [];
+    } else {
+      this.adapter = options.adapter;
+      this.middleware = options.middleware ?? [];
+    }
+  }
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
@@ -117,7 +137,15 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     try {
       await request.validate();
       const requestData = request.buildApiRequest();
-      const handlerResponse = await route.handler(requestData);
+
+      const allMiddleware = [...this.middleware, ...route.middleware];
+      let handlerResponse: ApiResponse;
+      if (allMiddleware.length > 0) {
+        handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
+      } else {
+        handlerResponse = await route.handler(requestData);
+      }
+
       const finalizedResponse = this.response.create(handlerResponse);
       return this.adapter.buildResult(finalizedResponse, event);
     } catch (error) {

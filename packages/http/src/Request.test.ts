@@ -16,6 +16,7 @@ function createRoute(overrides: Partial<InternalRoute> = {}): InternalRoute {
     pattern: /^\/$/,
     paramNames: [],
     handler: vi.fn(),
+    middleware: [],
     ...overrides,
   };
 }
@@ -142,22 +143,6 @@ suite('Request', () => {
       await expect(request.validate()).resolves.toBeUndefined();
     });
 
-    test('throws a NotFound response when path validation fails', async () => {
-      const pathSchema = createMockSchema({ issues: [{ message: 'invalid path' }] });
-      const route = createRoute({ pathSchema });
-      const request = new Request(createNormalizedEvent(), {}, createMockContext(), route, { id: 'bad' });
-
-      try {
-        await request.validate();
-        expect.unreachable('should have thrown');
-      } catch (thrown) {
-        expect(Response.isHTTPResponse(thrown)).toBe(true);
-        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
-        expect(thrown.statusCode).toBe(404);
-      }
-      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: 'bad' }, pathSchema);
-    });
-
     test('throws a BadRequest response when query validation fails', async () => {
       const querySchema = createMockSchema({ issues: [{ message: 'invalid query' }] });
       const route = createRoute({ querySchema });
@@ -193,10 +178,9 @@ suite('Request', () => {
     });
 
     test('does not throw when all schemas pass', async () => {
-      const pathSchema = createMockSchema();
       const querySchema = createMockSchema();
       const bodySchema = createMockSchema();
-      const route = createRoute({ pathSchema, querySchema, bodySchema });
+      const route = createRoute({ querySchema, bodySchema });
       const normalizedEvent = createNormalizedEvent({
         body: JSON.stringify({ name: 'test' }),
         query: { page: '1' },
@@ -204,7 +188,6 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: '1' });
 
       await expect(request.validate()).resolves.toBeUndefined();
-      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: '1' }, pathSchema);
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '1' }, querySchema);
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ name: 'test' }, bodySchema);
     });
@@ -226,33 +209,10 @@ suite('Request', () => {
       expect(bodySchema['~standard'].validate).toHaveBeenCalled();
     });
 
-    test('short-circuits on path failure without calling query or body schemas', async () => {
-      const pathSchema = createMockSchema({ issues: [{ message: 'invalid path' }] });
-      const querySchema = createMockSchema();
-      const bodySchema = createMockSchema();
-      const route = createRoute({ pathSchema, querySchema, bodySchema });
-      const normalizedEvent = createNormalizedEvent({
-        body: JSON.stringify({ name: 'test' }),
-        query: { page: '1' },
-      });
-      const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: 'bad' });
-
-      try {
-        await request.validate();
-        expect.unreachable('should have thrown');
-      } catch {
-        // expected
-      }
-
-      expect(querySchema['~standard'].validate).not.toHaveBeenCalled();
-      expect(bodySchema['~standard'].validate).not.toHaveBeenCalled();
-    });
-
     test('short-circuits on query failure without calling body schema', async () => {
-      const pathSchema = createMockSchema();
       const querySchema = createMockSchema({ issues: [{ message: 'invalid query' }] });
       const bodySchema = createMockSchema();
-      const route = createRoute({ pathSchema, querySchema, bodySchema });
+      const route = createRoute({ querySchema, bodySchema });
       const normalizedEvent = createNormalizedEvent({
         body: JSON.stringify({ name: 'test' }),
         query: { bad: 'param' },

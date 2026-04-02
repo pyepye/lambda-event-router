@@ -1,5 +1,6 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { ApiHandler, HttpMethod, PathParams, RouteDefinition } from './types.js';
+import type { ApiHandler, ApiRequest, ApiResponse, HttpMethod, PathParams, RouteDefinition } from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -10,30 +11,31 @@ export interface InternalRoute {
   pattern: RegExp;
   paramNames: string[];
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
-  pathSchema?: StandardSchemaV1;
+  middleware: Middleware<ApiRequest, ApiResponse>[];
   querySchema?: StandardSchemaV1;
   bodySchema?: StandardSchemaV1;
   responseSchema?: StandardSchemaV1;
 }
 
 // Base config shared by all route types
-interface BaseRouteConfig<TPathString extends string, TPath, TQuery, TResponse> {
+interface BaseRouteConfig<TPathString extends string, TQuery, TResponse> {
   path: TPathString;
-  pathSchema?: StandardSchemaV1<unknown, TPath>;
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }
 
 // Config for HTTP methods that don't support a request body (GET, HEAD, DELETE, OPTIONS)
 interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse>
-  extends BaseRouteConfig<TPathString, TPath, TQuery, TResponse> {
+  extends BaseRouteConfig<TPathString, TQuery, TResponse> {
   handler: ApiHandler<TPath, TQuery, undefined, TResponse>;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, undefined>, ApiResponse<TResponse>>[];
 }
 
 // Config for HTTP methods that support a request body (POST, PUT, PATCH)
 interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse>
-  extends BaseRouteConfig<TPathString, TPath, TQuery, TResponse> {
+  extends BaseRouteConfig<TPathString, TQuery, TResponse> {
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
@@ -114,7 +116,8 @@ export class PathRouter {
       pattern,
       paramNames,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
-      pathSchema: config.pathSchema,
+      // Casts needed: storing typed middleware in general storage (contravariance on request parameter)
+      middleware: (config.middleware ?? []) as unknown as Middleware<ApiRequest, ApiResponse>[],
       querySchema: config.querySchema,
       bodySchema: config.bodySchema,
       responseSchema: config.responseSchema,
@@ -142,8 +145,8 @@ export class PathRouter {
       const match = path.match(route.pattern);
       if (match) {
         const params: Record<string, string> = {};
-        for (const [i, name] of route.paramNames.entries()) {
-          const paramValue = match[i + 1];
+        for (const [idx, name] of route.paramNames.entries()) {
+          const paramValue = match[idx + 1];
           /* v8 ignore next -- @preserve - Guard is for TS. Capture group always exists when pattern matches */
           if (paramValue !== undefined) {
             params[name] = paramValue;

@@ -1,9 +1,10 @@
+import type { Middleware } from '@lambda-event-router/base';
 import * as base from '@lambda-event-router/base';
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
-import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
+import type { ApiRequest, ApiResponse, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
 
@@ -85,6 +86,34 @@ suite('HTTPRouter', () => {
     });
   });
 
+  suite('constructor with options object', () => {
+    test('accepts an options object with adapter and handles events', async () => {
+      const optionsRouter = new HTTPRouter({ adapter: mockAdapter });
+      optionsRouter.get({ path: '/', handler: async () => Ok({ message: 'options' }) });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      const result = await optionsRouter.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({ statusCode: 200, body: JSON.stringify({ message: 'options' }) }),
+      );
+    });
+
+    test('applies router-level middleware from options', async () => {
+      const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
+      const optionsRouter = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareSpy] });
+      optionsRouter.get({ path: '/', handler: async () => Ok({ message: 'with middleware' }) });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      const result = await optionsRouter.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 200 }));
+      expect(middlewareSpy).toHaveBeenCalledOnce();
+    });
+  });
+
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
@@ -125,16 +154,14 @@ suite('HTTPRouter', () => {
     });
 
     test('preserves all schemas and handler in the definition', () => {
-      const pathSchema = { safeParse: vi.fn() };
-      const querySchema = { safeParse: vi.fn() };
-      const bodySchema = { safeParse: vi.fn() };
-      const responseSchema = { safeParse: vi.fn() };
+      const querySchema = createMockSchema();
+      const bodySchema = createMockSchema();
+      const responseSchema = createMockSchema();
       const handler = vi.fn();
 
       const definition = defineRoute({
         method: 'POST',
         path: '/items/:id',
-        pathSchema,
         querySchema,
         bodySchema,
         responseSchema,
@@ -142,7 +169,6 @@ suite('HTTPRouter', () => {
 
       expect(definition.method).toBe('POST');
       expect(definition.path).toBe('/items/:id');
-      expect(definition.pathSchema).toBe(pathSchema);
       expect(definition.querySchema).toBe(querySchema);
       expect(definition.bodySchema).toBe(bodySchema);
       expect(definition.responseSchema).toBe(responseSchema);
@@ -286,16 +312,22 @@ suite('HTTPRouter', () => {
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ bad: 'data' }, bodySchema);
     });
 
-    test('calls validateSchemaResult with path params and pathSchema', async () => {
-      const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      const pathSchema = createMockSchema();
-      router.get({ path: '/items/:id', handler, pathSchema });
+    test('executes route-level middleware before calling the handler', async () => {
+      const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
+      const route = defineRoute({
+        method: 'GET',
+        path: '/items',
+        // @ts-expect-error - mock middleware uses default generic types, not exact route types
+        middleware: [middlewareSpy],
+      }).handle(async () => Ok(null));
+      router.route(route);
 
-      const event = createMockEvent({ path: '/items/42' });
+      const event = createMockEvent({ path: '/items' });
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
-      await router.handleEvent(event, context);
+      const result = await router.handleEvent(event, context);
 
-      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ id: '42' }, pathSchema);
+      expect(result).toEqual(expect.objectContaining({ statusCode: 200 }));
+      expect(middlewareSpy).toHaveBeenCalledOnce();
     });
 
     test('calls validateSchemaResult with query params and querySchema', async () => {

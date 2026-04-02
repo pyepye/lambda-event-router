@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { ALBEvent, Context } from 'aws-lambda';
 
@@ -78,6 +79,13 @@ export interface ApiResponse<T = unknown> {
 
 export type HTTPResponse<T = unknown> = ApiResponse<T>;
 
+export type HTTPMiddleware<
+  TPath = Record<string, string>,
+  TQuery = Record<string, string | undefined>,
+  TBody = unknown,
+  TResponse = unknown,
+> = Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>;
+
 export type ApiHandler<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
@@ -95,7 +103,7 @@ export interface RouteDefinition<
   method: AnyHttpMethod;
   path: TPathString;
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  pathSchema?: StandardSchemaV1<unknown, TPath>;
+  middleware?: HTTPMiddleware<TPath, TQuery, TBody, TResponse>[];
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;

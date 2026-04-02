@@ -1,3 +1,4 @@
+import { createMockSchema } from '@lambda-event-router/testing';
 import { PathRouter } from './PathRouter.js';
 
 suite('PathRouter', () => {
@@ -79,16 +80,14 @@ suite('PathRouter', () => {
   suite('addRoute', () => {
     test('stores route with all schemas, handler, compiled pattern, and paramNames', () => {
       const handler = vi.fn();
-      const pathSchema = { safeParse: vi.fn() };
-      const querySchema = { safeParse: vi.fn() };
-      const bodySchema = { safeParse: vi.fn() };
-      const responseSchema = { safeParse: vi.fn() };
+      const querySchema = createMockSchema();
+      const bodySchema = createMockSchema();
+      const responseSchema = createMockSchema();
 
       // @ts-expect-error - testing private method directly
       router.addRoute('POST', {
         path: '/items/:id',
         handler,
-        pathSchema,
         querySchema,
         bodySchema,
         responseSchema,
@@ -97,7 +96,6 @@ suite('PathRouter', () => {
       const match = router.match('POST', '/items/123');
       expect(match).not.toBeNull();
       expect(match?.route.handler).toBe(handler);
-      expect(match?.route.pathSchema).toBe(pathSchema);
       expect(match?.route.querySchema).toBe(querySchema);
       expect(match?.route.bodySchema).toBe(bodySchema);
       expect(match?.route.responseSchema).toBe(responseSchema);

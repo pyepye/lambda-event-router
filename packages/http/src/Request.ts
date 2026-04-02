@@ -52,11 +52,6 @@ export class Request {
   }
 
   async validate(): Promise<void> {
-    const pathValidation = await this.validatePath();
-    if (!pathValidation.success) {
-      throw Response.NotFound(pathValidation.issues);
-    }
-
     const queryValidation = await this.validateQuery();
     if (!queryValidation.success) {
       throw Response.BadRequest(queryValidation.issues);
@@ -78,10 +73,6 @@ export class Request {
       event: this.rawEvent,
       context: this.context,
     };
-  }
-
-  private validatePath(): Promise<ValidationResult<Record<string, string>>> {
-    return validateSchemaResult(this.pathParams, this.route.pathSchema);
   }
 
   private validateQuery(): Promise<ValidationResult<Record<string, string | undefined>>> {

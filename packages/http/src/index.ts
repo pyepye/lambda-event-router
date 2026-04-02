@@ -22,6 +22,7 @@ export type {
   Auth,
   FinalizedHTTPResponse,
   HTTPAdapter,
+  HTTPMiddleware,
   HTTPResponse,
   HttpMethod,
   NormalizedHTTPEvent,
