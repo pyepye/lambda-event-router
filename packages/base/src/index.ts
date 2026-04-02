@@ -11,6 +11,7 @@ export type {
   EventHandler,
   EventRequest,
   EventRouteDefinition,
+  EventRouterMiddleware,
 } from './eventRouterTypes.js';
 export { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';
 export type { Middleware } from './middleware.js';

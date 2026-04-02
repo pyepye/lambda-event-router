@@ -37,6 +37,7 @@ const processOrder = defineEventRoute({
   }),
 }).handle(async ({ event }) => {
   console.log(`Processing order ${event.orderId}`)
+  return { orderId: event.orderId, status: 'processed' }
 })
 eventRouter.route(processOrder)
 
@@ -62,8 +63,14 @@ eventRouter.route({
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
 export async function processOrder({ event }) {
-  console.log(`Processing order ${event.orderId}`)
+  return { orderId: event.orderId, status: 'processed' }
 }
+```
+
+For fire-and-forget event sources (EventBridge rules, SNS, S3 notifications, CloudWatch Logs, IoT) where no return value is needed, set the type to `void`:
+
+```ts
+const eventRouter = createEventRouter<void>()
 ```
 
 
@@ -123,6 +130,7 @@ const generateReport = defineEventRoute({
   eventSchema: ReportSchema,
 }).handle(async ({ event }) => {
   console.log(`Generating ${event.format} report ${event.reportId}`)
+  return { reportId: event.reportId, format: event.format }
 })
 
 eventRouter.route(generateReport)
@@ -145,6 +153,7 @@ eventRouter.route({
 
 async function generateReport({ event }) {
   console.log(`Generating ${event.format} report ${event.reportId}`)
+  return { reportId: event.reportId, format: event.format }
 }
 ```
 

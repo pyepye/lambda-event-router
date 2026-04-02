@@ -1,22 +1,34 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import { isObject, validateSchema } from './data.js';
-import type { EventFilterInput, EventFilters, EventHandler, EventRouteDefinition } from './eventRouterTypes.js';
+import type {
+  EventFilterInput,
+  EventFilters,
+  EventHandler,
+  EventRouteDefinition,
+  EventRouterMiddleware,
+} from './eventRouterTypes.js';
+import { handleEventWithMiddleware } from './middleware.js';
 import type { EventTypeRouter } from './types.js';
 
 interface InternalEventRoute {
   filters: { customFilter?: (input: EventFilterInput) => boolean };
   eventSchema?: StandardSchemaV1;
-  handler: EventHandler<unknown>;
+  middleware: EventRouterMiddleware<unknown, unknown>[];
+  handler: EventHandler<unknown, unknown>;
 }
 
-interface EventRouteInput<TEventSchema extends StandardSchemaV1 | undefined = undefined> {
+interface EventRouteInput<TEventSchema extends StandardSchemaV1 | undefined = undefined, TResponse = unknown> {
   filters: EventFilters<TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown>;
+  middleware?: EventRouterMiddleware<
+    TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown,
+    TResponse
+  >[];
   eventSchema?: TEventSchema;
 }
 
-interface EventRouteBuilder<TPayload> {
-  handle(handler: EventHandler<TPayload>): EventRouteDefinition<TPayload>;
+interface EventRouteBuilder<TPayload, TResponse = unknown> {
+  handle(handler: EventHandler<TPayload, TResponse>): EventRouteDefinition<TPayload, TResponse>;
 }
 
 // Check if event is from a known AWS source that has its own router
@@ -143,8 +155,17 @@ function isKnownEventSource(event: Record<string, unknown>): boolean {
   return false;
 }
 
-export class EventRouter implements EventTypeRouter<unknown, void> {
+interface EventRouterOptions<TResponse = unknown> {
+  middleware?: EventRouterMiddleware<unknown, TResponse>[];
+}
+
+export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown, TResponse> {
   private routes: InternalEventRoute[] = [];
+  private middleware: EventRouterMiddleware<unknown, TResponse>[];
+
+  constructor(options?: EventRouterOptions<TResponse>) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is unknown {
     if (!isObject(event)) return false;
@@ -152,26 +173,36 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
     return this.matchRoute(event) !== undefined;
   }
 
-  route<TPayload>(definition: EventRouteDefinition<TPayload>): this {
+  route<TPayload>(definition: EventRouteDefinition<TPayload, TResponse>): this {
     // Casts needed: storing typed route in general storage (contravariance)
-    const handler = definition.handler as EventHandler<unknown>;
+    const handler = definition.handler as EventHandler<unknown, unknown>;
     const filters = definition.filters as InternalEventRoute['filters'];
+    // @ts-expect-error - storing typed middleware in untyped internal collection (contravariance)
+    const middleware: EventRouterMiddleware<unknown, unknown>[] = definition.middleware ?? [];
     this.routes.push({
       filters,
       eventSchema: definition.eventSchema,
+      middleware,
       handler,
     });
     return this;
   }
 
-  async handleEvent(event: unknown, context: Context): Promise<void> {
+  async handleEvent(event: unknown, context: Context): Promise<TResponse> {
     const route = this.matchRoute(event);
     if (!route) {
       throw new Error('No route matched for event');
     }
 
     const validatedEvent = await validateSchema(event, route.eventSchema, 'Schema validation failed for event');
-    await route.handler({ event: validatedEvent, context });
+
+    const request = { event: validatedEvent, context };
+    const routeMiddleware = route.middleware;
+    const allMiddleware = [...this.middleware, ...routeMiddleware] as EventRouterMiddleware<unknown, TResponse>[];
+    if (allMiddleware.length > 0) {
+      return handleEventWithMiddleware(allMiddleware, request, route.handler as EventHandler<unknown, TResponse>);
+    }
+    return route.handler(request) as Promise<TResponse>;
   }
 
   private matchRoute(event: unknown): InternalEventRoute | undefined {
@@ -189,19 +220,33 @@ export class EventRouter implements EventTypeRouter<unknown, void> {
   }
 }
 
-export function defineEventRoute<TPayload = unknown, TEventSchema extends StandardSchemaV1 | undefined = undefined>(
-  config: EventRouteInput<TEventSchema>,
-): EventRouteBuilder<TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload> {
+export function defineEventRoute<
+  TPayload = unknown,
+  TResponse = unknown,
+  TEventSchema extends StandardSchemaV1 | undefined = undefined,
+>(
+  config: EventRouteInput<TEventSchema, TResponse>,
+): EventRouteBuilder<
+  TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload,
+  TResponse
+> {
   type ResolvedPayload = TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload;
   return {
-    handle(handler: EventHandler<ResolvedPayload>): EventRouteDefinition<ResolvedPayload> {
+    handle(handler: EventHandler<ResolvedPayload, TResponse>): EventRouteDefinition<ResolvedPayload, TResponse> {
       // Cast needed: generic type narrowing from builder input to route definition
-      const eventSchema = config.eventSchema as EventRouteDefinition<ResolvedPayload>['eventSchema'];
-      return { filters: config.filters, eventSchema, handler };
+      const eventSchema = config.eventSchema as EventRouteDefinition<ResolvedPayload, TResponse>['eventSchema'];
+      return {
+        filters: config.filters,
+        eventSchema,
+        middleware: config.middleware as EventRouterMiddleware<ResolvedPayload, TResponse>[] | undefined,
+        handler,
+      };
     },
   };
 }
 
-export function createEventRouter(): EventRouter {
-  return new EventRouter();
+export function createEventRouter<TResponse = unknown>(
+  options?: EventRouterOptions<TResponse>,
+): EventRouter<TResponse> {
+  return new EventRouter<TResponse>(options);
 }
