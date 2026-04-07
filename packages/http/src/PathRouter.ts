@@ -138,6 +138,16 @@ export class PathRouter {
     };
   }
 
+  getMethodsForPath(path: string): HttpMethod[] {
+    const methods: HttpMethod[] = [];
+    for (const route of this.routes) {
+      if (route.pattern.test(path) && !methods.includes(route.method)) {
+        methods.push(route.method);
+      }
+    }
+    return methods;
+  }
+
   match(method: string, path: string): RouteMatch | null {
     for (const route of this.routes) {
       if (route.method !== method) continue;

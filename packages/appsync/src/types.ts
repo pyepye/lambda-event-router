@@ -5,6 +5,7 @@ import type {
   AppSyncAuthorizerResult,
   AppSyncIdentity,
   AppSyncResolverEvent,
+  Context,
 } from 'aws-lambda';
 import type { AppSyncEventsEvent, AppSyncEventsIdentity, AppSyncEventsOperation } from './appSyncEventsTypes.js';
 
@@ -26,7 +27,7 @@ export interface AppSyncResolverRequest<TArgs = Record<string, unknown>> {
   prev: { result: Record<string, unknown> } | null;
   stash: Record<string, unknown>;
   event: AppSyncResolverEvent<TArgs>;
-  context: import('aws-lambda').Context;
+  context: Context;
 }
 
 export interface AppSyncResolverFilterInput {
@@ -119,7 +120,7 @@ export interface AppSyncAuthorizerRequest {
   operationName: string | undefined;
   variables: Record<string, unknown>;
   event: AppSyncAuthorizerEvent;
-  context: import('aws-lambda').Context;
+  context: Context;
 }
 
 export interface AppSyncAuthorizerRouteDefinition {
@@ -145,7 +146,7 @@ export interface AppSyncEventsRequest {
   stash: Record<string, unknown>;
   prev: AppSyncEventsEvent['prev'];
   event: AppSyncEventsEvent;
-  context: import('aws-lambda').Context;
+  context: Context;
 }
 
 export interface AppSyncEventsFilterInput {

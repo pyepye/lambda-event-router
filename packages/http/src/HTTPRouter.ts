@@ -2,10 +2,20 @@ import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
+import { buildCorsHeaders, type CorsConfig } from './cors.js';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';
-import type { AnyHttpMethod, ApiRequest, ApiResponse, HTTPAdapter, PathParams, RouteDefinition } from './types.js';
+import type {
+  AnyHttpMethod,
+  ApiRequest,
+  ApiResponse,
+  FinalizedHTTPResponse,
+  HTTPAdapter,
+  HttpMethod,
+  PathParams,
+  RouteDefinition,
+} from './types.js';
 
 // Compute response type from schema - if no schema provided, body is untyped (unknown)
 type ResponseType<TResponseSchema> = TResponseSchema extends StandardSchemaV1<unknown, infer R> ? R : unknown;
@@ -63,6 +73,7 @@ export function defineRoute<
 interface HTTPRouterOptions<TEvent, TResult> {
   adapter: HTTPAdapter<TEvent, TResult>;
   middleware?: Middleware<ApiRequest, ApiResponse>[];
+  cors?: CorsConfig;
 }
 
 export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
@@ -70,14 +81,19 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
   private response = new Response();
   private middleware: Middleware<ApiRequest, ApiResponse>[];
   private adapter: HTTPAdapter<TEvent, TResult>;
+  private corsConfig: CorsConfig | undefined;
 
   constructor(options: HTTPAdapter<TEvent, TResult> | HTTPRouterOptions<TEvent, TResult>) {
     if ('canHandleEvent' in options) {
       this.adapter = options;
       this.middleware = [];
     } else {
+      if (options.cors?.credentials && options.cors.origin === '*') {
+        throw new Error('CORS configuration error: credentials cannot be used with wildcard (*) origin');
+      }
       this.adapter = options.adapter;
       this.middleware = options.middleware ?? [];
+      this.corsConfig = options.cors;
     }
   }
 
@@ -121,14 +137,70 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return this.adapter.canHandleEvent(event);
   }
 
+  private getCorsHeaders(
+    normalizedEvent: { headers: Record<string, string | undefined>; path: string },
+    isPreflight: boolean,
+    methods: HttpMethod[] = [],
+  ): Record<string, string> | undefined {
+    if (!this.corsConfig) {
+      return undefined;
+    }
+
+    const corsHeaders = buildCorsHeaders({
+      config: this.corsConfig,
+      requestOrigin: normalizedEvent.headers.origin,
+      path: normalizedEvent.path,
+      isPreflight,
+      requestHeaders: normalizedEvent.headers,
+      methods,
+    });
+
+    if (corsHeaders) {
+      return corsHeaders;
+    }
+
+    // For dynamic origins (array or function), always include Vary: Origin on non-preflight
+    // responses so shared caches don't serve a no-CORS response to an allowed origin
+    const hasDynamicOrigin = typeof this.corsConfig.origin !== 'string';
+    if (!isPreflight && hasDynamicOrigin) {
+      return { Vary: 'Origin' };
+    }
+
+    return undefined;
+  }
+
+  private applyHeaders(
+    response: FinalizedHTTPResponse,
+    corsHeaders: Record<string, string> | undefined,
+  ): FinalizedHTTPResponse {
+    if (!corsHeaders) {
+      return response;
+    }
+    return { ...response, headers: { ...response.headers, ...corsHeaders } };
+  }
+
   async handleEvent(event: TEvent, context: Context): Promise<TResult> {
     const normalizedEvent = this.adapter.normalize(event);
     const { method, path } = normalizedEvent;
 
+    if (method === 'OPTIONS' && this.corsConfig) {
+      const methods = this.router.getMethodsForPath(path);
+      if (methods.length > 0) {
+        const corsHeaders = this.getCorsHeaders(normalizedEvent, true, methods);
+        if (corsHeaders) {
+          const preflightResponse = { statusCode: 204, body: '', headers: corsHeaders };
+          return this.adapter.buildResult(preflightResponse, event);
+        }
+      }
+    }
+
     const routeData = this.router.match(method, path);
     if (!routeData) {
+      // TODO: Could / should these notFound responses deal with CORS so we don't have to repeat here? Does it make sense?
       const notFoundResponse = this.response.notFound();
-      return this.adapter.buildResult(notFoundResponse, event);
+      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
+      const responseWithHeaders = this.applyHeaders(notFoundResponse, corsHeaders);
+      return this.adapter.buildResult(responseWithHeaders, event);
     }
 
     const { route, params } = routeData;
@@ -142,15 +214,20 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       const handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
 
       const response = this.response.create(handlerResponse);
-      return this.adapter.buildResult(response, event);
+      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
+      const responseWithHeaders = this.applyHeaders(response, corsHeaders);
+      return this.adapter.buildResult(responseWithHeaders, event);
     } catch (error) {
+      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
       if (Response.isHTTPResponse(error)) {
         const response = this.response.create(error);
-        return this.adapter.buildResult(response, event);
+        const responseWithHeaders = this.applyHeaders(response, corsHeaders);
+        return this.adapter.buildResult(responseWithHeaders, event);
       }
       const errorMessage = error instanceof Error ? error.message : undefined;
       const errorResponse = this.response.internalServerError(errorMessage);
-      return this.adapter.buildResult(errorResponse, event);
+      const responseWithHeaders = this.applyHeaders(errorResponse, corsHeaders);
+      return this.adapter.buildResult(responseWithHeaders, event);
     }
   }
 }

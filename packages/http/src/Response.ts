@@ -69,6 +69,7 @@ export class Response {
     return Response.httpRedirect(HTTP_STATUS_CODES.PERMANENT_REDIRECT, location);
   }
 
+  // TODO: Do we want to move CORS stuff to around here?
   private static buildHTTPResponse(response: unknown): HTTPResponse {
     if (Response.isHTTPResponse(response)) {
       return response;
