@@ -7,6 +7,7 @@ import { NoContent, Ok } from './Response.js';
 import type { ApiRequest, ApiResponse, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
+type HTTPNext = (request: ApiRequest) => Promise<ApiResponse>;
 
 interface MockEvent {
   method: string;
@@ -347,7 +348,7 @@ suite('HTTPRouter', () => {
     test('executes middleware before the route handler', async () => {
       const callOrder: string[] = [];
 
-      const middleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const middleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw-pre');
         const result = await next(request);
         callOrder.push('mw-post');
@@ -391,12 +392,12 @@ suite('HTTPRouter', () => {
     test('executes multiple router-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const middlewareOne: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const middlewareOne: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw1');
         return next(request);
       };
 
-      const middlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const middlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw2');
         return next(request);
       };
@@ -460,12 +461,12 @@ suite('HTTPRouter', () => {
     test('executes multiple route-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const routeMiddlewareOne: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const routeMiddlewareOne: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('route-mw1');
         return next(request);
       };
 
-      const routeMiddlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const routeMiddlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('route-mw2');
         return next(request);
       };
@@ -493,12 +494,12 @@ suite('HTTPRouter', () => {
     test('executes router middleware before route middleware', async () => {
       const callOrder: string[] = [];
 
-      const routerMiddleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const routerMiddleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('router-mw');
         return next(request);
       };
 
-      const routeMiddleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+      const routeMiddleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('route-mw');
         return next(request);
       };
