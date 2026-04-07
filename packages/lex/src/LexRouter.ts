@@ -1,28 +1,38 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 import type {
   LexDialogCodeHookRouteDefinition,
   LexFulfillmentCodeHookRouteDefinition,
   LexHandler,
+  LexMiddleware,
   LexRequest,
   LexRouteDefinition,
+  LexRouterOptions,
 } from './types.js';
 
 interface RouteBuilder {
   handle(handler: LexHandler): LexRouteDefinition;
 }
 
-export function defineRoute(config: { filters: LexRouteDefinition['filters'] }): RouteBuilder {
+export function defineRoute(config: {
+  filters: LexRouteDefinition['filters'];
+  middleware?: LexMiddleware[];
+}): RouteBuilder {
   return {
     handle(handler: LexHandler): LexRouteDefinition {
-      return { filters: config.filters, handler };
+      return { filters: config.filters, middleware: config.middleware, handler };
     },
   };
 }
 
 export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   private routes: LexRouteDefinition[] = [];
+  private middleware: LexMiddleware[] = [];
+
+  constructor(options?: LexRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is LexV2Event {
     if (!isObject(event)) return false;
@@ -48,6 +58,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   dialogCodeHook(definition: LexDialogCodeHookRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, invocationSources: ['DialogCodeHook'] },
+      middleware: definition.middleware,
       handler: definition.handler as LexHandler,
     });
   }
@@ -55,6 +66,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   fulfillmentCodeHook(definition: LexFulfillmentCodeHookRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, invocationSources: ['FulfillmentCodeHook'] },
+      middleware: definition.middleware,
       handler: definition.handler as LexHandler,
     });
   }
@@ -79,7 +91,8 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
       context,
     };
 
-    return route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(event: LexV2Event): LexRouteDefinition | undefined {
@@ -119,6 +132,6 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   }
 }
 
-export function createLexRouter(): LexRouter {
-  return new LexRouter();
+export function createLexRouter(options?: LexRouterOptions): LexRouter {
+  return new LexRouter(options);
 }

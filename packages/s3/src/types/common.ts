@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { Context, S3EventRecord } from 'aws-lambda';
 
 // =============================================================================
@@ -38,4 +39,10 @@ export interface S3BaseRequest {
   versionId: S3EventRecord['s3']['object']['versionId'];
   record: S3EventRecord;
   context: Context;
+}
+
+export type S3Middleware = Middleware<S3BaseRequest, void>;
+
+export interface S3RouterOptions {
+  middleware?: S3Middleware[];
 }

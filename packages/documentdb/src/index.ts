@@ -10,6 +10,7 @@ export type {
   DocumentDBFullDocumentOption,
   DocumentDBInsertRequest,
   DocumentDBInsertRouteDefinition,
+  DocumentDBMiddleware,
   DocumentDBOperationType,
   DocumentDBReplaceRequest,
   DocumentDBReplaceRouteDefinition,

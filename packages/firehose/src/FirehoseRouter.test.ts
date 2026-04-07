@@ -2,8 +2,11 @@ import * as base from '@lambda-event-router/base';
 import { createFirehoseEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { createFirehoseRouter, defineRoute, FirehoseRouter } from './FirehoseRouter.js';
+import type { FirehoseResponseResult } from './response.js';
 import { Dropped, Failed, Ok } from './response.js';
-import type { FirehoseFilterInput } from './types.js';
+import type { FirehoseFilterInput, FirehoseRequest } from './types.js';
+
+type FirehoseNext = (request: FirehoseRequest) => Promise<FirehoseResponseResult>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -918,6 +921,243 @@ suite('FirehoseRouter', () => {
       for (const record of result.records) {
         expect(record.result).toBe('ProcessingFailed');
       }
+    });
+  });
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createFirehoseRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok();
+        },
+      });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ firehoseHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: FirehoseRequest, _next: FirehoseNext): Promise<FirehoseResponseResult> {
+        return Dropped();
+      }
+
+      const router = createFirehoseRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createFirehoseRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok();
+        },
+      });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok();
+        },
+      });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ firehoseHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(
+        _request: FirehoseRequest,
+        _next: FirehoseNext,
+      ): Promise<FirehoseResponseResult> {
+        return Dropped();
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(
+        request: FirehoseRequest,
+        next: FirehoseNext,
+      ): Promise<FirehoseResponseResult> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(
+        request: FirehoseRequest,
+        next: FirehoseNext,
+      ): Promise<FirehoseResponseResult> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok();
+        },
+      });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+        return Ok();
+      });
+
+      router.route(route);
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ firehoseHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createFirehoseRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok();
+        },
+      });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({ firehoseHandlerEvent }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(
+        _request: FirehoseRequest,
+        _next: FirehoseNext,
+      ): Promise<FirehoseResponseResult> {
+        return Dropped();
+      }
+
+      const router = createFirehoseRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = firehoseHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ firehoseHandlerEvent }) => {
+      const middleware = vi.fn();
+      const dataSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createFirehoseRouter({ middleware: [middleware] });
+      router.route({ filters: {}, dataSchema, handler: async () => Ok() });
+
+      const { event, context } = firehoseHandlerEvent();
+      // Schema validation failure in firehose results in Failed status, not a throw
+      const result = await router.handleEvent(event, context);
+
+      expect(result.records[0]?.result).toBe('ProcessingFailed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

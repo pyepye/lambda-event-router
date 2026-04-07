@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
@@ -8,10 +8,12 @@ import type {
   RabbitMQFilters,
   RabbitMQInternalRoute,
   RabbitMQMessage,
+  RabbitMQMiddleware,
   RabbitMQRequest,
   RabbitMQRouteBuilder,
   RabbitMQRouteDefinition,
   RabbitMQRouteInput,
+  RabbitMQRouterOptions,
 } from './rabbitMQTypes.js';
 
 export function defineRabbitMQRoute<
@@ -24,6 +26,7 @@ export function defineRabbitMQRoute<
       return {
         filters: config.filters as RabbitMQFilters,
         bodySchema: config.bodySchema as StandardSchemaV1<unknown, TBody> | undefined,
+        middleware: config.middleware as RabbitMQRouteDefinition<TBody>['middleware'],
         handler: handler as (request: RabbitMQRequest<TBody>) => Promise<void>,
       };
     },
@@ -32,6 +35,11 @@ export function defineRabbitMQRoute<
 
 export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined> {
   private routes: RabbitMQInternalRoute[] = [];
+  private middleware: RabbitMQMiddleware[];
+
+  constructor(options?: RabbitMQRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is RabbitMQEvent {
     if (!isObject(event)) return false;
@@ -71,7 +79,8 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           context,
         };
 
-        await route.handler(request);
+        const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+        await handleEventWithMiddleware(allMiddleware, request, route.handler);
       }
     }
   }
@@ -110,6 +119,6 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
   }
 }
 
-export function createRabbitMQRouter(): RabbitMQRouter {
-  return new RabbitMQRouter();
+export function createRabbitMQRouter(options?: RabbitMQRouterOptions): RabbitMQRouter {
+  return new RabbitMQRouter(options);
 }

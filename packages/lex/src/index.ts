@@ -13,7 +13,9 @@ export type {
   LexHandler,
   LexInputMode,
   LexInvocationSource,
+  LexMiddleware,
   LexRequest,
   LexResponse,
   LexRouteDefinition,
+  LexRouterOptions,
 } from './types.js';

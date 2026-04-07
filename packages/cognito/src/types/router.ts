@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   CreateAuthChallengeTriggerEvent,
@@ -88,8 +89,9 @@ export type CognitoRequest<TUserAttributes extends UserAttributes = UserAttribut
 // Route definition for generic .route() method
 // Handlers receive a cloned event, modify it, and return it
 export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> {
-  filters?: CognitoFilters;
+  filters?: CognitoFilters<CognitoTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: (request: CognitoRequest<TUserAttributes>) => Promise<CognitoEvent>;
 }
 
@@ -136,6 +138,8 @@ export type EventForTrigger<TTrigger extends CognitoTriggerSource> = TriggerEven
 // Route definition types
 // =============================================================================
 
+export type CognitoMiddleware = Middleware<CognitoRequest, CognitoEvent>;
+
 // Route definition returned by defineRoute().handle()
 // Handlers receive a cloned event, modify it, and return it
 export interface TypedRouteDefinition<
@@ -144,6 +148,7 @@ export interface TypedRouteDefinition<
 > {
   filters?: CognitoFilters<TTrigger>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: (request: RequestForTrigger<TTrigger, TUserAttributes>) => Promise<EventForTrigger<TTrigger>>;
 }
 
@@ -162,6 +167,7 @@ export interface RouteInput<
 > {
   filters?: RouteInputFilters<TTrigger>;
   userAttributesSchema?: TUserAttributesSchema;
+  middleware?: CognitoMiddleware[];
 }
 
 // Route builder returned by defineRoute
@@ -170,4 +176,8 @@ export interface RouteBuilder<TTrigger extends CognitoTriggerSource, TUserAttrib
   handle(
     handler: (request: RequestForTrigger<TTrigger, TUserAttributes>) => Promise<EventForTrigger<TTrigger>>,
   ): TypedRouteDefinition<TTrigger, TUserAttributes>;
+}
+
+export interface CognitoRouterOptions {
+  middleware?: CognitoMiddleware[];
 }

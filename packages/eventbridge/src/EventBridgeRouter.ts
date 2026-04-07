@@ -1,19 +1,22 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
   EventBridgeEventEnvelope,
   EventBridgeFilterInput,
   EventBridgeHandler,
+  EventBridgeMiddleware,
   EventBridgeRequest,
   EventBridgeRouteDefinition,
+  EventBridgeRouterOptions,
   LookupDetailType,
 } from './types.js';
 
 interface InternalEventBridgeRoute {
   filters: EventBridgeRouteDefinition['filters'];
   detailSchema?: StandardSchemaV1;
+  middleware?: EventBridgeMiddleware[];
   handler: EventBridgeHandler<unknown>;
 }
 
@@ -31,6 +34,7 @@ interface EventBridgeRouteInput<
     customFilter?: (input: EventBridgeFilterInput) => boolean;
   };
   detailSchema?: TDetailSchema;
+  middleware?: EventBridgeMiddleware[];
 }
 
 interface EventBridgeRouteBuilder<TDetail> {
@@ -50,13 +54,19 @@ export function defineRoute<
       // Cast needed: generic type narrowing from builder input to route definition
       const filters = config.filters as EventBridgeRouteDefinition<TDetail>['filters'];
       const detailSchema = config.detailSchema as EventBridgeRouteDefinition<TDetail>['detailSchema'];
-      return { filters, detailSchema, handler };
+      const middleware = config.middleware as EventBridgeRouteDefinition<TDetail>['middleware'];
+      return { filters, detailSchema, middleware, handler };
     },
   };
 }
 
 export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelope, void> {
   private routes: InternalEventBridgeRoute[] = [];
+  private middleware: EventBridgeMiddleware[] = [];
+
+  constructor(options?: EventBridgeRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is EventBridgeEventEnvelope {
     if (!isObject(event)) return false;
@@ -74,6 +84,7 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     this.routes.push({
       filters: definition.filters,
       detailSchema: definition.detailSchema,
+      middleware: definition.middleware,
       handler,
     });
     return this;
@@ -104,7 +115,8 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(event: EventBridgeEventEnvelope): InternalEventBridgeRoute | undefined {
@@ -146,6 +158,6 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
   }
 }
 
-export function createEventBridgeRouter(): EventBridgeRouter {
-  return new EventBridgeRouter();
+export function createEventBridgeRouter(options?: EventBridgeRouterOptions): EventBridgeRouter {
+  return new EventBridgeRouter(options);
 }

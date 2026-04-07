@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, CustomMessageTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
+import type { CognitoMiddleware } from './router.js';
 
 // CustomMessage trigger sources - derived from aws-lambda
 export type CustomMessageTriggerSource = CustomMessageTriggerEvent['triggerSource'];
@@ -26,5 +27,6 @@ export type CustomMessageHandler<TUserAttributes extends UserAttributes = UserAt
 export interface CustomMessageRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomMessageTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: CustomMessageHandler<TUserAttributes>;
 }

@@ -6,7 +6,9 @@ export type {
   EventBridgeFilterInput,
   EventBridgeFilters,
   EventBridgeHandler,
+  EventBridgeMiddleware,
   EventBridgeRequest,
   EventBridgeRouteDefinition,
+  EventBridgeRouterOptions,
   ScheduledEventDetail,
 } from './types.js';

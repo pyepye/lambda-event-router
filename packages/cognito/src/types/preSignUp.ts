@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, PreSignUpTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
+import type { CognitoMiddleware } from './router.js';
 
 // PreSignUp trigger sources - derived from aws-lambda
 export type PreSignUpTriggerSource = PreSignUpTriggerEvent['triggerSource'];
@@ -26,5 +27,6 @@ export type PreSignUpHandler<TUserAttributes extends UserAttributes = UserAttrib
 export interface PreSignUpRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreSignUpTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: PreSignUpHandler<TUserAttributes>;
 }

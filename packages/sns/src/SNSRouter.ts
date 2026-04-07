@@ -1,5 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, SNSEvent, SNSEventRecord } from 'aws-lambda';
 import type {
@@ -16,6 +16,7 @@ interface InternalRoute {
   filters: SNSFilters;
   bodySchema?: StandardSchemaV1;
   messageAttributesSchema?: StandardSchemaV1<unknown, SNSMessageAttributes>;
+  middleware: Middleware<SNSRequest, void>[];
   handler: SNSRecordHandler;
 }
 
@@ -26,6 +27,7 @@ interface RouteInput<
   filters: SNSFilters;
   bodySchema?: TBodySchema;
   messageAttributesSchema?: TMessageAttributesSchema;
+  middleware?: Middleware<SNSRequest, void>[];
 }
 
 interface RouteBuilder<TBody, TMessageAttributes extends SNSMessageAttributes> {
@@ -51,9 +53,11 @@ export function defineRoute<
 export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
+  private middleware: Middleware<SNSRequest, void>[];
 
   constructor(options?: SNSRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is SNSEvent {
@@ -73,6 +77,7 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       filters: definition.filters,
       bodySchema: definition.bodySchema,
       messageAttributesSchema: definition.messageAttributesSchema,
+      middleware: (definition.middleware ?? []) as unknown as Middleware<SNSRequest, void>[],
       handler: definition.handler as SNSRecordHandler,
     });
     return this;
@@ -160,7 +165,8 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 }
 

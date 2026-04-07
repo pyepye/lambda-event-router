@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBRecord, StreamRecord } from 'aws-lambda';
 
@@ -48,6 +49,12 @@ export type DynamoDBRequest<
 
 export type DynamoDBResponse = undefined;
 
+export type DynamoDBMiddleware<
+  TKeys = Record<string, unknown>,
+  TNewItem = Record<string, unknown>,
+  TOldItem = Record<string, unknown>,
+> = Middleware<DynamoDBRequest<TKeys, TNewItem, TOldItem>, void>;
+
 type DynamoDBRecordHandler<
   TKeys = Record<string, unknown>,
   TNewItem = Record<string, unknown>,
@@ -82,6 +89,7 @@ export interface DynamoDBInsertRouteDefinition<TKeys = Record<string, unknown>, 
   filters: DynamoDBEventFilters;
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
+  middleware?: DynamoDBMiddleware<TKeys, TNewItem>[];
   handler: (request: DynamoDBInsertRequest<TKeys, TNewItem>) => Promise<void>;
 }
 
@@ -94,6 +102,7 @@ export interface DynamoDBModifyRouteDefinition<
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
   oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
+  middleware?: DynamoDBMiddleware<TKeys, TNewItem, TOldItem>[];
   handler: (request: DynamoDBModifyRequest<TKeys, TNewItem, TOldItem>) => Promise<void>;
 }
 
@@ -101,6 +110,7 @@ export interface DynamoDBRemoveRouteDefinition<TKeys = Record<string, unknown>, 
   filters: DynamoDBEventFilters;
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
+  middleware?: DynamoDBMiddleware<TKeys, Record<string, unknown>, TOldItem>[];
   handler: (request: DynamoDBRemoveRequest<TKeys, TOldItem>) => Promise<void>;
 }
 
@@ -113,9 +123,11 @@ export interface DynamoDBRouteDefinition<
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
   oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
+  middleware?: DynamoDBMiddleware<TKeys, TNewItem, TOldItem>[];
   handler: DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>;
 }
 
 export interface DynamoDBRouterOptions {
   batchItemFailures?: boolean;
+  middleware?: DynamoDBMiddleware[];
 }

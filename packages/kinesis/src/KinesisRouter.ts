@@ -1,5 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
@@ -8,12 +8,14 @@ import type { KinesisFilters, KinesisRequest, KinesisRouteDefinition, KinesisRou
 interface InternalRoute {
   filters: KinesisFilters;
   dataSchema?: StandardSchemaV1;
+  middleware: Middleware<KinesisRequest, void>[];
   handler: (request: KinesisRequest) => Promise<void>;
 }
 
 interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: KinesisFilters;
   dataSchema?: TDataSchema;
+  middleware?: Middleware<KinesisRequest, void>[];
 }
 
 interface RouteBuilder<TData> {
@@ -29,6 +31,7 @@ export function defineRoute<
       return {
         filters: config.filters as KinesisFilters,
         dataSchema: config.dataSchema as StandardSchemaV1<unknown, TData> | undefined,
+        middleware: config.middleware as KinesisRouteDefinition<TData>['middleware'],
         handler: handler as (request: KinesisRequest<TData>) => Promise<void>,
       };
     },
@@ -38,9 +41,11 @@ export function defineRoute<
 export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefined | KinesisStreamBatchResponse> {
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
+  private middleware: Middleware<KinesisRequest, void>[];
 
   constructor(options?: KinesisRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is KinesisStreamEvent {
@@ -54,7 +59,10 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
   }
 
   route<TData>(definition: KinesisRouteDefinition<TData>): this {
-    this.routes.push(definition as InternalRoute);
+    this.routes.push({
+      ...(definition as unknown as InternalRoute),
+      middleware: (definition.middleware ?? []) as unknown as Middleware<KinesisRequest, void>[],
+    });
     return this;
   }
 
@@ -116,7 +124,8 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(record: KinesisStreamRecord, data: unknown): InternalRoute | undefined {

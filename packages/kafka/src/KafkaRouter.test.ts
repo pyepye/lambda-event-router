@@ -4,6 +4,8 @@ import type { MockInstance } from 'vitest';
 import { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
 import type { KafkaFilterInput, KafkaRequest } from './types.js';
 
+type KafkaNext = (request: KafkaRequest) => Promise<void>;
+
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
@@ -715,6 +717,222 @@ suite('KafkaRouter', () => {
 
       expect(orderHandler).toHaveBeenCalledTimes(2);
       expect(catchAllHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createKafkaRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ kafkaHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: KafkaRequest, _next: KafkaNext): Promise<void> {
+        return;
+      }
+
+      const router = createKafkaRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createKafkaRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ kafkaHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: KafkaRequest, _next: KafkaNext): Promise<void> {
+        return;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      router.route(route);
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ kafkaHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: KafkaRequest, next: KafkaNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createKafkaRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({ kafkaHandlerEvent }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: KafkaRequest, _next: KafkaNext): Promise<void> {
+        return;
+      }
+
+      const router = createKafkaRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = kafkaHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ kafkaHandlerEvent }) => {
+      const middleware = vi.fn();
+      const valueSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createKafkaRouter({ middleware: [middleware] });
+      router.route({ filters: {}, valueSchema, handler: vi.fn() });
+
+      const { event, context } = kafkaHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('validation failed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

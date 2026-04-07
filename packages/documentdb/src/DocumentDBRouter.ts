@@ -1,5 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
@@ -54,6 +54,11 @@ export function defineRoute<
         fullDocumentBeforeChangeSchema: config.fullDocumentBeforeChangeSchema as
           | StandardSchemaV1<unknown, TFullDocumentBeforeChange>
           | undefined,
+        middleware: config.middleware as DocumentDBRouteDefinition<
+          TDocumentKey,
+          TFullDocument,
+          TFullDocumentBeforeChange
+        >['middleware'],
         handler: handler as (
           request: DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>,
         ) => Promise<void>,
@@ -64,6 +69,13 @@ export function defineRoute<
 
 export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefined> {
   private routes: InternalRoute[] = [];
+  private middleware: Middleware<InternalRequest, void>[];
+
+  constructor(options?: DocumentDBRouterOptions) {
+    // Cast needed: DocumentDBMiddleware uses the discriminated DocumentDBRequest union,
+    // InternalRequest uses the broader operationType field (contravariance)
+    this.middleware = (options?.middleware ?? []) as unknown as Middleware<InternalRequest, void>[];
+  }
 
   canHandleEvent(event: unknown): event is DocumentDBEvent {
     if (!isObject(event)) return false;
@@ -113,7 +125,10 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   }
 
   private addRoute(definition: InternalRoute): this {
-    this.routes.push(definition);
+    this.routes.push({
+      ...definition,
+      middleware: definition.middleware ?? [],
+    });
     return this;
   }
 
@@ -165,7 +180,8 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(changeEvent: DocumentDBChangeEvent, eventSourceArn: string): InternalRoute | undefined {
@@ -201,6 +217,6 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   }
 }
 
-export function createDocumentDBRouter(_options?: DocumentDBRouterOptions): DocumentDBRouter {
-  return new DocumentDBRouter();
+export function createDocumentDBRouter(options?: DocumentDBRouterOptions): DocumentDBRouter {
+  return new DocumentDBRouter(options);
 }

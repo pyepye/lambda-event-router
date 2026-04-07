@@ -260,11 +260,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     };
 
     const allMiddleware = [...this.middleware, ...route.middleware];
-    if (allMiddleware.length > 0) {
-      await handleEventWithMiddleware(allMiddleware, request, route.handler);
-    } else {
-      await route.handler(request);
-    }
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 }
 

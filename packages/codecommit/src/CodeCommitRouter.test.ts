@@ -1,6 +1,8 @@
 import { createCodeCommitEvent, test } from '@lambda-event-router/testing';
 import { CodeCommitRouter, createCodeCommitRouter, defineRoute } from './CodeCommitRouter.js';
-import type { CodeCommitFilterInput } from './types.js';
+import type { CodeCommitFilterInput, CodeCommitRequest } from './types.js';
+
+type CodeCommitNext = (request: CodeCommitRequest) => Promise<void>;
 
 suite('CodeCommitRouter', () => {
   let router: CodeCommitRouter;
@@ -1126,6 +1128,237 @@ suite('CodeCommitRouter', () => {
       expect(mainHandler).toHaveBeenCalledTimes(1);
       // catch-all matches both records
       expect(catchAllHandler).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createCodeCommitRouter({ middleware: [middleware] });
+      router.route(
+        defineRoute({ filters: {} }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ codeCommitHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: CodeCommitRequest, _next: CodeCommitNext): Promise<void> {
+        return;
+      }
+
+      const router = createCodeCommitRouter({ middleware: [skipMiddleware] });
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createCodeCommitRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route(
+        defineRoute({ filters: {} }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('executes middleware per matched route', async ({
+      codeCommitRecord,
+      codeCommitReference,
+      codeCommitEvent,
+      context,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('mw');
+        await next(request);
+      }
+
+      const router = createCodeCommitRouter({ middleware: [middleware] });
+      router.push(
+        defineRoute({ filters: {} }).handle(async () => {
+          callOrder.push('push-handler');
+        }),
+      );
+      router.branchCreated(
+        defineRoute({ filters: {} }).handle(async () => {
+          callOrder.push('create-handler');
+        }),
+      );
+
+      const pushRef = codeCommitReference({ ref: 'refs/heads/main' });
+      const createdRef = codeCommitReference({ ref: 'refs/heads/feature', created: true });
+      const record = codeCommitRecord({
+        codecommit: { references: [pushRef, createdRef] },
+      });
+      const event = codeCommitEvent([record]);
+      await router.handleEvent(event, context());
+
+      // Middleware runs once per matched route (two routes match)
+      const middlewareCount = callOrder.filter((entry) => entry === 'mw').length;
+      expect(middlewareCount).toBe(2);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      router.route(
+        defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ codeCommitHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: CodeCommitRequest, _next: CodeCommitNext): Promise<void> {
+        return;
+      }
+      router.route(defineRoute({ filters: {}, middleware: [blockingRouteMiddleware] }).handle(handler));
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+      router.route(
+        defineRoute({ filters: {}, middleware: [routeMiddlewareOne, routeMiddlewareTwo] }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+      router.route(route);
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ codeCommitHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: CodeCommitRequest, next: CodeCommitNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createCodeCommitRouter({ middleware: [routerMiddleware] });
+      router.route(
+        defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      codeCommitHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: CodeCommitRequest, _next: CodeCommitNext): Promise<void> {
+        return;
+      }
+
+      const router = createCodeCommitRouter({ middleware: [blockingRouterMiddleware] });
+      router.route(defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(handler));
+
+      const { event, context } = codeCommitHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

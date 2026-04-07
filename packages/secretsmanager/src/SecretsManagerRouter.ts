@@ -1,12 +1,14 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 import type {
   SecretsManagerFilterInput,
   SecretsManagerFilters,
   SecretsManagerHandler,
+  SecretsManagerMiddleware,
   SecretsManagerRequest,
   SecretsManagerRouteDefinition,
+  SecretsManagerRouterOptions,
   SecretsManagerStepRouteDefinition,
 } from './types.js';
 
@@ -25,16 +27,24 @@ interface RouteBuilder {
   handle(handler: SecretsManagerHandler): SecretsManagerRouteDefinition;
 }
 
-export function defineRoute(config: { filters: SecretsManagerFilters }): RouteBuilder {
+export function defineRoute(config: {
+  filters: SecretsManagerFilters;
+  middleware?: SecretsManagerMiddleware[];
+}): RouteBuilder {
   return {
     handle(handler: SecretsManagerHandler): SecretsManagerRouteDefinition {
-      return { filters: config.filters, handler };
+      return { filters: config.filters, middleware: config.middleware ?? [], handler };
     },
   };
 }
 
 export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotationEvent, undefined> {
   private routes: SecretsManagerRouteDefinition[] = [];
+  private middleware: SecretsManagerMiddleware[] = [];
+
+  constructor(options?: SecretsManagerRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is SecretsManagerRotationEvent {
     if (!isObject(event)) return false;
@@ -53,6 +63,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
   createSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, steps: ['createSecret'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -60,6 +71,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
   setSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, steps: ['setSecret'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -67,6 +79,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
   testSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, steps: ['testSecret'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -74,6 +87,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
   finishSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, steps: ['finishSecret'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -91,7 +105,9 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
       );
     }
     const request: SecretsManagerRequest = { ...filterInput, event, context };
-    await route.handler(request);
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(request: SecretsManagerFilterInput): SecretsManagerRouteDefinition | undefined {
@@ -132,6 +148,6 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
   }
 }
 
-export function createSecretsManagerRouter(): SecretsManagerRouter {
-  return new SecretsManagerRouter();
+export function createSecretsManagerRouter(options?: SecretsManagerRouterOptions): SecretsManagerRouter {
+  return new SecretsManagerRouter(options);
 }

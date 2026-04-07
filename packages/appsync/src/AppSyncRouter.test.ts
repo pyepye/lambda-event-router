@@ -552,6 +552,57 @@ suite('AppSyncRouter', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
+    test('does not execute middleware when schema validation fails', async () => {
+      const middleware = vi.fn();
+      const argumentsSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createAppSyncRouter({ middleware: [middleware] });
+      router.query({ fieldName: 'getUser', argumentsSchema, handler: vi.fn() });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+
+      await expect(router.handleEvent(event, createMockContext())).rejects.toThrow(
+        'Arguments validation failed for Query.getUser',
+      );
+      expect(middleware).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('mw1-pre');
+        const result = await next(request);
+        callOrder.push('mw1-post');
+        return result;
+      }
+
+      async function middlewareTwo(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('mw2-pre');
+        const result = await next(request);
+        callOrder.push('mw2-post');
+        return result;
+      }
+
+      const router = createAppSyncRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.query({
+        fieldName: 'getUser',
+        handler: async () => {
+          callOrder.push('handler');
+          return { id: '1' };
+        },
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['mw1-pre', 'mw2-pre', 'handler', 'mw2-post', 'mw1-post']);
+    });
+
     test('allows middleware to modify the result', async () => {
       async function middleware(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
         const result = await next(request);
@@ -582,7 +633,6 @@ suite('AppSyncRouter', () => {
         return next(request);
       }
 
-      const router = new AppSyncRouter();
       router.query({
         fieldName: 'getUser',
         middleware: [routeMiddleware],
@@ -598,6 +648,58 @@ suite('AppSyncRouter', () => {
       await router.handleEvent(event, createMockContext());
 
       expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async () => {
+      const handler = vi.fn().mockResolvedValue({ id: '1' });
+
+      async function blockingRouteMiddleware(_request: AppSyncResolverRequest, _next: AppSyncNext): Promise<unknown> {
+        return { error: 'Blocked' };
+      }
+
+      router.query({
+        fieldName: 'getUser',
+        middleware: [blockingRouteMiddleware],
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result).toEqual({ error: 'Blocked' });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(request: AppSyncResolverRequest, next: AppSyncNext): Promise<unknown> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.query({
+        fieldName: 'getUser',
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+          return { id: '1' };
+        },
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
     });
 
     test('supports middleware on defineRoute builder pattern', async () => {
@@ -616,7 +718,6 @@ suite('AppSyncRouter', () => {
         return { id: '1' };
       });
 
-      const router = new AppSyncRouter();
       router.route(route);
 
       const event = createAppSyncResolverEvent({
@@ -658,6 +759,30 @@ suite('AppSyncRouter', () => {
       await router.handleEvent(event, createMockContext());
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async () => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: AppSyncResolverRequest, _next: AppSyncNext): Promise<unknown> {
+        return { error: 'Blocked' };
+      }
+
+      const router = createAppSyncRouter({ middleware: [blockingRouterMiddleware] });
+      router.query({
+        fieldName: 'getUser',
+        middleware: [routeMiddleware],
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({
+        info: { parentTypeName: 'Query', fieldName: 'getUser' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

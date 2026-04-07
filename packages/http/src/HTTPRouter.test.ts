@@ -342,4 +342,220 @@ suite('HTTPRouter', () => {
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '2', limit: '10' }, querySchema);
     });
   });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async () => {
+      const callOrder: string[] = [];
+
+      const middleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      };
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
+      router.get({
+        path: '/',
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok({ message: 'hello' });
+        },
+      });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early response', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+
+      const authMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+        return { statusCode: 401, body: null };
+      };
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [authMiddleware] });
+      router.get({ path: '/', handler });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 401 }));
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      const middlewareOne: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('mw1');
+        return next(request);
+      };
+
+      const middlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('mw2');
+        return next(request);
+      };
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareOne, middlewareTwo] });
+      router.get({
+        path: '/',
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok({});
+        },
+      });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('does not execute middleware when body schema validation fails', async () => {
+      const middleware = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
+      router.post({ path: '/', handler: async () => Ok({}), bodySchema });
+
+      const event = createMockEvent({ method: 'POST', path: '/', body: JSON.stringify({ bad: 'data' }) });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 422 }));
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('allows route-level middleware to short-circuit by not calling next', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+
+      const blockingRouteMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+        return { statusCode: 403, body: null };
+      };
+
+      const route = defineRoute({
+        method: 'GET',
+        path: '/',
+        // @ts-expect-error - mock middleware uses default generic types, not exact route types
+        middleware: [blockingRouteMiddleware],
+      }).handle(handler);
+      router.route(route);
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 403 }));
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      const routeMiddlewareOne: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('route-mw1');
+        return next(request);
+      };
+
+      const routeMiddlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('route-mw2');
+        return next(request);
+      };
+
+      const route = defineRoute({
+        method: 'GET',
+        path: '/',
+        // @ts-expect-error - mock middleware uses default generic types, not exact route types
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+      }).handle(async () => {
+        callOrder.push('handler');
+        return Ok({});
+      });
+      router.route(route);
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async () => {
+      const callOrder: string[] = [];
+
+      const routerMiddleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('router-mw');
+        return next(request);
+      };
+
+      const routeMiddleware: Middleware<ApiRequest, ApiResponse> = async (request, next) => {
+        callOrder.push('route-mw');
+        return next(request);
+      };
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [routerMiddleware] });
+      const route = defineRoute({
+        method: 'GET',
+        path: '/',
+        // @ts-expect-error - mock middleware uses default generic types, not exact route types
+        middleware: [routeMiddleware],
+      }).handle(async () => {
+        callOrder.push('handler');
+        return Ok({});
+      });
+      router.route(route);
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async () => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+
+      const blockingMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+        return { statusCode: 403, body: null };
+      };
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [blockingMiddleware] });
+      router.get({ path: '/', middleware: [routeMiddleware], handler });
+
+      const event = createMockEvent();
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 403 }));
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run for unmatched routes', () => {
+    test('returns 404 without running middleware when no route matches', async () => {
+      const middleware = vi.fn();
+
+      const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
+      router.get({ path: '/items', handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/unknown' });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 404 }));
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
 });

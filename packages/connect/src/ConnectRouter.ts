@@ -1,28 +1,38 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
 import type {
   ConnectChannelRouteDefinition,
   ConnectHandler,
   ConnectInitiationMethodRouteDefinition,
+  ConnectMiddleware,
   ConnectRequest,
   ConnectRouteDefinition,
+  ConnectRouterOptions,
 } from './types.js';
 
 interface RouteBuilder {
   handle(handler: ConnectHandler): ConnectRouteDefinition;
 }
 
-export function defineRoute(config: { filters: ConnectRouteDefinition['filters'] }): RouteBuilder {
+export function defineRoute(config: {
+  filters: ConnectRouteDefinition['filters'];
+  middleware?: ConnectMiddleware[];
+}): RouteBuilder {
   return {
     handle(handler: ConnectHandler): ConnectRouteDefinition {
-      return { filters: config.filters, handler };
+      return { filters: config.filters, middleware: config.middleware ?? [], handler };
     },
   };
 }
 
 export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, ConnectContactFlowResult> {
   private routes: ConnectRouteDefinition[] = [];
+  private middleware: ConnectMiddleware[] = [];
+
+  constructor(options?: ConnectRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is ConnectContactFlowEvent {
     if (!isObject(event)) return false;
@@ -42,6 +52,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   voice(definition: ConnectChannelRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, channels: ['VOICE'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -49,6 +60,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   chat(definition: ConnectChannelRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, channels: ['CHAT'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -56,6 +68,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   email(definition: ConnectChannelRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, channels: ['EMAIL'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -63,6 +76,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   inbound(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, initiationMethods: ['INBOUND'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -70,6 +84,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   outbound(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, initiationMethods: ['OUTBOUND'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -77,6 +92,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   transfer(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, initiationMethods: ['TRANSFER'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -84,6 +100,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   callback(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, initiationMethods: ['CALLBACK'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -91,6 +108,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   api(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, initiationMethods: ['API'] },
+      middleware: definition.middleware,
       handler: definition.handler,
     });
   }
@@ -107,7 +125,8 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
     const request: ConnectRequest = { contactData, parameters, event, context };
 
-    return route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(event: ConnectContactFlowEvent): ConnectRouteDefinition | undefined {
@@ -141,6 +160,6 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   }
 }
 
-export function createConnectRouter(): ConnectRouter {
-  return new ConnectRouter();
+export function createConnectRouter(options?: ConnectRouterOptions): ConnectRouter {
+  return new ConnectRouter(options);
 }

@@ -1,4 +1,4 @@
-import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Lifecycle Expiration Event Names
@@ -45,10 +45,12 @@ export type S3LifecycleTransitionHandler = (request: S3LifecycleTransitionReques
 
 export interface S3LifecycleExpirationRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3LifecycleExpirationHandler;
 }
 
 export interface S3LifecycleTransitionRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3LifecycleTransitionHandler;
 }

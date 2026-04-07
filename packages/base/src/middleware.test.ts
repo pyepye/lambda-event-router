@@ -160,4 +160,17 @@ suite('handleEventWithMiddleware', () => {
 
     expect(handler).not.toHaveBeenCalled();
   });
+
+  test('throws an error if next() is called multiple times within a single middleware', async () => {
+    const handler = vi.fn().mockResolvedValue({ result: 'ok' });
+
+    async function doubleNextMiddleware(request: TestRequest, next: TestNext): Promise<TestResponse> {
+      await next(request);
+      return next(request);
+    }
+
+    await expect(handleEventWithMiddleware([doubleNextMiddleware], { value: 'test' }, handler)).rejects.toThrow(
+      'next() called multiple times within a single middleware',
+    );
+  });
 });

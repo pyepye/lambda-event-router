@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
@@ -41,14 +42,18 @@ export interface KafkaRequest<TValue = unknown> {
 
 export type KafkaResponse = undefined;
 
+export type KafkaMiddleware<TValue = unknown> = Middleware<KafkaRequest<TValue>, void>;
+
 export interface KafkaRouteDefinition<TValue = unknown> {
   filters: KafkaFilters;
   valueSchema?: StandardSchemaV1<unknown, TValue>;
+  middleware?: KafkaMiddleware<TValue>[];
   handler: (request: KafkaRequest<TValue>) => Promise<void>;
 }
 
 export interface KafkaRouterOptions {
   batchItemFailures?: boolean;
+  middleware?: KafkaMiddleware[];
 }
 
 export interface KafkaBatchResponse {

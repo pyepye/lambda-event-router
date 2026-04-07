@@ -1,6 +1,9 @@
 import { createLexEvent, test } from '@lambda-event-router/testing';
+import type { LexV2Result } from 'aws-lambda';
 import { createLexRouter, defineRoute, LexRouter } from './LexRouter.js';
-import type { LexFilterInput } from './types.js';
+import type { LexFilterInput, LexRequest } from './types.js';
+
+type LexNext = (request: LexRequest) => Promise<LexV2Result>;
 
 let router: LexRouter;
 
@@ -98,6 +101,7 @@ suite('defineRoute', () => {
 
     expect(definition).toEqual({
       filters: { intentNames: ['OrderPizza'] },
+      middleware: undefined,
       handler,
     });
   });
@@ -604,5 +608,220 @@ suite('full integration', () => {
 
     expect(dialogHandler).toHaveBeenCalledOnce();
     expect(fulfillmentHandler).not.toHaveBeenCalled();
+  });
+});
+
+suite('router-level middleware', () => {
+  test('executes middleware before the route handler', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function middleware(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('mw-pre');
+      const result = await next(request);
+      callOrder.push('mw-post');
+      return result;
+    }
+
+    const router = createLexRouter({ middleware: [middleware] });
+    router.route({
+      filters: {},
+      handler: async () => {
+        callOrder.push('handler');
+        return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+      },
+    });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+  });
+
+  test('allows middleware to skip a record by not calling next', async ({ lexHandlerEvent }) => {
+    const handler = vi.fn();
+
+    async function skipMiddleware(_request: LexRequest, _next: LexNext): Promise<LexV2Result> {
+      return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+    }
+
+    const router = createLexRouter({ middleware: [skipMiddleware] });
+    router.route({ filters: {}, handler });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('executes multiple router-level middleware in order', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function middlewareOne(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('mw1');
+      return next(request);
+    }
+
+    async function middlewareTwo(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('mw2');
+      return next(request);
+    }
+
+    const router = createLexRouter({ middleware: [middlewareOne, middlewareTwo] });
+    router.route({
+      filters: {},
+      handler: async () => {
+        callOrder.push('handler');
+        return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+      },
+    });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+  });
+});
+
+suite('route-level middleware', () => {
+  test('executes route-level middleware for a specific route', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddleware(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    router.route({
+      filters: {},
+      middleware: [routeMiddleware],
+      handler: async () => {
+        callOrder.push('handler');
+        return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+      },
+    });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw', 'handler']);
+  });
+
+  test('allows route-level middleware to short-circuit by not calling next', async ({ lexHandlerEvent }) => {
+    const handler = vi.fn();
+    const mockResult: LexV2Result = {
+      sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } },
+    };
+
+    async function blockingRouteMiddleware(_request: LexRequest, _next: LexNext): Promise<LexV2Result> {
+      return mockResult;
+    }
+
+    router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('executes multiple route-level middleware in order', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddlewareOne(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('route-mw1');
+      return next(request);
+    }
+
+    async function routeMiddlewareTwo(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('route-mw2');
+      return next(request);
+    }
+
+    router.route({
+      filters: {},
+      middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+      handler: async () => {
+        callOrder.push('handler');
+        return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+      },
+    });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+  });
+
+  test('supports middleware on defineRoute builder pattern', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddleware(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+      callOrder.push('handler');
+      return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+    });
+
+    router.route(route);
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw', 'handler']);
+  });
+});
+
+suite('combined router and route middleware', () => {
+  test('executes router middleware before route middleware', async ({ lexHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routerMiddleware(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('router-mw');
+      return next(request);
+    }
+
+    async function routeMiddleware(request: LexRequest, next: LexNext): Promise<LexV2Result> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    const router = createLexRouter({ middleware: [routerMiddleware] });
+    router.route({
+      filters: {},
+      middleware: [routeMiddleware],
+      handler: async () => {
+        callOrder.push('handler');
+        return { sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } } };
+      },
+    });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+  });
+
+  test('router middleware short-circuit prevents route middleware from running', async ({ lexHandlerEvent }) => {
+    const routeMiddleware = vi.fn();
+    const handler = vi.fn();
+    const mockResult: LexV2Result = {
+      sessionState: { dialogAction: { type: 'Close' }, intent: { name: 'Test', state: 'Fulfilled' } },
+    };
+
+    async function blockingRouterMiddleware(_request: LexRequest, _next: LexNext): Promise<LexV2Result> {
+      return mockResult;
+    }
+
+    const router = createLexRouter({ middleware: [blockingRouterMiddleware] });
+    router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+    const { event, context } = lexHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(routeMiddleware).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 });

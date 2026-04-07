@@ -1,4 +1,4 @@
-import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Reduced Redundancy Lost Object Event
@@ -15,6 +15,7 @@ export type S3ReducedRedundancyLostObjectHandler = (request: S3ReducedRedundancy
 
 export interface S3ReducedRedundancyLostObjectRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3ReducedRedundancyLostObjectHandler;
 }
 
@@ -33,6 +34,7 @@ export type S3IntelligentTieringHandler = (request: S3IntelligentTieringRequest)
 
 export interface S3IntelligentTieringRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3IntelligentTieringHandler;
 }
 
@@ -51,5 +53,6 @@ export type S3TestEventHandler = (request: S3TestEventRequest) => Promise<void>;
 
 export interface S3TestEventRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3TestEventHandler;
 }

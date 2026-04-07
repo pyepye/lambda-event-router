@@ -5,6 +5,7 @@ export type {
   KafkaEvent,
   KafkaFilterInput,
   KafkaFilters,
+  KafkaMiddleware,
   KafkaRecord,
   KafkaRequest,
   KafkaResponse,

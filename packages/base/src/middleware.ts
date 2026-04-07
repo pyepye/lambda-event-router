@@ -11,9 +11,14 @@ export async function handleEventWithMiddleware<TRequest, TResponse>(
   let index = 0;
 
   async function next(req: TRequest): Promise<TResponse> {
-    const currentMiddleware = middleware[index];
+    const currentIndex = index;
+    if (currentIndex > middleware.length) {
+      throw new Error('next() called multiple times within a single middleware');
+    }
+    index++;
+
+    const currentMiddleware = middleware[currentIndex];
     if (currentMiddleware) {
-      index++;
       return currentMiddleware(req, next);
     }
     return handler(req);

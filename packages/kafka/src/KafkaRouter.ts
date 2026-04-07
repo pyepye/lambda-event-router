@@ -1,5 +1,5 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, MSKEvent } from 'aws-lambda';
 import type { InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
@@ -24,6 +24,7 @@ export function defineRoute<
       return {
         filters: config.filters,
         valueSchema: config.valueSchema as StandardSchemaV1<unknown, TValue> | undefined,
+        middleware: config.middleware as KafkaRouteDefinition<TValue>['middleware'],
         handler: handler as (request: KafkaRequest<TValue>) => Promise<void>,
       };
     },
@@ -33,9 +34,11 @@ export function defineRoute<
 export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | KafkaBatchResponse> {
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
+  private middleware: Middleware<KafkaRequest, void>[];
 
   constructor(options?: KafkaRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is KafkaEvent {
@@ -47,7 +50,10 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
   }
 
   route<TValue>(definition: KafkaRouteDefinition<TValue>): this {
-    this.routes.push(definition as InternalRoute);
+    this.routes.push({
+      ...(definition as unknown as InternalRoute),
+      middleware: (definition.middleware ?? []) as unknown as Middleware<KafkaRequest, void>[],
+    });
     return this;
   }
 
@@ -146,7 +152,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(

@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, PostConfirmationTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
+import type { CognitoMiddleware } from './router.js';
 
 // PostConfirmation trigger sources - derived from aws-lambda
 export type PostConfirmationTriggerSource = PostConfirmationTriggerEvent['triggerSource'];
@@ -26,5 +27,6 @@ export type PostConfirmationHandler<TUserAttributes extends UserAttributes = Use
 export interface PostConfirmationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PostConfirmationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: PostConfirmationHandler<TUserAttributes>;
 }

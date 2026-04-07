@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
@@ -10,10 +10,12 @@ import type {
   ActiveMQInternalRoute,
   ActiveMQMessage,
   ActiveMQMessageType,
+  ActiveMQMiddleware,
   ActiveMQRequest,
   ActiveMQRouteBuilder,
   ActiveMQRouteDefinition,
   ActiveMQRouteInput,
+  ActiveMQRouterOptions,
   ActiveMQTextMessageRouteDefinition,
 } from './activeMQTypes.js';
 
@@ -28,6 +30,7 @@ export function defineActiveMQRoute<
       return {
         filters: config.filters as ActiveMQFilters,
         bodySchema: config.bodySchema as StandardSchemaV1<unknown, TBody> | undefined,
+        middleware: config.middleware as ActiveMQRouteDefinition<TBody>['middleware'],
         handler: handler as (request: ActiveMQRequest<TBody>) => Promise<void>,
       };
     },
@@ -36,6 +39,11 @@ export function defineActiveMQRoute<
 
 export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined> {
   private routes: ActiveMQInternalRoute[] = [];
+  private middleware: ActiveMQMiddleware[];
+
+  constructor(options?: ActiveMQRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is ActiveMQEvent {
     if (!isObject(event)) return false;
@@ -90,7 +98,8 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
         context,
       };
 
-      await route.handler(request);
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      await handleEventWithMiddleware(allMiddleware, request, route.handler);
     }
   }
 
@@ -124,6 +133,6 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
   }
 }
 
-export function createActiveMQRouter(): ActiveMQRouter {
-  return new ActiveMQRouter();
+export function createActiveMQRouter(options?: ActiveMQRouterOptions): ActiveMQRouter {
+  return new ActiveMQRouter(options);
 }

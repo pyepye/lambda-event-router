@@ -4,7 +4,9 @@ export type {
   CodePipelineFilters,
   CodePipelineJobHandler,
   CodePipelineJobRequest,
+  CodePipelineMiddleware,
   CodePipelineResponse,
   CodePipelineRouteDefinition,
+  CodePipelineRouterOptions,
   CodePipelineSuccessResult,
 } from './types.js';

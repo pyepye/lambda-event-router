@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type { ConfigEvent, ConfigurationItem, ConfigurationItemSummary } from './types.js';
@@ -22,6 +23,8 @@ export interface ConfigOversizedRequest<TParams = Record<string, string>> {
   context: Context;
 }
 
+export type ConfigMiddleware = Middleware<ConfigRequest | ConfigOversizedRequest, void>;
+
 export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Record<string, string>> =
   | ((request: ConfigRequest<TConfig, TParams>) => Promise<void>)
   | ((request: ConfigOversizedRequest<TParams>) => Promise<void>);
@@ -37,6 +40,7 @@ export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParam
   filters: ConfigChangeFilters;
   ruleParametersSchema?: StandardSchemaV1<unknown, TParams>;
   configurationSchema?: StandardSchemaV1<unknown, TConfig>;
+  middleware?: ConfigMiddleware[];
   handler: ConfigChangeHandler<TConfig, TParams>;
 }
 
@@ -44,6 +48,7 @@ export interface InternalConfigRoute {
   filters: ConfigChangeFilters;
   ruleParametersSchema?: StandardSchemaV1;
   configurationSchema?: StandardSchemaV1;
+  middleware?: ConfigMiddleware[];
   handler: ConfigChangeHandler;
 }
 
@@ -60,4 +65,9 @@ export interface ConfigRouteInput<
   filters: ConfigChangeFilters;
   ruleParametersSchema?: TParamsSchema;
   configurationSchema?: TConfigSchema;
+  middleware?: ConfigMiddleware[];
+}
+
+export interface ConfigRouterOptions {
+  middleware?: ConfigMiddleware[];
 }

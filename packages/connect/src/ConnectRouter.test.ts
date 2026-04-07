@@ -1,5 +1,8 @@
 import { createConnectEvent, test } from '@lambda-event-router/testing';
 import { ConnectRouter, createConnectRouter, defineRoute } from './ConnectRouter.js';
+import type { ConnectRequest, ConnectResponse } from './types.js';
+
+type ConnectNext = (request: ConnectRequest) => Promise<ConnectResponse>;
 
 let router: ConnectRouter;
 
@@ -64,6 +67,7 @@ suite('defineRoute', () => {
 
     expect(definition).toEqual({
       filters: { channels: ['VOICE'] },
+      middleware: [],
       handler,
     });
   });
@@ -465,5 +469,214 @@ suite('full integration', () => {
     expect(voiceInboundHandler).not.toHaveBeenCalled();
     expect(chatInboundHandler).toHaveBeenCalledOnce();
     expect(voiceOutboundHandler).not.toHaveBeenCalled();
+  });
+});
+
+suite('router-level middleware', () => {
+  test('executes middleware before the route handler', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function middleware(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('mw-pre');
+      const result = await next(request);
+      callOrder.push('mw-post');
+      return result;
+    }
+
+    const router = createConnectRouter({ middleware: [middleware] });
+    router.route({
+      filters: {},
+      handler: async () => {
+        callOrder.push('handler');
+        return {};
+      },
+    });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+  });
+
+  test('allows middleware to skip a record by not calling next', async ({ connectHandlerEvent }) => {
+    const handler = vi.fn();
+
+    async function skipMiddleware(_request: ConnectRequest, _next: ConnectNext): Promise<ConnectResponse> {
+      return {};
+    }
+
+    const router = createConnectRouter({ middleware: [skipMiddleware] });
+    router.route({ filters: {}, handler });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('executes multiple router-level middleware in order', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function middlewareOne(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('mw1');
+      return next(request);
+    }
+
+    async function middlewareTwo(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('mw2');
+      return next(request);
+    }
+
+    const router = createConnectRouter({ middleware: [middlewareOne, middlewareTwo] });
+    router.route({
+      filters: {},
+      handler: async () => {
+        callOrder.push('handler');
+        return {};
+      },
+    });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+  });
+});
+
+suite('route-level middleware', () => {
+  test('executes route-level middleware for a specific route', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddleware(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    router.route({
+      filters: {},
+      middleware: [routeMiddleware],
+      handler: async () => {
+        callOrder.push('handler');
+        return {};
+      },
+    });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw', 'handler']);
+  });
+
+  test('allows route-level middleware to short-circuit by not calling next', async ({ connectHandlerEvent }) => {
+    const handler = vi.fn();
+
+    async function blockingRouteMiddleware(_request: ConnectRequest, _next: ConnectNext): Promise<ConnectResponse> {
+      return {};
+    }
+
+    router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('executes multiple route-level middleware in order', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddlewareOne(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('route-mw1');
+      return next(request);
+    }
+
+    async function routeMiddlewareTwo(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('route-mw2');
+      return next(request);
+    }
+
+    router.route({
+      filters: {},
+      middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+      handler: async () => {
+        callOrder.push('handler');
+        return {};
+      },
+    });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+  });
+
+  test('supports middleware on defineRoute builder pattern', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routeMiddleware(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+      callOrder.push('handler');
+      return {};
+    });
+
+    router.route(route);
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['route-mw', 'handler']);
+  });
+});
+
+suite('combined router and route middleware', () => {
+  test('executes router middleware before route middleware', async ({ connectHandlerEvent }) => {
+    const callOrder: string[] = [];
+
+    async function routerMiddleware(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('router-mw');
+      return next(request);
+    }
+
+    async function routeMiddleware(request: ConnectRequest, next: ConnectNext): Promise<ConnectResponse> {
+      callOrder.push('route-mw');
+      return next(request);
+    }
+
+    const router = createConnectRouter({ middleware: [routerMiddleware] });
+    router.route({
+      filters: {},
+      middleware: [routeMiddleware],
+      handler: async () => {
+        callOrder.push('handler');
+        return {};
+      },
+    });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+  });
+
+  test('router middleware short-circuit prevents route middleware from running', async ({ connectHandlerEvent }) => {
+    const routeMiddleware = vi.fn();
+    const handler = vi.fn();
+
+    async function blockingRouterMiddleware(_request: ConnectRequest, _next: ConnectNext): Promise<ConnectResponse> {
+      return {};
+    }
+
+    const router = createConnectRouter({ middleware: [blockingRouterMiddleware] });
+    router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+    const { event, context } = connectHandlerEvent();
+    await router.handleEvent(event, context);
+
+    expect(routeMiddleware).not.toHaveBeenCalled();
+    expect(handler).not.toHaveBeenCalled();
   });
 });

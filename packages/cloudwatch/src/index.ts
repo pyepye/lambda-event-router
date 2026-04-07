@@ -5,6 +5,8 @@ export type {
   CloudWatchLogsEventFilters,
   CloudWatchLogsFilters,
   CloudWatchLogsMessageType,
+  CloudWatchLogsMiddleware,
   CloudWatchLogsRequest,
   CloudWatchLogsRouteDefinition,
+  CloudWatchRouterOptions,
 } from './types.js';

@@ -4,6 +4,7 @@ export type {
   DynamoDBFilterInput,
   DynamoDBInsertRequest,
   DynamoDBInsertRouteDefinition,
+  DynamoDBMiddleware,
   DynamoDBModifyRequest,
   DynamoDBModifyRouteDefinition,
   DynamoDBRemoveRequest,

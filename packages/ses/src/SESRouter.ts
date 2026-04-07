@@ -1,10 +1,18 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
-import type { SESFilters, SESRecordHandler, SESRequest, SESRouteDefinition } from './types.js';
+import type {
+  SESFilters,
+  SESMiddleware,
+  SESRecordHandler,
+  SESRequest,
+  SESRouteDefinition,
+  SESRouterOptions,
+} from './types.js';
 
 interface RouteInput {
   filters: SESFilters;
+  middleware?: SESMiddleware[];
 }
 
 interface RouteBuilder {
@@ -26,6 +34,11 @@ function extractDomain(email: string): string {
 
 export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
   private routes: SESRouteDefinition[] = [];
+  private middleware: SESMiddleware[];
+
+  constructor(options?: SESRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is SESEvent {
     if (!isObject(event)) return false;
@@ -123,10 +136,12 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
 
     const { mail, receipt } = record.ses;
     const request = this.buildRequest(record, mail, receipt, context);
-    await route.handler(request);
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 }
 
-export function createSESRouter(): SESRouter {
-  return new SESRouter();
+export function createSESRouter(options?: SESRouterOptions): SESRouter {
+  return new SESRouter(options);
 }

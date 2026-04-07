@@ -1140,7 +1140,6 @@ suite('SQSRouter', () => {
         await next(request);
       }
 
-      const router = new SQSRouter();
       router.route({
         filters: {},
         middleware: [routeMiddleware],
@@ -1153,6 +1152,52 @@ suite('SQSRouter', () => {
       await router.handleEvent(event, context());
 
       expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ sqsHandlerEvent, context }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: SQSRequest, _next: SQSNext): Promise<void> {
+        return;
+      }
+
+      router.route({
+        filters: {},
+        middleware: [blockingRouteMiddleware],
+        handler,
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ sqsHandlerEvent, context }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: SQSRequest, next: SQSNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
     });
 
     test('supports middleware on defineRoute builder pattern', async ({ sqsHandlerEvent, context }) => {
@@ -1170,7 +1215,6 @@ suite('SQSRouter', () => {
         callOrder.push('handler');
       });
 
-      const router = new SQSRouter();
       router.route(route);
 
       const { event } = sqsHandlerEvent();
@@ -1207,6 +1251,54 @@ suite('SQSRouter', () => {
       await router.handleEvent(event, context());
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+  });
+
+  suite('router middleware short-circuit prevents route middleware', () => {
+    test('router middleware short-circuit prevents route middleware from running', async ({ sqsHandlerEvent, context }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: SQSRequest, _next: SQSNext): Promise<void> {
+        return;
+      }
+
+      const router = createSQSRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler,
+      });
+
+      const { event } = sqsHandlerEvent();
+      await router.handleEvent(event, context());
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('schema validation prevents middleware', () => {
+    test('does not execute middleware when schema validation fails', async ({ sqsHandlerEvent, context }) => {
+      const middlewareFn = vi.fn();
+      const handler = vi.fn();
+
+      const failingSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createSQSRouter({
+        middleware: [middlewareFn],
+      });
+      router.route({
+        filters: {},
+        bodySchema: failingSchema,
+        handler,
+      });
+
+      const { event } = sqsHandlerEvent();
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Body validation failed');
+
+      expect(middlewareFn).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 

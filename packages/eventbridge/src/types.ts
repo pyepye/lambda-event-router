@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
@@ -19,6 +20,7 @@ export interface EC2StateChangeDetail {
 // Scheduled events from EventBridge Rules have an empty detail
 export type ScheduledEventDetail = Record<string, never>;
 
+// TODO: Should we type all these? Type the services? Type any in aws-lambda?
 // Type map: source -> detailType -> detail type
 // Users can extend this via module augmentation for custom events
 export interface EventBridgeDetailTypeMap {
@@ -76,6 +78,8 @@ export interface EventBridgeRequest<TDetail = unknown> {
   context: Context;
 }
 
+export type EventBridgeMiddleware = Middleware<EventBridgeRequest, void>;
+
 export type EventBridgeHandler<TDetail = unknown> = (request: EventBridgeRequest<TDetail>) => Promise<void>;
 
 export interface EventBridgeFilterInput {
@@ -97,5 +101,10 @@ export interface EventBridgeFilters {
 export interface EventBridgeRouteDefinition<TDetail = unknown> {
   filters: EventBridgeFilters;
   detailSchema?: StandardSchemaV1<unknown, TDetail>;
+  middleware?: EventBridgeMiddleware[];
   handler: EventBridgeHandler<TDetail>;
+}
+
+export interface EventBridgeRouterOptions {
+  middleware?: EventBridgeMiddleware[];
 }

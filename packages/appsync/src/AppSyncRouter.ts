@@ -138,10 +138,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     };
 
     const allMiddleware = [...this.middleware, ...route.middleware];
-    if (allMiddleware.length > 0) {
-      return handleEventWithMiddleware(allMiddleware, request, route.handler);
-    }
-    return route.handler(request);
+    return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(

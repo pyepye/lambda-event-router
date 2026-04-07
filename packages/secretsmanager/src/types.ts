@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
 // Change case for properties on SecretsManagerRotationEvent
@@ -10,6 +11,8 @@ export interface SecretsManagerRequest {
 }
 
 export type SecretsManagerResponse = undefined;
+
+export type SecretsManagerMiddleware = Middleware<SecretsManagerRequest, void>;
 
 export type SecretsManagerHandler = (request: SecretsManagerRequest) => Promise<SecretsManagerResponse>;
 
@@ -32,10 +35,16 @@ export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'steps'>;
 
 export interface SecretsManagerRouteDefinition {
   filters: SecretsManagerFilters;
+  middleware?: SecretsManagerMiddleware[];
   handler: SecretsManagerHandler;
 }
 
 export interface SecretsManagerStepRouteDefinition {
   filters: SecretsManagerStepFilters;
+  middleware?: SecretsManagerMiddleware[];
   handler: SecretsManagerHandler;
+}
+
+export interface SecretsManagerRouterOptions {
+  middleware?: SecretsManagerMiddleware[];
 }

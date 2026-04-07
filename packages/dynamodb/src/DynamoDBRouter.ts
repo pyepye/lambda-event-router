@@ -1,6 +1,6 @@
 import { unmarshall } from '@aws-sdk/util-dynamodb';
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEvent } from 'aws-lambda';
 import type { DynamoDBFilters, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
@@ -41,6 +41,7 @@ export function defineRoute<
         keysSchema: config.keysSchema as StandardSchemaV1<unknown, TKeys> | undefined,
         newImageSchema: config.newImageSchema as StandardSchemaV1<unknown, TNewItem> | undefined,
         oldImageSchema: config.oldImageSchema as StandardSchemaV1<unknown, TOldItem> | undefined,
+        middleware: config.middleware as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['middleware'],
         handler: handler as (request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>,
       };
     },
@@ -50,9 +51,11 @@ export function defineRoute<
 export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, undefined | DynamoDBBatchResponse> {
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
+  private middleware: Middleware<DynamoDBRequest, void>[];
 
   constructor(options?: DynamoDBRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is DynamoDBStreamEvent {
@@ -66,32 +69,35 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
   }
 
   route<TKeys, TNewItem, TOldItem>(definition: DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>): this {
-    return this.addRoute(definition as InternalRoute);
+    return this.addRoute(definition as unknown as InternalRoute);
   }
 
   insert<TKeys, TNewItem>(definition: DynamoDBInsertRouteDefinition<TKeys, TNewItem>): this {
     return this.addRoute({
       ...definition,
       filters: { ...definition.filters, eventNames: ['INSERT'] },
-    } as InternalRoute);
+    } as unknown as InternalRoute);
   }
 
   modify<TKeys, TNewItem, TOldItem>(definition: DynamoDBModifyRouteDefinition<TKeys, TNewItem, TOldItem>): this {
     return this.addRoute({
       ...definition,
       filters: { ...definition.filters, eventNames: ['MODIFY'] },
-    } as InternalRoute);
+    } as unknown as InternalRoute);
   }
 
   remove<TKeys, TOldItem>(definition: DynamoDBRemoveRouteDefinition<TKeys, TOldItem>): this {
     return this.addRoute({
       ...definition,
       filters: { ...definition.filters, eventNames: ['REMOVE'] },
-    } as InternalRoute);
+    } as unknown as InternalRoute);
   }
 
   private addRoute(definition: InternalRoute): this {
-    this.routes.push(definition);
+    this.routes.push({
+      ...definition,
+      middleware: definition.middleware ?? [],
+    });
     return this;
   }
 
@@ -180,7 +186,8 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       context,
     } as DynamoDBRequest;
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(

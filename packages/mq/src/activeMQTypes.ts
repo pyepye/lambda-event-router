@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
@@ -76,6 +77,8 @@ export interface ActiveMQMessageTypeFilters {
 
 // --- Handler Types ---
 
+export type ActiveMQMiddleware = Middleware<ActiveMQRequest, void>;
+
 type ActiveMQRecordHandler<TBody = unknown> =
   | ((request: ActiveMQRequest<TBody>) => Promise<void>)
   | ((request: ActiveMQTextMessageRequest<TBody>) => Promise<void>)
@@ -86,18 +89,21 @@ type ActiveMQRecordHandler<TBody = unknown> =
 export interface ActiveMQRouteDefinition<TBody = unknown> {
   filters: ActiveMQFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: ActiveMQMiddleware[];
   handler: ActiveMQRecordHandler<TBody>;
 }
 
 export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
   filters: ActiveMQMessageTypeFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: ActiveMQMiddleware[];
   handler: (request: ActiveMQTextMessageRequest<TBody>) => Promise<void>;
 }
 
 export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
   filters: ActiveMQMessageTypeFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: ActiveMQMiddleware[];
   handler: (request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>;
 }
 
@@ -106,6 +112,7 @@ export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
 export interface ActiveMQInternalRoute {
   filters: ActiveMQFilters;
   bodySchema?: StandardSchemaV1;
+  middleware?: ActiveMQMiddleware[];
   handler: (request: ActiveMQRequest) => Promise<void>;
 }
 
@@ -130,6 +137,7 @@ export interface ActiveMQRouteInput<
     messageTypes?: TMessageTypes;
     customFilter?: (input: ActiveMQFilterInput) => boolean;
   };
+  middleware?: ActiveMQMiddleware[];
   bodySchema?: TBodySchema;
 }
 
@@ -137,4 +145,8 @@ export interface ActiveMQRouteBuilder<TBody, TMessageTypes extends readonly Acti
   handle(
     handler: (request: MessageTypeToRequest<TMessageTypes, TBody>) => Promise<void>,
   ): ActiveMQRouteDefinition<TBody>;
+}
+
+export interface ActiveMQRouterOptions {
+  middleware?: ActiveMQMiddleware[];
 }

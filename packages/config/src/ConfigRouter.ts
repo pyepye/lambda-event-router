@@ -1,13 +1,15 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
+  ConfigMiddleware,
   ConfigOversizedRequest,
   ConfigRequest,
   ConfigRouteBuilder,
   ConfigRouteDefinition,
   ConfigRouteInput,
+  ConfigRouterOptions,
   InternalConfigRoute,
 } from './configRouterTypes.js';
 import type {
@@ -36,6 +38,7 @@ export function defineRoute<
         filters: config.filters,
         ruleParametersSchema: config.ruleParametersSchema as StandardSchemaV1<unknown, TParams> | undefined,
         configurationSchema: config.configurationSchema as StandardSchemaV1<unknown, TConfig> | undefined,
+        middleware: config.middleware,
         handler,
       };
     },
@@ -49,6 +52,11 @@ const CHANGE_MESSAGE_TYPES: Set<string> = new Set([
 
 export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse> {
   private routes: InternalConfigRoute[] = [];
+  private middleware: ConfigMiddleware[] = [];
+
+  constructor(options?: ConfigRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is ConfigEvent {
     if (!isObject(event)) return false;
@@ -114,7 +122,10 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
         event,
         context,
       };
-      await handler(request);
+
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      await handleEventWithMiddleware(allMiddleware, request, handler);
+
       return;
     }
 
@@ -143,7 +154,8 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       event,
       context,
     };
-    await handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, handler);
   }
 
   private matchRoute(input: {
@@ -184,6 +196,6 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
   }
 }
 
-export function createConfigRouter(): ConfigRouter {
-  return new ConfigRouter();
+export function createConfigRouter(options?: ConfigRouterOptions): ConfigRouter {
+  return new ConfigRouter(options);
 }

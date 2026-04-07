@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
 
 export type ConnectChannel = ConnectContactFlowEvent['Details']['ContactData']['Channel'];
@@ -12,6 +13,8 @@ export interface ConnectRequest {
 }
 
 export type ConnectResponse = ConnectContactFlowResult;
+
+export type ConnectMiddleware = Middleware<ConnectRequest, ConnectResponse>;
 
 export type ConnectHandler = (request: ConnectRequest) => Promise<ConnectResponse>;
 
@@ -34,15 +37,22 @@ export type ConnectInitiationMethodFilters = Omit<ConnectFilters, 'initiationMet
 
 export interface ConnectRouteDefinition {
   filters: ConnectFilters;
+  middleware?: ConnectMiddleware[];
   handler: ConnectHandler;
 }
 
 export interface ConnectChannelRouteDefinition {
   filters: ConnectChannelFilters;
+  middleware?: ConnectMiddleware[];
   handler: ConnectHandler;
 }
 
 export interface ConnectInitiationMethodRouteDefinition {
   filters: ConnectInitiationMethodFilters;
+  middleware?: ConnectMiddleware[];
   handler: ConnectHandler;
+}
+
+export interface ConnectRouterOptions {
+  middleware?: ConnectMiddleware[];
 }

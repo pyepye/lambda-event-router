@@ -402,7 +402,6 @@ suite('APIGatewayRouter', () => {
         return next(request);
       }
 
-      const router = new APIGatewayRouter();
       router.get({
         path: '/',
         middleware: [routeMiddleware],
@@ -418,6 +417,54 @@ suite('APIGatewayRouter', () => {
       expect(callOrder).toEqual(['route-mw', 'handler']);
     });
 
+    test('allows route-level middleware to short-circuit by not calling next', async ({ apiGatewayV2HandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+
+      async function blockingRouteMiddleware(_request: NoBodyRequest, _next: NoBodyNext): Promise<ApiResponse> {
+        return { statusCode: 403, body: null };
+      }
+
+      router.get({
+        path: '/',
+        middleware: [blockingRouteMiddleware],
+        handler,
+      });
+
+      const { event, context } = apiGatewayV2HandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 403 }));
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.get({
+        path: '/',
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+          return Ok({});
+        },
+      });
+
+      const { event, context } = apiGatewayV2HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
     test('does not apply route middleware to other routes', async ({ apiGatewayV2HandlerEvent }) => {
       const routeMiddleware = vi
         .fn()
@@ -425,7 +472,6 @@ suite('APIGatewayRouter', () => {
           next(request),
         );
 
-      const router = new APIGatewayRouter();
       router.get({
         path: '/with-mw',
         middleware: [routeMiddleware],
@@ -464,7 +510,6 @@ suite('APIGatewayRouter', () => {
         return Ok(null);
       });
 
-      const router = new APIGatewayRouter();
       router.route(route);
 
       const { event, context } = apiGatewayV2HandlerEvent();
@@ -525,6 +570,24 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(expect.objectContaining({ statusCode: 403 }));
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when body schema validation fails', async ({ apiGatewayV2HandlerEvent }) => {
+      const middleware = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
+
+      const router = createAPIGatewayRouter({ middleware: [middleware] });
+      router.post({ path: '/', handler: async () => Ok({}), bodySchema });
+
+      const { event, context } = apiGatewayV2HandlerEvent({
+        event: { body: { bad: 'data' }, requestContext: { http: { method: 'POST' } } },
+      });
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 422 }));
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 

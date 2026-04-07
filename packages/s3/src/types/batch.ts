@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { Context, S3BatchEvent, S3BatchEventTask, S3BatchResultResultCode } from 'aws-lambda';
 import type { S3BatchResponse } from '../batchResponse.js';
 
@@ -23,11 +24,15 @@ export interface S3BatchRequest {
 // Handler for processing individual batch tasks
 export type S3BatchHandler = (request: S3BatchRequest) => Promise<S3BatchResponse>;
 
+// Middleware for batch operations (different request/response types from notification middleware)
+export type S3BatchMiddleware = Middleware<S3BatchRequest, S3BatchResponse>;
+
 // =============================================================================
 // Route Definition Types
 // =============================================================================
 
 export interface S3BatchRouteDefinition {
+  middleware?: S3BatchMiddleware[];
   handler: S3BatchHandler;
 }
 

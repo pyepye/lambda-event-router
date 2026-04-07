@@ -79,8 +79,10 @@ export type {
 // Router types
 export type {
   CognitoEvent,
+  CognitoMiddleware,
   CognitoRequest,
   CognitoRouteDefinition,
+  CognitoRouterOptions,
   CognitoTriggerSource,
   EventForTrigger,
   RequestForTrigger,

@@ -1,20 +1,23 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
 import type {
   CodeCommitEvent,
   CodeCommitFilters,
+  CodeCommitMiddleware,
   CodeCommitRecord,
   CodeCommitRecordHandler,
   CodeCommitReference,
   CodeCommitRequest,
   CodeCommitRouteDefinition,
+  CodeCommitRouterOptions,
 } from './types.js';
 
 type ReferenceFilter = 'push' | 'branchCreated' | 'branchDeleted';
 
 interface InternalRoute {
   filters: CodeCommitFilters;
+  middleware: CodeCommitMiddleware[];
   handler: CodeCommitRecordHandler;
   referenceFilter?: ReferenceFilter;
 }
@@ -26,6 +29,7 @@ interface MatchResult {
 
 interface RouteInput {
   filters: CodeCommitFilters;
+  middleware?: CodeCommitMiddleware[];
 }
 
 interface RouteBuilder {
@@ -53,6 +57,11 @@ function extractBranchNameFromRef(ref: string): string {
 
 export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefined> {
   private routes: InternalRoute[] = [];
+  private middleware: CodeCommitMiddleware[];
+
+  constructor(options?: CodeCommitRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is CodeCommitEvent {
     if (!isObject(event)) return false;
@@ -66,22 +75,22 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
   }
 
   route(definition: CodeCommitRouteDefinition): this {
-    this.routes.push(definition);
+    this.routes.push({ ...definition, middleware: definition.middleware ?? [] });
     return this;
   }
 
   push(definition: CodeCommitRouteDefinition): this {
-    this.routes.push({ ...definition, referenceFilter: 'push' });
+    this.routes.push({ ...definition, middleware: definition.middleware ?? [], referenceFilter: 'push' });
     return this;
   }
 
   branchCreated(definition: CodeCommitRouteDefinition): this {
-    this.routes.push({ ...definition, referenceFilter: 'branchCreated' });
+    this.routes.push({ ...definition, middleware: definition.middleware ?? [], referenceFilter: 'branchCreated' });
     return this;
   }
 
   branchDeleted(definition: CodeCommitRouteDefinition): this {
-    this.routes.push({ ...definition, referenceFilter: 'branchDeleted' });
+    this.routes.push({ ...definition, middleware: definition.middleware ?? [], referenceFilter: 'branchDeleted' });
     return this;
   }
 
@@ -208,12 +217,14 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
         record,
         context,
       };
-      return route.handler(request);
+
+      const allMiddleware = [...this.middleware, ...route.middleware];
+      return handleEventWithMiddleware(allMiddleware, request, route.handler);
     });
     await Promise.all(handlerPromises);
   }
 }
 
-export function createCodeCommitRouter(): CodeCommitRouter {
-  return new CodeCommitRouter();
+export function createCodeCommitRouter(options?: CodeCommitRouterOptions): CodeCommitRouter {
+  return new CodeCommitRouter(options);
 }

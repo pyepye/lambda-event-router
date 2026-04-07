@@ -9,7 +9,9 @@ export type {
   ConnectInitiationMethod,
   ConnectInitiationMethodFilters,
   ConnectInitiationMethodRouteDefinition,
+  ConnectMiddleware,
   ConnectRequest,
   ConnectResponse,
   ConnectRouteDefinition,
+  ConnectRouterOptions,
 } from './types.js';

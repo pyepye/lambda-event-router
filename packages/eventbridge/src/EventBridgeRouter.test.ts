@@ -4,6 +4,8 @@ import type { MockInstance } from 'vitest';
 import { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './EventBridgeRouter.js';
 import type { EventBridgeFilterInput, EventBridgeRequest } from './types.js';
 
+type EventBridgeNext = (request: EventBridgeRequest) => Promise<void>;
+
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
 suite('EventBridgeRouter', () => {
@@ -531,6 +533,224 @@ suite('EventBridgeRouter', () => {
 
       expect(orderPlacedHandler).toHaveBeenCalledTimes(1);
       expect(orderShippedHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createEventBridgeRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ eventBridgeHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: EventBridgeRequest, _next: EventBridgeNext): Promise<void> {
+        return;
+      }
+
+      const router = createEventBridgeRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createEventBridgeRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ eventBridgeHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: EventBridgeRequest, _next: EventBridgeNext): Promise<void> {
+        return;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      router.route(route);
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ eventBridgeHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: EventBridgeRequest, next: EventBridgeNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createEventBridgeRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      eventBridgeHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: EventBridgeRequest, _next: EventBridgeNext): Promise<void> {
+        return;
+      }
+
+      const router = createEventBridgeRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ eventBridgeHandlerEvent }) => {
+      const middleware = vi.fn();
+      const detailSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createEventBridgeRouter({ middleware: [middleware] });
+      router.route({ filters: {}, detailSchema, handler: vi.fn() });
+
+      const { event, context } = eventBridgeHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, UserMigrationTriggerEvent } from 'aws-lambda';
 import type { CognitoFilters, UserAttributes } from './common.js';
+import type { CognitoMiddleware } from './router.js';
 
 // UserMigration trigger sources - derived from aws-lambda
 export type UserMigrationTriggerSource = UserMigrationTriggerEvent['triggerSource'];
@@ -27,5 +28,6 @@ export type UserMigrationHandler<TUserAttributes extends UserAttributes = UserAt
 export interface UserMigrationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<UserMigrationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
+  middleware?: CognitoMiddleware[];
   handler: UserMigrationHandler<TUserAttributes>;
 }

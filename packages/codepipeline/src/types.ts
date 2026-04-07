@@ -1,3 +1,5 @@
+import type { CodePipelineClient } from '@aws-sdk/client-codepipeline';
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lambda';
 
@@ -19,6 +21,8 @@ export interface CodePipelineSuccessResult {
 }
 
 export type CodePipelineResponse = CodePipelineSuccessResult | undefined;
+
+export type CodePipelineMiddleware = Middleware<CodePipelineJobRequest, CodePipelineResponse>;
 
 export type CodePipelineJobHandler<TUserParameters = unknown> = (
   request: CodePipelineJobRequest<TUserParameters>,
@@ -42,5 +46,11 @@ export interface CodePipelineFilters {
 export interface CodePipelineRouteDefinition<TUserParameters = unknown> {
   filters: CodePipelineFilters;
   userParametersSchema?: StandardSchemaV1<unknown, TUserParameters>;
+  middleware?: CodePipelineMiddleware[];
   handler: CodePipelineJobHandler<TUserParameters>;
+}
+
+export interface CodePipelineRouterOptions {
+  client?: CodePipelineClient;
+  middleware?: CodePipelineMiddleware[];
 }

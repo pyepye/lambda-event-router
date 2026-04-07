@@ -5,7 +5,7 @@ import {
   PutJobSuccessResultCommand,
 } from '@aws-sdk/client-codepipeline';
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { CodePipelineEvent, Context } from 'aws-lambda';
 import type {
@@ -13,18 +13,22 @@ import type {
   CodePipelineFilters,
   CodePipelineJobHandler,
   CodePipelineJobRequest,
+  CodePipelineMiddleware,
   CodePipelineResponse,
   CodePipelineRouteDefinition,
+  CodePipelineRouterOptions,
 } from './types.js';
 
 interface InternalRoute {
   filters: CodePipelineFilters;
   userParametersSchema?: StandardSchemaV1;
+  middleware?: CodePipelineMiddleware[];
   handler: CodePipelineJobHandler;
 }
 
 interface RouteInput<TUserParametersSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: CodePipelineFilters;
+  middleware?: CodePipelineMiddleware[];
   userParametersSchema?: TUserParametersSchema;
 }
 
@@ -52,9 +56,11 @@ export function defineRoute<
 export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, void> {
   private routes: InternalRoute[] = [];
   private codePipelineClient: CodePipelineClient;
+  private middleware: CodePipelineMiddleware[];
 
-  constructor(codePipelineClient?: CodePipelineClient) {
-    this.codePipelineClient = codePipelineClient ?? new CodePipelineClient();
+  constructor(options?: CodePipelineRouterOptions) {
+    this.codePipelineClient = options?.client ?? new CodePipelineClient();
+    this.middleware = options?.middleware ?? [];
   }
 
   canHandleEvent(event: unknown): event is CodePipelineEvent {
@@ -70,6 +76,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     this.routes.push({
       filters: definition.filters,
       userParametersSchema: definition.userParametersSchema,
+      middleware: definition.middleware as CodePipelineMiddleware[] | undefined,
       handler: definition.handler as CodePipelineJobHandler,
     });
     return this;
@@ -129,7 +136,8 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         context,
       };
 
-      const response = await route.handler(request);
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      const response = await handleEventWithMiddleware(allMiddleware, request, route.handler);
       await this.reportSuccess(jobId, response);
     } catch (error) {
       try {
@@ -199,6 +207,6 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
   }
 }
 
-export function createCodePipelineRouter(codePipelineClient?: CodePipelineClient): CodePipelineRouter {
-  return new CodePipelineRouter(codePipelineClient);
+export function createCodePipelineRouter(options?: CodePipelineRouterOptions): CodePipelineRouter {
+  return new CodePipelineRouter(options);
 }

@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
 
 export type CloudWatchLogsMessageType = 'DATA_MESSAGE' | 'CONTROL_MESSAGE';
@@ -19,17 +20,26 @@ export interface CloudWatchLogsFilters {
 
 export type CloudWatchLogsEventFilters = Omit<CloudWatchLogsFilters, 'messageTypes'>;
 
+export type CloudWatchLogsMiddleware = Middleware<CloudWatchLogsRequest, void>;
+
 export interface CloudWatchLogsRouteDefinition {
   filters: CloudWatchLogsFilters;
+  middleware?: CloudWatchLogsMiddleware[];
   handler: (request: CloudWatchLogsRequest) => Promise<void>;
 }
 
 export interface CloudWatchLogsDataMessageRouteDefinition {
   filters: CloudWatchLogsEventFilters;
+  middleware?: CloudWatchLogsMiddleware[];
   handler: (request: CloudWatchLogsRequest) => Promise<void>;
 }
 
 export interface CloudWatchLogsControlMessageRouteDefinition {
   filters: CloudWatchLogsEventFilters;
+  middleware?: CloudWatchLogsMiddleware[];
   handler: (request: CloudWatchLogsRequest) => Promise<void>;
+}
+
+export interface CloudWatchRouterOptions {
+  middleware?: CloudWatchLogsMiddleware[];
 }

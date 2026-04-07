@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
@@ -97,6 +98,12 @@ export type DocumentDBRequest<
 
 export type DocumentDBResponse = undefined;
 
+export type DocumentDBMiddleware<
+  TDocumentKey = Record<string, unknown>,
+  TFullDocument = Record<string, unknown>,
+  TFullDocumentBeforeChange = Record<string, unknown>,
+> = Middleware<DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>, void>;
+
 type DocumentDBRecordHandler<
   TDocumentKey = Record<string, unknown>,
   TFullDocument = Record<string, unknown>,
@@ -145,6 +152,7 @@ export interface DocumentDBInsertRouteDefinition<
   filters: DocumentDBEventFilters;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
+  middleware?: DocumentDBMiddleware<TDocumentKey, TFullDocument>[];
   handler: (request: DocumentDBInsertRequest<TDocumentKey, TFullDocument>) => Promise<void>;
 }
 
@@ -157,6 +165,7 @@ export interface DocumentDBUpdateRouteDefinition<
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
+  middleware?: DocumentDBMiddleware<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>[];
   handler: (request: DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -169,6 +178,7 @@ export interface DocumentDBReplaceRouteDefinition<
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
+  middleware?: DocumentDBMiddleware<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>[];
   handler: (request: DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -179,6 +189,7 @@ export interface DocumentDBDeleteRouteDefinition<
   filters: DocumentDBEventFilters;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
+  middleware?: DocumentDBMiddleware<TDocumentKey, Record<string, unknown>, TFullDocumentBeforeChange>[];
   handler: (request: DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>) => Promise<void>;
 }
 
@@ -191,8 +202,10 @@ export interface DocumentDBRouteDefinition<
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
+  middleware?: DocumentDBMiddleware<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>[];
   handler: DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>;
 }
 
-// No batch item failures for DocumentDB — it doesn't support ReportBatchItemFailures
-export type DocumentDBRouterOptions = Record<string, never>;
+export interface DocumentDBRouterOptions {
+  middleware?: DocumentDBMiddleware[];
+}

@@ -1,9 +1,11 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   DocumentDBEventEntry,
   DocumentDBFilterInput,
   DocumentDBFullDocumentBeforeChangeOption,
   DocumentDBFullDocumentOption,
+  DocumentDBMiddleware,
   DocumentDBOperationType,
   DocumentDBRequest,
   DocumentDBRouteDefinition,
@@ -36,6 +38,7 @@ export interface InternalRoute {
   documentKeySchema?: StandardSchemaV1;
   fullDocumentSchema?: StandardSchemaV1;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1;
+  middleware: Middleware<InternalRequest, void>[];
   handler: (request: InternalRequest) => Promise<void>;
 }
 
@@ -186,6 +189,7 @@ export type RouteInput<
 > = {
   filters: TFilters;
   documentKeySchema?: TDocumentKeySchema;
+  middleware?: DocumentDBMiddleware[];
 } & FullDocumentSchemaOption<TFilters['operationTypes'], TFullDocumentSchema> &
   FullDocumentBeforeChangeSchemaOption<TFilters['operationTypes'], TFullDocumentBeforeChangeSchema>;
 

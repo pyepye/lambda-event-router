@@ -28,5 +28,4 @@ export type {
   NormalizedHTTPEvent,
   PathParams,
   RouteDefinition,
-  StandardSchemaV1,
 } from './types.js';

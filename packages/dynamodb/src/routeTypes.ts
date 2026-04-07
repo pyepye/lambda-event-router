@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { DynamoDBRecord } from 'aws-lambda';
 import type {
@@ -20,6 +21,7 @@ export interface InternalRoute {
   keysSchema?: StandardSchemaV1;
   newImageSchema?: StandardSchemaV1;
   oldImageSchema?: StandardSchemaV1;
+  middleware: Middleware<DynamoDBRequest, void>[];
   handler: (request: DynamoDBRequest) => Promise<void>;
 }
 
@@ -82,6 +84,7 @@ export type RouteInput<
 > = {
   filters: RouteInputFilters<TEventNames, TViewTypes>;
   keysSchema?: TKeysSchema;
+  middleware?: Middleware<DynamoDBRequest, void>[];
 } & NewImageSchemaOption<TEventNames, TNewImageSchema> &
   OldImageSchemaOption<TEventNames, TOldImageSchema>;
 

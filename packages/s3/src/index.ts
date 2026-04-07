@@ -11,6 +11,7 @@ export type {
   S3BatchEventJob,
   S3BatchEventTask,
   S3BatchHandler,
+  S3BatchMiddleware,
   S3BatchRequest,
   S3BatchResult,
   S3BatchResultResult,
@@ -33,6 +34,8 @@ export type {
   S3LifecycleTransitionHandler,
   S3LifecycleTransitionRequest,
   S3LifecycleTransitionRouteDefinition,
+  // Middleware
+  S3Middleware,
   // ObjectAcl types
   S3ObjectAclEventName,
   S3ObjectAclHandler,
@@ -63,6 +66,8 @@ export type {
   S3ReducedRedundancyLostObjectHandler,
   S3ReducedRedundancyLostObjectRequest,
   S3ReducedRedundancyLostObjectRouteDefinition,
+  // RouterOptions
+  S3RouterOptions,
   S3TestEventHandler,
   S3TestEventName,
   S3TestEventRequest,

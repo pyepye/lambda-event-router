@@ -9,6 +9,8 @@ export type {
   CognitoEvent,
   CognitoFilterInput,
   CognitoFilters,
+  CognitoMiddleware,
+  CognitoRouterOptions,
   CognitoTriggerSource,
   // CreateAuthChallenge
   CreateAuthChallengeHandler,

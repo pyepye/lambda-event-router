@@ -1,8 +1,10 @@
 import * as base from '@lambda-event-router/base';
 import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
-import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
-import type { DynamoDBFilterInput, DynamoDBInsertRequest } from './types.js';
+import { createDynamoDBRouter, defineRoute, DynamoDBRouter } from './DynamoDBRouter.js';
+import type { DynamoDBFilterInput, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
+
+type DynamoDBNext = (request: DynamoDBRequest) => Promise<void>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
@@ -931,6 +933,278 @@ suite('DynamoDBRouter', () => {
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler for each record', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createDynamoDBRouter({ middleware: [middleware] });
+      router.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-record for multi-record events', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const recordIds: string[] = [];
+
+      async function middleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        recordIds.push(request.record.eventID ?? '');
+        await next(request);
+      }
+
+      const router = createDynamoDBRouter({ middleware: [middleware] });
+      router.insert({ filters: {}, handler: async () => {} });
+
+      const recordA = dynamoDBInsertRecord({ eventID: 'evt-1' });
+      const recordB = dynamoDBInsertRecord({ eventID: 'evt-2' });
+      const event = dynamoDBStreamEvent([recordA, recordB]);
+      await router.handleEvent(event, context());
+
+      expect(recordIds).toEqual(['evt-1', 'evt-2']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ dynamoDBStreamHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      const router = createDynamoDBRouter({ middleware: [skipMiddleware] });
+      router.insert({ filters: {}, handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createDynamoDBRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      router.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({
+      dynamoDBStreamHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      router.insert({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.insert({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({
+        filters: {},
+        middleware: [routeMiddleware],
+      }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      router.route(route);
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createDynamoDBRouter({ middleware: [routerMiddleware] });
+      router.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      dynamoDBStreamHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      const router = createDynamoDBRouter({ middleware: [blockingRouterMiddleware] });
+      router.insert({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ dynamoDBStreamHandlerEvent }) => {
+      const middleware = vi.fn();
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createDynamoDBRouter({ middleware: [middleware] });
+      router.insert({ filters: {}, keysSchema, handler: vi.fn() });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Image validation failed for Keys');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('batch item failures with middleware', () => {
+    test('middleware errors are tracked as batch item failures', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+
+      async function failingMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        throw new Error('middleware error');
+      }
+
+      const router = createDynamoDBRouter({ batchItemFailures: true, middleware: [failingMiddleware] });
+      router.insert({ filters: {}, handler });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      const result = await router.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: record.eventID }],
+      });
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

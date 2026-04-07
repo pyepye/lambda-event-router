@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SNSMessageAttributes as AWSSNSMessageAttributes, Context, SNSEventRecord } from 'aws-lambda';
 
@@ -12,6 +13,11 @@ export interface SNSRequest<TBody = unknown, TMessageAttributes extends SNSMessa
 }
 
 export type SNSResponse = undefined;
+
+export type SNSMiddleware<
+  TBody = unknown,
+  TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes,
+> = Middleware<SNSRequest<TBody, TMessageAttributes>, void>;
 
 export type SNSRecordHandler<
   TBody = unknown,
@@ -38,9 +44,11 @@ export interface SNSRouteDefinition<
   filters: SNSFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;
+  middleware?: SNSMiddleware<TBody, TMessageAttributes>[];
   handler: SNSRecordHandler<TBody, TMessageAttributes>;
 }
 
 export interface SNSRouterOptions {
   batchItemFailures?: boolean;
+  middleware?: SNSMiddleware[];
 }

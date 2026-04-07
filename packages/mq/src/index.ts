@@ -10,10 +10,12 @@ export type {
   ActiveMQMessage,
   ActiveMQMessageType,
   ActiveMQMessageTypeFilters,
+  ActiveMQMiddleware,
   ActiveMQRequest,
   ActiveMQRouteBuilder,
   ActiveMQRouteDefinition,
   ActiveMQRouteInput,
+  ActiveMQRouterOptions,
   ActiveMQTextMessageRequest,
   ActiveMQTextMessageRouteDefinition,
 } from './activeMQTypes.js';
@@ -25,9 +27,11 @@ export type {
   RabbitMQFilters,
   RabbitMQInternalRoute,
   RabbitMQMessage,
+  RabbitMQMiddleware,
   RabbitMQRequest,
   RabbitMQRouteBuilder,
   RabbitMQRouteDefinition,
   RabbitMQRouteInput,
+  RabbitMQRouterOptions,
 } from './rabbitMQTypes.js';
 export type { ActiveMQResponse, RabbitMQResponse } from './types.js';

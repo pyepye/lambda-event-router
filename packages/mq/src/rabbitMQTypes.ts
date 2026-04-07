@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 
@@ -60,9 +61,12 @@ export interface RabbitMQFilters {
 
 // --- Route Definition Types ---
 
+export type RabbitMQMiddleware = Middleware<RabbitMQRequest, void>;
+
 export interface RabbitMQRouteDefinition<TBody = unknown> {
   filters: RabbitMQFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: RabbitMQMiddleware[];
   handler: (request: RabbitMQRequest<TBody>) => Promise<void>;
 }
 
@@ -71,6 +75,7 @@ export interface RabbitMQRouteDefinition<TBody = unknown> {
 export interface RabbitMQInternalRoute {
   filters: RabbitMQFilters;
   bodySchema?: StandardSchemaV1;
+  middleware?: RabbitMQMiddleware[];
   handler: (request: RabbitMQRequest) => Promise<void>;
 }
 
@@ -83,9 +88,14 @@ export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undef
     contentTypes?: string[];
     customFilter?: (input: RabbitMQFilterInput) => boolean;
   };
+  middleware?: RabbitMQMiddleware[];
   bodySchema?: TBodySchema;
 }
 
 export interface RabbitMQRouteBuilder<TBody> {
   handle(handler: (request: RabbitMQRequest<TBody>) => Promise<void>): RabbitMQRouteDefinition<TBody>;
+}
+
+export interface RabbitMQRouterOptions {
+  middleware?: RabbitMQMiddleware[];
 }

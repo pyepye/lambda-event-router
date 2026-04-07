@@ -139,19 +139,14 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       const requestData = request.buildApiRequest();
 
       const allMiddleware = [...this.middleware, ...route.middleware];
-      let handlerResponse: ApiResponse;
-      if (allMiddleware.length > 0) {
-        handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
-      } else {
-        handlerResponse = await route.handler(requestData);
-      }
+      const handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
 
-      const finalizedResponse = this.response.create(handlerResponse);
-      return this.adapter.buildResult(finalizedResponse, event);
+      const response = this.response.create(handlerResponse);
+      return this.adapter.buildResult(response, event);
     } catch (error) {
       if (Response.isHTTPResponse(error)) {
-        const finalizedResponse = this.response.create(error);
-        return this.adapter.buildResult(finalizedResponse, event);
+        const response = this.response.create(error);
+        return this.adapter.buildResult(response, event);
       }
       const errorMessage = error instanceof Error ? error.message : undefined;
       const errorResponse = this.response.internalServerError(errorMessage);

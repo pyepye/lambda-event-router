@@ -1,4 +1,4 @@
-import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Event Names
@@ -24,5 +24,6 @@ export type S3ObjectAclHandler = (request: S3ObjectAclRequest) => Promise<void>;
 
 export interface S3ObjectAclRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3ObjectAclHandler;
 }

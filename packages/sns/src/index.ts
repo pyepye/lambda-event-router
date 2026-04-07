@@ -3,6 +3,7 @@ export type {
   SNSFilterInput,
   SNSFilters,
   SNSMessageAttributes,
+  SNSMiddleware,
   SNSRawMessageAttributes,
   SNSRequest as SNSRecord,
   SNSResponse,

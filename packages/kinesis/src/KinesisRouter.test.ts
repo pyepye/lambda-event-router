@@ -2,7 +2,9 @@ import * as base from '@lambda-event-router/base';
 import { createKinesisEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
-import type { KinesisFilterInput } from './types.js';
+import type { KinesisFilterInput, KinesisRequest } from './types.js';
+
+type KinesisNext = (request: KinesisRequest) => Promise<void>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -618,6 +620,259 @@ suite('KinesisRouter', () => {
       expect(result).toBeUndefined();
       expect(streamAHandler).toHaveBeenCalledTimes(2);
       expect(streamBHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createKinesisRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-record for multi-record events', async ({ kinesisRecord, kinesisEvent, context }) => {
+      const recordIds: string[] = [];
+
+      async function middleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        recordIds.push(request.record.eventID);
+        await next(request);
+      }
+
+      const router = createKinesisRouter({ middleware: [middleware] });
+      router.route({ filters: {}, handler: async () => {} });
+
+      const event = kinesisEvent([kinesisRecord({ eventID: 'evt-1' }), kinesisRecord({ eventID: 'evt-2' })]);
+      await router.handleEvent(event, context());
+
+      expect(recordIds).toEqual(['evt-1', 'evt-2']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ kinesisHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: KinesisRequest, _next: KinesisNext): Promise<void> {
+        return;
+      }
+
+      const router = createKinesisRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createKinesisRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ kinesisHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: KinesisRequest, _next: KinesisNext): Promise<void> {
+        return;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      router.route(route);
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ kinesisHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: KinesisRequest, next: KinesisNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createKinesisRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({ kinesisHandlerEvent }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: KinesisRequest, _next: KinesisNext): Promise<void> {
+        return;
+      }
+
+      const router = createKinesisRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ kinesisHandlerEvent }) => {
+      const middleware = vi.fn();
+      const dataSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createKinesisRouter({ middleware: [middleware] });
+      router.route({ filters: {}, dataSchema, handler: vi.fn() });
+
+      const { event, context } = kinesisHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('validation failed');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('batch item failures with middleware', () => {
+    test('middleware errors are tracked as batch item failures', async ({ kinesisRecord, kinesisEvent, context }) => {
+      const handler = vi.fn();
+
+      async function failingMiddleware(_request: KinesisRequest, _next: KinesisNext): Promise<void> {
+        throw new Error('middleware error');
+      }
+
+      const router = createKinesisRouter({ batchItemFailures: true, middleware: [failingMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const record = kinesisRecord({ eventID: 'evt-1' });
+      const event = kinesisEvent([record]);
+      const result = await router.handleEvent(event, context());
+
+      expect(result).toEqual({ batchItemFailures: [{ itemIdentifier: 'evt-1' }] });
+      expect(handler).not.toHaveBeenCalled();
     });
   });
 });

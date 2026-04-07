@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
@@ -10,16 +10,25 @@ import type {
 } from 'aws-lambda';
 import type { FirehoseResponseResult } from './response.js';
 import { isFirehoseResponse } from './response.js';
-import type { FirehoseFilters, FirehoseRequest, FirehoseResponse, FirehoseRouteDefinition } from './types.js';
+import type {
+  FirehoseFilters,
+  FirehoseMiddleware,
+  FirehoseRequest,
+  FirehoseResponse,
+  FirehoseRouteDefinition,
+  FirehoseRouterOptions,
+} from './types.js';
 
 interface InternalRoute {
   filters: FirehoseFilters;
   dataSchema?: StandardSchemaV1;
+  middleware?: FirehoseMiddleware[];
   handler: (request: FirehoseRequest) => Promise<FirehoseResponse>;
 }
 
 interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
   filters: FirehoseFilters;
+  middleware?: FirehoseMiddleware[];
   dataSchema?: TDataSchema;
 }
 
@@ -36,6 +45,7 @@ export function defineRoute<
       return {
         filters: config.filters as FirehoseFilters,
         dataSchema: config.dataSchema as StandardSchemaV1<unknown, TData> | undefined,
+        middleware: config.middleware,
         handler: handler as (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>,
       };
     },
@@ -44,6 +54,11 @@ export function defineRoute<
 
 export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEvent, FirehoseTransformationResult> {
   private routes: InternalRoute[] = [];
+  private middleware: FirehoseMiddleware[] = [];
+
+  constructor(options?: FirehoseRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is FirehoseTransformationEvent {
     if (!isObject(event)) return false;
@@ -101,8 +116,8 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
         metadata: record.kinesisRecordMetadata,
       };
 
-      const response = await route.handler(request);
-
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      const response = await handleEventWithMiddleware(allMiddleware, request, route.handler);
       return this.mapResponseToResult(record, response);
     } catch (error: unknown) {
       if (isFirehoseResponse(error)) {
@@ -173,6 +188,6 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
   }
 }
 
-export function createFirehoseRouter(): FirehoseRouter {
-  return new FirehoseRouter();
+export function createFirehoseRouter(options?: FirehoseRouterOptions): FirehoseRouter {
+  return new FirehoseRouter(options);
 }

@@ -18,8 +18,6 @@ type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${inf
 // Clean up the extracted params into a proper object type
 export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;
 
-export type { StandardSchemaV1 };
-
 // TODO: Does this need to be more dynamic based on the type?
 //       If not these types should all come from the actual interfaces like targetGroupArn
 export interface Auth {

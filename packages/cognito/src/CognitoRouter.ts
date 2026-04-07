@@ -1,5 +1,5 @@
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
@@ -17,8 +17,10 @@ import type {
 } from 'aws-lambda';
 import type {
   CognitoFilters,
+  CognitoMiddleware,
   CognitoRequest,
   CognitoRouteDefinition,
+  CognitoRouterOptions,
   CognitoTriggerSource,
   // CreateAuthChallenge
   CreateAuthChallengeRouteDefinition,
@@ -84,6 +86,7 @@ export function defineRoute<
       return {
         filters: config.filters as CognitoFilters<TTrigger> | undefined,
         userAttributesSchema: config.userAttributesSchema as StandardSchemaV1<unknown, TUserAttributes> | undefined,
+        middleware: config.middleware,
         handler: handler as (
           request: RequestForTrigger<TTrigger, TUserAttributes>,
         ) => Promise<EventForTrigger<TTrigger>>,
@@ -168,14 +171,16 @@ function hasUserAttributes(request: object): request is { userAttributes: UserAt
 // =============================================================================
 
 interface InternalRoute {
-  filters: CognitoFilters;
+  filters: CognitoFilters<CognitoTriggerSource>;
   userAttributesSchema?: StandardSchemaV1;
+  middleware?: CognitoMiddleware[];
   handler: (request: CognitoRequest) => Promise<CognitoEvent>;
 }
 
 interface InternalRouteInput {
-  filters?: CognitoFilters;
+  filters?: CognitoFilters<CognitoTriggerSource>;
   userAttributesSchema?: StandardSchemaV1;
+  middleware?: CognitoMiddleware[];
   handler: unknown;
 }
 
@@ -202,6 +207,11 @@ type CognitoResponse = CognitoEvent;
 
 export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoResponse> {
   private routes: InternalRoute[] = [];
+  private middleware: CognitoMiddleware[] = [];
+
+  constructor(options?: CognitoRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is CognitoEvent {
     if (!isObject(event)) return false;
@@ -216,6 +226,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     this.routes.push({
       filters: definition.filters ?? {},
       userAttributesSchema: definition.userAttributesSchema,
+      middleware: definition.middleware,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
     return this;
@@ -519,6 +530,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
         triggerSources,
       },
       userAttributesSchema: definition.userAttributesSchema,
+      middleware: definition.middleware,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
     return this;
@@ -545,7 +557,9 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
 
     const request: CognitoRequest = { triggerSource, userAttributes, event: eventClone, context } as CognitoRequest;
     // Handler modifies the cloned event and returns it
-    return await route.handler(request);
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    return await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private matchRoute(event: CognitoEvent, triggerSource: CognitoTriggerSource): InternalRoute | undefined {
@@ -603,6 +617,6 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   }
 }
 
-export function createCognitoRouter(): CognitoRouter {
-  return new CognitoRouter();
+export function createCognitoRouter(options?: CognitoRouterOptions): CognitoRouter {
+  return new CognitoRouter(options);
 }

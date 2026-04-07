@@ -1,4 +1,4 @@
-import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Event Names
@@ -28,5 +28,6 @@ export type S3ObjectTaggingHandler = (request: S3ObjectTaggingRequest) => Promis
 
 export interface S3ObjectTaggingRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3ObjectTaggingHandler;
 }

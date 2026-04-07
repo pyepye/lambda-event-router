@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
 
 // AWS CodeCommit Lambda trigger event types
@@ -43,6 +44,8 @@ export interface CodeCommitRequest {
 
 export type CodeCommitResponse = undefined;
 
+export type CodeCommitMiddleware = Middleware<CodeCommitRequest, void>;
+
 export type CodeCommitRecordHandler = (request: CodeCommitRequest) => Promise<void>;
 
 export interface CodeCommitFilterInput {
@@ -64,5 +67,10 @@ export interface CodeCommitFilters {
 
 export interface CodeCommitRouteDefinition {
   filters: CodeCommitFilters;
+  middleware?: CodeCommitMiddleware[];
   handler: CodeCommitRecordHandler;
+}
+
+export interface CodeCommitRouterOptions {
+  middleware?: CodeCommitMiddleware[];
 }

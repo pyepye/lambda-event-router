@@ -2,7 +2,9 @@ import * as base from '@lambda-event-router/base';
 import { createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { Mock, MockInstance } from 'vitest';
 import { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
-import type { CodePipelineFilterInput } from './types.js';
+import type { CodePipelineFilterInput, CodePipelineJobRequest, CodePipelineResponse } from './types.js';
+
+type CodePipelineNext = (request: CodePipelineJobRequest) => Promise<CodePipelineResponse>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -50,12 +52,12 @@ suite('CodePipelineRouter', () => {
       expect(router).toBeInstanceOf(CodePipelineRouter);
     });
 
-    test('uses custom CodePipelineClient when provided', async ({ codePipelineHandlerEvent }) => {
+    test('ucodePipeline custom CodePipelineClient when provided', async ({ codePipelineHandlerEvent }) => {
       const customSend = vi.fn().mockResolvedValue({});
       const customClient = { send: customSend };
 
       // @ts-expect-error - partial CodePipelineClient mock with only the send method needed
-      const router = createCodePipelineRouter(customClient);
+      const router = createCodePipelineRouter({ client: customClient });
       router.route(defineRoute({ filters: {} }).handle(async () => undefined));
 
       const { event, context } = codePipelineHandlerEvent({ event: { id: 'custom-client-job' } });
@@ -597,7 +599,7 @@ suite('CodePipelineRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('UserParameters validation failed');
     });
 
-    test('passes userParameters to safeJsonParse', async ({ context }) => {
+    test('pascodePipeline userParameters to safeJsonParse', async ({ context }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -631,7 +633,7 @@ suite('CodePipelineRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ userParameters: 'plain-string' }));
     });
 
-    test('passes continuationToken from event to handler request', async ({ context }) => {
+    test('pascodePipeline continuationToken from event to handler request', async ({ context }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -640,6 +642,267 @@ suite('CodePipelineRouter', () => {
       await router.handleEvent(event, ctx);
 
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ continuationToken: 'my-token' }));
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createCodePipelineRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+          return undefined;
+        },
+      });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ codePipelineHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(
+        _request: CodePipelineJobRequest,
+        _next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        return undefined;
+      }
+
+      const router = createCodePipelineRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createCodePipelineRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+          return undefined;
+        },
+      });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return undefined;
+        },
+      });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ codePipelineHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(
+        _request: CodePipelineJobRequest,
+        _next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        return undefined;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+          return undefined;
+        },
+      });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+        return undefined;
+      });
+
+      router.route(route);
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ codePipelineHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(
+        request: CodePipelineJobRequest,
+        next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createCodePipelineRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return undefined;
+        },
+      });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      codePipelineHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(
+        _request: CodePipelineJobRequest,
+        _next: CodePipelineNext,
+      ): Promise<CodePipelineResponse> {
+        return undefined;
+      }
+
+      const router = createCodePipelineRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ codePipelineHandlerEvent }) => {
+      const middleware = vi.fn();
+      const userParametersSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createCodePipelineRouter({ middleware: [middleware] });
+      router.route({ filters: {}, userParametersSchema, handler: vi.fn() });
+
+      const { event, context } = codePipelineHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('UserParameters validation failed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,8 +1,11 @@
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
-import { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
+import { type CognitoRequest, CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 import type { UserAttributes } from './types/common.js';
+import type { CognitoEvent } from './types/router.js';
+
+type CognitoNext = (request: CognitoRequest) => Promise<CognitoEvent>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
@@ -675,6 +678,236 @@ suite('CognitoRouter', () => {
     test('returns false when value is undefined', () => {
       // @ts-expect-error - testing private method directly
       expect(router.matchUserAttribute(undefined, 'test')).toBe(false);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createCognitoRouter({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async (request: CognitoRequest) => {
+          callOrder.push('handler');
+          return request.event;
+        },
+      });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: CognitoRequest, _next: CognitoNext): Promise<CognitoEvent> {
+        // @ts-expect-error - returning undefined to simulate skipping
+        return;
+      }
+
+      const router = createCognitoRouter({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createCognitoRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async (request: CognitoRequest) => {
+          callOrder.push('handler');
+          return request.event;
+        },
+      });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async (request: CognitoRequest) => {
+          callOrder.push('handler');
+          return request.event;
+        },
+      });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({
+      cognitoPreSignUpHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: CognitoRequest, _next: CognitoNext): Promise<CognitoEvent> {
+        // @ts-expect-error - returning undefined to simulate short-circuit
+        return;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async (request: CognitoRequest) => {
+          callOrder.push('handler');
+          return request.event;
+        },
+      });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async (request) => {
+        callOrder.push('handler');
+        return request.event;
+      });
+
+      router.route(route);
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(request: CognitoRequest, next: CognitoNext): Promise<CognitoEvent> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createCognitoRouter({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async (request: CognitoRequest) => {
+          callOrder.push('handler');
+          return request.event;
+        },
+      });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      cognitoPreSignUpHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: CognitoRequest, _next: CognitoNext): Promise<CognitoEvent> {
+        // @ts-expect-error - returning undefined to simulate short-circuit
+        return;
+      }
+
+      const router = createCognitoRouter({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ cognitoPreSignUpHandlerEvent }) => {
+      const middleware = vi.fn();
+      const userAttributesSchema = createMockSchema<UserAttributes>({ issues: [{ message: 'invalid' }] });
+
+      const router = createCognitoRouter({ middleware: [middleware] });
+      router.route({ filters: {}, userAttributesSchema, handler: vi.fn() });
+
+      const { event, context } = cognitoPreSignUpHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('User attributes validation failed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

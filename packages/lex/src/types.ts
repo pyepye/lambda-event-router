@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 
 export type LexInvocationSource = LexV2Event['invocationSource'];
@@ -52,17 +53,26 @@ export type LexDialogCodeHookFilters = Omit<LexFilters, 'invocationSources'>;
 
 export type LexFulfillmentCodeHookFilters = Omit<LexFilters, 'invocationSources'>;
 
+export type LexMiddleware = Middleware<LexRequest, LexResponse>;
+
 export interface LexRouteDefinition {
   filters: LexFilters;
+  middleware?: LexMiddleware[];
   handler: LexHandler;
 }
 
 export interface LexDialogCodeHookRouteDefinition {
   filters: LexDialogCodeHookFilters;
+  middleware?: LexMiddleware[];
   handler: LexDialogCodeHookHandler;
 }
 
 export interface LexFulfillmentCodeHookRouteDefinition {
   filters: LexFulfillmentCodeHookFilters;
+  middleware?: LexMiddleware[];
   handler: LexFulfillmentCodeHookHandler;
+}
+
+export interface LexRouterOptions {
+  middleware?: LexMiddleware[];
 }

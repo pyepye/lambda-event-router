@@ -1,26 +1,32 @@
-import { gunzipSync } from 'node:zlib';
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
+import { gunzipSync } from 'node:zlib';
 import type {
   CloudWatchLogsControlMessageRouteDefinition,
   CloudWatchLogsDataMessageRouteDefinition,
   CloudWatchLogsFilters,
   CloudWatchLogsMessageType,
+  CloudWatchLogsMiddleware,
   CloudWatchLogsRequest,
   CloudWatchLogsRouteDefinition,
+  CloudWatchRouterOptions,
 } from './types.js';
 
 interface RouteBuilder {
   handle(handler: (request: CloudWatchLogsRequest) => Promise<void>): CloudWatchLogsRouteDefinition;
 }
 
-export function defineRoute(config: { filters: CloudWatchLogsFilters }): RouteBuilder {
+export function defineRoute(config: {
+  filters: CloudWatchLogsFilters;
+  middleware?: CloudWatchLogsMiddleware[];
+}): RouteBuilder {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): CloudWatchLogsRouteDefinition {
       return {
         filters: config.filters,
+        middleware: config.middleware ?? [],
         handler,
       };
     },
@@ -29,6 +35,11 @@ export function defineRoute(config: { filters: CloudWatchLogsFilters }): RouteBu
 
 export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent, undefined> {
   private routes: CloudWatchLogsRouteDefinition[] = [];
+  private middleware: CloudWatchLogsMiddleware[] = [];
+
+  constructor(options?: CloudWatchRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is CloudWatchLogsEvent {
     if (!isObject(event)) return false;
@@ -70,7 +81,9 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
+
     return undefined;
   }
 
@@ -123,6 +136,6 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
   }
 }
 
-export function createCloudWatchLogsRouter(): CloudWatchLogsRouter {
-  return new CloudWatchLogsRouter();
+export function createCloudWatchLogsRouter(options?: CloudWatchRouterOptions): CloudWatchLogsRouter {
+  return new CloudWatchLogsRouter(options);
 }

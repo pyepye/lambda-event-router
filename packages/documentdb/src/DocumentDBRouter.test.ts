@@ -9,8 +9,10 @@ import {
   test,
 } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
-import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
-import type { DocumentDBFilterInput } from './types.js';
+import { createDocumentDBRouter, defineRoute, DocumentDBRouter } from './DocumentDBRouter.js';
+import type { DocumentDBFilterInput, DocumentDBMiddleware, DocumentDBRequest } from './types.js';
+
+type DocumentDBNext = (request: DocumentDBRequest) => Promise<void>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
@@ -701,6 +703,240 @@ suite('DocumentDBRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('update failed');
 
       expect(handler).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createDocumentDBRouter({ middleware: [middleware] });
+      router.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-entry for multi-entry events', async ({ context }) => {
+      const entryCount: number[] = [];
+      let callCount = 0;
+
+      async function middleware(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callCount++;
+        entryCount.push(callCount);
+        await next(request);
+      }
+
+      const router = createDocumentDBRouter({ middleware: [middleware] });
+      router.insert({ filters: {}, handler: async () => {} });
+
+      const entries = [createDocumentDBInsertEntry(), createDocumentDBInsertEntry()];
+      const event = createDocumentDBEvent(entries);
+      await router.handleEvent(event, context());
+
+      expect(entryCount).toEqual([1, 2]);
+    });
+
+    test('allows middleware to skip an entry by not calling next', async ({ documentDBHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: DocumentDBRequest, _next: DocumentDBNext): Promise<void> {
+        return;
+      }
+
+      const router = createDocumentDBRouter({ middleware: [skipMiddleware] });
+      router.insert({ filters: {}, handler });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createDocumentDBRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+      router.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ documentDBHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: DocumentDBRequest, _next: DocumentDBNext): Promise<void> {
+        return;
+      }
+      router.insert({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+      router.insert({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      const routeMiddleware: DocumentDBMiddleware = async (request: DocumentDBRequest, next: DocumentDBNext) => {
+        callOrder.push('route-mw');
+        await next(request);
+      };
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+      router.route(route);
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ documentDBHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: DocumentDBRequest, next: DocumentDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createDocumentDBRouter({ middleware: [routerMiddleware] });
+      router.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      documentDBHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: DocumentDBRequest, _next: DocumentDBNext): Promise<void> {
+        return;
+      }
+
+      const router = createDocumentDBRouter({ middleware: [blockingRouterMiddleware] });
+      router.insert({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = documentDBHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ documentDBHandlerEvent }) => {
+      const middleware = vi.fn();
+      const documentKeySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createDocumentDBRouter({ middleware: [middleware] });
+      router.insert({ filters: {}, documentKeySchema, handler: vi.fn() });
+
+      const { event, context } = documentDBHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed');
+      expect(middleware).not.toHaveBeenCalled();
     });
   });
 });

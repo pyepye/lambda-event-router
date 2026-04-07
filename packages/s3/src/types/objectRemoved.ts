@@ -1,4 +1,4 @@
-import type { S3BaseRequest, S3FiltersWithoutEventNames } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Event Names
@@ -29,5 +29,6 @@ export type S3ObjectRemovedHandler = (request: S3ObjectRemovedRequest) => Promis
 // Convenience route definition - eventNames set automatically by the method
 export interface S3ObjectRemovedRouteDefinition {
   filters?: S3FiltersWithoutEventNames;
+  middleware?: S3Middleware[];
   handler: S3ObjectRemovedHandler;
 }

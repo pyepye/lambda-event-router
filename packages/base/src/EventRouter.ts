@@ -197,12 +197,9 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     const validatedEvent = await validateSchema(event, route.eventSchema, 'Schema validation failed for event');
 
     const request = { event: validatedEvent, context };
-    const routeMiddleware = route.middleware;
-    const allMiddleware = [...this.middleware, ...routeMiddleware] as EventRouterMiddleware<unknown, TResponse>[];
-    if (allMiddleware.length > 0) {
-      return handleEventWithMiddleware(allMiddleware, request, route.handler as EventHandler<unknown, TResponse>);
-    }
-    return route.handler(request) as Promise<TResponse>;
+
+    const allMiddleware = [...this.middleware, ...route.middleware] as EventRouterMiddleware<unknown, TResponse>[];
+    return handleEventWithMiddleware(allMiddleware, request, route.handler as EventHandler<unknown, TResponse>);
   }
 
   private matchRoute(event: unknown): InternalEventRoute | undefined {

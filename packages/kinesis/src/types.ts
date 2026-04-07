@@ -1,3 +1,4 @@
+import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, KinesisStreamRecord } from 'aws-lambda';
 
@@ -24,12 +25,16 @@ export interface KinesisRequest<TData = unknown> {
 
 export type KinesisResponse = undefined;
 
+export type KinesisMiddleware<TData = unknown> = Middleware<KinesisRequest<TData>, void>;
+
 export interface KinesisRouteDefinition<TData = unknown> {
   filters: KinesisFilters;
   dataSchema?: StandardSchemaV1<unknown, TData>;
+  middleware?: KinesisMiddleware<TData>[];
   handler: (request: KinesisRequest<TData>) => Promise<void>;
 }
 
 export interface KinesisRouterOptions {
   batchItemFailures?: boolean;
+  middleware?: KinesisMiddleware[];
 }

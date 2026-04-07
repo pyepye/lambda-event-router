@@ -566,6 +566,52 @@ suite('EventRouter', () => {
       expect(validateSchemaSpy).toHaveBeenCalledWith(event, eventSchema, expect.any(String));
       expect(capturedRequest).toEqual({ event, context });
     });
+
+    test('does not execute middleware when schema validation fails', async () => {
+      const middleware = vi.fn();
+
+      const router = createEventRouter({ middleware: [middleware] });
+      router.route(
+        defineEventRoute({
+          filters: {},
+          eventSchema: createMockSchema({ issues: [{ message: 'invalid event' }] }),
+        }).handle(async () => {}),
+      );
+
+      await expect(router.handleEvent({ taskId: 'task-123' }, createMockContext())).rejects.toThrow(
+        'Schema validation failed for event',
+      );
+      expect(middleware).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: EventRequest, next: EventNext): Promise<unknown> {
+        callOrder.push('mw1-pre');
+        const result = await next(request);
+        callOrder.push('mw1-post');
+        return result;
+      }
+
+      async function middlewareTwo(request: EventRequest, next: EventNext): Promise<unknown> {
+        callOrder.push('mw2-pre');
+        const result = await next(request);
+        callOrder.push('mw2-post');
+        return result;
+      }
+
+      const router = createEventRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route(
+        defineEventRoute({ filters: {} }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      await router.handleEvent({ taskId: 'task-123' }, createMockContext());
+
+      expect(callOrder).toEqual(['mw1-pre', 'mw2-pre', 'handler', 'mw2-post', 'mw1-post']);
+    });
   });
 
   suite('route-level middleware', () => {
@@ -577,7 +623,6 @@ suite('EventRouter', () => {
         return next(request);
       }
 
-      const router = new EventRouter();
       router.route(
         defineEventRoute({
           filters: {},
@@ -590,6 +635,52 @@ suite('EventRouter', () => {
       await router.handleEvent({ taskId: 'task-123' }, createMockContext());
 
       expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async () => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: EventRequest, _next: EventNext): Promise<unknown> {
+        return undefined;
+      }
+
+      router.route(
+        defineEventRoute({
+          filters: {},
+          middleware: [blockingRouteMiddleware],
+        }).handle(handler),
+      );
+
+      await router.handleEvent({ taskId: 'task-123' }, createMockContext());
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: EventRequest, next: EventNext): Promise<unknown> {
+        callOrder.push('route-mw1');
+        return next(request);
+      }
+
+      async function routeMiddlewareTwo(request: EventRequest, next: EventNext): Promise<unknown> {
+        callOrder.push('route-mw2');
+        return next(request);
+      }
+
+      router.route(
+        defineEventRoute({
+          filters: {},
+          middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      await router.handleEvent({ taskId: 'task-123' }, createMockContext());
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
     });
   });
 
@@ -621,11 +712,32 @@ suite('EventRouter', () => {
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
+
+    test('router middleware short-circuit prevents route middleware from running', async () => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: EventRequest, _next: EventNext): Promise<unknown> {
+        return undefined;
+      }
+
+      const router = createEventRouter({ middleware: [blockingRouterMiddleware] });
+      router.route(
+        defineEventRoute({
+          filters: {},
+          middleware: [routeMiddleware],
+        }).handle(handler),
+      );
+
+      await router.handleEvent({ taskId: 'task-123' }, createMockContext());
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
   });
 
   suite('handler return value', () => {
     test('returns handler result from handleEvent', async () => {
-      const router = new EventRouter();
       router.route(
         defineEventRoute({ filters: {} }).handle(async () => {
           return { orderId: 'order-123', status: 'processed' };

@@ -1,6 +1,10 @@
 import { createS3BatchEvent, createS3BatchTask, createS3Event, test } from '@lambda-event-router/testing';
+import type { S3BatchResponse } from './batchResponse.js';
 import { createS3Router, defineRoute, S3Router } from './S3Router.js';
-import type { S3FilterInput } from './types/index.js';
+import type { S3BaseRequest, S3BatchRequest, S3FilterInput } from './types/index.js';
+
+type S3Next = (request: S3BaseRequest) => Promise<void>;
+type S3BatchNext = (request: S3BatchRequest) => Promise<S3BatchResponse>;
 
 suite('S3Router', () => {
   let router: S3Router;
@@ -780,6 +784,306 @@ suite('S3Router', () => {
 
       expect(uploadsHandler).toHaveBeenCalledTimes(2);
       expect(imagesHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const router = createS3Router({ middleware: [middleware] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ s3HandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: S3BaseRequest, _next: S3Next): Promise<void> {
+        return;
+      }
+
+      const router = createS3Router({ middleware: [skipMiddleware] });
+      router.route({ filters: {}, handler });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const router = createS3Router({ middleware: [middlewareOne, middlewareTwo] });
+      router.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ s3HandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: S3BaseRequest, _next: S3Next): Promise<void> {
+        return;
+      }
+
+      router.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      router.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+      router.route(route);
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ s3HandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('router-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: S3BaseRequest, next: S3Next): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const router = createS3Router({ middleware: [routerMiddleware] });
+      router.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router middleware short-circuit prevents route middleware from running', async ({ s3HandlerEvent }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingRouterMiddleware(_request: S3BaseRequest, _next: S3Next): Promise<void> {
+        return;
+      }
+
+      const router = createS3Router({ middleware: [blockingRouterMiddleware] });
+      router.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = s3HandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('batch operation middleware', () => {
+    test('executes batch middleware before the handler', async ({ s3BatchHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('mw-pre');
+        const response = await next(request);
+        callOrder.push('mw-post');
+        return response;
+      }
+      router.batchOperation({
+        middleware: [middleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return { resultCode: 'Succeeded' as const };
+        },
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip handler by not calling next', async ({ s3BatchHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' as const });
+
+      async function skipMiddleware(_request: S3BatchRequest, _next: S3BatchNext): Promise<S3BatchResponse> {
+        return { resultCode: 'PermanentFailure' as const, resultString: 'skipped by middleware' };
+      }
+      router.batchOperation({
+        middleware: [skipMiddleware],
+        handler,
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(result?.results[0]?.resultCode).toBe('PermanentFailure');
+      expect(result?.results[0]?.resultString).toBe('skipped by middleware');
+    });
+
+    test('executes multiple batch middleware in order', async ({ s3BatchHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('mw1');
+        return await next(request);
+      }
+
+      async function middlewareTwo(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('mw2');
+        return await next(request);
+      }
+      router.batchOperation({
+        middleware: [middlewareOne, middlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+          return { resultCode: 'Succeeded' as const };
+        },
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('middleware can modify the response', async ({ s3BatchHandlerEvent }) => {
+      async function middleware(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        const response = await next(request);
+        return { ...response, resultString: 'modified by middleware' };
+      }
+      router.batchOperation({
+        middleware: [middleware],
+        handler: async () => ({ resultCode: 'Succeeded' as const, resultString: 'original' }),
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result?.results[0]?.resultString).toBe('modified by middleware');
+    });
+
+    test('router-level middleware does not apply to batch routes', async ({ s3BatchHandlerEvent }) => {
+      const routerMiddleware = vi.fn();
+
+      const router = createS3Router({ middleware: [routerMiddleware] });
+      router.batchOperation({
+        handler: async () => ({ resultCode: 'Succeeded' as const }),
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(routerMiddleware).not.toHaveBeenCalled();
     });
   });
 });

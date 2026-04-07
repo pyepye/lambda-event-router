@@ -6,9 +6,11 @@ export {
 } from './ConfigScheduledRouter.js';
 export type {
   ConfigChangeFilters,
+  ConfigMiddleware,
   ConfigOversizedRequest,
   ConfigRequest,
   ConfigRouteDefinition,
+  ConfigRouterOptions,
 } from './configRouterTypes.js';
 export type {
   ConfigScheduledFilters,
