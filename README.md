@@ -4,7 +4,7 @@
 </p>
 
 <!-- TODO: Needs work -->
-A TypeScript framework for routing and handling different AWS Lambda events in the same function code in a unified and predictable way. This allows lambdas to be used in a more microservice architecture, where all of the code for a range of events can be handle by a singe lambda.
+A TypeScript framework for routing and handling different AWS Lambda events in the same function code in a unified and predictable way. This allows lambdas to be used in a more microservice like architecture, where all of the code for a range of related events / services can be handled by a single lambda or multiple lambdas with shared code.
 
 <br />
 
@@ -32,6 +32,8 @@ export const handler = lambdaRouter.handler()
 - **25+ AWS services** - Dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more
 - **Schema validation** - Built-in Zod schema validation for request bodies, message attributes, path params, and more
 - **Well tested** - Clear and concise tests covering most code branches for each event type
+
+This framework might not be the right fit in every situation, see [When not to use it](#when-not-to-use-it) for more details.
 
 
 ## Packages / Supported AWS Services
@@ -154,3 +156,16 @@ sqsRouter.route({
 <!-- TODO: Needs work -->
 
 See the [examples](examples/) directory for complete working examples for every supported service.
+
+
+## When not to use it
+<!-- TODO: Needs work -->
+
+If your Lambda handles a single event source in a single way, you probably don't need this. Here are some cases where it isn't the right fit:
+
+- Single event source with no filtering - Your Lambda receives events from one source and processes them all the same way. A plain handler function is simpler
+- Single-purpose Lambdas - Your Lambda does exactly one thing. Routing and filtering add indirection with no upside
+- HTTP-only Lambdas - Dedicated HTTP frameworks (Express, Hono, Fastify) have richer ecosystems for middleware, auth, templating, etc.
+- Performance-critical Lambdas with simple logic - The router iterates through registered routers via canHandleEvent checks and applies middleware chains. For ultra-simple Lambdas where every millisecond counts, a direct handler avoids this
+ overhead.
+- One Lambda per event source architecture - If you intentionally map one Lambda to one event source for isolated scaling, permissions, or deployment, there's nothing to route between.
