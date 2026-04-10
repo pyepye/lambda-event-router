@@ -1,0 +1,39 @@
+:root {
+  --vp-c-brand-1: #62ad60;
+  --vp-c-brand-2: #559e54;
+  --vp-c-brand-3: #4a8c49;
+  --vp-c-brand-soft: #62ad6024;
+
+  /* Accessible text */
+  --vp-c-brand-text: #2e5c2d;
+}
+
+.dark {
+  --vp-c-brand-1: #7bcf78;
+  --vp-c-brand-2: #62ad60;
+  --vp-c-brand-3: #4a8c49;
+  --vp-c-brand-soft: #7bcf7829;
+
+  /* Ppasses contrast easily in dark mode */
+  --vp-c-brand-text: #7bcf78;
+}
+
+.home-code-tabs {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 2rem 1rem 4rem;
+}
+
+@media (min-width: 960px) {
+  .VPDoc.VPDoc:not(.has-sidebar) .content {
+    max-width: 1104px;
+  }
+}
+@media (min-width: 1440px) {
+  .VPDoc.VPDoc:not(.has-sidebar) .content {
+    max-width: 1152px;
+  }
+  .VPDoc.VPDoc:not(.has-sidebar) .container {
+    max-width: 1280px;
+  }
+}

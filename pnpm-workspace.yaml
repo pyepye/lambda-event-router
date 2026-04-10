@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - examples
+  - docs
 
 catalog:
   '@aws-sdk/client-apigatewaymanagementapi': ^3.0.0

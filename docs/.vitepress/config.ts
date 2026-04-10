@@ -1,0 +1,89 @@
+import { defineConfig } from 'vitepress';
+
+// TODO: set `base` to '/lambda-event-manager/' before deploying to
+// https://pyepye.github.io/lambda-event-manager/, or keep '/' for a custom domain.
+export default defineConfig({
+  title: 'Lambda Event Router',
+  description: 'Type-safe routing for AWS Lambda events',
+  base: '/',
+  cleanUrls: true,
+  head: [['link', { rel: 'icon', href: '/lambda-event-router.svg' }]],
+  themeConfig: {
+    logo: {
+      light: '/lambda-event-router-light.svg',
+      dark: '/lambda-event-router-dark.svg',
+      alt: 'Lambda Event Router',
+    },
+    siteTitle: 'Lambda Event Router',
+    search: { provider: 'local' },
+    nav: [
+      { text: 'Packages', link: '/packages' },
+      { text: 'Docs', link: '/docs/' },
+      { text: 'Examples', link: '/examples/' },
+      { text: 'About', link: '/about' },
+    ],
+    sidebar: {
+      '/': [
+        {
+          text: 'Getting Started',
+          items: [
+            { text: 'Overview', link: '/docs/' },
+            { text: 'Quick Start', link: '/docs/quick-start' },
+            { text: 'Routers', link: '/docs/routers' },
+            { text: 'Routing / Filtering', link: '/docs/routing' },
+            { text: 'Handlers', link: '/docs/handlers' },
+            { text: 'Middleware', link: '/docs/middleware' },
+          ],
+        },
+        {
+          text: 'Routers',
+          items: [
+            { text: 'LambdaRouter', link: '/routers/LambdaRouter' },
+            { text: 'EventRouter', link: '/routers/EventRouter' },
+            { text: 'APIGatewayRouter', link: '/routers/APIGatewayRouter' },
+            { text: 'WebSocketRouter (API Gateway)', link: '/routers/WebSocketRouter' },
+            { text: 'LambdaAuthorizerRouter (API Gateway)', link: '/routers/LambdaAuthorizerRouter' },
+            { text: 'ActiveMQRouter', link: '/routers/ActiveMQRouter' },
+            { text: 'ALBRouter', link: '/routers/ALBRouter' },
+            { text: 'AppSyncAuthorizerRouter', link: '/routers/AppSyncAuthorizerRouter' },
+            { text: 'AppSyncEventsRouter', link: '/routers/AppSyncEventsRouter' },
+            { text: 'AppSyncRouter', link: '/routers/AppSyncRouter' },
+            { text: 'CloudFormationRouter', link: '/routers/CloudFormationRouter' },
+            { text: 'CloudWatchLogsRouter', link: '/routers/CloudWatchLogsRouter' },
+            { text: 'CodeCommitRouter', link: '/routers/CodeCommitRouter' },
+            { text: 'CodePipelineRouter', link: '/routers/CodePipelineRouter' },
+            { text: 'CognitoRouter', link: '/routers/CognitoRouter' },
+            { text: 'ConfigRouter', link: '/routers/ConfigRouter' },
+            { text: 'ConfigScheduledRouter', link: '/routers/ConfigScheduledRouter' },
+            { text: 'ConnectRouter', link: '/routers/ConnectRouter' },
+            { text: 'DocumentDBRouter', link: '/routers/DocumentDBRouter' },
+            { text: 'DynamoDBRouter', link: '/routers/DynamoDBRouter' },
+            { text: 'EventBridgeRouter', link: '/routers/EventBridgeRouter' },
+            { text: 'FirehoseRouter', link: '/routers/FirehoseRouter' },
+            { text: 'IoTRouter', link: '/routers/IoTRouter' },
+            { text: 'KafkaRouter', link: '/routers/KafkaRouter' },
+            { text: 'KinesisRouter', link: '/routers/KinesisRouter' },
+
+            { text: 'LexRouter', link: '/routers/LexRouter' },
+            { text: 'RabbitMQRouter', link: '/routers/RabbitMQRouter' },
+            { text: 'S3Router', link: '/routers/S3Router' },
+            { text: 'SecretsManagerRouter', link: '/routers/SecretsManagerRouter' },
+            { text: 'SESRouter', link: '/routers/SESRouter' },
+            { text: 'SNSRouter', link: '/routers/SNSRouter' },
+            { text: 'SQSRouter', link: '/routers/SQSRouter' },
+            { text: 'StepFunctionsRouter', link: '/routers/StepFunctionsRouter' },
+            { text: 'VPCLatticeRouter', link: '/routers/VPCLatticeRouter' },
+          ],
+        },
+        {
+          text: 'Examples',
+          items: [{ text: 'Examples', link: '/examples/' }],
+        },
+      ],
+    },
+    socialLinks: [{ icon: 'github', link: 'https://github.com/pyepye/lambda-event-router' }],
+    footer: {
+      copyright: `Copyright © ${new Date().getFullYear()} Matt Pye`,
+    },
+  },
+});

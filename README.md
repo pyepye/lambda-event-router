@@ -1,5 +1,5 @@
 <p align="center">
-    <img src="./docs/images/lambda-event-router.svg" width="200px" align="center" alt="Lambda Event Router logo" />
+    <img src="./docs/public/lambda-event-router.svg" width="200px" align="center" alt="Lambda Event Router logo" />
   <h1 align="center">Lambda Event Router</h1>
 </p>
 
@@ -30,7 +30,7 @@ export const handler = lambdaRouter.handler()
 - **Type-safe routing** - Full TypeScript support with inferred types from schemas and filters for inline handlers
 - **Declarative filters** - Route events by service specific data - ARN, eventType, topic, bucket, event name, detail type, and custom filter functions
 - **25+ AWS services** - Dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more
-- **Schema validation** - Built-in Zod schema validation for request bodies, message attributes, path params, and more
+- **Schema validation** - Built-in schema validation for request bodies, message attributes, path params, and more. Compatible with any Standard Schema compatible library
 - **Well tested** - Clear and concise tests covering most code branches for each event type
 
 This framework might not be the right fit in every situation, see [When not to use it](#when-not-to-use-it) for more details.
