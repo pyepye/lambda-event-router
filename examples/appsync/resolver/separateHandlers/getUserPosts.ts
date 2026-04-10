@@ -1,6 +1,6 @@
 import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 
-// Standalone nested resolver — resolves the `posts` field on a User type.
+// Standalone nested resolver - resolves the `posts` field on a User type.
 // `source` contains the parent User object returned by the parent resolver.
 export async function getUserPosts(request: AppSyncResolverRequest) {
   const { source, arguments: args, info } = request;

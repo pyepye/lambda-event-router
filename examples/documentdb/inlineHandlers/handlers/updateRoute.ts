@@ -17,13 +17,13 @@ import {
 //                              fullDocumentBeforeChange: 'whenAvailable' | 'required' (MongoDB 6.0+)
 //
 // The fullDocument and fullDocumentBeforeChange filters below match the MongoDB change stream
-// configuration options — NOT the event fields themselves. Declaring them here tells the router
+// configuration options - NOT the event fields themselves. Declaring them here tells the router
 // (and the types) that this handler expects those fields to be present on the event.
 export const updateRoute = defineRoute({
   filters: {
     operationTypes: ['update'],
     eventSourceArns: [CLUSTER_ARN],
-    // Match the change stream config — these control whether the event fields are populated
+    // Match the change stream config - these control whether the event fields are populated
     fullDocument: ['updateLookup'],
     fullDocumentBeforeChange: ['whenAvailable', 'required'],
   },
@@ -34,7 +34,7 @@ export const updateRoute = defineRoute({
   console.log(`Order ${documentKey._id} updated`);
 
   // updateDescription is always present on update events
-  // updatedFields contains whichever fields changed — the shape is unpredictable
+  // updatedFields contains whichever fields changed - the shape is unpredictable
   const { updatedFields, removedFields } = updateDescription;
 
   if (updatedFields?.status) {
@@ -46,7 +46,7 @@ export const updateRoute = defineRoute({
   }
 
   // Because the filters declared fullDocument and fullDocumentBeforeChange above,
-  // the types know these fields are present — no guards needed
+  // the types know these fields are present - no guards needed
   console.log(`Current status: ${fullDocument.status}`);
   console.log(`Previous status: ${fullDocumentBeforeChange.status}`);
 });

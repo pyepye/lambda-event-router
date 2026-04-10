@@ -1,6 +1,6 @@
 import { defineLambdaAuthorizerRoute, generatePolicy } from '@lambda-event-router/apigateway';
 
-// REQUEST authorizer (IAM policy response) — invoked with headers, query params, etc.
+// REQUEST authorizer (IAM policy response) invoked with headers, query params, etc.
 // Normalized across V1 and V2 request events.
 export const onRequestAuthRoute = defineLambdaAuthorizerRoute({
   filters: { type: 'REQUEST' },

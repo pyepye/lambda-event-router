@@ -74,14 +74,14 @@ secretsManagerRouter.route({
 });
 
 // =============================================================================
-// Convenience methods — pre-set the step filter
+// Convenience methods - pre-set the step filter
 // =============================================================================
 
 // .createSecret() is equivalent to .route() with steps: ['createSecret']
 secretsManagerRouter.createSecret({
   filters: {
     secretIds: [DATABASE_SECRET_ARN],
-    // steps is not valid here — already implied by .createSecret()
+    // steps is not valid here - already implied by .createSecret()
   },
   handler: handleCreateSecret,
 });

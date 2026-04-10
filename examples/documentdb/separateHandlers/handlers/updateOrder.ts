@@ -49,7 +49,7 @@ export async function updateOrder({
   console.log(`Order ${documentKey._id} updated`);
 
   // updateDescription is always present on update events
-  // updatedFields contains whichever fields changed — the shape is unpredictable
+  // updatedFields contains whichever fields changed - the shape is unpredictable
   const { updatedFields, removedFields } = updateDescription;
 
   if (updatedFields?.status) {

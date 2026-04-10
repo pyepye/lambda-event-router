@@ -1,6 +1,6 @@
 import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 
-// Standalone Mutation resolver — updates an existing user using pipeline resolver context.
+// Standalone Mutation resolver - updates an existing user using pipeline resolver context.
 // Uses stash and prev to coordinate with other resolvers in the pipeline.
 export async function updateUser(request: AppSyncResolverRequest) {
   const { arguments: args, stash, prev } = request;

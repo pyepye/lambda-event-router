@@ -1,4 +1,4 @@
-import { Dropped, defineRoute, type FirehoseFilterInput, Ok } from '@lambda-event-router/firehose';
+import { Dropped, Ok, defineRoute, type FirehoseFilterInput } from '@lambda-event-router/firehose';
 import { z } from 'zod';
 
 import { SOURCE_KINESIS_STREAM_ARN } from '../constants.js';
@@ -12,7 +12,7 @@ const EventDataSchema = z.object({
 
 const STALE_EVENT_THRESHOLD_MS = 60_000;
 
-// data is unknown (decoded but not schema-validated) — narrow before accessing properties
+// data is unknown (decoded but not schema-validated) - narrow before accessing properties
 function isUserEvent({ data }: FirehoseFilterInput): boolean {
   if (typeof data !== 'object' || data === null) return false;
   if (!('eventType' in data) || typeof data.eventType !== 'string') return false;

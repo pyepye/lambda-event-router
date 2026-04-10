@@ -121,7 +121,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
       return typeof event.authorizationToken === 'string' && typeof event.methodArn === 'string';
     }
 
-    // REQUEST type — V1 has methodArn + httpMethod, V2 has routeArn
+    // REQUEST type V1 has methodArn + httpMethod, V2 has routeArn
     if (typeof event.methodArn === 'string' && typeof event.httpMethod === 'string') {
       return true;
     }

@@ -1,6 +1,6 @@
 import { defineEventsRoute } from '@lambda-event-router/appsync';
 
-// SUBSCRIBE handler — authorizes or rejects subscription requests to a channel.
+// SUBSCRIBE handler - authorizes or rejects subscription requests to a channel.
 // Return the event to allow, or throw/reject to deny the subscription.
 export const onSubscribeRoute = defineEventsRoute({
   filters: {

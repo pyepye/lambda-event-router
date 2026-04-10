@@ -1,6 +1,6 @@
 import { defineRoute } from '@lambda-event-router/appsync';
 
-// Subscription resolver — controls authorization and filtering for the onUserCreated subscription.
+// Subscription resolver - controls authorization and filtering for the onUserCreated subscription.
 // Return the event payload to allow the subscription, or null to filter it out.
 export const onUserCreatedRoute = defineRoute({
   filters: {
@@ -18,7 +18,7 @@ export const onUserCreatedRoute = defineRoute({
   const isSameTenant = subscriberTenantId === eventTenantId;
 
   if (!isSameTenant) {
-    // Returning null filters out the event — subscriber will not receive it
+    // Returning null filters out the event - subscriber will not receive it
     return null;
   }
 

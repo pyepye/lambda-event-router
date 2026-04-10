@@ -2,7 +2,7 @@ import { LambdaRouter } from '@lambda-event-router/base';
 import { createSQSRouter, type SQSFilterInput } from '@lambda-event-router/sqs';
 import type { Handler } from 'aws-lambda';
 
-import { CreateItemBodySchema, createItem, createItemOther, MessageAttributesSchema } from './createItem.js';
+import { createItem, CreateItemBodySchema, createItemOther, MessageAttributesSchema } from './createItem.js';
 
 const sqsRouter = createSQSRouter({
   batchItemFailures: true,
@@ -32,7 +32,7 @@ sqsRouter.route({
 
 const HIGH_VALUE_THRESHOLD = 1000;
 
-// Custom filter checking parsed body content — messageAttributes can't express value thresholds
+// Custom filter checking parsed body content - messageAttributes can't express value thresholds
 function isHighValueOrder({ body }: SQSFilterInput): boolean {
   if (typeof body !== 'object' || body === null || !('total' in body)) return false;
   const { total } = body;

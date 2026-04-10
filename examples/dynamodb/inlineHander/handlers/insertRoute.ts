@@ -13,7 +13,7 @@ export const insertRoute = defineRoute({
   console.log(`newImage ${newImage} - pk ${pk} - sk ${sk}`);
 });
 
-// Match inserts where the new record has a PENDING status — filters on record data, not source ARN
+// Match inserts where the new record has a PENDING status - filters on record data, not source ARN
 export const pendingStatusInsertRoute = defineRoute({
   filters: {
     eventNames: ['INSERT'],

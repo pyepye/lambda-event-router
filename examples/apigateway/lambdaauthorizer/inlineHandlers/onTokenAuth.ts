@@ -1,6 +1,6 @@
 import { defineLambdaAuthorizerRoute, generatePolicy } from '@lambda-event-router/apigateway';
 
-// TOKEN authorizer — invoked with authorizationToken from the configured token source header.
+// TOKEN authorizer - invoked with authorizationToken from the configured token source header.
 // Returns an IAM policy via generatePolicy() helper.
 export const onTokenAuthRoute = defineLambdaAuthorizerRoute({
   filters: { type: 'TOKEN' },

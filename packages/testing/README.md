@@ -64,7 +64,7 @@ const context = createMockContext()
 
 ### Vitest fixtures
 
-This package exports `test` — a pre-configured version of [Vitest's `test.extend`](https://vitest.dev/guide/test-context.html#test-extend) with fixtures for every supported AWS service pre-loaded. Use it as a drop-in replacement for `test` from `vitest`. Any fixture you destructure in the test callback is lazily created for you:
+This package exports `test`. A pre-configured version of [Vitest's `test.extend`](https://vitest.dev/guide/test-context.html#test-extend) with fixtures for every supported AWS service pre-loaded. Use it as a drop-in replacement for `test` from `vitest`. Any fixture you destructure in the test callback is lazily created for you:
 
 ```ts
 import { test } from '@lambda-event-router/testing'

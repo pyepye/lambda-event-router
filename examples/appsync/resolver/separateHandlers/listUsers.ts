@@ -1,6 +1,6 @@
 import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 
-// Standalone Query resolver — lists users with pagination.
+// Standalone Query resolver - lists users with pagination.
 // Uses identity to scope results to the caller and arguments for pagination params.
 export async function listUsers(request: AppSyncResolverRequest) {
   const { arguments: args, identity } = request;

@@ -1,5 +1,5 @@
 import { defineAuthorizerRoute } from '@lambda-event-router/appsync';
-// AppSync Lambda authorizer — validates the authorization token and returns an auth decision.
+// AppSync Lambda authorizer - validates the authorization token and returns an auth decision.
 // Receives flattened fields from the AppSync authorizer event.
 export const onAuthRoute = defineAuthorizerRoute().handle(async (request) => {
   const { authorizationToken, requestHeaders, apiId, operationName } = request;

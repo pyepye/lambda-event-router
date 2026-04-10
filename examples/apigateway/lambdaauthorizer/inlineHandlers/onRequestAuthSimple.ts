@@ -1,6 +1,5 @@
 import { defineLambdaAuthorizerRoute } from '@lambda-event-router/apigateway';
 
-// REQUEST authorizer (simple response) — returns true/false.
 // The router wraps the boolean as { isAuthorized } for AWS API Gateway V2 simple mode.
 // Filtered to GET requests only.
 export const onRequestAuthSimpleRoute = defineLambdaAuthorizerRoute({

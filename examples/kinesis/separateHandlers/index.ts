@@ -28,7 +28,7 @@ kinesisRouter.route({
   dataSchema: OrderDataSchema,
 });
 
-// data is unknown (decoded but not schema-validated) — narrow before accessing properties
+// data is unknown (decoded but not schema-validated) - narrow before accessing properties
 function isLargeOrder({ data }: KinesisFilterInput): boolean {
   if (typeof data !== 'object' || data === null) return false;
   if (!('total' in data) || typeof data.total !== 'number') return false;

@@ -7,7 +7,7 @@ import {
 
 import type { LogData } from './transformHandler.js';
 
-// data is unknown (decoded but not schema-validated) — narrow before accessing properties
+// data is unknown (decoded but not schema-validated) - narrow before accessing properties
 export function isErrorLog({ data }: FirehoseFilterInput): boolean {
   if (typeof data !== 'object' || data === null) return false;
   if (!('level' in data) || typeof data.level !== 'string') return false;

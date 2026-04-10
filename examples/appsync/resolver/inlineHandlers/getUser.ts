@@ -1,6 +1,5 @@
 import { defineRoute } from '@lambda-event-router/appsync';
 
-// Query resolver — fetches a single user by ID.
 // Uses arguments for the GraphQL field args and selectionSetList to optimize the response.
 export const getUserRoute = defineRoute({
   filters: {

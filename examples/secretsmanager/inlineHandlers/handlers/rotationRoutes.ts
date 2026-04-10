@@ -50,7 +50,7 @@ export const finishSecretRoute = defineRoute({
 // Routes using convenience methods (no steps filter needed)
 // =============================================================================
 
-// Convenience-method-compatible route — step is already implied by the method
+// Convenience-method-compatible route - step is already implied by the method
 export const databaseCreateRoute = defineRoute({
   filters: {
     secretIds: [DATABASE_SECRET_ARN],
@@ -92,7 +92,7 @@ export const maintenanceWindowRotationRoute = defineRoute({
     secretPrefixes: ['prod/'],
     steps: ['createSecret'],
     customFilter: () => {
-      // Only allow rotation during the maintenance window — time-based logic that built-in filters can't express
+      // Only allow rotation during the maintenance window - time-based logic that built-in filters can't express
       const currentHour = new Date().getUTCHours();
       return currentHour >= MAINTENANCE_WINDOW_START && currentHour < MAINTENANCE_WINDOW_END;
     },

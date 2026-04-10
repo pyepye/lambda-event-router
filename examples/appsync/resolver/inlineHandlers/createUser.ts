@@ -8,7 +8,6 @@ const CreateUserInputSchema = z.object({
   }),
 });
 
-// Mutation resolver — creates a new user.
 // Uses argumentsSchema for input validation and headers for tracing context.
 export const createUserRoute = defineRoute({
   filters: {

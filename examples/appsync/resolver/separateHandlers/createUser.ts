@@ -10,7 +10,6 @@ const CreateUserInputSchema = z.object({
 
 type CreateUserArgs = z.infer<typeof CreateUserInputSchema>;
 
-// Standalone Mutation resolver — creates a new user.
 // Uses argumentsSchema for input validation and headers for tracing context.
 // In the separate handler style, define the schema alongside and use the inferred type.
 export { CreateUserInputSchema };

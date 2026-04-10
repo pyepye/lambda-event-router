@@ -15,7 +15,7 @@ export const deleteRoute = defineRoute({
   filters: {
     operationTypes: ['delete'],
     eventSourceArns: [CLUSTER_ARN],
-    // No fullDocumentBeforeChange filter here — this handler only needs the documentKey
+    // No fullDocumentBeforeChange filter here - this handler only needs the documentKey
   },
   documentKeySchema: orderDocumentKeySchema,
 }).handle(async ({ documentKey }) => {

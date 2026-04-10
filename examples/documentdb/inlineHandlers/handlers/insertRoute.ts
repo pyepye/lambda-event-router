@@ -33,7 +33,7 @@ export const insertRoute2 = defineRoute({
 
 const HIGH_VALUE_ORDER_THRESHOLD = 500;
 
-// Match high-value order inserts — filters on document content, not database/collection names
+// Match high-value order inserts - filters on document content, not database/collection names
 export const highValueOrderInsertRoute = defineRoute({
   filters: {
     operationTypes: ['insert'],

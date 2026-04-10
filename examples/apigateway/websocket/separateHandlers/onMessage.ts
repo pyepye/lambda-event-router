@@ -10,7 +10,7 @@ export const SendMessageBodySchema = z.object({
 
 type SendMessageBody = z.infer<typeof SendMessageBodySchema>;
 
-// MESSAGE handlers have no return value — AWS ignores responses for messages.
+// MESSAGE handlers have no return value - AWS ignores responses for messages.
 // Use postToConnection() (API Gateway Management API) to send data to clients.
 export async function onMessage(request: WebSocketRequest<SendMessageBody>): Promise<void> {
   const { connectionId, domainName, stage, body } = request;

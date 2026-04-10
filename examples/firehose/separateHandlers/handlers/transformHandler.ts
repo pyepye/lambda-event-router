@@ -33,7 +33,7 @@ export async function transformLog(request: FirehoseRequest<LogData>): Promise<F
   const recordSize = new TextEncoder().encode(JSON.stringify(transformedData)).byteLength;
 
   if (recordSize > MAX_RECORD_SIZE_BYTES) {
-    // Failed() can be thrown — the router catches it and marks the record as failed
+    // Failed() can be thrown - the router catches it and marks the record as failed
     // Unhandled exceptions also automatically return a Failed response in the FirehoseRouter
     throw Failed(`Record exceeds max size: ${recordSize} bytes`);
   }

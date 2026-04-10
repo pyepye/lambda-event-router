@@ -1,6 +1,6 @@
 import { defineRoute } from '@lambda-event-router/appsync';
 
-// Nested resolver — resolves the `posts` field on a User type.
+// Nested resolver - resolves the `posts` field on a User type.
 // `source` contains the parent User object returned by the parent resolver.
 export const getUserPostsRoute = defineRoute({
   filters: {

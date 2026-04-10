@@ -4,8 +4,7 @@ import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-// Local DocumentDB types — aws-lambda has no DocumentDB types, and importing from
-// @lambda-event-router/documentdb would create a circular dependency
+// aws-lambda has no DocumentDB types, and importing from @lambda-event-router/documentdb would create a circular dependency
 type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';
 
 interface DocumentDBUpdateDescription {
@@ -48,7 +47,7 @@ export interface CreateDocumentDBHandlerEventOptions {
 }
 
 export function createDocumentDBChangeEvent(overrides: DocumentDBChangeEventOverrides = {}): DocumentDBChangeEvent {
-  // Extract fields typed as `unknown` — these should replace defaults entirely, not deep merge
+  // Extract fields typed as `unknown`. These should replace defaults entirely, not deep merge
   const { _id, clusterTime, documentKey, fullDocument, fullDocumentBeforeChange, ...restOverrides } = overrides;
 
   const hasFullDocument = Object.hasOwn(overrides, 'fullDocument');

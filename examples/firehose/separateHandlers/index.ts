@@ -12,7 +12,7 @@ const DELIVERY_STREAM_ARN = 'arn:aws:firehose:us-east-1:123456789012:deliverystr
 
 const INVENTORY_KINESIS_STREAM_ARN = 'arn:aws:kinesis:us-east-1:123456789012:stream/inventory-events';
 
-// Route with deliveryStreamArns filter — transforms general logs
+// Route with deliveryStreamArns filter - transforms general logs
 firehoseRouter.route({
   filters: {
     deliveryStreamArns: [DELIVERY_STREAM_ARN],
@@ -21,7 +21,7 @@ firehoseRouter.route({
   dataSchema: LogDataSchema,
 });
 
-// Route with custom filter — routes error logs to a dedicated handler
+// Route with custom filter - routes error logs to a dedicated handler
 firehoseRouter.route({
   filters: {
     deliveryStreamArns: [DELIVERY_STREAM_ARN],
@@ -31,7 +31,7 @@ firehoseRouter.route({
   dataSchema: LogDataSchema,
 });
 
-// Route with sourceKinesisStreamArns filter — handles Kinesis-sourced inventory data
+// Route with sourceKinesisStreamArns filter - handles Kinesis-sourced inventory data
 firehoseRouter.route({
   filters: {
     sourceKinesisStreamArns: [INVENTORY_KINESIS_STREAM_ARN],

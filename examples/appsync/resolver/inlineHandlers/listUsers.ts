@@ -1,6 +1,6 @@
 import { defineRoute } from '@lambda-event-router/appsync';
 
-// Query resolver — lists users with pagination.
+// Query resolver - lists users with pagination.
 // Uses identity to scope results to the caller and arguments for pagination params.
 export const listUsersRoute = defineRoute({
   filters: {

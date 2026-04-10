@@ -220,7 +220,7 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('multiple filters combined — all must match', () => {
+    test('multiple filters combined - all must match', () => {
       router.route(
         defineRoute({
           filters: {

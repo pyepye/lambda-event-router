@@ -15,7 +15,7 @@ export const replaceRoute = defineRoute({
   filters: {
     operationTypes: ['replace'],
     eventSourceArns: [CLUSTER_ARN],
-    // No fullDocument filter needed — replace events always include fullDocument
+    // No fullDocument filter needed - replace events always include fullDocument
   },
   documentKeySchema: orderDocumentKeySchema,
   fullDocumentSchema: orderFullDocumentSchema,

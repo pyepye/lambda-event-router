@@ -26,7 +26,7 @@ cloudWatchLogsRouter.route({
   handler: handleLambdaLogs,
 });
 
-// Log group prefix match — all Lambda function logs
+// Log group prefix match - all Lambda function logs
 cloudWatchLogsRouter.route({
   filters: {
     logGroupPrefixes: ['/aws/lambda/'],
@@ -35,7 +35,7 @@ cloudWatchLogsRouter.route({
   handler: handleLambdaLogs,
 });
 
-// Log group suffix match — API Gateway logs
+// Log group suffix match - API Gateway logs
 cloudWatchLogsRouter.route({
   filters: {
     logGroupSuffixes: ['/access-logs', '/execution-logs'],
@@ -43,7 +43,7 @@ cloudWatchLogsRouter.route({
   handler: handleApiGatewayLogs,
 });
 
-// Log group substring match — ECS/Fargate logs
+// Log group substring match - ECS/Fargate logs
 cloudWatchLogsRouter.route({
   filters: {
     logGroupIncludes: ['ecs', 'fargate'],

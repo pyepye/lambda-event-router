@@ -34,7 +34,6 @@ export const handler = lambdaRouter.handler()
 ```ts
 // api.ts
 import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigateway'
-import { z } from 'zod'
 
 const apiRouter = createAPIGatewayRouter()
 
@@ -53,7 +52,6 @@ OR use a the separate syntax  to split router and handlers across files:
 ```ts
 // api.ts
 import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigateway'
-import { z } from 'zod'
 
 const apiRouter = createAPIGatewayRouter()
 

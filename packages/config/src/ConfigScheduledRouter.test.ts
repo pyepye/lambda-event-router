@@ -122,7 +122,7 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('multiple filters combined — all must match', () => {
+    test('multiple filters combined - all must match', () => {
       router.route(
         defineConfigScheduledRoute({
           filters: { configRuleNames: ['my-rule'], accountIds: ['123456789012'] },

@@ -1,6 +1,5 @@
 import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 
-// Standalone Query resolver — fetches a single user by ID.
 // Uses arguments for the GraphQL field args and selectionSetList to optimize the response.
 export async function getUser(request: AppSyncResolverRequest) {
   const { arguments: args, info } = request;

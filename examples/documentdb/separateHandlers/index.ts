@@ -35,7 +35,7 @@ documentDBRouter.insert({
 
 // Convenience method - .update() pre-sets operationType to 'update'
 // The fullDocument and fullDocumentBeforeChange filters match the MongoDB change stream
-// configuration options — NOT the event fields themselves. Declaring them tells the router
+// configuration options - NOT the event fields themselves. Declaring them tells the router
 // (and the types) that this handler expects those event fields to be populated.
 documentDBRouter.update({
   filters: {
@@ -54,7 +54,7 @@ documentDBRouter.update({
 documentDBRouter.replace({
   filters: {
     eventSourceArns: [CLUSTER_ARN],
-    // No fullDocument filter needed — replace events always include fullDocument
+    // No fullDocument filter needed - replace events always include fullDocument
     // fullDocumentBeforeChange could be added here if the change stream is configured for it
   },
   handler: replaceOrder,
@@ -64,7 +64,7 @@ documentDBRouter.replace({
 documentDBRouter.delete({
   filters: {
     eventSourceArns: [CLUSTER_ARN],
-    // No fullDocumentBeforeChange filter — this handler only needs the documentKey
+    // No fullDocumentBeforeChange filter - this handler only needs the documentKey
   },
   handler: deleteOrder,
 });

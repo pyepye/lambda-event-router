@@ -5,7 +5,6 @@ import type { Context } from 'aws-lambda';
 // DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
 export type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';
 
-// Change stream configuration options — these control which event fields get populated
 export type DocumentDBFullDocumentOption = 'default' | 'updateLookup' | 'whenAvailable' | 'required';
 export type DocumentDBFullDocumentBeforeChangeOption = 'off' | 'whenAvailable' | 'required';
 
@@ -35,7 +34,7 @@ export interface DocumentDBEvent {
   events: DocumentDBEventEntry[];
 }
 
-// Request types — one per operation, with type-level field availability
+// Request types - one per operation, with type-level field availability
 
 interface DocumentDBRequestBase<TDocumentKey = Record<string, unknown>> {
   documentKey: TDocumentKey;
@@ -143,7 +142,7 @@ interface DocumentDBEventFilters {
   customFilter?: (input: DocumentDBFilterInput) => boolean;
 }
 
-// Route definition types — one per operation + generic
+// Route definition types - one per operation + generic
 
 export interface DocumentDBInsertRouteDefinition<
   TDocumentKey = Record<string, unknown>,

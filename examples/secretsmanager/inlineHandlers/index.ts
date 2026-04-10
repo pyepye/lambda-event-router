@@ -16,7 +16,7 @@ import {
 
 const secretsManagerRouter = createSecretsManagerRouter();
 
-// Generic .route() with steps filter — each route defines its own step
+// Generic .route() with steps filter - each route defines its own step
 secretsManagerRouter
   .route(createSecretRoute)
   .route(setSecretRoute)
@@ -24,7 +24,7 @@ secretsManagerRouter
   .route(finishSecretRoute)
   .route(maintenanceWindowRotationRoute);
 
-// Convenience methods — step is implied by the method name
+// Convenience methods - step is implied by the method name
 secretsManagerRouter
   .createSecret(databaseCreateRoute)
   .setSecret(databaseSetRoute)

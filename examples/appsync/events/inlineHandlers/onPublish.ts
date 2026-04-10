@@ -1,6 +1,6 @@
 import { type AppSyncEventsFilterInput, defineEventsRoute } from '@lambda-event-router/appsync';
 
-// PUBLISH handler — processes events published to a channel namespace.
+// PUBLISH handler - processes events published to a channel namespace.
 // Can transform, validate, or reject events before they reach subscribers.
 export const onPublishRoute = defineEventsRoute({
   filters: {
@@ -21,7 +21,7 @@ export const onPublishRoute = defineEventsRoute({
   return { events: processedEvents };
 });
 
-// Match publish events containing message-type payloads — filters on event data, not channel path
+// Match publish events containing message-type payloads - filters on event data, not channel path
 export const messageEventPublishRoute = defineEventsRoute({
   filters: {
     operations: ['PUBLISH'],

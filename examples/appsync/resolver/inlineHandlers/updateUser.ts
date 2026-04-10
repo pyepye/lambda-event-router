@@ -1,6 +1,6 @@
 import { defineRoute } from '@lambda-event-router/appsync';
 
-// Mutation resolver — updates an existing user using pipeline resolver context.
+// Mutation resolver - updates an existing user using pipeline resolver context.
 // Uses stash and prev to coordinate with other resolvers in the pipeline.
 export const updateUserRoute = defineRoute({
   filters: {

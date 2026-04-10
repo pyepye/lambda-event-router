@@ -69,7 +69,7 @@ suite('LambdaRouter', () => {
     test('reorders EventRouter to the end regardless of input order', () => {
       const mockHandler = vi.fn();
 
-      // Class names matter — the constructor reorders based on constructor.name === 'EventRouter'
+      // The constructor reorders based on constructor.name === 'EventRouter'
       class EventRouter implements EventTypeRouter {
         canHandleEvent(event: unknown): event is unknown {
           return typeof event === 'object';
@@ -87,7 +87,6 @@ suite('LambdaRouter', () => {
       const eventRouter = new EventRouter();
       const sqsRouter = new SQSRouter();
 
-      // Pass EventRouter first — it should be moved to the end
       const lambdaRouter = createLambdaRouter({
         routers: [eventRouter, sqsRouter],
       });
