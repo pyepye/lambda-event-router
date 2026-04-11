@@ -1,40 +1,22 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { type PackageEntry, packages } from '../data/packages';
+import { filterPills, type PackageEntry, packages } from '../data/packages';
 
-type ServiceOption = {
-  slug: string;
-  label: string;
-};
-
-const searchQuery = ref('');
+const searchQuery = ref<string>('');
 const selectedServices = ref<Set<string>>(new Set());
-
-const serviceOptions = computed<ServiceOption[]>(function buildServiceOptions() {
-  const seen = new Map<string, string>();
-  for (const entry of packages) {
-    if (!seen.has(entry.serviceSlug)) {
-      seen.set(entry.serviceSlug, entry.service);
-    }
-  }
-  const options: ServiceOption[] = [];
-  for (const [slug, label] of seen) {
-    options.push({ slug, label });
-  }
-  return options;
-});
 
 const filteredPackages = computed<PackageEntry[]>(function filterPackages() {
   const query = searchQuery.value.trim().toLowerCase();
   const activeSlugs = selectedServices.value;
   const results: PackageEntry[] = [];
   for (const entry of packages) {
-    if (activeSlugs.size > 0 && !activeSlugs.has(entry.serviceSlug)) {
+    if (activeSlugs.size > 0 && !entry.services.some((service) => activeSlugs.has(service))) {
       continue;
     }
     if (query.length > 0) {
-      const haystack = `${entry.name} ${entry.service} ${entry.package} ${entry.details}`.toLowerCase();
-      if (!haystack.includes(query)) {
+      const servicesText = entry.services.join(' ');
+      const searchText = `${entry.name} ${servicesText} ${entry.package} ${entry.details}`.toLowerCase();
+      if (!searchText.includes(query)) {
         continue;
       }
     }
@@ -43,16 +25,16 @@ const filteredPackages = computed<PackageEntry[]>(function filterPackages() {
   return results;
 });
 
-function isServiceActive(slug: string): boolean {
-  return selectedServices.value.has(slug);
+function isServiceActive(service: string): boolean {
+  return selectedServices.value.has(service);
 }
 
-function toggleService(slug: string): void {
+function toggleService(service: string): void {
   const next = new Set(selectedServices.value);
-  if (next.has(slug)) {
-    next.delete(slug);
+  if (next.has(service)) {
+    next.delete(service);
   } else {
-    next.add(slug);
+    next.add(service);
   }
   selectedServices.value = next;
 }
@@ -82,21 +64,21 @@ function iconUrl(slug: string): string {
 
       <div class="packages-filters" role="group" aria-label="Filter by AWS service">
         <button
-          v-for="option in serviceOptions"
-          :key="option.slug"
+          v-for="option in filterPills"
+          :key="option.service"
           type="button"
           class="packages-filter-pill"
-          :class="{ 'is-active': isServiceActive(option.slug) }"
-          :aria-pressed="isServiceActive(option.slug)"
-          @click="toggleService(option.slug)"
+          :class="{ 'is-active': isServiceActive(option.service) }"
+          :aria-pressed="isServiceActive(option.service)"
+          @click="toggleService(option.service)"
         >
           <img
-            :src="iconUrl(option.slug)"
+            :src="iconUrl(option.service)"
             :alt="''"
             class="packages-filter-icon"
             aria-hidden="true"
           />
-          <span>{{ option.label }}</span>
+          <span>{{ option.name }}</span>
         </button>
       </div>
     </div>
@@ -109,13 +91,11 @@ function iconUrl(slug: string): string {
         class="packages-card"
       >
         <div class="packages-card-icon">
-          <img :src="iconUrl(entry.serviceSlug)" :alt="entry.service" />
+          <img v-for="icon in entry.icons" :key="icon" :src="iconUrl(icon)" :alt="icon" />
         </div>
         <h3 class="packages-card-title">{{ entry.name }}</h3>
         <p class="packages-card-package">{{ entry.package }}</p>
-        <p class="packages-card-service">
-          {{ entry.service }}<template v-if="entry.details"> · {{ entry.details }}</template>
-        </p>
+        <p class="packages-card-service">{{ entry.details }}</p>
       </a>
     </div>
     <div v-else class="packages-empty">
