@@ -10,3 +10,8 @@ coverage/
 tsup.config.bundled_*.mjs
 
 tmp/
+
+
+docs/.vitepress/cache
+docs/.vitepress/temp
+docs/.vitepress/dist
