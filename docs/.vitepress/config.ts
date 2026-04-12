@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress';
 // TODO: set `base` to '/lambda-event-manager/' before deploying to
 // https://pyepye.github.io/lambda-event-manager/, or keep '/' for a custom domain.
 export default defineConfig({
+  srcExclude: ['README.md'],
   title: 'Lambda Event Router',
   description: 'Type-safe routing for AWS Lambda events',
   base: '/',
@@ -63,7 +64,6 @@ export default defineConfig({
             { text: 'IoTRouter', link: '/routers/IoTRouter' },
             { text: 'KafkaRouter', link: '/routers/KafkaRouter' },
             { text: 'KinesisRouter', link: '/routers/KinesisRouter' },
-
             { text: 'LexRouter', link: '/routers/LexRouter' },
             { text: 'RabbitMQRouter', link: '/routers/RabbitMQRouter' },
             { text: 'S3Router', link: '/routers/S3Router' },
