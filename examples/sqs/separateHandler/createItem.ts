@@ -1,4 +1,4 @@
-import type { SQSMessageAttributes, SQSRecord, SQSResponse } from '@lambda-event-router/sqs';
+import type { SQSMessageAttributes, SQSRequest, SQSResponse } from '@lambda-event-router/sqs';
 import { z } from 'zod';
 
 export const CreateItemBodySchema = z.object({
@@ -12,7 +12,7 @@ export const MessageAttributesSchema = z.object({
 type CreateItemBody = z.infer<typeof CreateItemBodySchema>;
 type CreateItemMessageAttrs = z.infer<typeof MessageAttributesSchema>;
 
-export async function createItem(request: SQSRecord<CreateItemBody, CreateItemMessageAttrs>): Promise<SQSResponse> {
+export async function createItem(request: SQSRequest<CreateItemBody, CreateItemMessageAttrs>): Promise<SQSResponse> {
   const { orgId, itemId } = request.body;
 
   console.log('Creating item:', { orgId, itemId });
@@ -27,7 +27,7 @@ interface CreateItemMessageAttributes extends SQSMessageAttributes {
   someAttribute: string;
 }
 
-export async function createItemOther(request: SQSRecord<Body, CreateItemMessageAttributes>): Promise<SQSResponse> {
+export async function createItemOther(request: SQSRequest<Body, CreateItemMessageAttributes>): Promise<SQSResponse> {
   const { orgId, itemId } = request.body;
 
   console.log('Creating item:', { orgId, itemId });

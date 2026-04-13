@@ -4,7 +4,6 @@ export type {
   SESFilters,
   SESMiddleware,
   SESReceiptStatusValue,
-  SESRequest as SESRecord,
   SESRequest,
   SESResponse,
   SESRouteDefinition,
