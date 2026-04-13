@@ -1,6 +1,6 @@
 import type { HttpMethod } from './types.js';
 
-export type CorsOriginFunction = (origin: string, path: string) => string | undefined;
+export type CorsOriginFunction = (origin: string, path: string) => string | undefined | Promise<string | undefined>;
 
 export interface CorsConfig {
   origin: string | string[] | CorsOriginFunction;
@@ -20,7 +20,11 @@ interface BuildCorsHeadersOptions {
   methods: HttpMethod[];
 }
 
-export function resolveOrigin(config: CorsConfig, requestOrigin: string | undefined, path: string): string | undefined {
+export async function resolveOrigin(
+  config: CorsConfig,
+  requestOrigin: string | undefined,
+  path: string,
+): Promise<string | undefined> {
   const { origin } = config;
 
   if (typeof origin === 'string') {
@@ -38,13 +42,13 @@ export function resolveOrigin(config: CorsConfig, requestOrigin: string | undefi
     return undefined;
   }
 
-  return origin(requestOrigin, path);
+  return await origin(requestOrigin, path);
 }
 
-export function buildCorsHeaders(options: BuildCorsHeadersOptions): Record<string, string> | undefined {
+export async function buildCorsHeaders(options: BuildCorsHeadersOptions): Promise<Record<string, string> | undefined> {
   const { config, requestOrigin, path, isPreflight, requestHeaders, methods } = options;
 
-  const allowedOrigin = resolveOrigin(config, requestOrigin, path);
+  const allowedOrigin = await resolveOrigin(config, requestOrigin, path);
   if (allowedOrigin === undefined) {
     return undefined;
   }

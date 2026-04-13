@@ -137,16 +137,16 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return this.adapter.canHandleEvent(event);
   }
 
-  private getCorsHeaders(
+  private async getCorsHeaders(
     normalizedEvent: { headers: Record<string, string | undefined>; path: string },
     isPreflight: boolean,
     methods: HttpMethod[] = [],
-  ): Record<string, string> | undefined {
+  ): Promise<Record<string, string> | undefined> {
     if (!this.corsConfig) {
       return undefined;
     }
 
-    const corsHeaders = buildCorsHeaders({
+    const corsHeaders = await buildCorsHeaders({
       config: this.corsConfig,
       requestOrigin: normalizedEvent.headers.origin,
       path: normalizedEvent.path,
@@ -186,7 +186,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     if (method === 'OPTIONS' && this.corsConfig) {
       const methods = this.router.getMethodsForPath(path);
       if (methods.length > 0) {
-        const corsHeaders = this.getCorsHeaders(normalizedEvent, true, methods);
+        const corsHeaders = await this.getCorsHeaders(normalizedEvent, true, methods);
         if (corsHeaders) {
           const preflightResponse = { statusCode: 204, body: '', headers: corsHeaders };
           return this.adapter.buildResult(preflightResponse, event);
@@ -198,7 +198,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     if (!routeData) {
       // TODO: Could / should these notFound responses deal with CORS so we don't have to repeat here? Does it make sense?
       const notFoundResponse = this.response.notFound();
-      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
+      const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       const responseWithHeaders = this.applyHeaders(notFoundResponse, corsHeaders);
       return this.adapter.buildResult(responseWithHeaders, event);
     }
@@ -214,11 +214,11 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       const handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
 
       const response = this.response.create(handlerResponse);
-      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
+      const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       const responseWithHeaders = this.applyHeaders(response, corsHeaders);
       return this.adapter.buildResult(responseWithHeaders, event);
     } catch (error) {
-      const corsHeaders = this.getCorsHeaders(normalizedEvent, false);
+      const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       if (Response.isHTTPResponse(error)) {
         const response = this.response.create(error);
         const responseWithHeaders = this.applyHeaders(response, corsHeaders);

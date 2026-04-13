@@ -2,63 +2,71 @@ import { buildCorsHeaders, type CorsConfig, resolveOrigin } from './cors.js';
 import type { HttpMethod } from './types.js';
 
 suite('resolveOrigin', () => {
-  test('returns wildcard string origin directly', () => {
+  test('returns wildcard string origin directly', async () => {
     const config: CorsConfig = { origin: '*' };
 
-    expect(resolveOrigin(config, 'https://example.com', '/')).toBe('*');
+    const result = await resolveOrigin(config, 'https://example.com', '/');
+    expect(result).toBe('*');
   });
 
-  test('returns specific string origin directly', () => {
+  test('returns specific string origin directly', async () => {
     const config: CorsConfig = { origin: 'https://example.com' };
 
-    expect(resolveOrigin(config, 'https://other.com', '/')).toBe('https://example.com');
+    const result = await resolveOrigin(config, 'https://other.com', '/');
+    expect(result).toBe('https://example.com');
   });
 
-  test('returns string origin even when requestOrigin is undefined', () => {
+  test('returns string origin even when requestOrigin is undefined', async () => {
     const config: CorsConfig = { origin: 'https://example.com' };
 
-    expect(resolveOrigin(config, undefined, '/')).toBe('https://example.com');
+    const result = await resolveOrigin(config, undefined, '/');
+    expect(result).toBe('https://example.com');
   });
 
-  test('returns matching origin from array', () => {
+  test('returns matching origin from array', async () => {
     const config: CorsConfig = { origin: ['https://a.com', 'https://b.com'] };
 
-    expect(resolveOrigin(config, 'https://b.com', '/')).toBe('https://b.com');
+    const result = await resolveOrigin(config, 'https://b.com', '/');
+    expect(result).toBe('https://b.com');
   });
 
-  test('returns undefined for non-matching origin in array', () => {
+  test('returns undefined for non-matching origin in array', async () => {
     const config: CorsConfig = { origin: ['https://a.com', 'https://b.com'] };
 
-    expect(resolveOrigin(config, 'https://c.com', '/')).toBeUndefined();
+    const result = await resolveOrigin(config, 'https://c.com', '/');
+    expect(result).toBeUndefined();
   });
 
-  test('returns undefined for array origin when requestOrigin is undefined', () => {
+  test('returns undefined for array origin when requestOrigin is undefined', async () => {
     const config: CorsConfig = { origin: ['https://a.com'] };
 
-    expect(resolveOrigin(config, undefined, '/')).toBeUndefined();
+    const result = await resolveOrigin(config, undefined, '/');
+    expect(result).toBeUndefined();
   });
 
-  test('calls function origin with origin and path', () => {
+  test('calls function origin with origin and path', async () => {
     const originFn = vi.fn().mockReturnValue('https://allowed.com');
     const config: CorsConfig = { origin: originFn };
 
-    const result = resolveOrigin(config, 'https://allowed.com', '/items');
+    const result = await resolveOrigin(config, 'https://allowed.com', '/items');
 
     expect(result).toBe('https://allowed.com');
     expect(originFn).toHaveBeenCalledWith('https://allowed.com', '/items');
   });
 
-  test('returns undefined from function origin', () => {
+  test('returns undefined from function origin', async () => {
     const config: CorsConfig = { origin: () => undefined };
 
-    expect(resolveOrigin(config, 'https://denied.com', '/')).toBeUndefined();
+    const result = await resolveOrigin(config, 'https://denied.com', '/');
+    expect(result).toBeUndefined();
   });
 
-  test('returns undefined for function origin when requestOrigin is undefined', () => {
+  test('returns undefined for function origin when requestOrigin is undefined', async () => {
     const originFn = vi.fn();
     const config: CorsConfig = { origin: originFn };
 
-    expect(resolveOrigin(config, undefined, '/')).toBeUndefined();
+    const result = await resolveOrigin(config, undefined, '/');
+    expect(result).toBeUndefined();
     expect(originFn).not.toHaveBeenCalled();
   });
 });
@@ -71,10 +79,10 @@ suite('buildCorsHeaders', () => {
     methods: ['GET', 'POST'] as HttpMethod[],
   };
 
-  test('returns undefined when origin is not allowed', () => {
+  test('returns undefined when origin is not allowed', async () => {
     const config: CorsConfig = { origin: ['https://other.com'] };
 
-    const result = buildCorsHeaders({
+    const result = await buildCorsHeaders({
       config,
       ...defaultOptions,
       isPreflight: false,
@@ -84,10 +92,10 @@ suite('buildCorsHeaders', () => {
   });
 
   suite('actual requests', () => {
-    test('sets Access-Control-Allow-Origin for wildcard', () => {
+    test('sets Access-Control-Allow-Origin for wildcard', async () => {
       const config: CorsConfig = { origin: '*' };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -98,10 +106,10 @@ suite('buildCorsHeaders', () => {
       });
     });
 
-    test('sets Vary: Origin for non-wildcard origin', () => {
+    test('sets Vary: Origin for non-wildcard origin', async () => {
       const config: CorsConfig = { origin: ['https://example.com'] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -113,10 +121,10 @@ suite('buildCorsHeaders', () => {
       });
     });
 
-    test('sets Access-Control-Allow-Credentials when credentials is true', () => {
+    test('sets Access-Control-Allow-Credentials when credentials is true', async () => {
       const config: CorsConfig = { origin: '*', credentials: true };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -129,10 +137,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('sets Access-Control-Expose-Headers when configured', () => {
+    test('sets Access-Control-Expose-Headers when configured', async () => {
       const config: CorsConfig = { origin: '*', exposedHeaders: ['X-Request-Id', 'X-Total-Count'] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -145,10 +153,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('does not set Access-Control-Expose-Headers for empty exposedHeaders array', () => {
+    test('does not set Access-Control-Expose-Headers for empty exposedHeaders array', async () => {
       const config: CorsConfig = { origin: '*', exposedHeaders: [] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -157,10 +165,10 @@ suite('buildCorsHeaders', () => {
       expect(result).not.toHaveProperty('Access-Control-Expose-Headers');
     });
 
-    test('does not set preflight-only headers on actual requests', () => {
+    test('does not set preflight-only headers on actual requests', async () => {
       const config: CorsConfig = { origin: '*', maxAge: 3600 };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: false,
@@ -173,10 +181,10 @@ suite('buildCorsHeaders', () => {
   });
 
   suite('preflight requests', () => {
-    test('sets Access-Control-Allow-Methods from registered methods plus OPTIONS', () => {
+    test('sets Access-Control-Allow-Methods from registered methods plus OPTIONS', async () => {
       const config: CorsConfig = { origin: '*' };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -189,10 +197,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('uses configured methods instead of auto-detected ones', () => {
+    test('uses configured methods instead of auto-detected ones', async () => {
       const config: CorsConfig = { origin: '*', methods: ['GET', 'POST', 'PUT'] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -205,10 +213,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('reflects Access-Control-Request-Headers from request', () => {
+    test('reflects Access-Control-Request-Headers from request', async () => {
       const config: CorsConfig = { origin: '*' };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -222,10 +230,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('uses configured allowedHeaders over reflected headers', () => {
+    test('uses configured allowedHeaders over reflected headers', async () => {
       const config: CorsConfig = { origin: '*', allowedHeaders: ['Content-Type'] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -239,10 +247,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('sets Access-Control-Max-Age when configured', () => {
+    test('sets Access-Control-Max-Age when configured', async () => {
       const config: CorsConfig = { origin: '*', maxAge: 86400 };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -255,10 +263,10 @@ suite('buildCorsHeaders', () => {
       );
     });
 
-    test('does not set Access-Control-Allow-Headers when no allowedHeaders config and no request headers', () => {
+    test('does not set Access-Control-Allow-Headers when no allowedHeaders config and no request headers', async () => {
       const config: CorsConfig = { origin: '*' };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
@@ -268,10 +276,10 @@ suite('buildCorsHeaders', () => {
       expect(result).not.toHaveProperty('Access-Control-Allow-Headers');
     });
 
-    test('does not set Access-Control-Expose-Headers on preflight', () => {
+    test('does not set Access-Control-Expose-Headers on preflight', async () => {
       const config: CorsConfig = { origin: '*', exposedHeaders: ['X-Request-Id'] };
 
-      const result = buildCorsHeaders({
+      const result = await buildCorsHeaders({
         config,
         ...defaultOptions,
         isPreflight: true,
