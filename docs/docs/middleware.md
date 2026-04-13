@@ -9,7 +9,7 @@
   - Powertools flow diagram? OR https://www.simplybusiness.co.uk/about-us/tech/2019/07/rack-middleware-pattern-description/
   - Arrows down? https://contributte.org/packages/contributte/middlewares.html
   - Pre / post processing? https://k0s.org/mozilla/craft/middleware.html
-
+  - https://vivasoftltd.com/wp-content/uploads/2024/09/middleware-and-request-pipeline.webp
 
 ## LambdaRouter Middleware (Global)
 
