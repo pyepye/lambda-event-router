@@ -11,5 +11,5 @@
     "isolatedModules": true,
     "noEmit": true
   },
-  "include": [".vitepress/**/*.ts"]
+  "include": [".vitepress/**/*.ts", ".vitepress/**/*.vue"]
 }

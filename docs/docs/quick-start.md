@@ -233,5 +233,5 @@ apiRouter.post({
 ]
 </script>
 
-<!-- <CodeFileViewer :files="files" id="multi-router" line-numbers collapse-toggle /> -->
-<CodeFileViewer :files="files" id="multi-router" />
+<CodeFileViewer :files="files" default-file="schemas/item.ts" id="multi-router" line-numbers collapse-toggle fixed-height />
+<!-- <CodeFileViewer :files="files" id="multi-router" /> -->

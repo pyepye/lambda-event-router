@@ -13,7 +13,7 @@
   - E.g. dynamodbRouter.insert(), apiGatewayRouter.post()
   - Same as defining a filter (see #filtering)
 - 2 ways inline using defineRoute vs separate using a route object
-  - Note: defineRoute maybe define<Router>Route for packages with multiple routers
+  - Note: `defineRoute` maybe `define<Router>Route` for packages with multiple routers
 - Inline good for automatic typing
 - Separate good for route vs handler separation
 

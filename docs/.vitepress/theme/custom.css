@@ -247,3 +247,21 @@
   background-color: var(--vp-c-brand-1);
   color: var(--vp-c-white);
 }
+
+/* Let the main content fill available width instead of capping at 688px,
+   which causes growing margins as the viewport widens past 1280px. */
+.VPDoc.VPDoc.has-aside .content-container {
+  max-width: none;
+}
+
+/* Reduce gap between main content and aside to give more width to content */
+@media (min-width: 960px) {
+  .VPDoc.has-aside .content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .VPDoc .aside {
+    padding-left: 16px;
+    max-width: 220px;
+  }
+}

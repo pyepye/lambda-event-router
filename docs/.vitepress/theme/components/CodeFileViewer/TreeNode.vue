@@ -39,40 +39,41 @@
   </button>
 </template>
 
-<script setup>
-import { computed } from 'vue'
+<script setup lang="ts">
+import { computed } from 'vue';
+import type { CodeFile, TreeNode as TreeNodeType } from './types';
+import { getBadgeLabel, getExt } from './fileBadge';
 
-const props = defineProps({
-  node: { type: Object, required: true },
-  depth: { type: Number, required: true },
-  selectedPath: { type: String, required: true },
-  collapsed: { type: Set, required: true },
-})
+const props = defineProps<{
+  node: TreeNodeType;
+  depth: number;
+  selectedPath: string;
+  collapsed: Set<string>;
+}>();
 
-defineEmits(['select', 'toggle'])
+defineEmits<{
+  select: [file: CodeFile];
+  toggle: [path: string];
+}>();
 
-const isCollapsed = computed(() => props.collapsed.has(props.node.path))
+const isCollapsed = computed(() => props.collapsed.has(props.node.path));
 
+// 12px base padding + 16px per nesting level
 const indent = computed(() => ({
   paddingLeft: `${12 + props.depth * 16}px`,
-}))
+}));
 
-const ext = computed(() => {
-  const dot = props.node.name.lastIndexOf('.')
-  return dot === -1 ? '' : props.node.name.slice(dot + 1).toUpperCase()
-})
+const ext = computed(() => getExt(props.node.name).toUpperCase());
 
-const badgeLabels = { JSON: '{}', HTML: '<>' }
-
-const badgeLabel = computed(() => badgeLabels[ext.value] || ext.value)
+const badgeLabel = computed(() => getBadgeLabel(ext.value));
 </script>
 
-<style>
-.cfv .tree-row {
+<style scoped>
+.tree-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 12px;
+  padding: 6px 6px 6px 12px;
   border: none;
   background: transparent;
   cursor: pointer;
@@ -87,20 +88,20 @@ const badgeLabel = computed(() => badgeLabels[ext.value] || ext.value)
   width: calc(100% - 12px);
 }
 
-.cfv .tree-row:hover {
+.tree-row:hover {
   background: color-mix(in srgb, var(--vp-c-default-soft) 50%, transparent);
 }
 
-.cfv .tree-file.selected {
+.tree-file.selected {
   background: var(--vp-c-default-soft);
   color: var(--vp-c-text-1);
 }
 
-.cfv .tree-file.selected:hover {
+.tree-file.selected:hover {
   background: var(--vp-c-default-soft);
 }
 
-.cfv .tree-chevron {
+.tree-chevron {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -113,27 +114,27 @@ const badgeLabel = computed(() => badgeLabels[ext.value] || ext.value)
   color: var(--vp-c-text-3);
 }
 
-.cfv .tree-chevron.expanded {
+.tree-chevron.expanded {
   transform: rotate(0deg);
 }
 
-.cfv .tree-icon {
+.tree-icon {
   flex-shrink: 0;
   color: var(--vp-c-text-3);
 }
 
-.cfv .tree-folder .tree-name {
+.tree-folder .tree-name {
   font-weight: 500;
   color: var(--vp-c-text-1);
 }
 
-.cfv .tree-name {
+.tree-name {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.cfv .tree-file-badge {
+.tree-file-badge {
   display: inline-block;
   padding: 0 4px;
   border-radius: 3px;
@@ -141,9 +142,6 @@ const badgeLabel = computed(() => badgeLabels[ext.value] || ext.value)
   font-weight: 600;
   line-height: 1.5;
   flex-shrink: 0;
-}
-
-.cfv .tree-file-badge {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-text);
 }

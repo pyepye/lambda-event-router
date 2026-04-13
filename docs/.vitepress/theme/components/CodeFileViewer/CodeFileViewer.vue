@@ -1,7 +1,7 @@
 <template>
-  <div class="cfv" :id="id || undefined">
+  <div class="cfv" :class="{ 'cfv-dragging': isDragging }" :id="id">
     <!-- LEFT SIDEBAR: file tree -->
-    <div v-show="sidebarOpen" class="cfv-sidebar" :class="{ 'cfv-sidebar-fixed': collapseToggle }">
+    <div v-show="sidebarOpen" ref="sidebarRef" class="cfv-sidebar" :class="{ 'cfv-sidebar-fixed': collapseToggle }" :style="sidebarStyle">
       <div class="cfv-sidebar-header">
         <span class="cfv-sidebar-title">File viewer</span>
         <div class="cfv-sidebar-actions">
@@ -33,6 +33,9 @@
       </template>
     </div>
 
+    <!-- DRAG DIVIDER -->
+    <div v-show="sidebarOpen" class="cfv-divider" @mousedown="onDividerMouseDown" />
+
     <!-- RIGHT PANEL: code viewer -->
     <div class="cfv-code">
       <div class="cfv-code-header">
@@ -42,7 +45,7 @@
             <path d="M8 3L13 8L8 13" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" />
           </svg>
         </button>
-        <span class="cfv-badge" :data-lang="activeExt">{{ badgeLabel(activeExt) }}</span>
+        <span class="cfv-badge" :data-lang="activeExt">{{ getBadgeLabel(activeExt) }}</span>
         <span class="cfv-code-path">{{ activeFile.path }}</span>
         <button
           title="Copy Code"
@@ -51,51 +54,71 @@
           @click="copyCode"
         />
       </div>
-      <div class="cfv-code-body" :class="{ 'line-numbers': lineNumbers }" :style="lineNumberStyle" v-html="html" />
+      <div v-if="fixedHeight" class="cfv-code-body-stack" :class="{ 'line-numbers': lineNumbers }">
+        <div
+          v-for="file in files"
+          :key="file.path"
+          class="cfv-code-body cfv-code-body-layer"
+          :class="{ 'cfv-code-body-hidden': file.path !== activeFile.path }"
+          :style="lineNumberStyleFor(file)"
+          v-html="allHtml.get(file.path) || ''"
+        />
+      </div>
+      <div v-else class="cfv-code-body" :class="{ 'line-numbers': lineNumbers }" :style="lineNumberStyleFor(activeFile)" v-html="html" />
     </div>
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { codeToHtml } from 'shiki';
-import { computed, onMounted, onUnmounted, reactive, ref, watchEffect } from 'vue';
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue';
+import { getBadgeLabel, getExt } from './fileBadge';
 import TreeNode from './TreeNode.vue';
+import type { CodeFile, FolderNode, TreeNode as TreeNodeType } from './types';
 
-const props = defineProps({
-  files: { type: Array, required: true },
-  rootLabel: { type: String, default: '' },
-  defaultFile: { type: String, default: '' },
-  sidebarCollapsed: { type: Boolean, default: false },
-  id: { type: String, default: '' },
-  lineNumbers: { type: Boolean, default: false },
-  collapseToggle: { type: Boolean, default: false },
-});
+const props = withDefaults(
+  defineProps<{
+    files: CodeFile[];
+    rootLabel?: string;
+    defaultFile?: string;
+    sidebarCollapsed?: boolean;
+    id?: string;
+    lineNumbers?: boolean;
+    collapseToggle?: boolean;
+    fixedHeight?: boolean;
+  }>(),
+  {
+    sidebarCollapsed: false,
+    lineNumbers: false,
+    collapseToggle: false,
+    fixedHeight: false,
+  },
+);
 
-const langMap = { ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx', json: 'json', html: 'html' };
+const langMap: Record<string, string> = {
+  ts: 'typescript', tsx: 'tsx', js: 'javascript', jsx: 'jsx',
+  json: 'json', html: 'html', css: 'css', yaml: 'yaml', yml: 'yaml',
+  md: 'markdown', sh: 'bash', bash: 'bash',
+};
 
-function getExt(path) {
-  const dot = path.lastIndexOf('.');
-  return dot === -1 ? '' : path.slice(dot + 1).toLowerCase();
-}
-
-function inferLang(file) {
+function inferLang(file: CodeFile): string {
   if (file.lang) return file.lang;
   return langMap[getExt(file.path)] || 'text';
 }
 
 // Build tree from flat file list
-function buildTree(files, rootLabel) {
-  const root = [];
+function buildTree(files: CodeFile[], rootLabel?: string): TreeNodeType[] {
+  const root: TreeNodeType[] = [];
 
   for (const file of files) {
     const parts = file.path.split('/');
-    let current = root;
+    let current: TreeNodeType[] = root;
 
-    for (let i = 0; i < parts.length - 1; i++) {
-      const folderName = parts[i];
-      let folder = current.find((n) => n.name === folderName && n.type === 'folder');
+    const folderParts = parts.slice(0, -1);
+    for (const [depth, folderName] of folderParts.entries()) {
+      let folder = current.find((n): n is FolderNode => n.name === folderName && n.type === 'folder');
       if (!folder) {
-        folder = { name: folderName, type: 'folder', path: parts.slice(0, i + 1).join('/'), children: [] };
+        folder = { name: folderName, type: 'folder', path: parts.slice(0, depth + 1).join('/'), children: [] };
         current.push(folder);
       }
       current = folder.children;
@@ -105,13 +128,13 @@ function buildTree(files, rootLabel) {
   }
 
   // Sort: folders first, then files, alphabetical within each group
-  function sortNodes(nodes) {
+  function sortNodes(nodes: TreeNodeType[]): void {
     nodes.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
     for (const node of nodes) {
-      if (node.children) sortNodes(node.children);
+      if (node.type === 'folder') sortNodes(node.children);
     }
   }
   sortNodes(root);
@@ -130,34 +153,64 @@ const initialFile = props.defaultFile
 
 const activeFile = ref(initialFile);
 const html = ref('');
-const collapsed = reactive(new Set());
+const collapsed = reactive(new Set<string>());
 const sidebarOpen = ref(!props.sidebarCollapsed);
 const copied = ref(false);
+const sidebarWidth = ref<number | null>(null);
+const isDragging = ref(false);
 
-const lineNumberStyle = computed(() => {
-  if (!props.lineNumbers) return {};
-  const lineCount = activeFile.value.code.split('\n').length;
-  const digits = String(lineCount).length;
-  return { '--cfv-ln-width': `${digits}ch` };
+const sidebarStyle = computed(() => {
+  if (sidebarWidth.value === null) return {};
+  return { width: `${sidebarWidth.value}px`, maxWidth: `${sidebarWidth.value}px` };
 });
 
-let copyTimeout;
+const dragStartX = ref(0);
+const dragStartWidth = ref(0);
+const sidebarRef = ref<HTMLElement | null>(null);
+
+function onDragMove(event: MouseEvent) {
+  const delta = event.clientX - dragStartX.value;
+  const minWidth = 120;
+  const maxWidth = 400;
+  sidebarWidth.value = Math.min(maxWidth, Math.max(minWidth, dragStartWidth.value + delta));
+}
+
+function onDragEnd() {
+  isDragging.value = false;
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+}
+
+function onDividerMouseDown(event: MouseEvent) {
+  event.preventDefault();
+  if (!sidebarRef.value) return;
+  isDragging.value = true;
+  dragStartX.value = event.clientX;
+  dragStartWidth.value = sidebarRef.value.getBoundingClientRect().width;
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+const allHtml = ref(new Map<string, string>());
+
+function lineNumberStyleFor(file: CodeFile) {
+  if (!props.lineNumbers) return {};
+  const lineCount = file.code.split('\n').length;
+  const digits = String(lineCount).length;
+  return { '--cfv-ln-width': `${digits}ch` };
+}
+
+const copyTimeout = ref<ReturnType<typeof setTimeout>>();
 function copyCode() {
   navigator.clipboard.writeText(activeFile.value.code);
   copied.value = true;
-  clearTimeout(copyTimeout);
-  copyTimeout = setTimeout(() => {
+  clearTimeout(copyTimeout.value);
+  copyTimeout.value = setTimeout(() => {
     copied.value = false;
   }, 2000);
 }
 
 const activeExt = computed(() => getExt(activeFile.value.path).toUpperCase());
-
-const badgeLabels = { JSON: '{}', HTML: '<>' };
-
-function badgeLabel(ext) {
-  return badgeLabels[ext] || ext;
-}
 
 function getFileFromHash() {
   if (!props.id) return null;
@@ -168,18 +221,23 @@ function getFileFromHash() {
   return props.files.find((f) => f.path === filePath) || null;
 }
 
-function expandParentFolders(filePath) {
+function expandParentFolders(filePath: string) {
   const parts = filePath.split('/');
-  for (let i = 1; i < parts.length; i++) {
-    const folderPath = parts.slice(0, i).join('/');
+  const parentParts = parts.slice(0, -1);
+  for (const [index] of parentParts.entries()) {
+    const folderPath = parts.slice(0, index + 1).join('/');
     collapsed.delete(folderPath);
   }
 }
 
-function selectFile(file) {
+function selectFile(file: CodeFile) {
   activeFile.value = file;
-  if (props.id) {
-    history.replaceState(null, '', `#${props.id}:${file.path}`);
+  clearHash();
+}
+
+function clearHash() {
+  if (getFileFromHash()) {
+    history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 }
 
@@ -191,7 +249,7 @@ function onHashChange() {
   }
 }
 
-function toggleFolder(path) {
+function toggleFolder(path: string) {
   if (collapsed.has(path)) {
     collapsed.delete(path);
   } else {
@@ -199,14 +257,12 @@ function toggleFolder(path) {
   }
 }
 
-function collectFolderPaths(nodes) {
-  const paths = [];
+function collectFolderPaths(nodes: TreeNodeType[]): string[] {
+  const paths: string[] = [];
   for (const node of nodes) {
     if (node.type === 'folder') {
       paths.push(node.path);
-      if (node.children) {
-        paths.push(...collectFolderPaths(node.children));
-      }
+      paths.push(...collectFolderPaths(node.children));
     }
   }
   return paths;
@@ -228,25 +284,43 @@ function toggleAllFolders() {
 }
 
 onMounted(() => {
-  const file = getFileFromHash();
-  if (file) {
-    expandParentFolders(file.path);
-    activeFile.value = file;
+  const hashFile = getFileFromHash();
+  if (hashFile) {
+    expandParentFolders(hashFile.path);
+    activeFile.value = hashFile;
+    clearHash();
+  } else if (props.defaultFile) {
+    expandParentFolders(activeFile.value.path);
   }
   window.addEventListener('hashchange', onHashChange);
 });
 
 onUnmounted(() => {
   window.removeEventListener('hashchange', onHashChange);
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+  clearTimeout(copyTimeout.value);
 });
 
-watchEffect(async () => {
-  const file = activeFile.value;
+watch(activeFile, async (file) => {
+  if (props.fixedHeight && allHtml.value.size === 0) {
+    const renderPromises = props.files.map(async (f) => {
+      const rendered = await codeToHtml(f.code, {
+        lang: inferLang(f),
+        themes: { light: 'github-light', dark: 'github-dark' },
+      });
+      return [f.path, rendered] as const;
+    });
+    const entries = await Promise.all(renderPromises);
+    allHtml.value = new Map(entries);
+    return;
+  }
+
   html.value = await codeToHtml(file.code, {
     lang: inferLang(file),
     themes: { light: 'github-light', dark: 'github-dark' },
   });
-});
+}, { immediate: true });
 </script>
 
 <style scoped>
@@ -263,7 +337,6 @@ watchEffect(async () => {
   max-width: 200px;
   width: fit-content;
   background: var(--vp-code-block-bg);
-  border-right: 1px solid var(--vp-c-divider);
   padding: 0 0 12px;
   overflow-y: auto;
   flex-shrink: 0;
@@ -317,6 +390,40 @@ watchEffect(async () => {
   background: var(--vp-c-bg-soft);
 }
 
+/* Drag divider */
+.cfv-divider {
+  width: 4px;
+  cursor: col-resize;
+  background: transparent;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  margin-left: -1px;
+}
+
+.cfv-divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 1px;
+  background: var(--vp-c-divider);
+  transition: background-color 0.15s, width 0.15s;
+  transform: translateX(-50%);
+}
+
+.cfv-divider:hover::after,
+.cfv-dragging .cfv-divider::after {
+  width: 3px;
+  background: var(--vp-c-divider);
+}
+
+.cfv-dragging {
+  user-select: none;
+  cursor: col-resize;
+}
+
 /* Code panel */
 .cfv-code {
   flex: 1;
@@ -349,6 +456,21 @@ watchEffect(async () => {
   overflow: auto;
 }
 
+/* Fixed-height: stack all file renders in the same grid cell */
+.cfv-code-body-stack {
+  flex: 1;
+  display: grid;
+  overflow: auto;
+}
+
+.cfv-code-body-layer {
+  grid-area: 1 / 1;
+}
+
+.cfv-code-body-hidden {
+  visibility: hidden;
+}
+
 /* Copy button — matches VitePress code block copy */
 .cfv-copy {
   margin-left: auto;
@@ -362,7 +484,7 @@ watchEffect(async () => {
   background-size: 18px;
   background-repeat: no-repeat;
   cursor: pointer;
-  opacity: 0.7;
+  opacity: 0;
   flex-shrink: 0;
   transition:
     border-color 0.25s,
@@ -370,13 +492,18 @@ watchEffect(async () => {
     opacity 0.25s;
 }
 
-.cfv-copy:hover {
+.cfv-code:hover .cfv-copy {
+  opacity: 0.7;
+}
+
+.cfv-code:hover .cfv-copy:hover {
   opacity: 1;
   border-color: var(--vp-code-copy-code-hover-border-color);
   background-color: var(--vp-code-copy-code-hover-bg);
 }
 
-.cfv-copy.copied {
+.cfv-copy.copied,
+.cfv-code:hover .cfv-copy.copied {
   opacity: 1;
   border-color: var(--vp-code-copy-code-hover-border-color);
   background-color: var(--vp-code-copy-code-hover-bg);
@@ -393,9 +520,6 @@ watchEffect(async () => {
   font-family: var(--vp-font-family-mono);
   line-height: 1.4;
   white-space: nowrap;
-}
-
-.cfv-badge {
   background: var(--vp-c-brand-soft);
   color: var(--vp-c-brand-text);
 }
