@@ -77,6 +77,22 @@ export interface ApiResponse<T = unknown> {
 
 export type HTTPResponse<T = unknown> = ApiResponse<T>;
 
+export interface HTTPFilterInput<TEvent = unknown> {
+  method: string;
+  path: string;
+  headers: Record<string, string | undefined>;
+  query: Record<string, string | undefined>;
+  body: string | undefined;
+  auth: Auth | undefined;
+  event: TEvent;
+}
+
+export interface HTTPFilters<TPathString extends string = string> {
+  method: AnyHttpMethod;
+  path: TPathString;
+  customFilter?: (input: HTTPFilterInput) => boolean;
+}
+
 export type HTTPMiddleware<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
@@ -98,8 +114,7 @@ export interface RouteDefinition<
   TBody = unknown,
   TResponse = unknown,
 > {
-  method: AnyHttpMethod;
-  path: TPathString;
+  filters: HTTPFilters<TPathString>;
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
   middleware?: HTTPMiddleware<TPath, TQuery, TBody, TResponse>[];
   querySchema?: StandardSchemaV1<unknown, TQuery>;

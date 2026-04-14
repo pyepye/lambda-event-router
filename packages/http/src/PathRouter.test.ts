@@ -9,7 +9,7 @@ suite('PathRouter', () => {
   });
 
   test('returns the router instance for chaining', () => {
-    const config = { path: '/items', handler: vi.fn() };
+    const config = { filters: { path: '/items' }, handler: vi.fn() };
 
     expect(router.get(config)).toBe(router);
     expect(router.head(config)).toBe(router);
@@ -23,8 +23,7 @@ suite('PathRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const result = router.route({
-        method: 'GET',
-        path: '/items',
+        filters: { method: 'GET', path: '/items' },
         handler: vi.fn(),
       });
 
@@ -33,8 +32,7 @@ suite('PathRouter', () => {
 
     test('registers routes with a lowercase method', () => {
       router.route({
-        method: 'get',
-        path: '/items',
+        filters: { method: 'get', path: '/items' },
         handler: vi.fn(),
       });
 
@@ -86,7 +84,7 @@ suite('PathRouter', () => {
 
       // @ts-expect-error - testing private method directly
       router.addRoute('POST', {
-        path: '/items/:id',
+        filters: { path: '/items/:id' },
         handler,
         querySchema,
         bodySchema,
@@ -107,7 +105,7 @@ suite('PathRouter', () => {
   suite('match', () => {
     test('matches a static path', () => {
       const handler = vi.fn();
-      router.get({ path: '/items', handler });
+      router.get({ filters: { path: '/items' }, handler });
 
       const result = router.match('GET', '/items');
 
@@ -117,7 +115,7 @@ suite('PathRouter', () => {
     });
 
     test('returns null when no route matches', () => {
-      router.get({ path: '/items', handler: vi.fn() });
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
 
       const result = router.match('GET', '/unknown');
 
@@ -125,7 +123,7 @@ suite('PathRouter', () => {
     });
 
     test('returns null when method does not match', () => {
-      router.get({ path: '/items', handler: vi.fn() });
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
 
       const result = router.match('POST', '/items');
 
@@ -133,7 +131,7 @@ suite('PathRouter', () => {
     });
 
     test('extracts a single path parameter', () => {
-      router.get({ path: '/items/:id', handler: vi.fn() });
+      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
 
       const result = router.match('GET', '/items/abc-123');
 
@@ -142,7 +140,7 @@ suite('PathRouter', () => {
     });
 
     test('extracts multiple path parameters', () => {
-      router.get({ path: '/items/:itemId/sub/:subId', handler: vi.fn() });
+      router.get({ filters: { path: '/items/:itemId/sub/:subId' }, handler: vi.fn() });
 
       const result = router.match('GET', '/items/item-1/sub/sub-2');
 
@@ -151,7 +149,7 @@ suite('PathRouter', () => {
     });
 
     test('does not match a partial path', () => {
-      router.get({ path: '/items', handler: vi.fn() });
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
 
       const result = router.match('GET', '/items/extra');
 
@@ -159,7 +157,7 @@ suite('PathRouter', () => {
     });
 
     test('does not match a shorter path', () => {
-      router.get({ path: '/items/:id', handler: vi.fn() });
+      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
 
       const result = router.match('GET', '/items');
 
@@ -169,8 +167,8 @@ suite('PathRouter', () => {
     test('matches the correct method when multiple routes share the same path', () => {
       const getHandler = vi.fn();
       const postHandler = vi.fn();
-      router.get({ path: '/items', handler: getHandler });
-      router.post({ path: '/items', handler: postHandler });
+      router.get({ filters: { path: '/items' }, handler: getHandler });
+      router.post({ filters: { path: '/items' }, handler: postHandler });
 
       const getResult = router.match('GET', '/items');
       const postResult = router.match('POST', '/items');
@@ -182,8 +180,8 @@ suite('PathRouter', () => {
     test('returns the first match when multiple routes could match the same path', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-      router.get({ path: '/items/:id', handler: firstHandler });
-      router.get({ path: '/items/:slug', handler: secondHandler });
+      router.get({ filters: { path: '/items/:id' }, handler: firstHandler });
+      router.get({ filters: { path: '/items/:slug' }, handler: secondHandler });
 
       const result = router.match('GET', '/items/abc');
 
@@ -192,7 +190,7 @@ suite('PathRouter', () => {
 
     test('returns the handler reference from the matched route', () => {
       const handler = vi.fn();
-      router.post({ path: '/items', handler });
+      router.post({ filters: { path: '/items' }, handler });
 
       const result = router.match('POST', '/items');
 
@@ -200,13 +198,13 @@ suite('PathRouter', () => {
     });
 
     test('matches all HTTP methods', () => {
-      router.get({ path: '/a', handler: vi.fn() });
-      router.head({ path: '/b', handler: vi.fn() });
-      router.delete({ path: '/c', handler: vi.fn() });
-      router.options({ path: '/d', handler: vi.fn() });
-      router.post({ path: '/e', handler: vi.fn() });
-      router.put({ path: '/f', handler: vi.fn() });
-      router.patch({ path: '/g', handler: vi.fn() });
+      router.get({ filters: { path: '/a' }, handler: vi.fn() });
+      router.head({ filters: { path: '/b' }, handler: vi.fn() });
+      router.delete({ filters: { path: '/c' }, handler: vi.fn() });
+      router.options({ filters: { path: '/d' }, handler: vi.fn() });
+      router.post({ filters: { path: '/e' }, handler: vi.fn() });
+      router.put({ filters: { path: '/f' }, handler: vi.fn() });
+      router.patch({ filters: { path: '/g' }, handler: vi.fn() });
 
       expect(router.match('GET', '/a')).not.toBeNull();
       expect(router.match('HEAD', '/b')).not.toBeNull();
@@ -215,6 +213,115 @@ suite('PathRouter', () => {
       expect(router.match('POST', '/e')).not.toBeNull();
       expect(router.match('PUT', '/f')).not.toBeNull();
       expect(router.match('PATCH', '/g')).not.toBeNull();
+    });
+
+    test('skips route when customFilter returns false', () => {
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: () => false,
+        },
+        handler: vi.fn(),
+      });
+
+      const result = router.match('GET', '/items', {});
+
+      expect(result).toBeNull();
+    });
+
+    test('matches route when customFilter returns true', () => {
+      const handler = vi.fn();
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: () => true,
+        },
+        handler,
+      });
+
+      const result = router.match('GET', '/items', {});
+
+      expect(result).not.toBeNull();
+      expect(result?.route.handler).toBe(handler);
+    });
+
+    test('passes filterInput to customFilter', () => {
+      const customFilter = vi.fn().mockReturnValue(true);
+      router.get({
+        filters: { path: '/items', customFilter },
+        handler: vi.fn(),
+      });
+
+      const filterInput = { method: 'GET', path: '/items', headers: { authorization: 'Bearer token' } };
+      router.match('GET', '/items', filterInput);
+
+      expect(customFilter).toHaveBeenCalledWith(filterInput);
+    });
+
+    test('falls through to next route when customFilter rejects first match', () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: () => false,
+        },
+        handler: firstHandler,
+      });
+      router.get({
+        filters: { path: '/items' },
+        handler: secondHandler,
+      });
+
+      const result = router.match('GET', '/items', {});
+
+      expect(result).not.toBeNull();
+      expect(result?.route.handler).toBe(secondHandler);
+    });
+
+    test('does not call customFilter when method does not match', () => {
+      const customFilter = vi.fn();
+      router.get({
+        filters: { path: '/items', customFilter },
+        handler: vi.fn(),
+      });
+
+      router.match('POST', '/items', {});
+
+      expect(customFilter).not.toHaveBeenCalled();
+    });
+
+    test('does not call customFilter when path does not match', () => {
+      const customFilter = vi.fn();
+      router.get({
+        filters: { path: '/items', customFilter },
+        handler: vi.fn(),
+      });
+
+      router.match('GET', '/other', {});
+
+      expect(customFilter).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('getMethodsForPath', () => {
+    test('ignores customFilter and returns methods based on path only', () => {
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: () => false,
+        },
+        handler: vi.fn(),
+      });
+      router.post({
+        filters: { path: '/items' },
+        handler: vi.fn(),
+      });
+
+      const methods = router.getMethodsForPath('/items');
+
+      expect(methods).toEqual(['GET', 'POST']);
     });
   });
 });

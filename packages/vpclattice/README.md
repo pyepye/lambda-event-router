@@ -36,8 +36,10 @@ const latticeRouter = createVPCLatticeRouter()
 
 latticeRouter.route(
   defineRoute({
-    method: 'GET',
-    path: '/items/:itemId',
+    filter: {
+      method: 'GET',
+      path: '/items/:itemId',
+    },
   }).handle(async ({ path }) => {
     return { statusCode: 200, body: { itemId: path.itemId } }
   })
@@ -55,8 +57,10 @@ import { createVPCLatticeRouter, defineRoute } from '@lambda-event-router/vpclat
 const latticeRouter = createVPCLatticeRouter()
 
 const updateItemRoute = defineRoute({
-  method: 'POST',
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    method: 'POST',
+    path: '/orgs/:orgId/items/:itemId',
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,
@@ -77,13 +81,15 @@ import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice'
 const latticeRouter = createVPCLatticeRouter()
 
 latticeRouter.post({
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    path: '/orgs/:orgId/items/:itemId',
+  },
   handler: updateItem
 })
 
 export async function updateItem(
   request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<UpdateItemResponse>> {
+): Promise<UpdateItemResponse> {
   const item = await getItem(path.itemId);
   if (!item) {
     throw NotFound(`${path.itemId} not found`);

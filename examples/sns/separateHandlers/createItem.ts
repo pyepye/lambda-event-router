@@ -1,4 +1,4 @@
-import type { SNSMessageAttributes, SNSRecord, SNSResponse } from '@lambda-event-router/sns';
+import type { SNSMessageAttributes, SNSRequest, SNSResponse } from '@lambda-event-router/sns';
 import { z } from 'zod';
 
 export const CreateItemBodySchema = z.object({
@@ -13,7 +13,7 @@ export const MessageAttributesSchema = z.object({
 type CreateItemBody = z.infer<typeof CreateItemBodySchema>;
 type CreateItemMessageAttrs = z.infer<typeof MessageAttributesSchema>;
 
-export async function createItem(request: SNSRecord<CreateItemBody, CreateItemMessageAttrs>): Promise<SNSResponse> {
+export async function createItem(request: SNSRequest<CreateItemBody, CreateItemMessageAttrs>): Promise<SNSResponse> {
   const { orgId, itemId } = request.body;
 
   console.log('Creating item:', { orgId, itemId });
@@ -28,7 +28,7 @@ interface CreateItemMessageAttributes extends SNSMessageAttributes {
   someAttribute: string;
 }
 
-export async function createItemOther(request: SNSRecord<Body, CreateItemMessageAttributes>): Promise<SNSResponse> {
+export async function createItemOther(request: SNSRequest<Body, CreateItemMessageAttributes>): Promise<SNSResponse> {
   const { orgId, itemId } = request.body;
 
   console.log('Creating item:', { orgId, itemId });

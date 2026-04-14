@@ -19,8 +19,10 @@ const ResponseSchema = z.object({
 });
 
 export const createItemRoute = defineRoute({
-  method: 'POST',
-  path: '/orgs/:orgId/items/:itemId',
+  filters: {
+    method: 'POST',
+    path: '/orgs/:orgId/items/:itemId',
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,
@@ -39,8 +41,10 @@ export const createItemRoute = defineRoute({
 });
 
 export const updateItemRoute = defineRoute({
-  method: 'PUT',
-  path: '/orgs/:orgId/items/:itemId',
+  filters: {
+    method: 'PUT',
+    path: '/orgs/:orgId/items/:itemId',
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,

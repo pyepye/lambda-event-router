@@ -39,8 +39,10 @@ const apiRouter = createAPIGatewayRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const updateItem = defineRoute({
-  method: 'PUT',
-  path: '/org/:orgId/items/:itemId/',
+  filter: {
+    method: 'PUT',
+    path: '/org/:orgId/items/:itemId/',
+  }
 }).handle(async ({ path, body }) => {
   return { orgId: path.orgId, name: body.name, price: body.price };
 })
@@ -57,14 +59,16 @@ const apiRouter = createAPIGatewayRouter()
 
 // Separate handler to define routes and handlers in different places
 apiRouter.put({
-  path: '/org/:orgId/items/:itemId/',
+  filter {
+    path: '/org/:orgId/items/:itemId/',
+  },
   handler: updateItem,
 });
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
 export async function updateItem(
   request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<UpdateItemResponse>> {
+): Promise<UpdateItemResponse> {
   return { orgId: path.orgId, name: body.name, price: body.price }
 }
 ```
@@ -110,8 +114,10 @@ import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigat
 const apiRouter = createAPIGatewayRouter()
 
 const updateItemRoute = defineRoute({
-  method: 'POST',
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    method: 'POST',
+    path: '/orgs/:orgId/items/:itemId',
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,
@@ -133,8 +139,9 @@ import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.get({
-  method: 'POST'
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    path: '/orgs/:orgId/items/:itemId',
+  },
   handler: updateItem
 })
 

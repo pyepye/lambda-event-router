@@ -1,4 +1,4 @@
-import { type ApiRequest, type ApiResponse, BadRequest } from '@lambda-event-router/apigateway';
+import { type ApiRequest, BadRequest } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 export const CreateItemBodySchema = z.object({
@@ -22,9 +22,7 @@ interface CreateItemResponse {
   dryRun: boolean;
 }
 
-export async function createItem(
-  request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<CreateItemResponse>> {
+export async function createItem(request: ApiRequest<PathParams, QueryParams, Body>): Promise<CreateItemResponse> {
   const { orgId, itemId } = request.path;
   const { dryRun } = request.query;
   const { name, price } = request.body;
@@ -33,8 +31,12 @@ export async function createItem(
     throw BadRequest('Dry run not supported for this');
   }
 
+  return { orgId, itemId, name, price, dryRun: Boolean(dryRun) };
+  /*
+  Under the hood APIRouter returns
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun: Boolean(dryRun) },
   };
+  */
 }

@@ -90,7 +90,7 @@ suite('HTTPRouter', () => {
   suite('constructor with options object', () => {
     test('accepts an options object with adapter and handles events', async () => {
       const optionsRouter = new HTTPRouter({ adapter: mockAdapter });
-      optionsRouter.get({ path: '/', handler: async () => Ok({ message: 'options' }) });
+      optionsRouter.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'options' }) });
 
       const event = createMockEvent();
       const context = createMockContext();
@@ -104,7 +104,7 @@ suite('HTTPRouter', () => {
     test('applies router-level middleware from options', async () => {
       const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
       const optionsRouter = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareSpy] });
-      optionsRouter.get({ path: '/', handler: async () => Ok({ message: 'with middleware' }) });
+      optionsRouter.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'with middleware' }) });
 
       const event = createMockEvent();
       const context = createMockContext();
@@ -118,8 +118,7 @@ suite('HTTPRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: { method: 'GET', path: '/items' },
       }).handle(async () => NoContent());
 
       const result = router.route(definition);
@@ -137,7 +136,7 @@ suite('HTTPRouter', () => {
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
       // @ts-expect-error - calling union of method signatures
-      const result = router[method]({ path, handler });
+      const result = router[method]({ filters: { path }, handler });
 
       expect(result).toBe(router);
     });
@@ -146,8 +145,7 @@ suite('HTTPRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: { method: 'GET', path: '/items' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -161,15 +159,14 @@ suite('HTTPRouter', () => {
       const handler = vi.fn();
 
       const definition = defineRoute({
-        method: 'POST',
-        path: '/items/:id',
+        filters: { method: 'POST', path: '/items/:id' },
         querySchema,
         bodySchema,
         responseSchema,
       }).handle(handler);
 
-      expect(definition.method).toBe('POST');
-      expect(definition.path).toBe('/items/:id');
+      expect(definition.filters.method).toBe('POST');
+      expect(definition.filters.path).toBe('/items/:id');
       expect(definition.querySchema).toBe(querySchema);
       expect(definition.bodySchema).toBe(bodySchema);
       expect(definition.responseSchema).toBe(responseSchema);
@@ -180,7 +177,7 @@ suite('HTTPRouter', () => {
   suite('handleEvent', () => {
     test('calls the matched handler and returns a response', async () => {
       router.get({
-        path: '/',
+        filters: { path: '/' },
         handler: async () => Ok({ message: 'hello' }),
       });
 
@@ -197,7 +194,7 @@ suite('HTTPRouter', () => {
     });
 
     test('returns 404 when no route matches', async () => {
-      router.get({ path: '/items', handler: async () => Ok({}) });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
       const event = createMockEvent({ path: '/unknown' });
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
@@ -213,7 +210,7 @@ suite('HTTPRouter', () => {
 
     test('catches a generic Error and returns 500 with the error message', async () => {
       router.get({
-        path: '/',
+        filters: { path: '/' },
         handler: async () => {
           throw new Error('something broke');
         },
@@ -233,7 +230,7 @@ suite('HTTPRouter', () => {
 
     test('catches a non-Error throw and returns 500 with default message', async () => {
       router.get({
-        path: '/',
+        filters: { path: '/' },
         handler: async () => {
           throw 'string error';
         },
@@ -253,7 +250,7 @@ suite('HTTPRouter', () => {
 
     test('passes extracted path params to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      router.get({ path: '/items/:id', handler });
+      router.get({ filters: { path: '/items/:id' }, handler });
 
       const event = createMockEvent({ path: '/items/42' });
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
@@ -265,7 +262,7 @@ suite('HTTPRouter', () => {
 
     test('passes query params to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      router.get({ path: '/items', handler });
+      router.get({ filters: { path: '/items' }, handler });
 
       const event = createMockEvent({ path: '/items', query: { page: '2', limit: '10' } });
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
@@ -277,7 +274,7 @@ suite('HTTPRouter', () => {
 
     test('passes parsed body to the handler', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      router.post({ path: '/items', handler });
+      router.post({ filters: { path: '/items' }, handler });
 
       const event = createMockEvent({
         method: 'POST',
@@ -294,7 +291,7 @@ suite('HTTPRouter', () => {
     test('validates the request before calling handler and returns 422 for body schema failure', async () => {
       const handler = vi.fn();
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
-      router.post({ path: '/', handler, bodySchema });
+      router.post({ filters: { path: '/' }, handler, bodySchema });
 
       const event = createMockEvent({
         method: 'POST',
@@ -316,8 +313,7 @@ suite('HTTPRouter', () => {
     test('executes route-level middleware before calling the handler', async () => {
       const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
       const route = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: { method: 'GET', path: '/items' },
         // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [middlewareSpy],
       }).handle(async () => Ok(null));
@@ -334,13 +330,84 @@ suite('HTTPRouter', () => {
     test('calls validateSchemaResult with query params and querySchema', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
       const querySchema = createMockSchema();
-      router.get({ path: '/items', handler, querySchema });
+      router.get({ filters: { path: '/items' }, handler, querySchema });
 
       const event = createMockEvent({ path: '/items', query: { page: '2', limit: '10' } });
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
       await router.handleEvent(event, context);
 
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '2', limit: '10' }, querySchema);
+    });
+  });
+
+  suite('handleEvent - customFilter', () => {
+    test('matches route when customFilter returns true', async () => {
+      const handler = vi.fn(async () => Ok({ message: 'hello' }));
+      router.get({
+        filters: { path: '/items', customFilter: () => true },
+        handler,
+      });
+
+      const event = createMockEvent({ path: '/items' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 200,
+          body: JSON.stringify({ message: 'hello' }),
+        }),
+      );
+      expect(handler).toHaveBeenCalledOnce();
+    });
+
+    test('returns 404 when customFilter returns false', async () => {
+      const handler = vi.fn(async () => Ok({}));
+      router.get({
+        filters: { path: '/items', customFilter: () => false },
+        handler,
+      });
+
+      const event = createMockEvent({ path: '/items' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 404,
+          body: JSON.stringify({ error: 'Not found' }),
+        }),
+      );
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('passes HTTPFilterInput populated from the normalized event', async () => {
+      const customFilter = vi.fn().mockReturnValue(true);
+      router.post({
+        filters: { path: '/items', customFilter },
+        handler: async () => Ok({}),
+      });
+
+      const event = createMockEvent({
+        method: 'POST',
+        path: '/items',
+        headers: { 'x-trace-id': 'abc' },
+        query: { page: '1' },
+        body: '{"name":"thing"}',
+      });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      await router.handleEvent(event, context);
+
+      expect(customFilter).toHaveBeenCalledOnce();
+      expect(customFilter).toHaveBeenCalledWith({
+        method: 'POST',
+        path: '/items',
+        headers: { 'x-trace-id': 'abc' },
+        query: { page: '1' },
+        body: '{"name":"thing"}',
+        auth: undefined,
+        event,
+      });
     });
   });
 
@@ -357,7 +424,7 @@ suite('HTTPRouter', () => {
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
       router.get({
-        path: '/',
+        filters: { path: '/' },
         handler: async () => {
           callOrder.push('handler');
           return Ok({ message: 'hello' });
@@ -379,7 +446,7 @@ suite('HTTPRouter', () => {
       };
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [authMiddleware] });
-      router.get({ path: '/', handler });
+      router.get({ filters: { path: '/' }, handler });
 
       const event = createMockEvent();
       const context = createMockContext();
@@ -404,7 +471,7 @@ suite('HTTPRouter', () => {
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareOne, middlewareTwo] });
       router.get({
-        path: '/',
+        filters: { path: '/' },
         handler: async () => {
           callOrder.push('handler');
           return Ok({});
@@ -423,7 +490,7 @@ suite('HTTPRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
-      router.post({ path: '/', handler: async () => Ok({}), bodySchema });
+      router.post({ filters: { path: '/' }, handler: async () => Ok({}), bodySchema });
 
       const event = createMockEvent({ method: 'POST', path: '/', body: JSON.stringify({ bad: 'data' }) });
       const context = createMockContext();
@@ -443,8 +510,7 @@ suite('HTTPRouter', () => {
       };
 
       const route = defineRoute({
-        method: 'GET',
-        path: '/',
+        filters: { method: 'GET', path: '/' },
         // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [blockingRouteMiddleware],
       }).handle(handler);
@@ -472,8 +538,7 @@ suite('HTTPRouter', () => {
       };
 
       const route = defineRoute({
-        method: 'GET',
-        path: '/',
+        filters: { method: 'GET', path: '/' },
         // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [routeMiddlewareOne, routeMiddlewareTwo],
       }).handle(async () => {
@@ -506,8 +571,7 @@ suite('HTTPRouter', () => {
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [routerMiddleware] });
       const route = defineRoute({
-        method: 'GET',
-        path: '/',
+        filters: { method: 'GET', path: '/' },
         // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [routeMiddleware],
       }).handle(async () => {
@@ -532,7 +596,7 @@ suite('HTTPRouter', () => {
       };
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [blockingMiddleware] });
-      router.get({ path: '/', middleware: [routeMiddleware], handler });
+      router.get({ filters: { path: '/' }, middleware: [routeMiddleware], handler });
 
       const event = createMockEvent();
       const context = createMockContext();
@@ -549,7 +613,7 @@ suite('HTTPRouter', () => {
       const middleware = vi.fn();
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
-      router.get({ path: '/items', handler: async () => Ok({}) });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
       const event = createMockEvent({ path: '/unknown' });
       const context = createMockContext();
@@ -560,525 +624,523 @@ suite('HTTPRouter', () => {
     });
   });
 
-  suite('CORS', () => {
-    suite('preflight requests', () => {
-      test('returns 204 with CORS headers for OPTIONS request with wildcard origin', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
+  suite('handleEvent - CORS preflight', () => {
+    test('returns 204 with CORS headers for OPTIONS request with wildcard origin', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(204);
-        expect(result.headers).toEqual(
-          expect.objectContaining({
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          }),
-        );
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
       });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
 
-      test('returns correct Allow-Methods for path with multiple methods', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-        router.post({ path: '/items', handler: async () => Ok({}) });
-        router.delete({ path: '/items/:id', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(204);
-        expect(result.headers?.['Access-Control-Allow-Methods']).toBe('GET, POST, OPTIONS');
-      });
-
-      test('returns 204 with matching origin from allowed list', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://allowed.com', 'https://also-allowed.com'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://allowed.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(204);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://allowed.com');
-        expect(result.headers?.Vary).toBe('Origin');
-      });
-
-      test('returns 404 for preflight on non-matching origin from allowed list', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://allowed.com'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://denied.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(404);
-        expect(result.headers).toEqual({ Vary: 'Origin' });
-      });
-
-      test('returns 204 with dynamic origin function', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: {
-            origin: (origin: string, _path: string) => {
-              if (origin.endsWith('.example.com')) return origin;
-              return undefined;
-            },
-          },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://app.example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(204);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://app.example.com');
-      });
-
-      test('passes path to dynamic origin function', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: {
-            origin: (_origin: string, path: string) => {
-              if (path.startsWith('/public')) return '*';
-              return undefined;
-            },
-          },
-        });
-        router.get({ path: '/public/data', handler: async () => Ok({}) });
-        router.get({ path: '/private/data', handler: async () => Ok({}) });
-
-        const context = createMockContext();
-
-        const publicResult = await router.handleEvent(
-          createMockEvent({ method: 'OPTIONS', path: '/public/data', headers: { origin: 'https://any.com' } }),
-          context,
-        );
-        expect(publicResult.statusCode).toBe(204);
-        expect(publicResult.headers?.['Access-Control-Allow-Origin']).toBe('*');
-
-        const privateResult = await router.handleEvent(
-          createMockEvent({ method: 'OPTIONS', path: '/private/data', headers: { origin: 'https://any.com' } }),
-          context,
-        );
-        expect(privateResult.statusCode).toBe(404);
-      });
-
-      test('returns 404 for preflight on unregistered path', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/unknown',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(404);
-      });
-
-      test('reflects Access-Control-Request-Headers in preflight response', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.post({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: {
-            origin: 'https://example.com',
-            'access-control-request-headers': 'Content-Type, Authorization',
-          },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
-      });
-
-      test('includes maxAge in preflight response', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*', maxAge: 86400 } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Max-Age']).toBe('86400');
-      });
-
-      test('returns 204 for preflight on parameterized path', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.delete({ path: '/items/:id', handler: async () => NoContent() });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items/123',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(204);
-        expect(result.headers?.['Access-Control-Allow-Methods']).toBe('DELETE, OPTIONS');
-      });
-
-      test('uses configured allowedHeaders in preflight response', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: '*', allowedHeaders: ['Content-Type', 'Authorization'] },
-        });
-        router.post({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: {
-            origin: 'https://example.com',
-            'access-control-request-headers': 'Content-Type, Authorization, X-Custom',
-          },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
-      });
-
-      test('includes credentials in preflight response', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://example.com'], credentials: true },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Allow-Credentials']).toBe('true');
-      });
+      expect(result.statusCode).toBe(204);
+      expect(result.headers).toEqual(
+        expect.objectContaining({
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, OPTIONS',
+        }),
+      );
     });
 
-    suite('actual requests', () => {
-      test('adds CORS headers to successful response', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({ data: 'test' }) });
+    test('returns correct Allow-Methods for path with multiple methods', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      router.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      router.delete({ filters: { path: '/items/:id' }, handler: async () => Ok({}) });
 
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
       });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
 
-      test('adds CORS headers to 404 response', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/unknown', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(404);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('adds CORS headers to error responses from thrown errors', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({
-          path: '/items',
-          handler: async () => {
-            throw new Error('something broke');
-          },
-        });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(500);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('adds CORS headers to thrown HTTPResponse errors', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({
-          path: '/items',
-          handler: async () => {
-            throw { statusCode: 400, body: { error: 'bad input' } };
-          },
-        });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(400);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('CORS headers take precedence over handler-set headers', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({
-          path: '/items',
-          handler: async () => ({
-            statusCode: 200,
-            body: { data: 'test' },
-            headers: { 'X-Custom': 'value', 'Access-Control-Allow-Origin': 'https://evil.com' },
-          }),
-        });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-        expect(result.headers?.['X-Custom']).toBe('value');
-      });
-
-      test('adds only Vary: Origin when origin is not allowed with dynamic origins', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://allowed.com'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({ data: 'test' }) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://denied.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers).toEqual({ Vary: 'Origin' });
-      });
-
-      test('includes Vary: Origin for non-wildcard origins', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://example.com'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.Vary).toBe('Origin');
-      });
-
-      test('adds CORS headers to validation failure (422) response', async () => {
-        const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.post({ path: '/items', handler: async () => Ok({}), bodySchema });
-
-        const event = createMockEvent({
-          method: 'POST',
-          path: '/items',
-          body: JSON.stringify({ bad: 'data' }),
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(422);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('adds CORS headers to non-Error throw response', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({
-          path: '/items',
-          handler: async () => {
-            throw 'string error';
-          },
-        });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(500);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('adds CORS headers when no origin header with wildcard config', async () => {
-        const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items' });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-      });
-
-      test('adds only Vary: Origin when no origin header with dynamic origin', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://allowed.com'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items' });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers).toEqual({ Vary: 'Origin' });
-      });
-
-      test('adds CORS headers for allowed function origin on actual request', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: {
-            origin: (origin: string) => {
-              if (origin.endsWith('.example.com')) return origin;
-              return undefined;
-            },
-          },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://app.example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://app.example.com');
-        expect(result.headers?.Vary).toBe('Origin');
-      });
-
-      test('adds only Vary: Origin for denied function origin on actual request', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: {
-            origin: () => undefined,
-          },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://denied.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers).toEqual({ Vary: 'Origin' });
-      });
-
-      test('includes credentials on actual response', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: ['https://example.com'], credentials: true },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.statusCode).toBe(200);
-        expect(result.headers?.['Access-Control-Allow-Credentials']).toBe('true');
-      });
-
-      test('includes exposedHeaders on actual responses', async () => {
-        const router = new HTTPRouter({
-          adapter: mockAdapter,
-          cors: { origin: '*', exposedHeaders: ['X-Request-Id'] },
-        });
-        router.get({ path: '/items', handler: async () => Ok({}) });
-
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
-
-        expect(result.headers?.['Access-Control-Expose-Headers']).toBe('X-Request-Id');
-      });
+      expect(result.statusCode).toBe(204);
+      expect(result.headers?.['Access-Control-Allow-Methods']).toBe('GET, POST, OPTIONS');
     });
 
-    suite('CORS configuration validation', () => {
-      test('throws when credentials is true with wildcard origin', () => {
-        expect(() => new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*', credentials: true } })).toThrow(
-          'CORS configuration error: credentials cannot be used with wildcard (*) origin',
-        );
+    test('returns 204 with matching origin from allowed list', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://allowed.com', 'https://also-allowed.com'] },
       });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
-      test('allows credentials with specific origin', () => {
-        expect(
-          () => new HTTPRouter({ adapter: mockAdapter, cors: { origin: 'https://example.com', credentials: true } }),
-        ).not.toThrow();
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://allowed.com' },
       });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
 
-      test('allows credentials with array origins', () => {
-        expect(
-          () => new HTTPRouter({ adapter: mockAdapter, cors: { origin: ['https://example.com'], credentials: true } }),
-        ).not.toThrow();
-      });
+      expect(result.statusCode).toBe(204);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://allowed.com');
+      expect(result.headers?.Vary).toBe('Origin');
     });
 
-    suite('no CORS configured', () => {
-      test('does not add CORS headers when cors is not configured', async () => {
-        router.get({ path: '/items', handler: async () => Ok({ data: 'test' }) });
+    test('returns 404 for preflight on non-matching origin from allowed list', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://allowed.com'] },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
-        const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://denied.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
 
-        expect(result.statusCode).toBe(200);
-        expect(result.headers).toBeUndefined();
+      expect(result.statusCode).toBe(404);
+      expect(result.headers).toEqual({ Vary: 'Origin' });
+    });
+
+    test('returns 204 with dynamic origin function', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: {
+          origin: (origin: string, _path: string) => {
+            if (origin.endsWith('.example.com')) return origin;
+            return undefined;
+          },
+        },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://app.example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://app.example.com');
+    });
+
+    test('passes path to dynamic origin function', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: {
+          origin: (_origin: string, path: string) => {
+            if (path.startsWith('/public')) return '*';
+            return undefined;
+          },
+        },
+      });
+      router.get({ filters: { path: '/public/data' }, handler: async () => Ok({}) });
+      router.get({ filters: { path: '/private/data' }, handler: async () => Ok({}) });
+
+      const context = createMockContext();
+
+      const publicResult = await router.handleEvent(
+        createMockEvent({ method: 'OPTIONS', path: '/public/data', headers: { origin: 'https://any.com' } }),
+        context,
+      );
+      expect(publicResult.statusCode).toBe(204);
+      expect(publicResult.headers?.['Access-Control-Allow-Origin']).toBe('*');
+
+      const privateResult = await router.handleEvent(
+        createMockEvent({ method: 'OPTIONS', path: '/private/data', headers: { origin: 'https://any.com' } }),
+        context,
+      );
+      expect(privateResult.statusCode).toBe(404);
+    });
+
+    test('returns 404 for preflight on unregistered path', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/unknown',
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(404);
+    });
+
+    test('reflects Access-Control-Request-Headers in preflight response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: {
+          origin: 'https://example.com',
+          'access-control-request-headers': 'Content-Type, Authorization',
+        },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
+    });
+
+    test('includes maxAge in preflight response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*', maxAge: 86400 } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Max-Age']).toBe('86400');
+    });
+
+    test('returns 204 for preflight on parameterized path', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.delete({ filters: { path: '/items/:id' }, handler: async () => NoContent() });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items/123',
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers?.['Access-Control-Allow-Methods']).toBe('DELETE, OPTIONS');
+    });
+
+    test('uses configured allowedHeaders in preflight response', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: '*', allowedHeaders: ['Content-Type', 'Authorization'] },
+      });
+      router.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: {
+          origin: 'https://example.com',
+          'access-control-request-headers': 'Content-Type, Authorization, X-Custom',
+        },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Headers']).toBe('Content-Type, Authorization');
+    });
+
+    test('includes credentials in preflight response', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://example.com'], credentials: true },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Credentials']).toBe('true');
+    });
+  });
+
+  suite('handleEvent - CORS', () => {
+    test('adds CORS headers to successful response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds CORS headers to 404 response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/unknown', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(404);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds CORS headers to error responses from thrown errors', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({
+        filters: { path: '/items' },
+        handler: async () => {
+          throw new Error('something broke');
+        },
       });
 
-      test('does not handle OPTIONS preflight when cors is not configured', async () => {
-        router.get({ path: '/items', handler: async () => Ok({}) });
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
 
-        const event = createMockEvent({
-          method: 'OPTIONS',
-          path: '/items',
-          headers: { origin: 'https://example.com' },
-        });
-        const context = createMockContext();
-        const result = await router.handleEvent(event, context);
+      expect(result.statusCode).toBe(500);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
 
-        expect(result.statusCode).toBe(404);
+    test('adds CORS headers to thrown HTTPResponse errors', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({
+        filters: { path: '/items' },
+        handler: async () => {
+          throw { statusCode: 400, body: { error: 'bad input' } };
+        },
       });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(400);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('CORS headers take precedence over handler-set headers', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({
+        filters: { path: '/items' },
+        handler: async () => ({
+          statusCode: 200,
+          body: { data: 'test' },
+          headers: { 'X-Custom': 'value', 'Access-Control-Allow-Origin': 'https://evil.com' },
+        }),
+      });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(result.headers?.['X-Custom']).toBe('value');
+    });
+
+    test('adds only Vary: Origin when origin is not allowed with dynamic origins', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://allowed.com'] },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://denied.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers).toEqual({ Vary: 'Origin' });
+    });
+
+    test('includes Vary: Origin for non-wildcard origins', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://example.com'] },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.Vary).toBe('Origin');
+    });
+
+    test('adds CORS headers to validation failure (422) response', async () => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.post({ filters: { path: '/items' }, handler: async () => Ok({}), bodySchema });
+
+      const event = createMockEvent({
+        method: 'POST',
+        path: '/items',
+        body: JSON.stringify({ bad: 'data' }),
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(422);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds CORS headers to non-Error throw response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({
+        filters: { path: '/items' },
+        handler: async () => {
+          throw 'string error';
+        },
+      });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(500);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds CORS headers when no origin header with wildcard config', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items' });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds only Vary: Origin when no origin header with dynamic origin', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://allowed.com'] },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items' });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers).toEqual({ Vary: 'Origin' });
+    });
+
+    test('adds CORS headers for allowed function origin on actual request', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: {
+          origin: (origin: string) => {
+            if (origin.endsWith('.example.com')) return origin;
+            return undefined;
+          },
+        },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://app.example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('https://app.example.com');
+      expect(result.headers?.Vary).toBe('Origin');
+    });
+
+    test('adds only Vary: Origin for denied function origin on actual request', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: {
+          origin: () => undefined,
+        },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://denied.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers).toEqual({ Vary: 'Origin' });
+    });
+
+    test('includes credentials on actual response', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: ['https://example.com'], credentials: true },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Credentials']).toBe('true');
+    });
+
+    test('includes exposedHeaders on actual responses', async () => {
+      const router = new HTTPRouter({
+        adapter: mockAdapter,
+        cors: { origin: '*', exposedHeaders: ['X-Request-Id'] },
+      });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Expose-Headers']).toBe('X-Request-Id');
+    });
+  });
+
+  suite('constructor - CORS configuration validation', () => {
+    test('throws when credentials is true with wildcard origin', () => {
+      expect(() => new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*', credentials: true } })).toThrow(
+        'CORS configuration error: credentials cannot be used with wildcard (*) origin',
+      );
+    });
+
+    test('allows credentials with specific origin', () => {
+      expect(
+        () => new HTTPRouter({ adapter: mockAdapter, cors: { origin: 'https://example.com', credentials: true } }),
+      ).not.toThrow();
+    });
+
+    test('allows credentials with array origins', () => {
+      expect(
+        () => new HTTPRouter({ adapter: mockAdapter, cors: { origin: ['https://example.com'], credentials: true } }),
+      ).not.toThrow();
+    });
+  });
+
+  suite('handleEvent - no CORS configured', () => {
+    test('does not add CORS headers when cors is not configured', async () => {
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const event = createMockEvent({ path: '/items', headers: { origin: 'https://example.com' } });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers).toBeUndefined();
+    });
+
+    test('does not handle OPTIONS preflight when cors is not configured', async () => {
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(404);
     });
   });
 });

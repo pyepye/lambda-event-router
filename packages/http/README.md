@@ -23,8 +23,10 @@ import { z } from 'zod'
 
 // Inline functions allows Typescript to automatic infer types
 const getItemRoute = defineRoute({
-  method: 'GET',
-  path: '/orgs/:orgId/items/:itemId',
+  filter {
+    method: 'GET',
+    path: '/orgs/:orgId/items/:itemId',
+  },
 }).handle(async ({ path }) => {
   return { statusCode: 200, body: { orgId: path.orgId, itemId: path.itemId } }
 })
@@ -55,8 +57,10 @@ const ResponseSchema = z.object({
 })
 
 const createItemRoute = defineRoute({
-  method: 'POST',
-  path: '/items',
+  filter {
+    method: 'POST',
+    path: '/items',
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,

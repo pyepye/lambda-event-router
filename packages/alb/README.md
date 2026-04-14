@@ -36,8 +36,10 @@ const albRouter = createALBRouter()
 
 albRouter.route(
   defineRoute({
-    method: 'POST',
-    path: '/orgs/:orgId/items/:itemId',
+    filter: {
+      method: 'POST',
+      path: '/orgs/:orgId/items/:itemId',
+    },
     bodySchema: z.object({ name: z.string(), price: z.number() }),
   }).handle(async ({ path, body }) => {
     return { statusCode: 201, body: { orgId: path.orgId, itemId: path.itemId, name: body.name } }
@@ -56,8 +58,10 @@ import { createALBRouter, defineRoute } from '@lambda-event-router/alb'
 const albRouter = createALBRouter()
 
 const updateItemRoute = defineRoute({
-  method: 'POST',
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    method: 'POST',
+    path: '/orgs/:orgId/items/:itemId',
+  }
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,
@@ -78,13 +82,15 @@ import { createALBRouter } from '@lambda-event-router/alb'
 const albRouter = createALBRouter()
 
 albRouter.post({
-  path: '/orgs/:orgId/items/:itemId',
+  filter: {
+    path: '/orgs/:orgId/items/:itemId',
+  },
   handler: updateItem
 })
 
 export async function updateItem(
   request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<UpdateItemResponse>> {
+): Promise<UpdateItemResponse> {
   const item = await getItem(path.itemId);
   if (!item) {
     throw NotFound(`${path.itemId} not found`);
