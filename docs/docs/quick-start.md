@@ -44,7 +44,7 @@ const sqsRouter = createSQSRouter()
 
 // Separate handler to define routes and handlers in different places
 sqsRouter.route({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: BodySchema,
   handler: processOrder,
 })
@@ -111,7 +111,7 @@ import { OrderSchema } from '../schemas/order.js'
 export const sqsRouter = createSQSRouter()
 
 sqsRouter.route({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:orders'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:orders' },
   bodySchema: OrderSchema,
   handler: processOrder,
 })`,

@@ -58,14 +58,18 @@ import { createOrder, createOrderSchema } from './createOrder'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.route({
-  method: 'GET',
-  path: '/order/:id/',
+  filter {
+    method: 'GET',
+    path: '/order/:id/',
+  },
   handler: getOrder,
 })
 
 apiRouter.route({
-  method: 'POST',
-  path: '/order/:id/',
+  filter {
+    method: 'POST',
+    path: '/order/:id/',
+  },
   handler: createOrder,
   bodySchema: createOrderSchema,
 })
