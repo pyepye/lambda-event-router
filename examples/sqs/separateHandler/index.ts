@@ -13,14 +13,14 @@ const SOME_DL_QUEUE_ARN = 'arn:aws:sqs:region:account-id:some-dl-queue';
 
 sqsRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
+    eventSourceArn: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
   },
   handler: createItemOther,
 });
 
 sqsRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
+    eventSourceArn: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
     messageAttributes: {
       Type: ['ORDER', 'REFUND'],
     },
@@ -41,7 +41,7 @@ function isHighValueOrder({ body }: SQSFilterInput): boolean {
 
 sqsRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
+    eventSourceArn: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
     customFilter: isHighValueOrder,
   },
   handler: createItem,

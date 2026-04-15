@@ -58,7 +58,7 @@ suite('SQSRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'] },
+        filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:my-queue' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -70,8 +70,8 @@ suite('SQSRouter', () => {
       const messageAttributesSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'],
-        messageAttributes: { eventType: ['order.created'] },
+        eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:my-queue',
+        messageAttributes: { eventType: 'order.created' },
       };
 
       const definition = defineRoute({
@@ -90,7 +90,7 @@ suite('SQSRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:my-queue'] },
+        filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:my-queue' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -100,11 +100,11 @@ suite('SQSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArns', ({ sqsRecord }) => {
+    test('matches route by eventSourceArn', ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async () => {}),
       );
 
@@ -115,10 +115,25 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArns does not match', ({ sqsRecord }) => {
+    test('matches route by eventSourceArn array', ({ sqsRecord }) => {
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:other-queue'] },
+          filters: { eventSourceArn: [eventSourceArn, 'arn:aws:sqs:us-east-1:123456789012:other-queue'] },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {}, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventSourceArn does not match', ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:other-queue' },
         }).handle(async () => {}),
       );
 
@@ -129,10 +144,10 @@ suite('SQSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by messageAttributes', ({ sqsRecord }) => {
+    test('matches route by messageAttributes with single value', ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(async () => {}),
       );
 
@@ -146,7 +161,7 @@ suite('SQSRouter', () => {
     test('does not match route when messageAttributes does not match', ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.shipped'] } },
+          filters: { messageAttributes: { eventType: 'order.shipped' } },
         }).handle(async () => {}),
       );
 
@@ -160,7 +175,7 @@ suite('SQSRouter', () => {
     test('matches route by number messageAttribute value', ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { count: [42] } },
+          filters: { messageAttributes: { count: 42 } },
         }).handle(async () => {}),
       );
 
@@ -174,7 +189,7 @@ suite('SQSRouter', () => {
     test('does not match when messageAttribute value is a Buffer', ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { data: ['some-value'] } },
+          filters: { messageAttributes: { data: 'some-value' } },
         }).handle(async () => {}),
       );
 
@@ -203,7 +218,7 @@ suite('SQSRouter', () => {
     test('requires all messageAttribute filter keys to match', ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'], priority: ['high'] } },
+          filters: { messageAttributes: { eventType: 'order.created', priority: 'high' } },
         }).handle(async () => {}),
       );
 
@@ -217,13 +232,13 @@ suite('SQSRouter', () => {
       expect(partialResult).toBeUndefined();
     });
 
-    test('matches route when both eventSourceArns and messageAttributes match', ({ sqsRecord }) => {
+    test('matches route when both eventSourceArn and messageAttributes match', ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            messageAttributes: { eventType: ['order.created'] },
+            eventSourceArn,
+            messageAttributes: { eventType: 'order.created' },
           },
         }).handle(async () => {}),
       );
@@ -235,13 +250,13 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArns matches but messageAttributes do not', ({ sqsRecord }) => {
+    test('does not match when eventSourceArn matches but messageAttributes do not', ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            messageAttributes: { eventType: ['order.created'] },
+            eventSourceArn,
+            messageAttributes: { eventType: 'order.created' },
           },
         }).handle(async () => {}),
       );
@@ -253,12 +268,12 @@ suite('SQSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when messageAttributes match but eventSourceArns does not', ({ sqsRecord }) => {
+    test('does not match when messageAttributes match but eventSourceArn does not', ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: ['arn:aws:sqs:us-east-1:123456789012:other-queue'],
-            messageAttributes: { eventType: ['order.created'] },
+            eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:other-queue',
+            messageAttributes: { eventType: 'order.created' },
           },
         }).handle(async () => {}),
       );
@@ -323,12 +338,12 @@ suite('SQSRouter', () => {
       const secondHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(secondHandler),
       );
 
@@ -347,7 +362,7 @@ suite('SQSRouter', () => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
 
       const definition = defineRoute({
-        filters: { eventSourceArns: [eventSourceArn] },
+        filters: { eventSourceArn },
       }).handle(handler);
       router.route(definition);
 
@@ -383,7 +398,7 @@ suite('SQSRouter', () => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async () => {
           throw new Error('handler exploded');
         }),
@@ -402,7 +417,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async () => {
           throw new Error('fifo handler exploded');
         }),
@@ -422,7 +437,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async (request) => {
           const messageId = request.record.messageId;
           callOrder.push(`start-${messageId}`);
@@ -464,7 +479,7 @@ suite('SQSRouter', () => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async () => {}),
       );
 
@@ -489,7 +504,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async (request) => {
           if (request.record.messageId === failingRecord.messageId) {
             throw new Error('processing failed');
@@ -522,7 +537,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(async (request) => {
           const isFailingRecord =
             request.record.messageId === failingRecordA.messageId ||
@@ -554,7 +569,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async (request) => {
           const messageId = request.record.messageId;
           callOrder.push(`start-${messageId}`);
@@ -590,7 +605,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async (request) => {
           const groupId = request.record.attributes.MessageGroupId;
           callOrder.push(`start-${groupId}`);
@@ -623,7 +638,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async (request) => {
           const groupId = request.record.attributes.MessageGroupId;
           if (groupId === 'group-A') {
@@ -683,7 +698,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async (request) => {
           if (request.record.messageId === record2.messageId) {
             throw new Error('processing failed');
@@ -707,7 +722,7 @@ suite('SQSRouter', () => {
     test('returns empty batchItemFailures when all records succeed', async ({ sqsRecord, sqsEvent, context }) => {
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async () => {}),
       );
 
@@ -741,7 +756,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [fifoArn] },
+          filters: { eventSourceArn: fifoArn },
         }).handle(async (request) => {
           // Fail the first record in group-A only
           if (request.record.messageId === groupARecord1.messageId) {
@@ -772,7 +787,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           bodySchema,
         }).handle(handler),
       );
@@ -798,7 +813,7 @@ suite('SQSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -814,7 +829,7 @@ suite('SQSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -839,7 +854,7 @@ suite('SQSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           messageAttributesSchema,
         }).handle(handler),
       );
@@ -872,7 +887,7 @@ suite('SQSRouter', () => {
       const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           messageAttributesSchema,
         }).handle(async () => {}),
       );
@@ -897,7 +912,7 @@ suite('SQSRouter', () => {
       const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
           messageAttributesSchema,
         }).handle(async () => {}),
       );
@@ -923,7 +938,7 @@ suite('SQSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(handler),
       );
 
@@ -940,7 +955,7 @@ suite('SQSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(handler),
       );
 
@@ -957,7 +972,7 @@ suite('SQSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
         }).handle(handler),
       );
 
@@ -1255,7 +1270,10 @@ suite('SQSRouter', () => {
   });
 
   suite('router middleware short-circuit prevents route middleware', () => {
-    test('router middleware short-circuit prevents route middleware from running', async ({ sqsHandlerEvent, context }) => {
+    test('router middleware short-circuit prevents route middleware from running', async ({
+      sqsHandlerEvent,
+      context,
+    }) => {
       const routeMiddleware = vi.fn();
       const handler = vi.fn();
 

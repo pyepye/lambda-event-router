@@ -15,7 +15,7 @@ const MessageAttributesSchema = z.object({
 
 export const createItemRoute = defineRoute({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
+    eventSourceArn: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
   },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
@@ -30,7 +30,7 @@ const HIGH_VALUE_THRESHOLD = 1000;
 // Route that only matches high-value orders using customFilter
 export const highValueOrderRoute = defineRoute({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
+    eventSourceArn: [SOME_QUEUE_ARN],
     customFilter: ({ body }: SQSFilterInput) => {
       if (typeof body !== 'object' || body === null) return false;
       if (!('total' in body) || typeof body.total !== 'number') return false;

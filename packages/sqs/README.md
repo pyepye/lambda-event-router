@@ -36,7 +36,7 @@ const sqsRouter = createSQSRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineRoute({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: z.object({ name: z.string(), price: z.number() }),
 }).handle(async ({ body }) => {
   console.log(`Creating item: ${body.name} - $${body.price}`)
@@ -54,7 +54,7 @@ const sqsRouter = createSQSRouter()
 
 // Separate handler to define routes and handlers in different places
 sqsRouter.route({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: BodySchema,
   handler: processOrder,
 })
@@ -76,7 +76,7 @@ import { createSQSRouter, defineRoute } from '@lambda-event-router/sqs'
 const sqsRouter = createSQSRouter()
 
 const processOrder = defineRoute({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
 }).handle(async ({ body, messageAttributes }) => {
@@ -95,7 +95,7 @@ import { createSQSRouter } from '@lambda-event-router/sqs'
 const sqsRouter = createSQSRouter()
 
 sqsRouter.route({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
   handler: processOrder,
@@ -112,8 +112,8 @@ async function processOrder({ body, messageAttributes }) {
 ```ts
 defineRoute({
   filters: {
-    eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'],
-    messageAttributes: { environment: ['production'] },
+    eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue',
+    messageAttributes: { environment: 'production' },
     customFilter: ({ body }) => {
       if (typeof body !== 'object' || body === null) return false
       return 'orderId' in body
@@ -130,7 +130,7 @@ const MessageAttributesSchema = z.object({
 })
 
 defineRoute({
-  filters: { eventSourceArns: ['arn:aws:sqs:us-east-1:123456789:my-queue'] },
+  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
 }).handle(async ({ body, messageAttributes }) => {
