@@ -10,7 +10,7 @@ import type {
   CloudWatchLogsMiddleware,
   CloudWatchLogsRequest,
   CloudWatchLogsRouteDefinition,
-  CloudWatchRouterOptions,
+  CloudWatchLogsRouterOptions,
 } from './types.js';
 
 interface RouteBuilder {
@@ -37,7 +37,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
   private routes: CloudWatchLogsRouteDefinition[] = [];
   private middleware: CloudWatchLogsMiddleware[] = [];
 
-  constructor(options?: CloudWatchRouterOptions) {
+  constructor(options?: CloudWatchLogsRouterOptions) {
     this.middleware = options?.middleware ?? [];
   }
 
@@ -55,7 +55,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
   dataMessage(definition: CloudWatchLogsDataMessageRouteDefinition): this {
     this.routes.push({
       ...definition,
-      filters: { ...definition.filters, messageTypes: ['DATA_MESSAGE'] },
+      filters: { ...definition.filters, messageType: 'DATA_MESSAGE' },
     });
     return this;
   }
@@ -63,7 +63,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
   controlMessage(definition: CloudWatchLogsControlMessageRouteDefinition): this {
     this.routes.push({
       ...definition,
-      filters: { ...definition.filters, messageTypes: ['CONTROL_MESSAGE'] },
+      filters: { ...definition.filters, messageType: 'CONTROL_MESSAGE' },
     });
     return this;
   }
@@ -98,32 +98,39 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.messageTypes && !filters.messageTypes.includes(input.messageType as CloudWatchLogsMessageType)) {
-        return false;
+      if (filters.messageType) {
+        const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
+        if (!messageTypes.includes(input.messageType as CloudWatchLogsMessageType)) return false;
       }
 
-      if (filters.logGroups && !filters.logGroups.includes(input.logGroup)) {
-        return false;
+      if (filters.logGroup) {
+        const logGroups = Array.isArray(filters.logGroup) ? filters.logGroup : [filters.logGroup];
+        if (!logGroups.includes(input.logGroup)) return false;
       }
 
-      if (filters.logGroupPrefixes) {
-        const hasMatchingPrefix = filters.logGroupPrefixes.some((prefix) => input.logGroup.startsWith(prefix));
+      if (filters.logGroupPrefix) {
+        const prefixes = Array.isArray(filters.logGroupPrefix) ? filters.logGroupPrefix : [filters.logGroupPrefix];
+        const hasMatchingPrefix = prefixes.some((prefix) => input.logGroup.startsWith(prefix));
         if (!hasMatchingPrefix) return false;
       }
 
-      if (filters.logGroupSuffixes) {
-        const hasMatchingSuffix = filters.logGroupSuffixes.some((suffix) => input.logGroup.endsWith(suffix));
+      if (filters.logGroupSuffix) {
+        const suffixes = Array.isArray(filters.logGroupSuffix) ? filters.logGroupSuffix : [filters.logGroupSuffix];
+        const hasMatchingSuffix = suffixes.some((suffix) => input.logGroup.endsWith(suffix));
         if (!hasMatchingSuffix) return false;
       }
 
-      if (filters.logGroupIncludes) {
-        const hasMatchingSubstring = filters.logGroupIncludes.some((substring) => input.logGroup.includes(substring));
+      if (filters.logGroupInclude) {
+        const includes = Array.isArray(filters.logGroupInclude) ? filters.logGroupInclude : [filters.logGroupInclude];
+        const hasMatchingSubstring = includes.some((substring) => input.logGroup.includes(substring));
         if (!hasMatchingSubstring) return false;
       }
 
-      if (filters.subscriptionFilters) {
-        const routeFilters = filters.subscriptionFilters;
-        const hasMatchingFilter = input.subscriptionFilters.some((subFilter) => routeFilters.includes(subFilter));
+      if (filters.subscriptionFilter) {
+        const subFilters = Array.isArray(filters.subscriptionFilter)
+          ? filters.subscriptionFilter
+          : [filters.subscriptionFilter];
+        const hasMatchingFilter = input.subscriptionFilters.some((subFilter) => subFilters.includes(subFilter));
         if (!hasMatchingFilter) return false;
       }
 
@@ -136,6 +143,6 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
   }
 }
 
-export function createCloudWatchLogsRouter(options?: CloudWatchRouterOptions): CloudWatchLogsRouter {
+export function createCloudWatchLogsRouter(options?: CloudWatchLogsRouterOptions): CloudWatchLogsRouter {
   return new CloudWatchLogsRouter(options);
 }

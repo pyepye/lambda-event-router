@@ -1,4 +1,4 @@
-export { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchRouter.js';
+export { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchLogsRouter.js';
 export type {
   CloudWatchLogsControlMessageRouteDefinition,
   CloudWatchLogsDataMessageRouteDefinition,
@@ -8,5 +8,5 @@ export type {
   CloudWatchLogsMiddleware,
   CloudWatchLogsRequest,
   CloudWatchLogsRouteDefinition,
-  CloudWatchRouterOptions,
+  CloudWatchLogsRouterOptions,
 } from './types.js';

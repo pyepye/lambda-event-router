@@ -118,8 +118,10 @@ import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.route({
-  method: 'POST'
-  path: '/order/:id/'
+  filter {
+    method: 'POST'
+    path: '/order/:id/'
+  },
   handler: createOrder // Puts message on an SQS queue with a message attribute of ProcessOrder (string)
 })
 ```

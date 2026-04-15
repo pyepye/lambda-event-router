@@ -9,16 +9,16 @@ export interface CloudWatchLogsRequest extends CloudWatchLogsDecodedData {
 }
 
 export interface CloudWatchLogsFilters {
-  logGroups?: string[];
-  logGroupPrefixes?: string[];
-  logGroupSuffixes?: string[];
-  logGroupIncludes?: string[];
-  subscriptionFilters?: string[];
-  messageTypes?: CloudWatchLogsMessageType[];
+  logGroup?: string | string[];
+  logGroupPrefix?: string | string[];
+  logGroupSuffix?: string | string[];
+  logGroupInclude?: string | string[];
+  subscriptionFilter?: string | string[];
+  messageType?: CloudWatchLogsMessageType | CloudWatchLogsMessageType[];
   customFilter?: (input: CloudWatchLogsDecodedData) => boolean;
 }
 
-export type CloudWatchLogsEventFilters = Omit<CloudWatchLogsFilters, 'messageTypes'>;
+export type CloudWatchLogsEventFilters = Omit<CloudWatchLogsFilters, 'messageType'>;
 
 export type CloudWatchLogsMiddleware = Middleware<CloudWatchLogsRequest, void>;
 
@@ -40,6 +40,6 @@ export interface CloudWatchLogsControlMessageRouteDefinition {
   handler: (request: CloudWatchLogsRequest) => Promise<void>;
 }
 
-export interface CloudWatchRouterOptions {
+export interface CloudWatchLogsRouterOptions {
   middleware?: CloudWatchLogsMiddleware[];
 }

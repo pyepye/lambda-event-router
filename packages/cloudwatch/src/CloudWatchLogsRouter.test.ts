@@ -1,6 +1,6 @@
 import { createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
 import type { CloudWatchLogsDecodedData } from 'aws-lambda';
-import { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchRouter.js';
+import { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchLogsRouter.js';
 import type { CloudWatchLogsRequest } from './types.js';
 
 type CloudWatchLogsNext = (request: CloudWatchLogsRequest) => Promise<void>;
@@ -25,7 +25,7 @@ suite('CloudWatchLogsRouter', () => {
       expect(router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns false for a non-CloudWatch event', () => {
+    test('returns false for a non-CloudWatch Logs event', () => {
       const event = { detail: { foo: 'bar' }, source: 'custom.app' };
       expect(router.canHandleEvent(event)).toBe(false);
     });
@@ -50,7 +50,7 @@ suite('CloudWatchLogsRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { logGroups: ['/aws/lambda/my-function'] },
+        filters: { logGroup: '/aws/lambda/my-function' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -60,8 +60,8 @@ suite('CloudWatchLogsRouter', () => {
     test('preserves filters and handler in the definition', () => {
       const handler = vi.fn();
       const filters = {
-        logGroups: ['/aws/lambda/my-function'],
-        messageTypes: ['DATA_MESSAGE' as const],
+        logGroup: '/aws/lambda/my-function',
+        messageType: 'DATA_MESSAGE' as const,
       };
 
       const definition = defineRoute({ filters }).handle(handler);
@@ -73,7 +73,7 @@ suite('CloudWatchLogsRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { logGroups: ['/aws/lambda/my-function'] },
+        filters: { logGroup: '/aws/lambda/my-function' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -92,9 +92,9 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('forces messageTypes to DATA_MESSAGE in filters', () => {
+    test('forces messageType to DATA_MESSAGE in filters', () => {
       const handler = vi.fn();
-      router.dataMessage({ filters: { logGroups: ['/aws/lambda/my-function'] }, handler });
+      router.dataMessage({ filters: { logGroup: '/aws/lambda/my-function' }, handler });
 
       const decodedData: CloudWatchLogsDecodedData = {
         owner: '123456789012',
@@ -128,10 +128,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('forces messageTypes to CONTROL_MESSAGE in filters', () => {
+    test('forces messageType to CONTROL_MESSAGE in filters', () => {
       const handler = vi.fn();
 
-      router.controlMessage({ filters: { logGroups: ['/aws/lambda/my-function'] }, handler });
+      router.controlMessage({ filters: { logGroup: '/aws/lambda/my-function' }, handler });
 
       const decodedData: CloudWatchLogsDecodedData = {
         owner: '123456789012',
@@ -185,10 +185,10 @@ suite('CloudWatchLogsRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by messageTypes', () => {
+    test('matches route by messageType', () => {
       router.route(
         defineRoute({
-          filters: { messageTypes: ['DATA_MESSAGE'] },
+          filters: { messageType: 'DATA_MESSAGE' },
         }).handle(async () => {}),
       );
 
@@ -206,10 +206,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when messageTypes does not match', () => {
+    test('does not match when messageType does not match', () => {
       router.route(
         defineRoute({
-          filters: { messageTypes: ['CONTROL_MESSAGE'] },
+          filters: { messageType: 'CONTROL_MESSAGE' },
         }).handle(async () => {}),
       );
 
@@ -227,10 +227,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroups', () => {
+    test('matches route by logGroup', () => {
       router.route(
         defineRoute({
-          filters: { logGroups: ['/aws/lambda/my-function'] },
+          filters: { logGroup: '/aws/lambda/my-function' },
         }).handle(async () => {}),
       );
 
@@ -248,10 +248,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroups does not match', () => {
+    test('does not match when logGroup does not match', () => {
       router.route(
         defineRoute({
-          filters: { logGroups: ['/aws/lambda/other-function'] },
+          filters: { logGroup: '/aws/lambda/other-function' },
         }).handle(async () => {}),
       );
 
@@ -269,10 +269,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupPrefixes', () => {
+    test('matches route by logGroupPrefix', () => {
       router.route(
         defineRoute({
-          filters: { logGroupPrefixes: ['/aws/lambda/'] },
+          filters: { logGroupPrefix: '/aws/lambda/' },
         }).handle(async () => {}),
       );
 
@@ -290,10 +290,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupPrefixes does not match', () => {
+    test('does not match when logGroupPrefix does not match', () => {
       router.route(
         defineRoute({
-          filters: { logGroupPrefixes: ['/aws/ecs/'] },
+          filters: { logGroupPrefix: '/aws/ecs/' },
         }).handle(async () => {}),
       );
 
@@ -311,10 +311,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupSuffixes', () => {
+    test('matches route by logGroupSuffix', () => {
       router.route(
         defineRoute({
-          filters: { logGroupSuffixes: ['my-function'] },
+          filters: { logGroupSuffix: 'my-function' },
         }).handle(async () => {}),
       );
 
@@ -332,10 +332,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupSuffixes does not match', () => {
+    test('does not match when logGroupSuffix does not match', () => {
       router.route(
         defineRoute({
-          filters: { logGroupSuffixes: ['other-function'] },
+          filters: { logGroupSuffix: 'other-function' },
         }).handle(async () => {}),
       );
 
@@ -353,10 +353,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupIncludes', () => {
+    test('matches route by logGroupInclude', () => {
       router.route(
         defineRoute({
-          filters: { logGroupIncludes: ['lambda'] },
+          filters: { logGroupInclude: 'lambda' },
         }).handle(async () => {}),
       );
 
@@ -374,10 +374,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupIncludes does not match', () => {
+    test('does not match when logGroupInclude does not match', () => {
       router.route(
         defineRoute({
-          filters: { logGroupIncludes: ['ecs'] },
+          filters: { logGroupInclude: 'ecs' },
         }).handle(async () => {}),
       );
 
@@ -395,10 +395,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by subscriptionFilters', () => {
+    test('matches route by subscriptionFilter', () => {
       router.route(
         defineRoute({
-          filters: { subscriptionFilters: ['my-filter'] },
+          filters: { subscriptionFilter: 'my-filter' },
         }).handle(async () => {}),
       );
 
@@ -416,10 +416,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when subscriptionFilters does not match', () => {
+    test('does not match when subscriptionFilter does not match', () => {
       router.route(
         defineRoute({
-          filters: { subscriptionFilters: ['other-filter'] },
+          filters: { subscriptionFilter: 'other-filter' },
         }).handle(async () => {}),
       );
 
@@ -435,6 +435,132 @@ suite('CloudWatchLogsRouter', () => {
       const result = router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
+    });
+
+    test('matches route by messageType array', () => {
+      router.route(
+        defineRoute({
+          filters: { messageType: ['DATA_MESSAGE', 'CONTROL_MESSAGE'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by logGroup array', () => {
+      router.route(
+        defineRoute({
+          filters: { logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by logGroupPrefix array', () => {
+      router.route(
+        defineRoute({
+          filters: { logGroupPrefix: ['/aws/lambda/', '/aws/ecs/'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by logGroupSuffix array', () => {
+      router.route(
+        defineRoute({
+          filters: { logGroupSuffix: ['my-function', 'other-function'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by logGroupInclude array', () => {
+      router.route(
+        defineRoute({
+          filters: { logGroupInclude: ['lambda', 'ecs'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by subscriptionFilter array', () => {
+      router.route(
+        defineRoute({
+          filters: { subscriptionFilter: ['my-filter', 'other-filter'] },
+        }).handle(async () => {}),
+      );
+
+      const decodedData: CloudWatchLogsDecodedData = {
+        owner: '123456789012',
+        logGroup: '/aws/lambda/my-function',
+        logStream: '2024/01/01/[$LATEST]abc123',
+        subscriptionFilters: ['my-filter'],
+        messageType: 'DATA_MESSAGE',
+        logEvents: [],
+      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
     });
 
     test('matches route by customFilter', () => {
@@ -509,12 +635,12 @@ suite('CloudWatchLogsRouter', () => {
       const secondHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { logGroups: ['/aws/lambda/my-function'] },
+          filters: { logGroup: '/aws/lambda/my-function' },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { logGroups: ['/aws/lambda/my-function'] },
+          filters: { logGroup: '/aws/lambda/my-function' },
         }).handle(secondHandler),
       );
 
@@ -537,9 +663,9 @@ suite('CloudWatchLogsRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            logGroups: ['/aws/lambda/my-function'],
-            messageTypes: ['DATA_MESSAGE'],
-            subscriptionFilters: ['my-filter'],
+            logGroup: '/aws/lambda/my-function',
+            messageType: 'DATA_MESSAGE',
+            subscriptionFilter: 'my-filter',
           },
         }).handle(async () => {}),
       );
@@ -562,8 +688,8 @@ suite('CloudWatchLogsRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            logGroups: ['/aws/lambda/my-function'],
-            messageTypes: ['CONTROL_MESSAGE'],
+            logGroup: '/aws/lambda/my-function',
+            messageType: 'CONTROL_MESSAGE',
           },
         }).handle(async () => {}),
       );
@@ -588,7 +714,7 @@ suite('CloudWatchLogsRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { logGroups: ['/aws/lambda/my-function'] },
+          filters: { logGroup: '/aws/lambda/my-function' },
         }).handle(handler),
       );
 
@@ -656,12 +782,12 @@ suite('CloudWatchLogsRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { logGroupPrefixes: ['/aws/lambda/'] },
+          filters: { logGroupPrefix: '/aws/lambda/' },
         }).handle(lambdaHandler),
       );
       router.route(
         defineRoute({
-          filters: { logGroupPrefixes: ['/aws/ecs/'] },
+          filters: { logGroupPrefix: '/aws/ecs/' },
         }).handle(ecsHandler),
       );
 
