@@ -15,7 +15,7 @@ const MessageAttributesSchema = z.object({
 
 export const createItemRoute = defineRoute({
   filters: {
-    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    topicArn: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
   },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
@@ -28,7 +28,7 @@ export const createItemRoute = defineRoute({
 // Route that only matches urgent notifications using customFilter
 export const urgentNotificationRoute = defineRoute({
   filters: {
-    topicArns: [SOME_TOPIC_ARN],
+    topicArn: [SOME_TOPIC_ARN],
     customFilter: ({ body }: SNSFilterInput) => {
       if (typeof body !== 'object' || body === null) return false;
       if (!('urgency' in body) || typeof body.urgency !== 'string') return false;

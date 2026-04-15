@@ -14,7 +14,7 @@ const SOME_DL_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-dl-topic';
 // Simple route with topicArns filter only
 snsRouter.route({
   filters: {
-    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    topicArn: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
   },
   handler: createItemOther,
 });
@@ -22,8 +22,8 @@ snsRouter.route({
 // Route with topicArns and subjects filtering
 snsRouter.route({
   filters: {
-    topicArns: [SOME_TOPIC_ARN],
-    subjects: ['order-created', 'order-updated'],
+    topicArn: [SOME_TOPIC_ARN],
+    subject: ['order-created', 'order-updated'],
   },
   handler: createItem,
   bodySchema: CreateItemBodySchema,
@@ -33,7 +33,7 @@ snsRouter.route({
 // Route with topicArns and messageAttributes filtering
 snsRouter.route({
   filters: {
-    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    topicArn: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
     messageAttributes: {
       Type: ['ORDER', 'REFUND'],
     },
@@ -50,7 +50,7 @@ function isHighPriority({ messageAttributes }: SNSFilterInput): boolean {
 // Route with customFilter for complex logic
 snsRouter.route({
   filters: {
-    topicArns: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
+    topicArn: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
     customFilter: isHighPriority,
   },
   handler: createItem,

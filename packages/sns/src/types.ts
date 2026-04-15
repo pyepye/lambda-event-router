@@ -31,9 +31,9 @@ export interface SNSFilterInput {
 }
 
 export interface SNSFilters {
-  topicArns?: string[];
-  subjects?: string[];
-  messageAttributes?: Record<string, string[]>;
+  topicArn?: string | string[];
+  subject?: string | string[];
+  messageAttributes?: Record<string, string | string[]>;
   customFilter?: (input: SNSFilterInput) => boolean;
 }
 

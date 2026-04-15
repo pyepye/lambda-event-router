@@ -58,7 +58,7 @@ suite('SNSRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+        filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -70,7 +70,7 @@ suite('SNSRouter', () => {
       const messageAttributesSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'],
+        topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'],
         messageAttributes: { eventType: ['order.created'] },
       };
 
@@ -90,7 +90,7 @@ suite('SNSRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+        filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -100,11 +100,11 @@ suite('SNSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by topicArns', ({ snsRecord }) => {
+    test('matches route by topicArn', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async () => {}),
       );
 
@@ -115,10 +115,25 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when topicArns does not match', ({ snsRecord }) => {
+    test('matches route by topicArn with a single string value', ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:other-topic'] },
+          filters: { topicArn },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when topicArn does not match', ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'] },
         }).handle(async () => {}),
       );
 
@@ -129,10 +144,10 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by subjects', ({ snsRecord }) => {
+    test('matches route by subject', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subjects: ['Order Notification'] },
+          filters: { subject: ['Order Notification'] },
         }).handle(async () => {}),
       );
 
@@ -143,10 +158,24 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when subjects does not match', ({ snsRecord }) => {
+    test('matches route by subject with a single string value', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subjects: ['Shipping Update'] },
+          filters: { subject: 'Order Notification' },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when subject does not match', ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { subject: ['Shipping Update'] },
         }).handle(async () => {}),
       );
 
@@ -157,10 +186,10 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when subject is undefined and subjects filter is set', ({ snsRecord }) => {
+    test('does not match when subject is undefined and subject filter is set', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subjects: ['Order Notification'] },
+          filters: { subject: ['Order Notification'] },
         }).handle(async () => {}),
       );
 
@@ -175,6 +204,21 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.created'] } },
+        }).handle(async () => {}),
+      );
+
+      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
+      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {}, rawAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by messageAttributes with a single string value', ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(async () => {}),
       );
 
@@ -277,13 +321,13 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route when both topicArns and subjects match', ({ snsRecord }) => {
+    test('matches route when both topicArn and subject match', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
           filters: {
-            topicArns: [topicArn],
-            subjects: ['Order Notification'],
+            topicArn: [topicArn],
+            subject: ['Order Notification'],
           },
         }).handle(async () => {}),
       );
@@ -295,13 +339,13 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when topicArns matches but subjects does not', ({ snsRecord }) => {
+    test('does not match when topicArn matches but subject does not', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
           filters: {
-            topicArns: [topicArn],
-            subjects: ['Shipping Update'],
+            topicArn: [topicArn],
+            subject: ['Shipping Update'],
           },
         }).handle(async () => {}),
       );
@@ -313,12 +357,12 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when subjects matches but topicArns does not', ({ snsRecord }) => {
+    test('does not match when subject matches but topicArn does not', ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            topicArns: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
-            subjects: ['Order Notification'],
+            topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
+            subject: ['Order Notification'],
           },
         }).handle(async () => {}),
       );
@@ -332,13 +376,13 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route when topicArns, subjects, and messageAttributes all match', ({ snsRecord }) => {
+    test('matches route when topicArn, subject, and messageAttributes all match', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
           filters: {
-            topicArns: [topicArn],
-            subjects: ['Order Notification'],
+            topicArn: [topicArn],
+            subject: ['Order Notification'],
             messageAttributes: { eventType: ['order.created'] },
           },
         }).handle(async () => {}),
@@ -354,13 +398,13 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when topicArns and subjects match but messageAttributes does not', ({ snsRecord }) => {
+    test('does not match when topicArn and subject match but messageAttributes does not', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
           filters: {
-            topicArns: [topicArn],
-            subjects: ['Order Notification'],
+            topicArn: [topicArn],
+            subject: ['Order Notification'],
             messageAttributes: { eventType: ['order.shipped'] },
           },
         }).handle(async () => {}),
@@ -376,12 +420,12 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not evaluated when topicArns does not match', ({ snsRecord }) => {
+    test('customFilter is not evaluated when topicArn does not match', ({ snsRecord }) => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
           filters: {
-            topicArns: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
+            topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
             customFilter,
           },
         }).handle(async () => {}),
@@ -401,7 +445,7 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArns: [topicArn],
+            topicArn: [topicArn],
             customFilter,
           },
         }).handle(async () => {}),
@@ -489,12 +533,12 @@ suite('SNSRouter', () => {
       const secondHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { topicArns: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
         }).handle(secondHandler),
       );
 
@@ -513,7 +557,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
 
       const definition = defineRoute({
-        filters: { topicArns: [topicArn] },
+        filters: { topicArn: [topicArn] },
       }).handle(handler);
       router.route(definition);
 
@@ -543,7 +587,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async () => {}),
       );
 
@@ -563,7 +607,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async () => {
           throw new Error('handler exploded');
         }),
@@ -578,7 +622,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(handler),
       );
 
@@ -598,7 +642,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(handler),
       );
 
@@ -614,7 +658,7 @@ suite('SNSRouter', () => {
       const callOrder: string[] = [];
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async (request) => {
           const messageId = request.record.Sns.MessageId;
           callOrder.push(`start-${messageId}`);
@@ -645,7 +689,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async () => {}),
       );
 
@@ -664,7 +708,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async () => {
           throw new Error('processing failed');
         }),
@@ -690,7 +734,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(async (request) => {
           if (request.record.Sns.MessageId === failingRecord.Sns.MessageId) {
             throw new Error('processing failed');
@@ -714,7 +758,7 @@ suite('SNSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -735,7 +779,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
           bodySchema,
         }).handle(handler),
       );
@@ -763,7 +807,7 @@ suite('SNSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -785,7 +829,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
           messageAttributesSchema,
         }).handle(handler),
       );
@@ -819,7 +863,7 @@ suite('SNSRouter', () => {
       const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
           messageAttributesSchema,
         }).handle(async () => {}),
       );
@@ -843,7 +887,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(handler),
       );
 
@@ -860,7 +904,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(handler),
       );
 
@@ -877,7 +921,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArns: [topicArn] },
+          filters: { topicArn: [topicArn] },
         }).handle(handler),
       );
 

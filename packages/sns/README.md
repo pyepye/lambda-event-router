@@ -36,7 +36,7 @@ const snsRouter = createSNSRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const processNotification = defineRoute({
-  filters: { topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'] },
+  filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: z.object({ name: z.string(), price: z.number() }),
 }).handle(async ({ body }) => {
   console.log(`Creating item: ${body.name} - $${body.price}`)
@@ -54,7 +54,7 @@ const snsRouter = createSNSRouter()
 
 // Separate handler to define routes and handlers in different places
 snsRouter.route({
-  filters: { topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'] },
+  filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: BodySchema,
   handler: processNotification,
 })
@@ -76,7 +76,7 @@ import { createSNSRouter, defineRoute } from '@lambda-event-router/sns'
 const snsRouter = createSNSRouter()
 
 const processNotification = defineRoute({
-  filters: { topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'] },
+  filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
 }).handle(async ({ body, messageAttributes }) => {
@@ -95,7 +95,7 @@ import { createSNSRouter } from '@lambda-event-router/sns'
 const snsRouter = createSNSRouter()
 
 snsRouter.route({
-  filters: { topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'] },
+  filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
   handler: processNotification,
@@ -110,11 +110,21 @@ async function processNotification({ body, messageAttributes }) {
 #### Filters
 
 ```ts
+// Single values
 defineRoute({
   filters: {
-    topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'],
-    subjects: ['Order Created'],
-    messageAttributes: { environment: ['production'] },
+    topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic',
+    subject: 'Order Created',
+    messageAttributes: { environment: 'production' },
+  },
+})
+
+// Multiple values
+defineRoute({
+  filters: {
+    topicArn: ['arn:aws:sns:us-east-1:123456789:topic-a', 'arn:aws:sns:us-east-1:123456789:topic-b'],
+    subject: ['Order Created', 'Order Updated'],
+    messageAttributes: { environment: ['production', 'staging'] },
     customFilter: ({ body }) => {
       if (typeof body !== 'object' || body === null) return false
       return 'urgency' in body && body.urgency === 'CRITICAL'
@@ -131,7 +141,7 @@ const MessageAttributesSchema = z.object({
 })
 
 defineRoute({
-  filters: { topicArns: ['arn:aws:sns:us-east-1:123456789:my-topic'] },
+  filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: BodySchema,
   messageAttributesSchema: MessageAttributesSchema,
 }).handle(async ({ body, messageAttributes }) => {
