@@ -10,25 +10,25 @@ const BOT_ID = 'ABCDEF1234';
 
 lexRouter.route({
   filters: {
-    intentNames: ['OrderPizza', 'OrderDrink'],
-    botIds: [BOT_ID],
+    intentName: ['OrderPizza', 'OrderDrink'],
+    botId: BOT_ID,
   },
   handler: handleOrder,
 });
 
 lexRouter.dialogCodeHook({
   filters: {
-    intentNames: ['OrderPizza'],
-    botIds: [BOT_ID],
-    // invocationSources: ['DialogCodeHook'], // Not valid filter for .dialogCodeHook()
+    intentName: 'OrderPizza',
+    botId: BOT_ID,
+    // invocationSource: 'DialogCodeHook', // Not valid filter for .dialogCodeHook()
   },
   handler: validatePizzaOrder,
 });
 
 lexRouter.fulfillmentCodeHook({
   filters: {
-    intentNames: ['OrderPizza'],
-    // invocationSources: ['FulfillmentCodeHook'], // Not valid filter for .fulfillmentCodeHook()
+    intentName: 'OrderPizza',
+    // invocationSource: 'FulfillmentCodeHook', // Not valid filter for .fulfillmentCodeHook()
   },
   handler: fulfillPizzaOrder,
 });
@@ -39,7 +39,7 @@ function isSpeechInput({ inputMode, botId }: LexFilterInput): boolean {
 
 lexRouter.fulfillmentCodeHook({
   filters: {
-    intentNames: ['OrderPizza'],
+    intentName: 'OrderPizza',
     customFilter: isSpeechInput,
   },
   handler: fulfillPizzaOrder,

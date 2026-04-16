@@ -5,9 +5,9 @@ import { BOT_ID } from '../constants.js';
 // DialogCodeHook for OrderDrink - confirms the order before fulfillment
 export const confirmRoute = defineRoute({
   filters: {
-    invocationSources: ['DialogCodeHook'],
-    intentNames: ['OrderDrink'],
-    botIds: [BOT_ID],
+    invocationSource: 'DialogCodeHook',
+    intentName: 'OrderDrink',
+    botId: BOT_ID,
   },
 }).handle(async ({ intentName, slots }) => {
   console.log(`Confirming ${intentName} - slots: ${JSON.stringify(slots)}`);

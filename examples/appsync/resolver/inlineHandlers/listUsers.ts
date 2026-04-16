@@ -4,8 +4,8 @@ import { defineRoute } from '@lambda-event-router/appsync';
 // Uses identity to scope results to the caller and arguments for pagination params.
 export const listUsersRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Query'],
-    fieldNames: ['listUsers'],
+    parentTypeName: 'Query',
+    fieldName: 'listUsers',
   },
 }).handle(async (request) => {
   const { arguments: args, identity } = request;

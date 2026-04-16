@@ -76,7 +76,7 @@ suite('CognitoRouter', () => {
   suite('defineRoute', () => {
     test('returns a builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: 'PreSignUp_SignUp' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -88,11 +88,11 @@ suite('CognitoRouter', () => {
       const userAttributesSchema = createMockSchema();
 
       const definition = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: 'PreSignUp_SignUp' },
         userAttributesSchema,
       }).handle(handler);
 
-      expect(definition.filters?.triggerSources).toEqual(['PreSignUp_SignUp']);
+      expect(definition.filters?.triggerSource).toEqual('PreSignUp_SignUp');
       expect(definition.userAttributesSchema).toBe(userAttributesSchema);
       expect(definition.handler).toBe(handler);
     });
@@ -109,10 +109,23 @@ suite('CognitoRouter', () => {
   });
 
   suite('matchRoute', () => {
-    suite('triggerSources filter', () => {
+    suite('triggerSource filter', () => {
       test('matches when triggerSource is in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { triggerSources: ['PreSignUp_SignUp'] },
+          filters: { triggerSource: 'PreSignUp_SignUp' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeDefined();
+      });
+
+      test('matches when triggerSource array', ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { triggerSource: ['PreSignUp_SignUp', 'PostConfirmation_ConfirmSignUp'] },
           handler: vi.fn(),
         });
 
@@ -125,7 +138,7 @@ suite('CognitoRouter', () => {
 
       test('does not match when triggerSource is not in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { triggerSources: ['PostConfirmation_ConfirmSignUp'] },
+          filters: { triggerSource: 'PostConfirmation_ConfirmSignUp' },
           handler: vi.fn(),
         });
 
@@ -136,7 +149,7 @@ suite('CognitoRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when triggerSources filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when triggerSource filter is undefined', ({ cognitoPreSignUpEvent }) => {
         router.route({
           handler: vi.fn(),
         });
@@ -149,10 +162,23 @@ suite('CognitoRouter', () => {
       });
     });
 
-    suite('userPoolIds filter', () => {
+    suite('userPoolId filter', () => {
       test('matches when userPoolId is in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { userPoolIds: ['us-east-1_TestPool'] },
+          filters: { userPoolId: 'us-east-1_TestPool' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeDefined();
+      });
+
+      test('matches when userPoolId array', ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { userPoolId: ['us-east-1_TestPool', 'us-east-1_OtherPool'] },
           handler: vi.fn(),
         });
 
@@ -165,7 +191,7 @@ suite('CognitoRouter', () => {
 
       test('does not match when userPoolId is not in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { userPoolIds: ['us-west-2_OtherPool'] },
+          filters: { userPoolId: 'us-west-2_OtherPool' },
           handler: vi.fn(),
         });
 
@@ -176,9 +202,9 @@ suite('CognitoRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when userPoolIds filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when userPoolId filter is undefined', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { triggerSources: ['PreSignUp_SignUp'] },
+          filters: { triggerSource: 'PreSignUp_SignUp' },
           handler: vi.fn(),
         });
 
@@ -190,10 +216,23 @@ suite('CognitoRouter', () => {
       });
     });
 
-    suite('clientIds filter', () => {
+    suite('clientId filter', () => {
       test('matches when clientId is in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { clientIds: ['test-client-id'] },
+          filters: { clientId: 'test-client-id' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeDefined();
+      });
+
+      test('matches when clientId array', ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { clientId: ['test-client-id', 'other-id'] },
           handler: vi.fn(),
         });
 
@@ -206,7 +245,7 @@ suite('CognitoRouter', () => {
 
       test('does not match when clientId is not in the list', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { clientIds: ['other-client-id'] },
+          filters: { clientId: ['other-client-id'] },
           handler: vi.fn(),
         });
 
@@ -217,9 +256,9 @@ suite('CognitoRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when clientIds filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when clientId filter is undefined', ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { triggerSources: ['PreSignUp_SignUp'] },
+          filters: { triggerSource: 'PreSignUp_SignUp' },
           handler: vi.fn(),
         });
 
@@ -383,11 +422,11 @@ suite('CognitoRouter', () => {
     });
 
     suite('filter combinations', () => {
-      test('does not match when triggerSources matches but userPoolIds does not', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when triggerSource matches but userPoolId does not', ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {
-            triggerSources: ['PreSignUp_SignUp'],
-            userPoolIds: ['us-west-2_OtherPool'],
+            triggerSource: 'PreSignUp_SignUp',
+            userPoolId: 'us-west-2_OtherPool',
           },
           handler: vi.fn(),
         });
@@ -402,9 +441,9 @@ suite('CognitoRouter', () => {
       test('matches when all filters pass together', ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {
-            triggerSources: ['PreSignUp_SignUp'],
-            userPoolIds: ['us-east-1_TestPool'],
-            clientIds: ['test-client-id'],
+            triggerSource: 'PreSignUp_SignUp',
+            userPoolId: 'us-east-1_TestPool',
+            clientId: 'test-client-id',
             userAttributes: { email: 'test@example.com' },
             customFilter: () => true,
           },
@@ -831,7 +870,12 @@ suite('CognitoRouter', () => {
         return next(request);
       }
 
-      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async (request) => {
+      const route = defineRoute({
+        filters: {
+          userPoolId: '',
+        },
+        middleware: [routeMiddleware],
+      }).handle(async (request) => {
         callOrder.push('handler');
         return request.event;
       });

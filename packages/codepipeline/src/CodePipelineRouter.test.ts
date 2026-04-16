@@ -118,7 +118,7 @@ suite('CodePipelineRouter', () => {
   suite('defineRoute', () => {
     test('returns a builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { functionNames: ['my-function'] },
+        filters: { functionName: 'my-function' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -127,7 +127,7 @@ suite('CodePipelineRouter', () => {
 
     test('preserves filters, userParametersSchema, and handler in the definition', () => {
       const handler = vi.fn();
-      const filters = { functionNames: ['my-function'] };
+      const filters = { functionName: 'my-function' };
       const userParametersSchema = createMockSchema();
 
       const definition = defineRoute({ filters, userParametersSchema }).handle(handler);
@@ -141,7 +141,7 @@ suite('CodePipelineRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { functionNames: ['my-function'] },
+        filters: { functionName: 'my-function' },
       }).handle(async () => undefined);
 
       const result = router.route(definition);
@@ -164,7 +164,7 @@ suite('CodePipelineRouter', () => {
       const handler = vi.fn();
 
       router.continuation({
-        filters: { functionNames: ['my-function'] },
+        filters: { functionName: 'my-function' },
         handler,
       });
 
@@ -191,45 +191,45 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('matchRoute', () => {
+    let filterInput: CodePipelineFilterInput;
+
+    beforeEach(() => {
+      filterInput = {
+        functionName: 'my-function',
+        userParameters: '',
+        hasInputArtifacts: false,
+        hasContinuationToken: false,
+      };
+    });
+
     test('matches when no filters are set', () => {
       router.route(defineRoute({ filters: {} }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(filterInput);
+      expect(result).toBeDefined();
+    });
+
+    test('matches by functionName', () => {
+      router.route(defineRoute({ filters: { functionName: 'my-function' } }).handle(async () => undefined));
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeDefined();
     });
 
-    test('matches by functionNames', () => {
-      router.route(defineRoute({ filters: { functionNames: ['my-function'] } }).handle(async () => undefined));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
+    test('matches by functionName array', () => {
+      router.route(
+        defineRoute({ filters: { functionName: ['my-function', 'other-function'] } }).handle(async () => undefined),
+      );
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeDefined();
     });
 
-    test('rejects when functionNames does not match', () => {
-      router.route(defineRoute({ filters: { functionNames: ['other-function'] } }).handle(async () => undefined));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
+    test('rejects when functionName does not match', () => {
+      router.route(defineRoute({ filters: { functionName: 'other-function' } }).handle(async () => undefined));
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
@@ -254,13 +254,6 @@ suite('CodePipelineRouter', () => {
     test('rejects when hasInputArtifacts does not match', () => {
       router.route(defineRoute({ filters: { hasInputArtifacts: true } }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
-
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeUndefined();
@@ -268,13 +261,6 @@ suite('CodePipelineRouter', () => {
 
     test('matches by hasInputArtifacts false', () => {
       router.route(defineRoute({ filters: { hasInputArtifacts: false } }).handle(async () => undefined));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
@@ -299,13 +285,6 @@ suite('CodePipelineRouter', () => {
     test('rejects when hasContinuationToken does not match', () => {
       router.route(defineRoute({ filters: { hasContinuationToken: true } }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
-
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeUndefined();
@@ -313,13 +292,6 @@ suite('CodePipelineRouter', () => {
 
     test('matches by hasContinuationToken false', () => {
       router.route(defineRoute({ filters: { hasContinuationToken: false } }).handle(async () => undefined));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
@@ -362,13 +334,6 @@ suite('CodePipelineRouter', () => {
       };
       router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
-
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
       expect(result).toBeDefined();
@@ -377,13 +342,6 @@ suite('CodePipelineRouter', () => {
     test('rejects when customFilter returns false', () => {
       const customFilter = (): boolean => false;
       router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);
@@ -394,7 +352,7 @@ suite('CodePipelineRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            functionNames: ['my-function'],
+            functionName: 'my-function',
             hasInputArtifacts: true,
             hasContinuationToken: false,
           },
@@ -429,13 +387,6 @@ suite('CodePipelineRouter', () => {
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
-
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: '',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(filterInput);

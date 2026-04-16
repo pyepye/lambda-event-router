@@ -9,8 +9,8 @@ const DATABASE_SECRET_ARN = 'arn:aws:secretsmanager:eu-west-1:123456789012:secre
 // Route for the createSecret step on a specific secret
 export const createSecretRoute = defineRoute({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
-    steps: ['createSecret'],
+    secretId: DATABASE_SECRET_ARN,
+    step: 'createSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`Creating new secret version for ${secretId} (token: ${clientRequestToken})`);
@@ -19,8 +19,8 @@ export const createSecretRoute = defineRoute({
 // Route for the setSecret step using prefix matching
 export const setSecretRoute = defineRoute({
   filters: {
-    secretPrefixes: ['prod/database/'],
-    steps: ['setSecret'],
+    secretPrefix: 'prod/database/',
+    step: 'setSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`Setting secret for ${secretId} (token: ${clientRequestToken})`);
@@ -29,8 +29,8 @@ export const setSecretRoute = defineRoute({
 // Route for the testSecret step using suffix matching
 export const testSecretRoute = defineRoute({
   filters: {
-    secretSuffixes: ['/password', '-credentials'],
-    steps: ['testSecret'],
+    secretSuffix: ['/password', '-credentials'],
+    step: 'testSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`Testing secret for ${secretId} (token: ${clientRequestToken})`);
@@ -39,8 +39,8 @@ export const testSecretRoute = defineRoute({
 // Route for the finishSecret step using includes matching
 export const finishSecretRoute = defineRoute({
   filters: {
-    secretIncludes: ['redis'],
-    steps: ['finishSecret'],
+    secretIncludes: 'redis',
+    step: 'finishSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`Finishing rotation for ${secretId} (token: ${clientRequestToken})`);
@@ -53,7 +53,7 @@ export const finishSecretRoute = defineRoute({
 // Convenience-method-compatible route - step is already implied by the method
 export const databaseCreateRoute = defineRoute({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`[database] Creating secret version for ${secretId} (token: ${clientRequestToken})`);
@@ -61,7 +61,7 @@ export const databaseCreateRoute = defineRoute({
 
 export const databaseSetRoute = defineRoute({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`[database] Setting secret for ${secretId} (token: ${clientRequestToken})`);
@@ -69,7 +69,7 @@ export const databaseSetRoute = defineRoute({
 
 export const databaseTestRoute = defineRoute({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`[database] Testing secret for ${secretId} (token: ${clientRequestToken})`);
@@ -77,7 +77,7 @@ export const databaseTestRoute = defineRoute({
 
 export const databaseFinishRoute = defineRoute({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
   console.log(`[database] Finishing rotation for ${secretId} (token: ${clientRequestToken})`);
@@ -89,8 +89,8 @@ const MAINTENANCE_WINDOW_END = 6;
 
 export const maintenanceWindowRotationRoute = defineRoute({
   filters: {
-    secretPrefixes: ['prod/'],
-    steps: ['createSecret'],
+    secretPrefix: 'prod/',
+    step: 'createSecret',
     customFilter: () => {
       // Only allow rotation during the maintenance window - time-based logic that built-in filters can't express
       const currentHour = new Date().getUTCHours();

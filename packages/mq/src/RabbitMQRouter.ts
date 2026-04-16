@@ -93,16 +93,26 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.eventSourceArns && !filters.eventSourceArns.includes(event.eventSourceArn)) {
-        return false;
+      if (filters.eventSourceArn) {
+        const { eventSourceArn: filterArn } = filters;
+        const eventSourceArns = Array.isArray(filterArn) ? filterArn : [filterArn];
+        if (!eventSourceArns.includes(event.eventSourceArn)) {
+          return false;
+        }
       }
 
-      if (filters.queues && !filters.queues.includes(queueName)) {
-        return false;
+      if (filters.queue) {
+        const queues = Array.isArray(filters.queue) ? filters.queue : [filters.queue];
+        if (!queues.includes(queueName)) {
+          return false;
+        }
       }
 
-      if (filters.contentTypes && !filters.contentTypes.includes(message.basicProperties.contentType)) {
-        return false;
+      if (filters.contentType) {
+        const contentTypes = Array.isArray(filters.contentType) ? filters.contentType : [filters.contentType];
+        if (!contentTypes.includes(message.basicProperties.contentType)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

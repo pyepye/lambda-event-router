@@ -3,8 +3,8 @@ import { defineRoute } from '@lambda-event-router/appsync';
 // Uses arguments for the GraphQL field args and selectionSetList to optimize the response.
 export const getUserRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Query'],
-    fieldNames: ['getUser'],
+    parentTypeName: 'Query',
+    fieldName: 'getUser',
   },
 }).handle(async (request) => {
   const { arguments: args, info } = request;

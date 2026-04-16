@@ -23,7 +23,7 @@ function isComplianceAudit({ headers }: KafkaFilterInput): boolean {
 
 export const auditRoute = defineRoute({
   filters: {
-    topics: [AUDIT_TOPIC],
+    topic: AUDIT_TOPIC,
     customFilter: isComplianceAudit,
   },
   valueSchema: AuditValueSchema,

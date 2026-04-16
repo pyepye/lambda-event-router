@@ -13,8 +13,8 @@ import { orderDocumentKeySchema, orderFullDocumentSchema } from '../orderSchemas
 //   updateDescription - only present on 'update' events
 export const replaceRoute = defineRoute({
   filters: {
-    operationTypes: ['replace'],
-    eventSourceArns: [CLUSTER_ARN],
+    operationType: 'replace',
+    eventSourceArn: CLUSTER_ARN,
     // No fullDocument filter needed - replace events always include fullDocument
   },
   documentKeySchema: orderDocumentKeySchema,

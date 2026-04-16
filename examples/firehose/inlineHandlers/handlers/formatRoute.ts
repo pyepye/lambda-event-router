@@ -12,7 +12,7 @@ const AnalyticsDataSchema = z.object({
 
 export const formatRoute = defineRoute({
   filters: {
-    deliveryStreamArns: [ANALYTICS_DELIVERY_STREAM_ARN],
+    deliveryStreamArn: ANALYTICS_DELIVERY_STREAM_ARN,
   },
   dataSchema: AnalyticsDataSchema,
 }).handle(async ({ data }) => {

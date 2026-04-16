@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const preTokenGenerationRoute = defineRoute({
   filters: {
-    triggerSources: ['TokenGeneration_Authentication', 'TokenGeneration_RefreshTokens'],
+    triggerSource: ['TokenGeneration_Authentication', 'TokenGeneration_RefreshTokens'],
   },
 }).handle(async ({ event }) => {
   console.log(`Token generation for: ${event.userName}`);

@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const postAuthenticationRoute = defineRoute({
   filters: {
-    triggerSources: ['PostAuthentication_Authentication'],
+    triggerSource: 'PostAuthentication_Authentication',
   },
 }).handle(async ({ event }) => {
   console.log(`Successful login: ${event.userName}`);

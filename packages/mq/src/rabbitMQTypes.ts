@@ -53,9 +53,9 @@ export interface RabbitMQFilterInput {
 }
 
 export interface RabbitMQFilters {
-  eventSourceArns?: string[];
-  queues?: string[];
-  contentTypes?: string[];
+  eventSourceArn?: string | string[];
+  queue?: string | string[];
+  contentType?: string | string[];
   customFilter?: (input: RabbitMQFilterInput) => boolean;
 }
 
@@ -83,9 +83,9 @@ export interface RabbitMQInternalRoute {
 
 export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undefined = undefined> {
   filters: {
-    eventSourceArns?: string[];
-    queues?: string[];
-    contentTypes?: string[];
+    eventSourceArn?: string | string[];
+    queue?: string | string[];
+    contentType?: string | string[];
     customFilter?: (input: RabbitMQFilterInput) => boolean;
   };
   middleware?: RabbitMQMiddleware[];

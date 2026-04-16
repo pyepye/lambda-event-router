@@ -9,8 +9,8 @@ export interface KinesisFilterInput {
 }
 
 export interface KinesisFilters {
-  eventSourceArns?: KinesisStreamRecord['eventSourceARN'][];
-  partitionKeys?: string[];
+  eventSourceArn?: KinesisStreamRecord['eventSourceARN'] | KinesisStreamRecord['eventSourceARN'][];
+  partitionKey?: string | string[];
   customFilter?: (input: KinesisFilterInput) => boolean;
 }
 

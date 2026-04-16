@@ -8,7 +8,7 @@ const tagAuditParamsSchema = z.object({
 
 export const tagAuditRoute = defineConfigScheduledRoute({
   filters: {
-    configRuleNames: ['periodic-tag-audit'],
+    configRuleName: 'periodic-tag-audit',
   },
   ruleParametersSchema: tagAuditParamsSchema,
 }).handle(async ({ resultToken, configRuleName, accountId, ruleParameters }) => {
@@ -23,8 +23,8 @@ export const tagAuditRoute = defineConfigScheduledRoute({
 
 export const crossAccountRoute = defineConfigScheduledRoute({
   filters: {
-    configRuleNames: ['cross-account-access-check'],
-    accountIds: ['123456789012', '987654321098'],
+    configRuleName: 'cross-account-access-check',
+    accountId: ['123456789012', '987654321098'],
   },
 }).handle(async ({ resultToken, configRuleName, accountId, ruleParameters }) => {
   console.log(`Cross-account check: rule=${configRuleName}, account=${accountId}`);

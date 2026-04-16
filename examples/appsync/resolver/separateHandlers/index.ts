@@ -35,8 +35,8 @@ appSyncRouter.mutation({
 
 appSyncRouter.route({
   filters: {
-    parentTypeNames: ['User'],
-    fieldNames: ['posts'],
+    parentTypeName: 'User',
+    fieldName: 'posts',
   },
   handler: getUserPosts,
 });
@@ -55,8 +55,8 @@ function isAdminMutation({ event }: AppSyncResolverFilterInput): boolean {
 
 appSyncRouter.route({
   filters: {
-    parentTypeNames: ['Mutation'],
-    fieldNames: ['createUser'],
+    parentTypeName: 'Mutation',
+    fieldName: 'createUser',
     customFilter: isAdminMutation,
   },
   argumentsSchema: CreateUserInputSchema,

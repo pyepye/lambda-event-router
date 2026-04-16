@@ -14,9 +14,9 @@ const sesRouter = createSESRouter();
 // Route matching emails to specific recipients with security verdicts
 sesRouter.route({
   filters: {
-    recipients: ['support@example.com', 'help@example.com'],
-    spamVerdict: ['PASS'],
-    virusVerdict: ['PASS'],
+    recipient: ['support@example.com', 'help@example.com'],
+    spamVerdict: 'PASS',
+    virusVerdict: 'PASS',
   },
   handler: processInboundEmail,
 });
@@ -24,9 +24,9 @@ sesRouter.route({
 // Route matching emails from specific senders with failed SPF (e.g. forwarded mail)
 sesRouter.route({
   filters: {
-    senders: ['notifications@partner.com', 'alerts@partner.com'],
-    spfVerdict: ['FAIL'],
-    dkimVerdict: ['PASS'],
+    sender: ['notifications@partner.com', 'alerts@partner.com'],
+    spfVerdict: 'FAIL',
+    dkimVerdict: 'PASS',
   },
   handler: processPartnerEmail,
 });
@@ -34,9 +34,9 @@ sesRouter.route({
 // Route matching emails by domain with DMARC verification
 sesRouter.route({
   filters: {
-    senderDomains: ['internal.example.com'],
-    recipientDomains: ['example.com'],
-    dmarcVerdict: ['PASS'],
+    senderDomain: 'internal.example.com',
+    recipientDomain: 'example.com',
+    dmarcVerdict: 'PASS',
   },
   handler: processInternalEmail,
 });
@@ -50,7 +50,7 @@ function isQuarantined({ receipt }: SESFilterInput): boolean {
 // Route with customFilter for complex logic
 sesRouter.route({
   filters: {
-    recipientDomains: ['example.com'],
+    recipientDomain: 'example.com',
     customFilter: isQuarantined,
   },
   handler: processQuarantinedEmail,

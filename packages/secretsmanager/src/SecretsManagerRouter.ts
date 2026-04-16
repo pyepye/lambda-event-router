@@ -62,7 +62,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
 
   createSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, steps: ['createSecret'] },
+      filters: { ...definition.filters, step: 'createSecret' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -70,7 +70,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
 
   setSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, steps: ['setSecret'] },
+      filters: { ...definition.filters, step: 'setSecret' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -78,7 +78,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
 
   testSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, steps: ['testSecret'] },
+      filters: { ...definition.filters, step: 'testSecret' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -86,7 +86,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
 
   finishSecret(definition: SecretsManagerStepRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, steps: ['finishSecret'] },
+      filters: { ...definition.filters, step: 'finishSecret' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -116,27 +116,37 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.secretIds && !filters.secretIds.includes(secretId)) {
-        return false;
+      if (filters.secretId) {
+        const secretIds = Array.isArray(filters.secretId) ? filters.secretId : [filters.secretId];
+        if (!secretIds.includes(secretId)) {
+          return false;
+        }
       }
 
-      if (filters.secretPrefixes) {
-        const hasMatchingPrefix = filters.secretPrefixes.some((prefix) => secretId.startsWith(prefix));
+      if (filters.secretPrefix) {
+        const secretPrefixes = Array.isArray(filters.secretPrefix) ? filters.secretPrefix : [filters.secretPrefix];
+        const hasMatchingPrefix = secretPrefixes.some((prefix) => secretId.startsWith(prefix));
         if (!hasMatchingPrefix) return false;
       }
 
-      if (filters.secretSuffixes) {
-        const hasMatchingSuffix = filters.secretSuffixes.some((suffix) => secretId.endsWith(suffix));
+      if (filters.secretSuffix) {
+        const secretSuffixes = Array.isArray(filters.secretSuffix) ? filters.secretSuffix : [filters.secretSuffix];
+        const hasMatchingSuffix = secretSuffixes.some((suffix) => secretId.endsWith(suffix));
         if (!hasMatchingSuffix) return false;
       }
 
       if (filters.secretIncludes) {
-        const hasMatchingIncludes = filters.secretIncludes.some((str) => secretId.includes(str));
+        const { secretIncludes: filterSecretIncludes } = filters;
+        const secretIncludes = Array.isArray(filterSecretIncludes) ? filterSecretIncludes : [filterSecretIncludes];
+        const hasMatchingIncludes = secretIncludes.some((str) => secretId.includes(str));
         if (!hasMatchingIncludes) return false;
       }
 
-      if (filters.steps && !filters.steps.includes(step)) {
-        return false;
+      if (filters.step) {
+        const steps = Array.isArray(filters.step) ? filters.step : [filters.step];
+        if (!steps.includes(step)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

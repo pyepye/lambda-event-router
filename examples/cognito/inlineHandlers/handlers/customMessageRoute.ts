@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const customMessageSignUpRoute = defineRoute({
   filters: {
-    triggerSources: ['CustomMessage_SignUp'],
+    triggerSource: 'CustomMessage_SignUp',
   },
 }).handle(async ({ event }) => {
   console.log(`Custom signup message for: ${event.userName}`);
@@ -19,7 +19,7 @@ export const customMessageSignUpRoute = defineRoute({
 // Handlers modify the cloned event and return it
 export const customMessageForgotPasswordRoute = defineRoute({
   filters: {
-    triggerSources: ['CustomMessage_ForgotPassword'],
+    triggerSource: 'CustomMessage_ForgotPassword',
   },
 }).handle(async ({ event }) => {
   console.log(`Password reset message for: ${event.userName}`);

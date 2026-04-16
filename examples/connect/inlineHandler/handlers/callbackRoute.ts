@@ -4,8 +4,8 @@ import { INSTANCE_ARN } from '../constants.js';
 
 export const callbackRoute = defineRoute({
   filters: {
-    initiationMethods: ['CALLBACK'],
-    instanceArns: [INSTANCE_ARN],
+    initiationMethod: 'CALLBACK',
+    instanceArn: INSTANCE_ARN,
   },
 }).handle(async ({ contactData }) => {
   const queueName = contactData.Queue?.Name;

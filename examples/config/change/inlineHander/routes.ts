@@ -9,9 +9,9 @@ const keyRotationParamsSchema = z.object({
 // ConfigurationItemChangeNotification with Zod validation on ruleParameters
 export const kmsKeyRotationRoute = defineRoute({
   filters: {
-    configRuleNames: ['kms-key-rotation-check'],
-    resourceTypes: ['AWS::KMS::Key'],
-    configurationItemStatuses: ['OK', 'ResourceDiscovered'],
+    configRuleName: 'kms-key-rotation-check',
+    resourceType: 'AWS::KMS::Key',
+    configurationItemStatus: ['OK', 'ResourceDiscovered'],
   },
   ruleParametersSchema: keyRotationParamsSchema,
 }).handle(async ({ configurationItem, ruleParameters }) => {
@@ -41,8 +41,8 @@ const elbConfigurationSchema = z.object({
 // ConfigurationItemChangeNotification with Zod validation on configuration
 export const elbListenerRoute = defineRoute({
   filters: {
-    configRuleNames: ['elb-https-listener-check'],
-    resourceTypes: ['AWS::ElasticLoadBalancingV2::LoadBalancer'],
+    configRuleName: 'elb-https-listener-check',
+    resourceType: 'AWS::ElasticLoadBalancingV2::LoadBalancer',
   },
   configurationSchema: elbConfigurationSchema,
 }).handle(async ({ configurationItem }) => {
@@ -60,8 +60,8 @@ export const elbListenerRoute = defineRoute({
 // OversizedConfigurationItemChangeNotification route
 export const oversizedRdsRoute = defineRoute({
   filters: {
-    resourceTypes: ['AWS::RDS::DBInstance'],
-    configurationItemStatuses: ['OK'],
+    resourceType: 'AWS::RDS::DBInstance',
+    configurationItemStatus: 'OK',
   },
   ruleParametersSchema: keyRotationParamsSchema,
 }).handle(async ({ configurationItemSummary, ruleParameters, resultToken }) => {

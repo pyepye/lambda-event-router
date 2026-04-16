@@ -22,8 +22,8 @@ const eventBridgeRouter = createEventBridgeRouter();
 // EC2 instance state changes - type automatically inferred from source/detailType
 eventBridgeRouter.route({
   filters: {
-    sources: ['aws.ec2'],
-    detailTypes: ['EC2 Instance State-change Notification'],
+    source: 'aws.ec2',
+    detailType: 'EC2 Instance State-change Notification',
   },
   handler: handleEC2StateChange,
 });
@@ -31,8 +31,8 @@ eventBridgeRouter.route({
 // S3 events via EventBridge (when enabled on bucket)
 eventBridgeRouter.route({
   filters: {
-    sources: ['aws.s3'],
-    detailTypes: ['Object Created', 'Object Deleted'],
+    source: 'aws.s3',
+    detailType: ['Object Created', 'Object Deleted'],
   },
   handler: handleS3Notification,
 });
@@ -40,8 +40,8 @@ eventBridgeRouter.route({
 // Scheduled events from EventBridge Rules (cron/rate expressions)
 eventBridgeRouter.route({
   filters: {
-    sources: ['aws.events'],
-    detailTypes: ['Scheduled Event'],
+    source: 'aws.events',
+    detailType: 'Scheduled Event',
   },
   handler: handleScheduledRule,
 });
@@ -49,8 +49,8 @@ eventBridgeRouter.route({
 // Custom application events with schema validation
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created'],
+    source: 'myapp.orders',
+    detailType: 'Order Created',
   },
   detailSchema: OrderDetailSchema,
   handler: handleOrderCreated,
@@ -59,8 +59,8 @@ eventBridgeRouter.route({
 // Order status change events (multiple detail types)
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Updated', 'Order Shipped', 'Order Delivered', 'Order Cancelled'],
+    source: 'myapp.orders',
+    detailType: ['Order Updated', 'Order Shipped', 'Order Delivered', 'Order Cancelled'],
   },
   detailSchema: OrderDetailSchema,
   handler: handleOrderStatusChange,
@@ -69,8 +69,8 @@ eventBridgeRouter.route({
 // High-severity GuardDuty findings using customFilter to filter by severity
 eventBridgeRouter.route({
   filters: {
-    sources: ['aws.guardduty'],
-    detailTypes: ['GuardDuty Finding'],
+    source: 'aws.guardduty',
+    detailType: 'GuardDuty Finding',
     customFilter: ({ detail }) => {
       const highSeverityThreshold = 7;
       const finding = detail as Record<string, unknown>;
@@ -84,8 +84,8 @@ eventBridgeRouter.route({
 // Pipes: SQS → Pipes → EventBridge → Lambda (order processing pipeline)
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.pipes.orders'],
-    detailTypes: ['OrderReceived'],
+    source: 'myapp.pipes.orders',
+    detailType: 'OrderReceived',
   },
   detailSchema: PipesOrderDetailSchema,
   handler: handlePipesOrderReceived,
@@ -94,8 +94,8 @@ eventBridgeRouter.route({
 // Pipes: DynamoDB → Pipes → EventBridge → Lambda (change data capture)
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.pipes.inventory'],
-    detailTypes: ['InventoryChanged'],
+    source: 'myapp.pipes.inventory',
+    detailType: 'InventoryChanged',
   },
   detailSchema: PipesInventoryDetailSchema,
   handler: handlePipesInventoryChanged,

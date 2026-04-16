@@ -67,11 +67,11 @@ suite('AppSyncRouter', () => {
       const argumentsSchema = createMockSchema();
 
       const definition = defineRoute({
-        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        filters: { parentTypeName: 'Query', fieldName: 'getUser' },
         argumentsSchema,
       }).handle(handler);
 
-      expect(definition.filters).toEqual({ parentTypeNames: ['Query'], fieldNames: ['getUser'] });
+      expect(definition.filters).toEqual({ parentTypeName: 'Query', fieldName: 'getUser' });
       expect(definition.argumentsSchema).toBe(argumentsSchema);
       expect(definition.handler).toBe(handler);
     });
@@ -80,7 +80,7 @@ suite('AppSyncRouter', () => {
       const handler = vi.fn();
 
       const definition = defineRoute({
-        filters: { parentTypeNames: ['Query'] },
+        filters: { parentTypeName: 'Query' },
       }).handle(handler);
 
       expect(definition.argumentsSchema).toBeUndefined();
@@ -93,7 +93,7 @@ suite('AppSyncRouter', () => {
       const handler = vi.fn();
 
       const result = router.route({
-        filters: { parentTypeNames: ['Query'] },
+        filters: { parentTypeName: 'Query' },
         handler,
       });
 
@@ -135,9 +135,21 @@ suite('AppSyncRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by parentTypeNames', () => {
+    test('matches by parentTypeName', () => {
       const handler = vi.fn();
-      router.route({ filters: { parentTypeNames: ['Query'] }, handler });
+      router.route({ filters: { parentTypeName: 'Query' }, handler });
+
+      const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('Query', 'getUser', event);
+      expect(matched).toBeDefined();
+      expect(matched?.handler).toBe(handler);
+    });
+
+    test('matches by parentTypeName array', () => {
+      const handler = vi.fn();
+      router.route({ filters: { parentTypeName: ['Query', 'Other'] }, handler });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
 
@@ -148,7 +160,7 @@ suite('AppSyncRouter', () => {
     });
 
     test('does not match when parentTypeName is different', () => {
-      router.route({ filters: { parentTypeNames: ['Query'] }, handler: vi.fn() });
+      router.route({ filters: { parentTypeName: 'Query' }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Mutation' } });
 
@@ -157,9 +169,21 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeUndefined();
     });
 
-    test('matches by fieldNames', () => {
+    test('matches by fieldName', () => {
       const handler = vi.fn();
-      router.route({ filters: { fieldNames: ['getUser'] }, handler });
+      router.route({ filters: { fieldName: 'getUser' }, handler });
+
+      const event = createAppSyncResolverEvent({ info: { fieldName: 'getUser' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = router.matchRoute('Query', 'getUser', event);
+      expect(matched).toBeDefined();
+      expect(matched?.handler).toBe(handler);
+    });
+
+    test('matches by fieldName array', () => {
+      const handler = vi.fn();
+      router.route({ filters: { fieldName: ['getUser', 'createUser'] }, handler });
 
       const event = createAppSyncResolverEvent({ info: { fieldName: 'getUser' } });
 
@@ -170,7 +194,7 @@ suite('AppSyncRouter', () => {
     });
 
     test('does not match when fieldName is different', () => {
-      router.route({ filters: { fieldNames: ['getUser'] }, handler: vi.fn() });
+      router.route({ filters: { fieldName: 'getUser' }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent({ info: { fieldName: 'listUsers' } });
 
@@ -203,8 +227,8 @@ suite('AppSyncRouter', () => {
     test('first route wins when multiple match', () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-      router.route({ filters: { parentTypeNames: ['Query'] }, handler: firstHandler });
-      router.route({ filters: { parentTypeNames: ['Query'] }, handler: secondHandler });
+      router.route({ filters: { parentTypeName: 'Query' }, handler: firstHandler });
+      router.route({ filters: { parentTypeName: 'Query' }, handler: secondHandler });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
 
@@ -217,8 +241,8 @@ suite('AppSyncRouter', () => {
       const handler = vi.fn();
       router.route({
         filters: {
-          parentTypeNames: ['Query'],
-          fieldNames: ['getUser'],
+          parentTypeName: 'Query',
+          fieldName: 'getUser',
           customFilter: () => true,
         },
         handler,
@@ -234,8 +258,8 @@ suite('AppSyncRouter', () => {
     test('does not match when combined filters pass but customFilter fails', () => {
       router.route({
         filters: {
-          parentTypeNames: ['Query'],
-          fieldNames: ['getUser'],
+          parentTypeName: 'Query',
+          fieldName: 'getUser',
           customFilter: () => false,
         },
         handler: vi.fn(),
@@ -278,7 +302,7 @@ suite('AppSyncRouter', () => {
     test('builds complete AppSyncResolverRequest and calls handler', async () => {
       const handler = vi.fn().mockResolvedValue({ id: '123', name: 'Test' });
       router.route({
-        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        filters: { parentTypeName: 'Query', fieldName: 'getUser' },
         handler,
       });
 
@@ -323,7 +347,7 @@ suite('AppSyncRouter', () => {
       const handler = vi.fn().mockResolvedValue('ok');
       const argumentsSchema = createMockSchema();
       router.route({
-        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        filters: { parentTypeName: 'Query', fieldName: 'getUser' },
         argumentsSchema,
         handler,
       });
@@ -343,7 +367,7 @@ suite('AppSyncRouter', () => {
     test('throws when schema validation fails', async () => {
       const argumentsSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route({
-        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        filters: { parentTypeName: 'Query', fieldName: 'getUser' },
         argumentsSchema,
         handler: vi.fn(),
       });
@@ -711,7 +735,7 @@ suite('AppSyncRouter', () => {
       }
 
       const route = defineRoute({
-        filters: { parentTypeNames: ['Query'], fieldNames: ['getUser'] },
+        filters: { parentTypeName: 'Query', fieldName: 'getUser' },
         middleware: [routeMiddleware],
       }).handle(async () => {
         callOrder.push('handler');

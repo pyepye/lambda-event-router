@@ -6,8 +6,8 @@ import { oldOrderSchema } from '../orderSchemas.js';
 // REMOVE with only oldImageSchema - newImage is undefined for REMOVE
 export const orderRemoveRoute = defineRoute({
   filters: {
-    eventNames: ['REMOVE'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'REMOVE',
+    eventSourceArn: STREAM_ARN,
   },
   oldImageSchema: oldOrderSchema,
 }).handle(async ({ oldImage }) => {

@@ -12,7 +12,7 @@ export interface CloudWatchLogsFilters {
   logGroup?: string | string[];
   logGroupPrefix?: string | string[];
   logGroupSuffix?: string | string[];
-  logGroupInclude?: string | string[];
+  logGroupIncludes?: string | string[];
   subscriptionFilter?: string | string[];
   messageType?: CloudWatchLogsMessageType | CloudWatchLogsMessageType[];
   customFilter?: (input: CloudWatchLogsDecodedData) => boolean;

@@ -71,22 +71,15 @@ export interface DynamoDBFilterInput {
   record: DynamoDBRecord;
 }
 
-interface DynamoDBFilters {
-  eventNames?: DynamoDBEventName[];
-  eventSourceArns?: DynamoDBRecord['eventSourceARN'][];
-  streamViewTypes?: DynamoDBViewType[];
-  customFilter?: (input: DynamoDBFilterInput) => boolean;
-}
-
-// Filters without eventNames for event-specific methods (insert, modify, remove)
-interface DynamoDBEventFilters {
-  eventSourceArns?: DynamoDBRecord['eventSourceARN'][];
-  streamViewTypes?: DynamoDBViewType[];
+export interface DynamoDBFilters {
+  eventName?: DynamoDBEventName | DynamoDBEventName[];
+  eventSourceArn?: DynamoDBRecord['eventSourceARN'] | DynamoDBRecord['eventSourceARN'][];
+  streamViewType?: DynamoDBViewType | DynamoDBViewType[];
   customFilter?: (input: DynamoDBFilterInput) => boolean;
 }
 
 export interface DynamoDBInsertRouteDefinition<TKeys = Record<string, unknown>, TNewItem = Record<string, unknown>> {
-  filters: DynamoDBEventFilters;
+  filters: Omit<DynamoDBFilters, 'eventName'>;
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
   middleware?: DynamoDBMiddleware<TKeys, TNewItem>[];
@@ -98,7 +91,7 @@ export interface DynamoDBModifyRouteDefinition<
   TNewItem = Record<string, unknown>,
   TOldItem = Record<string, unknown>,
 > {
-  filters: DynamoDBEventFilters;
+  filters: Omit<DynamoDBFilters, 'eventName'>;
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   newImageSchema?: StandardSchemaV1<unknown, TNewItem>;
   oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
@@ -107,7 +100,7 @@ export interface DynamoDBModifyRouteDefinition<
 }
 
 export interface DynamoDBRemoveRouteDefinition<TKeys = Record<string, unknown>, TOldItem = Record<string, unknown>> {
-  filters: DynamoDBEventFilters;
+  filters: Omit<DynamoDBFilters, 'eventName'>;
   keysSchema?: StandardSchemaV1<unknown, TKeys>;
   oldImageSchema?: StandardSchemaV1<unknown, TOldItem>;
   middleware?: DynamoDBMiddleware<TKeys, Record<string, unknown>, TOldItem>[];

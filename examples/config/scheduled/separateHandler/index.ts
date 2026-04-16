@@ -11,15 +11,15 @@ const CROSS_ACCOUNT_RULE = 'cross-account-access-check';
 
 configScheduledRouter.route({
   filters: {
-    configRuleNames: [TAG_AUDIT_RULE],
+    configRuleName: TAG_AUDIT_RULE,
   },
   handler: handlePeriodicTagAudit,
 });
 
 configScheduledRouter.route({
   filters: {
-    configRuleNames: [CROSS_ACCOUNT_RULE],
-    accountIds: ['123456789012', '987654321098'],
+    configRuleName: CROSS_ACCOUNT_RULE,
+    accountId: ['123456789012', '987654321098'],
   },
   handler: handleCrossAccountCompliance,
 });

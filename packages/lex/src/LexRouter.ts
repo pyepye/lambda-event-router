@@ -57,7 +57,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
 
   dialogCodeHook(definition: LexDialogCodeHookRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, invocationSources: ['DialogCodeHook'] },
+      filters: { ...definition.filters, invocationSource: 'DialogCodeHook' },
       middleware: definition.middleware,
       handler: definition.handler as LexHandler,
     });
@@ -65,7 +65,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
 
   fulfillmentCodeHook(definition: LexFulfillmentCodeHookRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, invocationSources: ['FulfillmentCodeHook'] },
+      filters: { ...definition.filters, invocationSource: 'FulfillmentCodeHook' },
       middleware: definition.middleware,
       handler: definition.handler as LexHandler,
     });
@@ -101,20 +101,33 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.intentNames && !filters.intentNames.includes(intentName)) {
-        return false;
+      if (filters.intentName) {
+        const intentNames = Array.isArray(filters.intentName) ? filters.intentName : [filters.intentName];
+        if (!intentNames.includes(intentName)) {
+          return false;
+        }
       }
 
-      if (filters.invocationSources && !filters.invocationSources.includes(event.invocationSource)) {
-        return false;
+      if (filters.invocationSource) {
+        const { invocationSource: filterSource } = filters;
+        const invocationSources = Array.isArray(filterSource) ? filterSource : [filterSource];
+        if (!invocationSources.includes(event.invocationSource)) {
+          return false;
+        }
       }
 
-      if (filters.botIds && !filters.botIds.includes(event.bot.id)) {
-        return false;
+      if (filters.botId) {
+        const botIds = Array.isArray(filters.botId) ? filters.botId : [filters.botId];
+        if (!botIds.includes(event.bot.id)) {
+          return false;
+        }
       }
 
-      if (filters.inputModes && !filters.inputModes.includes(event.inputMode)) {
-        return false;
+      if (filters.inputMode) {
+        const inputModes = Array.isArray(filters.inputMode) ? filters.inputMode : [filters.inputMode];
+        if (!inputModes.includes(event.inputMode)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

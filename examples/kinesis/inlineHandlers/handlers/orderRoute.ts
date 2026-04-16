@@ -12,7 +12,7 @@ const OrderDataSchema = z.object({
 
 export const orderRoute = defineRoute({
   filters: {
-    eventSourceArns: [ORDER_STREAM_ARN],
+    eventSourceArn: ORDER_STREAM_ARN,
   },
   dataSchema: OrderDataSchema,
 }).handle(async ({ data, partitionKey, sequenceNumber, context }) => {

@@ -12,54 +12,54 @@ const SOME_QUEUE_ARN = 'arn:aws:dynamodb:region:account-id:some-stream';
 
 dynamodbStreamRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
-    eventNames: ['INSERT'],
+    eventSourceArn: SOME_QUEUE_ARN,
+    eventName: 'INSERT',
   },
   handler: createItem,
 });
 
 dynamodbStreamRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
-    eventNames: ['MODIFY'],
+    eventSourceArn: SOME_QUEUE_ARN,
+    eventName: 'MODIFY',
   },
   handler: updateItem,
 });
 
 dynamodbStreamRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
-    eventNames: ['REMOVE'],
+    eventSourceArn: SOME_QUEUE_ARN,
+    eventName: 'REMOVE',
   },
   handler: updateItem,
 });
 
 dynamodbStreamRouter.route({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
-    streamViewTypes: ['NEW_AND_OLD_IMAGES'],
+    eventSourceArn: SOME_QUEUE_ARN,
+    streamViewType: 'NEW_AND_OLD_IMAGES',
   },
   handler: updateItem,
 });
 
 dynamodbStreamRouter.insert({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
-    // eventNames: ['INSERT'], // Not valid filter for .insert() etc
+    eventSourceArn: SOME_QUEUE_ARN,
+    // eventName: 'INSERT', // Not valid filter for .insert() etc
   },
   handler: createItem,
 });
 
 dynamodbStreamRouter.modify({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
+    eventSourceArn: SOME_QUEUE_ARN,
   },
   handler: modifyItem,
 });
 
 dynamodbStreamRouter.remove({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
+    eventSourceArn: SOME_QUEUE_ARN,
   },
   handler: removeItem,
 });
@@ -71,7 +71,7 @@ function isFromUsersTable({ record }: DynamoDBFilterInput): boolean {
 
 dynamodbStreamRouter.insert({
   filters: {
-    eventSourceArns: [SOME_QUEUE_ARN],
+    eventSourceArn: SOME_QUEUE_ARN,
     customFilter: isFromUsersTable,
   },
   handler: createItem,

@@ -15,10 +15,10 @@ const CLUSTER_ARN = 'arn:aws:rds:eu-west-1:123456789012:cluster:my-documentdb-cl
 // Generic .route() with full filters
 documentDBRouter.route({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
-    operationTypes: ['insert'],
-    databases: ['ecommerce'],
-    collections: ['orders'],
+    eventSourceArn: CLUSTER_ARN,
+    operationType: 'insert',
+    database: 'ecommerce',
+    collection: 'orders',
   },
   handler: insertOrder,
 });
@@ -26,9 +26,9 @@ documentDBRouter.route({
 // Convenience method - .insert() pre-sets operationType to 'insert'
 documentDBRouter.insert({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
-    databases: ['ecommerce'],
-    collections: ['orders'],
+    eventSourceArn: CLUSTER_ARN,
+    database: 'ecommerce',
+    collection: 'orders',
   },
   handler: insertOrder,
 });
@@ -39,7 +39,7 @@ documentDBRouter.insert({
 // (and the types) that this handler expects those event fields to be populated.
 documentDBRouter.update({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
+    eventSourceArn: CLUSTER_ARN,
     // Change stream was opened with fullDocument: 'updateLookup'
     // so the fullDocument event field will be populated on update events
     fullDocument: ['updateLookup'],
@@ -53,7 +53,7 @@ documentDBRouter.update({
 // Convenience method - .replace() pre-sets operationType to 'replace'
 documentDBRouter.replace({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
+    eventSourceArn: CLUSTER_ARN,
     // No fullDocument filter needed - replace events always include fullDocument
     // fullDocumentBeforeChange could be added here if the change stream is configured for it
   },
@@ -63,7 +63,7 @@ documentDBRouter.replace({
 // Convenience method - .delete() pre-sets operationType to 'delete'
 documentDBRouter.delete({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
+    eventSourceArn: CLUSTER_ARN,
     // No fullDocumentBeforeChange filter - this handler only needs the documentKey
   },
   handler: deleteOrder,
@@ -76,8 +76,8 @@ function isEcommerceOrderChange(input: DocumentDBFilterInput): boolean {
 
 documentDBRouter.route({
   filters: {
-    eventSourceArns: [CLUSTER_ARN],
-    operationTypes: ['update'],
+    eventSourceArn: CLUSTER_ARN,
+    operationType: 'update',
     customFilter: isEcommerceOrderChange,
   },
   handler: updateOrder,

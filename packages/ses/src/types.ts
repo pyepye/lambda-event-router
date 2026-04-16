@@ -25,15 +25,15 @@ export interface SESFilterInput {
 }
 
 export interface SESFilters {
-  recipients?: string[];
-  senders?: string[];
-  senderDomains?: string[];
-  recipientDomains?: string[];
-  spamVerdict?: SESReceiptStatusValue[];
-  virusVerdict?: SESReceiptStatusValue[];
-  spfVerdict?: SESReceiptStatusValue[];
-  dkimVerdict?: SESReceiptStatusValue[];
-  dmarcVerdict?: SESReceiptStatusValue[];
+  recipient?: string | string[];
+  sender?: string | string[];
+  senderDomain?: string | string[];
+  recipientDomain?: string | string[];
+  spamVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
+  virusVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
+  spfVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
+  dkimVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
+  dmarcVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
   customFilter?: (input: SESFilterInput) => boolean;
 }
 

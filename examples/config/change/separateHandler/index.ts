@@ -16,25 +16,25 @@ const ENCRYPTION_RULE = 'rds-encryption-check';
 
 configRouter.route({
   filters: {
-    configRuleNames: [TAG_COMPLIANCE_RULE],
-    resourceTypes: ['AWS::IAM::Role'],
-    configurationItemStatuses: ['OK', 'ResourceDiscovered'],
+    configRuleName: TAG_COMPLIANCE_RULE,
+    resourceType: 'AWS::IAM::Role',
+    configurationItemStatus: ['OK', 'ResourceDiscovered'],
   },
   handler: handleIamRoleCompliance,
 });
 
 configRouter.route({
   filters: {
-    configRuleNames: [ENCRYPTION_RULE],
-    resourceTypes: ['AWS::RDS::DBInstance'],
-    resourceIds: ['my-production-db'],
+    configRuleName: ENCRYPTION_RULE,
+    resourceType: 'AWS::RDS::DBInstance',
+    resourceId: 'my-production-db',
   },
   handler: handleRdsEncryptionCheck,
 });
 
 configRouter.route({
   filters: {
-    configurationItemStatuses: ['ResourceDeleted'],
+    configurationItemStatus: 'ResourceDeleted',
   },
   handler: handleResourceDeleted,
 });
@@ -42,8 +42,8 @@ configRouter.route({
 // OversizedConfigurationItemChangeNotification - config item too large, needs API call
 configRouter.route({
   filters: {
-    configRuleNames: [TAG_COMPLIANCE_RULE],
-    resourceTypes: ['AWS::Lambda::Function'],
+    configRuleName: TAG_COMPLIANCE_RULE,
+    resourceType: 'AWS::Lambda::Function',
   },
   handler: handleOversizedLambdaCompliance,
 });

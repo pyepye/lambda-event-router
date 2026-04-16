@@ -42,10 +42,10 @@ export interface LexFilterInput {
 }
 
 export interface LexFilters {
-  intentNames?: string[];
-  invocationSources?: LexInvocationSource[];
-  botIds?: string[];
-  inputModes?: LexInputMode[];
+  intentName?: string | string[];
+  invocationSource?: LexInvocationSource | LexInvocationSource[];
+  botId?: string | string[];
+  inputMode?: LexInputMode | LexInputMode[];
   customFilter?: (input: LexFilterInput) => boolean;
 }
 

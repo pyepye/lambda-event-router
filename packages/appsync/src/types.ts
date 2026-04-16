@@ -37,8 +37,8 @@ export interface AppSyncResolverFilterInput {
 }
 
 export interface AppSyncResolverFilters {
-  parentTypeNames?: string[];
-  fieldNames?: string[];
+  parentTypeName?: string | string[];
+  fieldName?: string | string[];
   customFilter?: (input: AppSyncResolverFilterInput) => boolean;
 }
 
@@ -157,8 +157,8 @@ export interface AppSyncEventsFilterInput {
 }
 
 export interface AppSyncEventsFilters {
-  operations?: AppSyncEventsOperation[];
-  channelNamespaces?: string[];
+  operation?: AppSyncEventsOperation | AppSyncEventsOperation[];
+  channelNamespace?: string | string[];
   customFilter?: (input: AppSyncEventsFilterInput) => boolean;
 }
 

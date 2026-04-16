@@ -36,7 +36,7 @@ const cognitoRouter = createCognitoRouter()
 // Inline functions allows Typescript to automatic infer types
 const handlePreSignUp = defineRoute({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
   },
 }).handle(async ({ event }) => {
   console.log(`Pre-signup: ${event.userName}`)
@@ -79,7 +79,7 @@ const cognitoRouter = createCognitoRouter()
 
 const handlePreSignUp = defineRoute({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
   },
 }).handle(async ({ event }) => {
   event.response.autoConfirmUser = true
@@ -99,7 +99,7 @@ const cognitoRouter = createCognitoRouter()
 
 cognitoRouter.preSignUp({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     customFilter: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
   },
   handler: handlePreSignUp,
@@ -145,7 +145,7 @@ cognitoRouter.userMigration()
 ```ts
 cognitoRouter.preSignUp({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     customFilter: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
   },
   handler: async ({ event }) => {

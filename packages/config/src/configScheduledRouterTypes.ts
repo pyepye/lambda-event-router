@@ -12,8 +12,8 @@ export interface ConfigScheduledRequest<TParams = Record<string, string>> {
 }
 
 export interface ConfigScheduledFilters {
-  configRuleNames?: string[];
-  accountIds?: string[];
+  configRuleName?: string | string[];
+  accountId?: string | string[];
 }
 
 export interface ConfigScheduledRouteDefinition<TParams = Record<string, string>> {

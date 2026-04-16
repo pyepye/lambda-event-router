@@ -26,7 +26,7 @@ suite('RabbitMQRouter', () => {
   suite('defineRabbitMQRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRabbitMQRoute({
-        filters: { queues: ['orders'] },
+        filters: { queue: 'orders' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -37,9 +37,9 @@ suite('RabbitMQRouter', () => {
       const bodySchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        eventSourceArns: ['arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234'],
-        queues: ['orders'],
-        contentTypes: ['application/json'],
+        eventSourceArn: ['arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234'],
+        queue: 'orders',
+        contentType: 'application/json',
       };
 
       const definition = defineRabbitMQRoute({
@@ -90,11 +90,11 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArns', ({ rabbitMQMessage }) => {
+    test('matches route by eventSourceArn', ({ rabbitMQMessage }) => {
       const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
       router.route(
         defineRabbitMQRoute({
-          filters: { eventSourceArns: [arn] },
+          filters: { eventSourceArn: arn },
         }).handle(async () => {}),
       );
 
@@ -108,10 +108,29 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArns does not match', ({ rabbitMQMessage }) => {
+    test('matches route by eventSourceArn array', ({ rabbitMQMessage }) => {
+      const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
+      const arn2 = 'arn:aws:mq:eu-west-2:987654321098:broker:OtherBroker:z-9876';
       router.route(
         defineRabbitMQRoute({
-          filters: { eventSourceArns: ['arn:aws:mq:us-east-1:123456789012:broker:OtherBroker:b-9999'] },
+          filters: { eventSourceArn: [arn, arn2] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      event.eventSourceArn = arn;
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event, 'test-queue', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when eventSourceArn does not match', ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { eventSourceArn: 'arn:aws:mq:us-east-1:123456789012:broker:OtherBroker:b-9999' },
         }).handle(async () => {}),
       );
 
@@ -124,10 +143,10 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by queues', ({ rabbitMQMessage }) => {
+    test('matches route by queue', ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
-          filters: { queues: ['orders'] },
+          filters: { queue: 'orders' },
         }).handle(async () => {}),
       );
 
@@ -140,10 +159,26 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when queues does not match', ({ rabbitMQMessage }) => {
+    test('matches route by queue array', ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
-          filters: { queues: ['orders'] },
+          filters: { queue: ['orders', 'refunds'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event, 'orders', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when queue does not match', ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { queue: 'orders' },
         }).handle(async () => {}),
       );
 
@@ -156,10 +191,10 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by contentTypes', ({ rabbitMQMessage }) => {
+    test('matches route by contentType', ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
-          filters: { contentTypes: ['application/json'] },
+          filters: { contentType: 'application/json' },
         }).handle(async () => {}),
       );
 
@@ -172,10 +207,26 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when contentTypes does not match', ({ rabbitMQMessage }) => {
+    test('matches route by contentType array', ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
-          filters: { contentTypes: ['application/xml'] },
+          filters: { contentType: ['application/json', 'application/xml'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event, 'test-queue', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when contentType does not match', ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { contentType: 'application/xml' },
         }).handle(async () => {}),
       );
 
@@ -249,7 +300,7 @@ suite('RabbitMQRouter', () => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRabbitMQRoute({
-          filters: { queues: ['other-queue'], customFilter: customFilterSpy },
+          filters: { queue: 'other-queue', customFilter: customFilterSpy },
         }).handle(async () => {}),
       );
 
@@ -415,7 +466,7 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('processes messages sequentially across queues', async ({ rabbitMQMessage, context }) => {
+    test('processes messages sequentially across queue', async ({ rabbitMQMessage, context }) => {
       const callOrder: string[] = [];
 
       router.route(
@@ -436,7 +487,7 @@ suite('RabbitMQRouter', () => {
       expect(callOrder).toEqual(['start-queue-a', 'end-queue-a', 'start-queue-b', 'end-queue-b']);
     });
 
-    test('processes messages from multiple queues', async ({ rabbitMQMessage, context }) => {
+    test('processes messages from multiple queue', async ({ rabbitMQMessage, context }) => {
       const handler = vi.fn();
       router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
 
@@ -488,12 +539,12 @@ suite('RabbitMQRouter', () => {
   });
 
   suite('full event processing', () => {
-    test('routes messages from different queues to different handlers', async ({ rabbitMQMessage, context }) => {
+    test('routes messages from different queue to different handlers', async ({ rabbitMQMessage, context }) => {
       const ordersHandler = vi.fn();
       const usersHandler = vi.fn();
 
-      router.route(defineRabbitMQRoute({ filters: { queues: ['orders'] } }).handle(ordersHandler));
-      router.route(defineRabbitMQRoute({ filters: { queues: ['users'] } }).handle(usersHandler));
+      router.route(defineRabbitMQRoute({ filters: { queue: 'orders' } }).handle(ordersHandler));
+      router.route(defineRabbitMQRoute({ filters: { queue: 'users' } }).handle(usersHandler));
 
       const event = createRabbitMQEvent({
         'orders::/vhost': [rabbitMQMessage()],
@@ -509,8 +560,8 @@ suite('RabbitMQRouter', () => {
       const jsonHandler = vi.fn();
       const xmlHandler = vi.fn();
 
-      router.route(defineRabbitMQRoute({ filters: { contentTypes: ['application/json'] } }).handle(jsonHandler));
-      router.route(defineRabbitMQRoute({ filters: { contentTypes: ['application/xml'] } }).handle(xmlHandler));
+      router.route(defineRabbitMQRoute({ filters: { contentType: 'application/json' } }).handle(jsonHandler));
+      router.route(defineRabbitMQRoute({ filters: { contentType: 'application/xml' } }).handle(xmlHandler));
 
       const event = createRabbitMQEvent({
         'test-queue::/vhost': [

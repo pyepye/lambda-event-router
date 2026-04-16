@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const preAuthenticationRoute = defineRoute({
   filters: {
-    triggerSources: ['PreAuthentication_Authentication'],
+    triggerSource: 'PreAuthentication_Authentication',
   },
 }).handle(async ({ event }) => {
   console.log(`Pre-authentication check: ${event.userName}`);

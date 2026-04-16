@@ -13,8 +13,8 @@ const ORDERS_TOPIC = 'orders';
 
 kafkaRouter.route({
   filters: {
-    topics: [ORDERS_TOPIC],
-    eventSourceArns: [MSK_CLUSTER_ARN],
+    topic: ORDERS_TOPIC,
+    eventSourceArn: MSK_CLUSTER_ARN,
   },
   handler: processOrder,
   valueSchema: OrderValueSchema,
@@ -25,8 +25,8 @@ const BOOTSTRAP_SERVERS = 'kafka-broker-1.example.com:9092';
 
 kafkaRouter.route({
   filters: {
-    topics: [ORDERS_TOPIC],
-    bootstrapServers: [BOOTSTRAP_SERVERS],
+    topic: ORDERS_TOPIC,
+    bootstrapServer: BOOTSTRAP_SERVERS,
   },
   handler: processOrder,
   valueSchema: OrderValueSchema,
@@ -39,7 +39,7 @@ function hasCorrelationId({ headers }: KafkaFilterInput): boolean {
 
 kafkaRouter.route({
   filters: {
-    topics: [ORDERS_TOPIC],
+    topic: ORDERS_TOPIC,
     customFilter: hasCorrelationId,
   },
   handler: processOrder,

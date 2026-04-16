@@ -58,8 +58,8 @@ suite('EventBridgeRouter', () => {
       const detailSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        sources: ['order.service'],
-        detailTypes: ['OrderPlaced'],
+        source: 'order.service',
+        detailType: 'OrderPlaced',
       };
 
       const definition = defineRoute({
@@ -76,7 +76,7 @@ suite('EventBridgeRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { sources: ['my.app'] },
+        filters: { source: 'my.app' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -86,10 +86,10 @@ suite('EventBridgeRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by sources filter', ({ eventBridgeEvent }) => {
+    test('matches route by source filter', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { sources: ['my.app'] },
+          filters: { source: 'my.app' },
         }).handle(async () => {}),
       );
 
@@ -100,24 +100,10 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when sources filter does not match', ({ eventBridgeEvent }) => {
+    test('matches route by source filter array', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { sources: ['other.app'] },
-        }).handle(async () => {}),
-      );
-
-      const event = eventBridgeEvent();
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by detailTypes filter', ({ eventBridgeEvent }) => {
-      router.route(
-        defineRoute({
-          filters: { detailTypes: ['OrderPlaced'] },
+          filters: { source: ['my.app', 'other.app'] },
         }).handle(async () => {}),
       );
 
@@ -128,10 +114,10 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when detailTypes filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when source filter does not match', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { detailTypes: ['OrderShipped'] },
+          filters: { source: 'other.app' },
         }).handle(async () => {}),
       );
 
@@ -142,10 +128,10 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by accounts filter', ({ eventBridgeEvent }) => {
+    test('matches route by detailType filter', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { accounts: ['123456789012'] },
+          filters: { detailType: 'OrderPlaced' },
         }).handle(async () => {}),
       );
 
@@ -156,24 +142,10 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when accounts filter does not match', ({ eventBridgeEvent }) => {
+    test('matches route by detailType filter array', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { accounts: ['999999999999'] },
-        }).handle(async () => {}),
-      );
-
-      const event = eventBridgeEvent();
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by regions filter', ({ eventBridgeEvent }) => {
-      router.route(
-        defineRoute({
-          filters: { regions: ['us-east-1'] },
+          filters: { detailType: ['OrderPlaced', 'OrderRefunded'] },
         }).handle(async () => {}),
       );
 
@@ -184,10 +156,10 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when regions filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when detailType filter does not match', ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
-          filters: { regions: ['eu-west-1'] },
+          filters: { detailType: 'OrderShipped' },
         }).handle(async () => {}),
       );
 
@@ -198,11 +170,95 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by resources filter', ({ eventBridgeEvent }) => {
+    test('matches route by account filter', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { account: '123456789012' },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by account filter array', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { account: ['123456789012', '987654321098'] },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when account filter does not match', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { account: '999999999999' },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by region filter', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { region: 'us-east-1' },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by region filter array', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { region: ['us-east-1', 'eu-west-2'] },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when region filter does not match', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { region: 'eu-west-1' },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by resource filter', ({ eventBridgeEvent }) => {
       const resourceArn = 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0';
       router.route(
         defineRoute({
-          filters: { resources: [resourceArn] },
+          filters: { resource: resourceArn },
         }).handle(async () => {}),
       );
 
@@ -213,10 +269,26 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when resources filter does not match', ({ eventBridgeEvent }) => {
+    test('matches route by resource filter array', ({ eventBridgeEvent }) => {
+      const resourceArn = 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0';
+      const resourceArn2 = 'arn:aws:ec2:eu-west-1:987654321098:instance/i-9876543210zyxwvu9';
       router.route(
         defineRoute({
-          filters: { resources: ['arn:aws:ec2:us-east-1:123456789012:instance/i-other'] },
+          filters: { resource: [resourceArn, resourceArn2] },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent({ resources: [resourceArn] });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when resource filter does not match', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { resource: 'arn:aws:ec2:us-east-1:123456789012:instance/i-other' },
         }).handle(async () => {}),
       );
 
@@ -233,10 +305,10 @@ suite('EventBridgeRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            sources: ['my.app'],
-            detailTypes: ['OrderPlaced'],
-            accounts: ['123456789012'],
-            regions: ['us-east-1'],
+            source: 'my.app',
+            detailType: 'OrderPlaced',
+            account: '123456789012',
+            region: 'us-east-1',
           },
         }).handle(async () => {}),
       );
@@ -252,9 +324,9 @@ suite('EventBridgeRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            sources: ['my.app'],
-            detailTypes: ['OrderPlaced'],
-            accounts: ['999999999999'],
+            source: 'my.app',
+            detailType: 'OrderPlaced',
+            account: '999999999999',
           },
         }).handle(async () => {}),
       );
@@ -307,12 +379,12 @@ suite('EventBridgeRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { sources: ['my.app'] },
+          filters: { source: 'my.app' },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { sources: ['my.app'] },
+          filters: { source: 'my.app' },
         }).handle(secondHandler),
       );
 
@@ -328,7 +400,7 @@ suite('EventBridgeRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            sources: ['my.app'],
+            source: 'my.app',
             customFilter: ({ detail }: EventBridgeFilterInput): boolean => {
               // @ts-expect-error - detail is unknown, testing filter with known shape
               return detail.orderId === '12345';
@@ -348,7 +420,7 @@ suite('EventBridgeRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            sources: ['my.app'],
+            source: 'my.app',
             customFilter: (): boolean => false,
           },
         }).handle(async () => {}),
@@ -367,11 +439,25 @@ suite('EventBridgeRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { resources: [arnB] },
+          filters: { resource: arnB },
         }).handle(async () => {}),
       );
 
       const event = eventBridgeEvent({ resources: [arnA, arnB] });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches when filter source is an array and event source is one of them', ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { source: ['my.app', 'other.app'] },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent({ source: 'other.app' });
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute(event);
 
@@ -403,7 +489,7 @@ suite('EventBridgeRouter', () => {
     test('calls handler with complete EventBridgeRequest properties', async ({ eventBridgeEvent, context }) => {
       const handler = vi.fn();
       const definition = defineRoute({
-        filters: { sources: ['my.app'] },
+        filters: { source: 'my.app' },
       }).handle(handler);
       router.route(definition);
 
@@ -449,7 +535,7 @@ suite('EventBridgeRouter', () => {
       const detailSchema = createMockSchema();
       router.route(
         defineRoute({
-          filters: { sources: ['my.app'] },
+          filters: { source: 'my.app' },
           detailSchema,
         }).handle(handler),
       );
@@ -466,7 +552,7 @@ suite('EventBridgeRouter', () => {
       const detailSchema = createMockSchema({ issues: [{ message: 'invalid detail' }] });
       router.route(
         defineRoute({
-          filters: { sources: ['my.app'] },
+          filters: { source: 'my.app' },
           detailSchema,
         }).handle(async () => {}),
       );
@@ -482,14 +568,14 @@ suite('EventBridgeRouter', () => {
       const receivedPaymentRequests: EventBridgeRequest[] = [];
       router.route(
         defineRoute({
-          filters: { sources: ['order.service'] },
+          filters: { source: 'order.service' },
         }).handle(async (request) => {
           receivedOrderRequests.push(request);
         }),
       );
       router.route(
         defineRoute({
-          filters: { sources: ['payment.service'] },
+          filters: { source: 'payment.service' },
         }).handle(async (request) => {
           receivedPaymentRequests.push(request);
         }),
@@ -518,12 +604,12 @@ suite('EventBridgeRouter', () => {
       const orderShippedHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { detailTypes: ['OrderPlaced'] },
+          filters: { detailType: 'OrderPlaced' },
         }).handle(orderPlacedHandler),
       );
       router.route(
         defineRoute({
-          filters: { detailTypes: ['OrderShipped'] },
+          filters: { detailType: 'OrderShipped' },
         }).handle(orderShippedHandler),
       );
 

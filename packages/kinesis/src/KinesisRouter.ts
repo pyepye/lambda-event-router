@@ -132,12 +132,19 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.eventSourceArns && !filters.eventSourceArns.includes(record.eventSourceARN)) {
-        return false;
+      if (filters.eventSourceArn) {
+        const { eventSourceArn: filterSourceArn } = filters;
+        const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
+        if (!eventSourceArns.includes(record.eventSourceARN)) {
+          return false;
+        }
       }
 
-      if (filters.partitionKeys && !filters.partitionKeys.includes(record.kinesis.partitionKey)) {
-        return false;
+      if (filters.partitionKey) {
+        const partitionKeys = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
+        if (!partitionKeys.includes(record.kinesis.partitionKey)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

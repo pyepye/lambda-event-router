@@ -23,11 +23,11 @@ export interface SecretsManagerFilterInput {
 }
 
 export interface SecretsManagerFilters {
-  secretIds?: string[];
-  secretPrefixes?: string[];
-  secretSuffixes?: string[];
-  secretIncludes?: string[];
-  steps?: SecretsManagerRotationEventStep[];
+  secretId?: string | string[];
+  secretPrefix?: string | string[];
+  secretSuffix?: string | string[];
+  secretIncludes?: string | string[];
+  step?: SecretsManagerRotationEventStep | SecretsManagerRotationEventStep[];
   customFilter?: (input: SecretsManagerFilterInput) => boolean;
 }
 

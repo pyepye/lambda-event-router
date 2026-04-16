@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const verifyAuthChallengeResponseRoute = defineRoute({
   filters: {
-    triggerSources: ['VerifyAuthChallengeResponse_Authentication'],
+    triggerSource: 'VerifyAuthChallengeResponse_Authentication',
   },
 }).handle(async ({ event }) => {
   const { challengeAnswer, privateChallengeParameters } = event.request;

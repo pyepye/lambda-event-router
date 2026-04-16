@@ -21,8 +21,8 @@ import {
 // (and the types) that this handler expects those fields to be present on the event.
 export const updateRoute = defineRoute({
   filters: {
-    operationTypes: ['update'],
-    eventSourceArns: [CLUSTER_ARN],
+    operationType: 'update',
+    eventSourceArn: CLUSTER_ARN,
     // Match the change stream config - these control whether the event fields are populated
     fullDocument: ['updateLookup'],
     fullDocumentBeforeChange: ['whenAvailable', 'required'],

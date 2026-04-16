@@ -10,32 +10,32 @@ const activeMQRouter = createActiveMQRouter();
 
 activeMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
+    eventSourceArn: BROKER_ARN,
   },
   handler: handleAllMessages,
 });
 
 activeMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    messageTypes: ['jms/text-message'],
+    eventSourceArn: BROKER_ARN,
+    messageType: 'jms/text-message',
   },
   handler: handleTextMessage,
 });
 
 activeMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    messageTypes: ['jms/bytes-message'],
+    eventSourceArn: BROKER_ARN,
+    messageType: 'jms/bytes-message',
   },
   handler: handleBytesMessage,
 });
 
 activeMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    destinations: ['orders-queue'],
-    messageTypes: ['jms/text-message'],
+    eventSourceArn: BROKER_ARN,
+    destination: 'orders-queue',
+    messageType: 'jms/text-message',
   },
   handler: handleOrderMessage,
 });
@@ -43,16 +43,16 @@ activeMQRouter.route({
 // Shorthand methods
 activeMQRouter.textMessage({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    // messageTypes: ['jms/text-message'], // Not valid filter for .textMessage()
+    eventSourceArn: BROKER_ARN,
+    // messageType: 'jms/text-message', // Not valid filter for .textMessage()
   },
   handler: handleTextMessage,
 });
 
 activeMQRouter.bytesMessage({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    // messageTypes: ['jms/bytes-message'], // Not valid filter for .bytesMessage()
+    eventSourceArn: BROKER_ARN,
+    // messageType: 'jms/bytes-message', // Not valid filter for .bytesMessage()
   },
   handler: handleBytesMessage,
 });
@@ -63,7 +63,7 @@ function isPriorityDestination({ destination }: ActiveMQFilterInput): boolean {
 
 activeMQRouter.textMessage({
   filters: {
-    eventSourceArns: [BROKER_ARN],
+    eventSourceArn: BROKER_ARN,
     customFilter: isPriorityDestination,
   },
   handler: handleOrderMessage,

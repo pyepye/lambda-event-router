@@ -80,7 +80,7 @@ suite('S3Router', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { buckets: ['my-bucket'] },
+        filters: { bucket: 'my-bucket' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -89,7 +89,7 @@ suite('S3Router', () => {
 
     test('preserves filters and handler in the definition', () => {
       const handler = vi.fn();
-      const filters = { buckets: ['my-bucket'], prefixes: ['uploads/'] };
+      const filters = { bucket: 'my-bucket', prefix: 'uploads/' };
 
       const definition = defineRoute({ filters }).handle(handler);
 
@@ -100,7 +100,7 @@ suite('S3Router', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { buckets: ['my-bucket'] },
+        filters: { bucket: 'my-bucket' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -156,7 +156,7 @@ suite('S3Router', () => {
 
     test('merges user-provided filters with auto-set eventName', ({ s3Record }) => {
       const handler = vi.fn();
-      router.objectCreatedPut({ filters: { buckets: ['specific-bucket'], prefixes: ['uploads/'] }, handler });
+      router.objectCreatedPut({ filters: { bucket: 'specific-bucket', prefix: 'uploads/' }, handler });
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
@@ -173,7 +173,21 @@ suite('S3Router', () => {
     test('matches route by exact eventName', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventNames: ['s3:ObjectCreated:Put'] },
+          filters: { eventName: 's3:ObjectCreated:Put' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by exact eventName array', ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { eventName: ['s3:ObjectCreated:Put', 's3:ObjectCreated:Get'] },
         }).handle(async () => {}),
       );
 
@@ -187,7 +201,7 @@ suite('S3Router', () => {
     test('matches route by wildcard eventName', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventNames: ['s3:ObjectCreated:*'] },
+          filters: { eventName: 's3:ObjectCreated:*' },
         }).handle(async () => {}),
       );
 
@@ -201,7 +215,7 @@ suite('S3Router', () => {
     test('does not match route when eventName does not match', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventNames: ['s3:ObjectRemoved:Delete'] },
+          filters: { eventName: 's3:ObjectRemoved:Delete' },
         }).handle(async () => {}),
       );
 
@@ -215,7 +229,21 @@ suite('S3Router', () => {
     test('matches route by bucket name', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { buckets: ['my-bucket'] },
+          filters: { bucket: 'my-bucket' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by bucket name array', ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { bucket: ['my-bucket', 'other-bucket'] },
         }).handle(async () => {}),
       );
 
@@ -229,7 +257,7 @@ suite('S3Router', () => {
     test('does not match route when bucket does not match', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { buckets: ['other-bucket'] },
+          filters: { bucket: 'other-bucket' },
         }).handle(async () => {}),
       );
 
@@ -240,10 +268,24 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key starts with any prefix', ({ s3Record }) => {
+    test('matches route when key starts with prefix', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { prefixes: ['images/', 'uploads/'] },
+          filters: { prefix: 'uploads/' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when key starts with prefix array', ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { prefix: ['images/', 'uploads/'] },
         }).handle(async () => {}),
       );
 
@@ -257,7 +299,7 @@ suite('S3Router', () => {
     test('does not match route when key does not start with any prefix', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { prefixes: ['images/', 'docs/'] },
+          filters: { prefix: ['images/', 'docs/'] },
         }).handle(async () => {}),
       );
 
@@ -268,10 +310,24 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key ends with any suffix', ({ s3Record }) => {
+    test('matches route when key ends with suffix', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { suffixes: ['.jpg', '.txt'] },
+          filters: { suffix: '.txt' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when key ends with suffix array', ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { suffix: ['.jpg', '.txt'] },
         }).handle(async () => {}),
       );
 
@@ -285,7 +341,7 @@ suite('S3Router', () => {
     test('does not match route when key does not end with any suffix', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { suffixes: ['.jpg', '.png'] },
+          filters: { suffix: ['.jpg', '.png'] },
         }).handle(async () => {}),
       );
 
@@ -296,7 +352,21 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key contains any substring', ({ s3Record }) => {
+    test('matches route when key contains substring', ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { includes: 'test' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when key contains substring array', ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { includes: ['archive', 'test'] },
@@ -379,7 +449,7 @@ suite('S3Router', () => {
     test('matches when both bucket and prefix filters pass', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { buckets: ['my-bucket'], prefixes: ['uploads/'] },
+          filters: { bucket: 'my-bucket', prefix: 'uploads/' },
         }).handle(async () => {}),
       );
 
@@ -393,7 +463,7 @@ suite('S3Router', () => {
     test('does not match when bucket passes but prefix fails', ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { buckets: ['my-bucket'], prefixes: ['images/'] },
+          filters: { bucket: 'my-bucket', prefix: 'images/' },
         }).handle(async () => {}),
       );
 
@@ -408,7 +478,7 @@ suite('S3Router', () => {
       router.route(
         defineRoute({
           filters: {
-            buckets: ['my-bucket'],
+            bucket: 'my-bucket',
             customFilter: ({ key }: S3FilterInput): boolean => key.endsWith('.txt'),
           },
         }).handle(async () => {}),
@@ -425,7 +495,7 @@ suite('S3Router', () => {
       router.route(
         defineRoute({
           filters: {
-            buckets: ['my-bucket'],
+            bucket: 'my-bucket',
             customFilter: (): boolean => false,
           },
         }).handle(async () => {}),
@@ -451,8 +521,8 @@ suite('S3Router', () => {
     test('selects the first matching route when multiple routes match', ({ s3Record }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
-      router.route(defineRoute({ filters: { buckets: ['my-bucket'] } }).handle(firstHandler));
-      router.route(defineRoute({ filters: { buckets: ['my-bucket'] } }).handle(secondHandler));
+      router.route(defineRoute({ filters: { bucket: 'my-bucket' } }).handle(firstHandler));
+      router.route(defineRoute({ filters: { bucket: 'my-bucket' } }).handle(secondHandler));
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
@@ -468,7 +538,7 @@ suite('S3Router', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventNames: ['s3:ObjectCreated:Put'] },
+          filters: { eventName: 's3:ObjectCreated:Put' },
         }).handle(handler),
       );
 
@@ -765,12 +835,12 @@ suite('S3Router', () => {
       const imagesHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { buckets: ['my-bucket'], prefixes: ['uploads/'] },
+          filters: { bucket: 'my-bucket', prefix: 'uploads/' },
         }).handle(uploadsHandler),
       );
       router.route(
         defineRoute({
-          filters: { buckets: ['my-bucket'], prefixes: ['images/'] },
+          filters: { bucket: 'my-bucket', prefix: 'images/' },
         }).handle(imagesHandler),
       );
 

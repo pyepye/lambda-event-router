@@ -4,8 +4,8 @@ import type { CloudWatchLogsDecodedData } from 'aws-lambda';
 // Handle logs from specific Lambda functions using logGroups + logGroupPrefixes
 export const lambdaErrorLogsRoute = defineRoute({
   filters: {
-    logGroups: ['/aws/lambda/my-api-handler'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroup: '/aws/lambda/my-api-handler',
+    messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logStream, logEvents, owner }) => {
   console.log(`Processing ${logEvents.length} log events from ${logGroup}`);
@@ -19,8 +19,8 @@ export const lambdaErrorLogsRoute = defineRoute({
 // Handle logs from any Lambda function using prefix matching
 export const allLambdaLogsRoute = defineRoute({
   filters: {
-    logGroupPrefixes: ['/aws/lambda/'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroupPrefix: '/aws/lambda/',
+    messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logEvents }) => {
   console.log(`Lambda logs from ${logGroup}: ${logEvents.length} events`);
@@ -29,7 +29,7 @@ export const allLambdaLogsRoute = defineRoute({
 // Handle logs matching a subscription filter name
 export const alertSubscriptionRoute = defineRoute({
   filters: {
-    subscriptionFilters: ['error-alerts', 'critical-alerts'],
+    subscriptionFilter: ['error-alerts', 'critical-alerts'],
   },
 }).handle(async ({ logGroup, logStream, logEvents, subscriptionFilters }) => {
   console.log(`Alert triggered for ${logGroup} via filters: ${subscriptionFilters.join(', ')}`);
@@ -40,7 +40,7 @@ export const alertSubscriptionRoute = defineRoute({
 export const ecsServiceLogsRoute = defineRoute({
   filters: {
     logGroupIncludes: ['ecs', 'fargate'],
-    messageTypes: ['DATA_MESSAGE'],
+    messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logEvents }) => {
   console.log(`ECS logs from ${logGroup}: ${logEvents.length} events`);
@@ -49,7 +49,7 @@ export const ecsServiceLogsRoute = defineRoute({
 // Handle logs from API Gateway using suffix matching
 export const apiGatewayLogsRoute = defineRoute({
   filters: {
-    logGroupSuffixes: ['/access-logs', '/execution-logs'],
+    logGroupSuffix: ['/access-logs', '/execution-logs'],
   },
 }).handle(async ({ logGroup, logStream, logEvents }) => {
   console.log(`API Gateway logs from ${logGroup}`);

@@ -12,8 +12,8 @@ const NotificationValueSchema = z.object({
 // eventSourceArns filter only applies to MSK events (not self-managed Kafka)
 export const notificationRoute = defineRoute({
   filters: {
-    topics: [NOTIFICATIONS_TOPIC],
-    eventSourceArns: [MSK_CLUSTER_ARN],
+    topic: NOTIFICATIONS_TOPIC,
+    eventSourceArn: MSK_CLUSTER_ARN,
   },
   valueSchema: NotificationValueSchema,
 }).handle(async (request) => {

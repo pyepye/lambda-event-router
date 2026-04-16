@@ -53,7 +53,7 @@ suite('SESRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { recipients: ['user@example.com'] },
+        filters: { recipient: 'user@example.com' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -63,8 +63,8 @@ suite('SESRouter', () => {
     test('preserves filters and handler in the definition', () => {
       const handler = vi.fn();
       const filters = {
-        recipients: ['user@example.com'],
-        senders: ['sender@example.com'],
+        recipient: 'user@example.com',
+        sender: 'sender@example.com',
       };
 
       const definition = defineRoute({ filters }).handle(handler);
@@ -76,7 +76,7 @@ suite('SESRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { recipients: ['user@example.com'] },
+        filters: { recipient: 'user@example.com' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -86,10 +86,10 @@ suite('SESRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by recipients', ({ sesRecord }) => {
+    test('matches route by recipient', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipients: ['recipient@example.com'] },
+          filters: { recipient: 'recipient@example.com' },
         }).handle(async () => {}),
       );
 
@@ -100,10 +100,24 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when recipients do not match', ({ sesRecord }) => {
+    test('matches route by recipient array', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipients: ['other@example.com'] },
+          filters: { recipient: ['recipient@example.com', 'other@example.com'] },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when recipient do not match', ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { recipient: 'other@example.com' },
         }).handle(async () => {}),
       );
 
@@ -114,10 +128,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when one of multiple recipients matches', ({ sesRecord }) => {
+    test('matches when one of multiple recipient matches', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipients: ['recipient@example.com'] },
+          filters: { recipient: 'recipient@example.com' },
         }).handle(async () => {}),
       );
 
@@ -130,10 +144,24 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by senders', ({ sesRecord }) => {
+    test('matches route by sender', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senders: ['sender@example.com'] },
+          filters: { sender: 'sender@example.com' },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord({ ses: { mail: { source: 'sender@example.com' } } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by sender array', ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sender: ['sender@example.com', 'other@example.com'] },
         }).handle(async () => {}),
       );
 
@@ -147,7 +175,7 @@ suite('SESRouter', () => {
     test('does not match route when senders do not match', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senders: ['other@example.com'] },
+          filters: { sender: 'other@example.com' },
         }).handle(async () => {}),
       );
 
@@ -158,10 +186,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by senderDomains', ({ sesRecord }) => {
+    test('matches route by senderDomain', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senderDomains: ['example.com'] },
+          filters: { senderDomain: 'example.com' },
         }).handle(async () => {}),
       );
 
@@ -172,10 +200,24 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when senderDomains do not match', ({ sesRecord }) => {
+    test('matches route by senderDomain array', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senderDomains: ['other.com'] },
+          filters: { senderDomain: ['example.com', 'test.com'] },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord({ ses: { mail: { source: 'user@example.com' } } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when senderDomain do not match', ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { senderDomain: 'other.com' },
         }).handle(async () => {}),
       );
 
@@ -186,10 +228,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by recipientDomains', ({ sesRecord }) => {
+    test('matches route by recipientDomain', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomains: ['example.com'] },
+          filters: { recipientDomain: 'example.com' },
         }).handle(async () => {}),
       );
 
@@ -200,10 +242,24 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when recipientDomains do not match', ({ sesRecord }) => {
+    test('matches route by recipientDomain array', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomains: ['other.com'] },
+          filters: { recipientDomain: ['example.com', 'test.com'] },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when recipientDomain do not match', ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { recipientDomain: 'other.com' },
         }).handle(async () => {}),
       );
 
@@ -217,7 +273,7 @@ suite('SESRouter', () => {
     test('matches when one of multiple recipient domains matches', ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomains: ['example.com'] },
+          filters: { recipientDomain: 'example.com' },
         }).handle(async () => {}),
       );
 
@@ -236,7 +292,21 @@ suite('SESRouter', () => {
       test(`matches route by ${verdictType}`, ({ sesRecord }) => {
         router.route(
           defineRoute({
-            filters: { [verdictType]: ['PASS'] },
+            filters: { [verdictType]: 'PASS' },
+          }).handle(async () => {}),
+        );
+
+        const record = sesRecord({ ses: { receipt: { [verdictType]: { status: 'PASS' } } } });
+        // @ts-expect-error - testing private method directly
+        const result = router.matchRoute(record);
+
+        expect(result).toBeDefined();
+      });
+
+      test(`matches route by ${verdictType} array`, ({ sesRecord }) => {
+        router.route(
+          defineRoute({
+            filters: { [verdictType]: ['PASS', 'DISABLED'] },
           }).handle(async () => {}),
         );
 
@@ -250,7 +320,7 @@ suite('SESRouter', () => {
       test(`does not match route when ${verdictType} does not match`, ({ sesRecord }) => {
         router.route(
           defineRoute({
-            filters: { [verdictType]: ['FAIL'] },
+            filters: { [verdictType]: 'FAIL' },
           }).handle(async () => {}),
         );
 
@@ -331,7 +401,7 @@ suite('SESRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            recipients: ['nonexistent@example.com'],
+            recipient: 'nonexistent@example.com',
             customFilter: filterSpy,
           },
         }).handle(async () => {}),
@@ -364,12 +434,12 @@ suite('SESRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { recipients: ['recipient@example.com'] },
+          filters: { recipient: 'recipient@example.com' },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { recipients: ['recipient@example.com'] },
+          filters: { recipient: 'recipient@example.com' },
         }).handle(secondHandler),
       );
 
@@ -385,8 +455,8 @@ suite('SESRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            recipients: ['recipient@example.com'],
-            senders: ['sender@example.com'],
+            recipient: 'recipient@example.com',
+            sender: 'sender@example.com',
           },
         }).handle(async () => {}),
       );
@@ -407,8 +477,8 @@ suite('SESRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            recipients: ['recipient@example.com'],
-            senders: ['other@example.com'],
+            recipient: 'recipient@example.com',
+            sender: 'other@example.com',
           },
         }).handle(async () => {}),
       );
@@ -429,8 +499,8 @@ suite('SESRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            recipients: ['other@example.com'],
-            senders: ['sender@example.com'],
+            recipient: 'other@example.com',
+            sender: 'sender@example.com',
           },
         }).handle(async () => {}),
       );
@@ -447,12 +517,12 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when both senderDomains and recipientDomains match', ({ sesRecord }) => {
+    test('matches when both senderDomain and recipientDomain match', ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            senderDomains: ['example.com'],
-            recipientDomains: ['example.com'],
+            senderDomain: 'example.com',
+            recipientDomain: 'example.com',
           },
         }).handle(async () => {}),
       );
@@ -469,12 +539,12 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when senderDomains match but recipientDomains do not', ({ sesRecord }) => {
+    test('does not match when senderDomain match but recipientDomain do not', ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            senderDomains: ['example.com'],
-            recipientDomains: ['other.com'],
+            senderDomain: 'example.com',
+            recipientDomain: 'other.com',
           },
         }).handle(async () => {}),
       );
@@ -495,9 +565,9 @@ suite('SESRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            recipients: ['recipient@example.com'],
-            spamVerdict: ['PASS'],
-            virusVerdict: ['PASS'],
+            recipient: 'recipient@example.com',
+            spamVerdict: 'PASS',
+            virusVerdict: 'PASS',
           },
         }).handle(async () => {}),
       );
@@ -555,7 +625,7 @@ suite('SESRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { recipients: ['recipient@example.com'] },
+          filters: { recipient: 'recipient@example.com' },
         }).handle(handler),
       );
 
@@ -650,12 +720,12 @@ suite('SESRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { senderDomains: ['internal.com'] },
+          filters: { senderDomain: 'internal.com' },
         }).handle(internalHandler),
       );
       router.route(
         defineRoute({
-          filters: { senderDomains: ['external.com'] },
+          filters: { senderDomain: 'external.com' },
         }).handle(externalHandler),
       );
 

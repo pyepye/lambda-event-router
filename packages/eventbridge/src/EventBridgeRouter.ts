@@ -5,6 +5,7 @@ import type { Context } from 'aws-lambda';
 import type {
   EventBridgeEventEnvelope,
   EventBridgeFilterInput,
+  EventBridgeFilters,
   EventBridgeHandler,
   EventBridgeMiddleware,
   EventBridgeRequest,
@@ -14,7 +15,7 @@ import type {
 } from './types.js';
 
 interface InternalEventBridgeRoute {
-  filters: EventBridgeRouteDefinition['filters'];
+  filters: EventBridgeFilters;
   detailSchema?: StandardSchemaV1;
   middleware?: EventBridgeMiddleware[];
   handler: EventBridgeHandler<unknown>;
@@ -22,16 +23,12 @@ interface InternalEventBridgeRoute {
 
 interface EventBridgeRouteInput<
   TDetailSchema extends StandardSchemaV1 | undefined = undefined,
-  TSources extends readonly string[] | undefined = undefined,
-  TDetailTypes extends readonly string[] | undefined = undefined,
+  TSources extends string | readonly string[] | undefined = undefined,
+  TDetailTypes extends string | readonly string[] | undefined = undefined,
 > {
-  filters: {
-    sources?: TSources;
-    detailTypes?: TDetailTypes;
-    accounts?: string[];
-    regions?: string[];
-    resources?: string[];
-    customFilter?: (input: EventBridgeFilterInput) => boolean;
+  filters: Omit<EventBridgeFilters, 'source' | 'detailType'> & {
+    source?: TSources;
+    detailType?: TDetailTypes;
   };
   detailSchema?: TDetailSchema;
   middleware?: EventBridgeMiddleware[];
@@ -43,8 +40,8 @@ interface EventBridgeRouteBuilder<TDetail> {
 
 export function defineRoute<
   TDetailSchema extends StandardSchemaV1 | undefined = undefined,
-  const TSources extends readonly string[] | undefined = undefined,
-  const TDetailTypes extends readonly string[] | undefined = undefined,
+  const TSources extends string | readonly string[] | undefined = undefined,
+  const TDetailTypes extends string | readonly string[] | undefined = undefined,
   TDetail = TDetailSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TDetailSchema>
     : LookupDetailType<TSources, TDetailTypes>,
@@ -130,20 +127,33 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.sources && !filters.sources.includes(event.source)) {
-        return false;
+      if (filters.source) {
+        const sources = Array.isArray(filters.source) ? filters.source : [filters.source];
+        if (!sources.includes(event.source)) {
+          return false;
+        }
       }
-      if (filters.detailTypes && !filters.detailTypes.includes(event['detail-type'])) {
-        return false;
+      if (filters.detailType) {
+        const detailTypes = Array.isArray(filters.detailType) ? filters.detailType : [filters.detailType];
+        if (!detailTypes.includes(event['detail-type'])) {
+          return false;
+        }
       }
-      if (filters.accounts && !filters.accounts.includes(event.account)) {
-        return false;
+      if (filters.account) {
+        const accounts = Array.isArray(filters.account) ? filters.account : [filters.account];
+        if (!accounts.includes(event.account)) {
+          return false;
+        }
       }
-      if (filters.regions && !filters.regions.includes(event.region)) {
-        return false;
+      if (filters.region) {
+        const regions = Array.isArray(filters.region) ? filters.region : [filters.region];
+        if (!regions.includes(event.region)) {
+          return false;
+        }
       }
-      if (filters.resources) {
-        const hasMatchingResource = event.resources.some((r) => filters.resources?.includes(r));
+      if (filters.resource) {
+        const resources = Array.isArray(filters.resource) ? filters.resource : [filters.resource];
+        const hasMatchingResource = event.resources.some((r) => resources?.includes(r));
         if (!hasMatchingResource) {
           return false;
         }

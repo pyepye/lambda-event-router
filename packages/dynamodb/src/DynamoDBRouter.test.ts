@@ -49,7 +49,7 @@ suite('DynamoDBRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { eventNames: ['INSERT'] },
+        filters: { eventName: 'INSERT' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -62,9 +62,9 @@ suite('DynamoDBRouter', () => {
       const oldImageSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        eventNames: ['MODIFY' as const],
-        eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000'],
-        streamViewTypes: ['NEW_AND_OLD_IMAGES' as const],
+        eventName: ['MODIFY' as const],
+        eventSourceArn: ['arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000'],
+        streamViewType: ['NEW_AND_OLD_IMAGES' as const],
       };
 
       const definition = defineRoute({
@@ -85,7 +85,7 @@ suite('DynamoDBRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { eventNames: ['INSERT'] },
+        filters: { eventName: 'INSERT' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -176,10 +176,10 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventNames', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventName', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
-          filters: { eventNames: ['INSERT'] },
+          filters: { eventName: 'INSERT' },
         }).handle(async () => {}),
       );
 
@@ -190,10 +190,24 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventNames does not match', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventName array', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
-          filters: { eventNames: ['REMOVE'] },
+          filters: { eventName: ['INSERT', 'MODIFY'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventName does not match', ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { eventName: 'REMOVE' },
         }).handle(async () => {}),
       );
 
@@ -204,11 +218,11 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by eventSourceArns', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventSourceArn', ({ dynamoDBInsertRecord }) => {
       const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [tableArn] },
+          filters: { eventSourceArn: tableArn },
         }).handle(async () => {}),
       );
 
@@ -219,13 +233,27 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArns does not match', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventSourceArn array', ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      const tableArn2 = 'arn:aws:dynamodb:us-east-1:987654321098:table/refunds/stream/2025-01-01T00:00:00.000';
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: [tableArn, tableArn2] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventSourceArn does not match', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [
-              'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
-            ],
+            eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
           },
         }).handle(async () => {}),
       );
@@ -239,10 +267,10 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by streamViewTypes', ({ dynamoDBInsertRecord }) => {
+    test('matches route by streamViewType', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
-          filters: { streamViewTypes: ['NEW_AND_OLD_IMAGES'] },
+          filters: { streamViewType: 'NEW_AND_OLD_IMAGES' },
         }).handle(async () => {}),
       );
 
@@ -253,10 +281,24 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when streamViewTypes does not match', ({ dynamoDBInsertRecord }) => {
+    test('matches route by streamViewType array', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
-          filters: { streamViewTypes: ['KEYS_ONLY'] },
+          filters: { streamViewType: ['NEW_AND_OLD_IMAGES', 'KEYS_ONLY'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when streamViewType does not match', ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { streamViewType: 'KEYS_ONLY' },
         }).handle(async () => {}),
       );
 
@@ -322,7 +364,7 @@ suite('DynamoDBRouter', () => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { eventNames: ['REMOVE'], customFilter: customFilterSpy },
+          filters: { eventName: 'REMOVE', customFilter: customFilterSpy },
         }).handle(async () => {}),
       );
 
@@ -353,12 +395,12 @@ suite('DynamoDBRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventNames: ['INSERT'] },
+          filters: { eventName: 'INSERT' },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { eventNames: ['INSERT'] },
+          filters: { eventName: 'INSERT' },
         }).handle(secondHandler),
       );
 
@@ -370,14 +412,12 @@ suite('DynamoDBRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('does not match when eventNames matches but eventSourceArns does not', ({ dynamoDBInsertRecord }) => {
+    test('does not match when eventName matches but eventSourceArn does not', ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            eventNames: ['INSERT'],
-            eventSourceArns: [
-              'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
-            ],
+            eventName: 'INSERT',
+            eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
           },
         }).handle(async () => {}),
       );
@@ -396,9 +436,9 @@ suite('DynamoDBRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            eventNames: ['INSERT'],
-            eventSourceArns: [tableArn],
-            streamViewTypes: ['NEW_AND_OLD_IMAGES'],
+            eventName: 'INSERT',
+            eventSourceArn: tableArn,
+            streamViewType: 'NEW_AND_OLD_IMAGES',
           },
         }).handle(async () => {}),
       );
@@ -855,7 +895,7 @@ suite('DynamoDBRouter', () => {
       const handler = vi.fn();
       const newImageSchema = createMockSchema();
       router.route({
-        filters: { eventNames: ['REMOVE'] },
+        filters: { eventName: 'REMOVE' },
         newImageSchema,
         handler,
       });
@@ -895,7 +935,7 @@ suite('DynamoDBRouter', () => {
       expect(removeHandler).toHaveBeenCalledTimes(1);
     });
 
-    test('routes by eventSourceArns for different tables', async ({
+    test('routes by eventSourceArn for different tables', async ({
       dynamoDBInsertRecord,
       dynamoDBStreamEvent,
       context,
@@ -906,8 +946,8 @@ suite('DynamoDBRouter', () => {
       const ordersHandler = vi.fn();
       const usersHandler = vi.fn();
 
-      router.insert({ filters: { eventSourceArns: [ordersArn] }, handler: ordersHandler });
-      router.insert({ filters: { eventSourceArns: [usersArn] }, handler: usersHandler });
+      router.insert({ filters: { eventSourceArn: [ordersArn] }, handler: ordersHandler });
+      router.insert({ filters: { eventSourceArn: [usersArn] }, handler: usersHandler });
 
       const ordersRecord = dynamoDBInsertRecord({ eventSourceARN: ordersArn });
       const usersRecord = dynamoDBInsertRecord({ eventSourceARN: usersArn });

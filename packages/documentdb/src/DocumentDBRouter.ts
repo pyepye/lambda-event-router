@@ -2,20 +2,13 @@ import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
-import type {
-  DocumentDBFilters,
-  FiltersToRequest,
-  InternalRequest,
-  InternalRoute,
-  RouteBuilder,
-  RouteInput,
-  RouteInputFilters,
-} from './routeTypes.js';
+import type { FiltersToRequest, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
   DocumentDBChangeEvent,
   DocumentDBDeleteRouteDefinition,
   DocumentDBEvent,
   DocumentDBEventEntry,
+  DocumentDBFilters,
   DocumentDBInsertRouteDefinition,
   DocumentDBReplaceRouteDefinition,
   DocumentDBRequest,
@@ -28,7 +21,7 @@ export function defineRoute<
   TDocumentKeySchema extends StandardSchemaV1 | undefined = undefined,
   TFullDocumentSchema extends StandardSchemaV1 | undefined = undefined,
   TFullDocumentBeforeChangeSchema extends StandardSchemaV1 | undefined = undefined,
-  const TFilters extends RouteInputFilters = RouteInputFilters,
+  const TFilters extends DocumentDBFilters = DocumentDBFilters,
   TDocumentKey = TDocumentKeySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TDocumentKeySchema>
     : Record<string, unknown>,
@@ -47,8 +40,11 @@ export function defineRoute<
         request: FiltersToRequest<TFilters, TDocumentKey, TFullDocument, TFullDocumentBeforeChange>,
       ) => Promise<void>,
     ): DocumentDBRouteDefinition<TDocumentKey, TFullDocument, TFullDocumentBeforeChange> {
+      // Casts bridge the narrowed RouteInput shape back to the public route definition.
+      // Handler is contravariant in the request union: FiltersToRequest narrows the request,
+      // but DocumentDBRouteDefinition expects the full discriminated union.
       return {
-        filters: config.filters as DocumentDBFilters,
+        filters: config.filters,
         documentKeySchema: config.documentKeySchema as StandardSchemaV1<unknown, TDocumentKey> | undefined,
         fullDocumentSchema: config.fullDocumentSchema as StandardSchemaV1<unknown, TFullDocument> | undefined,
         fullDocumentBeforeChangeSchema: config.fullDocumentBeforeChangeSchema as
@@ -69,12 +65,10 @@ export function defineRoute<
 
 export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefined> {
   private routes: InternalRoute[] = [];
-  private middleware: Middleware<InternalRequest, void>[];
+  private middleware: Middleware<DocumentDBRequest, void>[];
 
   constructor(options?: DocumentDBRouterOptions) {
-    // Cast needed: DocumentDBMiddleware uses the discriminated DocumentDBRequest union,
-    // InternalRequest uses the broader operationType field (contravariance)
-    this.middleware = (options?.middleware ?? []) as unknown as Middleware<InternalRequest, void>[];
+    this.middleware = (options?.middleware ?? []) as Middleware<DocumentDBRequest, void>[];
   }
 
   canHandleEvent(event: unknown): event is DocumentDBEvent {
@@ -93,7 +87,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   insert<TDocumentKey, TFullDocument>(definition: DocumentDBInsertRouteDefinition<TDocumentKey, TFullDocument>): this {
     return this.addRoute({
       ...definition,
-      filters: { ...definition.filters, operationTypes: ['insert'] },
+      filters: { ...definition.filters, operationType: 'insert' },
     } as InternalRoute);
   }
 
@@ -102,7 +96,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   ): this {
     return this.addRoute({
       ...definition,
-      filters: { ...definition.filters, operationTypes: ['update'] },
+      filters: { ...definition.filters, operationType: 'update' },
     } as InternalRoute);
   }
 
@@ -111,7 +105,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   ): this {
     return this.addRoute({
       ...definition,
-      filters: { ...definition.filters, operationTypes: ['replace'] },
+      filters: { ...definition.filters, operationType: 'replace' },
     } as InternalRoute);
   }
 
@@ -120,7 +114,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
   ): this {
     return this.addRoute({
       ...definition,
-      filters: { ...definition.filters, operationTypes: ['delete'] },
+      filters: { ...definition.filters, operationType: 'delete' },
     } as InternalRoute);
   }
 
@@ -169,7 +163,9 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       fullDocumentBeforeChangeErrorMessage,
     );
 
-    const request: InternalRequest = {
+    // The discriminated request union is built at runtime from the event's operationType -
+    // TS can't narrow it from a dynamic discriminant, hence the cast
+    const request = {
       operationType: changeEvent.operationType,
       documentKey,
       fullDocument,
@@ -178,7 +174,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       changeEvent,
       entry,
       context,
-    };
+    } as DocumentDBRequest;
 
     const allMiddleware = [...this.middleware, ...route.middleware];
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
@@ -188,20 +184,32 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.operationTypes && !filters.operationTypes.includes(changeEvent.operationType)) {
-        return false;
+      if (filters.operationType) {
+        const operationTypes = Array.isArray(filters.operationType) ? filters.operationType : [filters.operationType];
+        if (!operationTypes.includes(changeEvent.operationType)) {
+          return false;
+        }
       }
 
-      if (filters.eventSourceArns && !filters.eventSourceArns.includes(eventSourceArn)) {
-        return false;
+      if (filters.eventSourceArn) {
+        const arns = Array.isArray(filters.eventSourceArn) ? filters.eventSourceArn : [filters.eventSourceArn];
+        if (!arns.includes(eventSourceArn)) {
+          return false;
+        }
       }
 
-      if (filters.databases && !filters.databases.includes(changeEvent.ns.db)) {
-        return false;
+      if (filters.database) {
+        const databases = Array.isArray(filters.database) ? filters.database : [filters.database];
+        if (!databases.includes(changeEvent.ns.db)) {
+          return false;
+        }
       }
 
-      if (filters.collections && !filters.collections.includes(changeEvent.ns.coll)) {
-        return false;
+      if (filters.collection) {
+        const collections = Array.isArray(filters.collection) ? filters.collection : [filters.collection];
+        if (!collections.includes(changeEvent.ns.coll)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

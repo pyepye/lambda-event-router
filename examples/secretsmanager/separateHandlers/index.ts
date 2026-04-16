@@ -22,16 +22,16 @@ const DATABASE_SECRET_ARN = 'arn:aws:secretsmanager:eu-west-1:123456789012:secre
 // Route specific steps for a known secret ARN
 secretsManagerRouter.route({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
-    steps: ['createSecret'],
+    secretId: DATABASE_SECRET_ARN,
+    step: 'createSecret',
   },
   handler: handleCreateSecret,
 });
 
 secretsManagerRouter.route({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
-    steps: ['setSecret'],
+    secretId: DATABASE_SECRET_ARN,
+    step: 'setSecret',
   },
   handler: handleSetSecret,
 });
@@ -43,8 +43,8 @@ secretsManagerRouter.route({
 // Match all secrets under the prod/database/ path
 secretsManagerRouter.route({
   filters: {
-    secretPrefixes: ['prod/database/'],
-    steps: ['createSecret', 'setSecret', 'testSecret', 'finishSecret'],
+    secretPrefix: 'prod/database/',
+    step: ['createSecret', 'setSecret', 'testSecret', 'finishSecret'],
   },
   handler: handleDatabaseRotation,
 });
@@ -56,7 +56,7 @@ secretsManagerRouter.route({
 // Match all secrets ending with /password or -credentials
 secretsManagerRouter.route({
   filters: {
-    secretSuffixes: ['/password', '-credentials'],
+    secretSuffix: ['/password', '-credentials'],
   },
   handler: handleDatabaseRotation,
 });
@@ -68,7 +68,7 @@ secretsManagerRouter.route({
 // Match any secret containing "redis" in its name/ARN
 secretsManagerRouter.route({
   filters: {
-    secretIncludes: ['redis'],
+    secretIncludes: 'redis',
   },
   handler: handleDatabaseRotation,
 });
@@ -77,10 +77,10 @@ secretsManagerRouter.route({
 // Convenience methods - pre-set the step filter
 // =============================================================================
 
-// .createSecret() is equivalent to .route() with steps: ['createSecret']
+// .createSecret() is equivalent to .route() with step: 'createSecret'
 secretsManagerRouter.createSecret({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
     // steps is not valid here - already implied by .createSecret()
   },
   handler: handleCreateSecret,
@@ -88,21 +88,21 @@ secretsManagerRouter.createSecret({
 
 secretsManagerRouter.setSecret({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
   handler: handleSetSecret,
 });
 
 secretsManagerRouter.testSecret({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
   handler: handleTestSecret,
 });
 
 secretsManagerRouter.finishSecret({
   filters: {
-    secretIds: [DATABASE_SECRET_ARN],
+    secretId: DATABASE_SECRET_ARN,
   },
   handler: handleFinishSecret,
 });
@@ -119,7 +119,7 @@ function isHighPrioritySecret({ secretId }: SecretsManagerFilterInput): boolean 
 
 secretsManagerRouter.route({
   filters: {
-    steps: ['createSecret'],
+    step: 'createSecret',
     customFilter: isHighPrioritySecret,
   },
   handler: handleHighPriorityRotation,

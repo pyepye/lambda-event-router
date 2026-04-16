@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const postConfirmationRoute = defineRoute({
   filters: {
-    triggerSources: ['PostConfirmation_ConfirmSignUp'],
+    triggerSource: 'PostConfirmation_ConfirmSignUp',
   },
 }).handle(async ({ event }) => {
   console.log(`User confirmed: ${event.userName}`);

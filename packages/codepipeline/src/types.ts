@@ -36,7 +36,7 @@ export interface CodePipelineFilterInput {
 }
 
 export interface CodePipelineFilters {
-  functionNames?: string[];
+  functionName?: string | string[];
   hasInputArtifacts?: boolean;
   hasContinuationToken?: boolean;
   userParametersContains?: string;

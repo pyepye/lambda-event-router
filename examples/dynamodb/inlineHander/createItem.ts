@@ -6,8 +6,8 @@ const STREAM_ARN = 'arn:aws:dynamodb:region:account-id:some-stream';
 // INSERT only - newImage is guaranteed, oldImage is undefined
 export const insertRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'INSERT',
+    eventSourceArn: STREAM_ARN,
   },
 }).handle(async ({ newImage, keys }) => {
   const { pk, sk } = keys;
@@ -17,8 +17,8 @@ export const insertRoute = defineRoute({
 // All events - newImage/oldImage depend on eventName
 export const allEventsRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT', 'MODIFY', 'REMOVE'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: ['INSERT', 'MODIFY', 'REMOVE'],
+    eventSourceArn: STREAM_ARN,
   },
 }).handle(async ({ newImage, oldImage, keys }) => {
   const { pk, sk } = keys;
@@ -26,7 +26,7 @@ export const allEventsRoute = defineRoute({
 });
 
 export const noEventNameRoute = defineRoute({
-  filters: { eventSourceArns: [''] },
+  filters: { eventSourceArn: STREAM_ARN },
 }).handle(async ({ eventName }) => {
   console.log(`eventName ${eventName}`);
 });
@@ -56,8 +56,8 @@ const orderKeysSchema = z.object({
 // MODIFY with separate schemas - keys, newImage and oldImage can have different shapes
 export const orderModifyRoute = defineRoute({
   filters: {
-    eventNames: ['MODIFY'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'MODIFY',
+    eventSourceArn: STREAM_ARN,
   },
   keysSchema: orderKeysSchema,
   newImageSchema: newOrderSchema,
@@ -73,8 +73,8 @@ export const orderModifyRoute = defineRoute({
 // INSERT with only newImageSchema - oldImage is undefined for INSERT
 export const orderInsertRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'INSERT',
+    eventSourceArn: STREAM_ARN,
   },
   newImageSchema: newOrderSchema,
 }).handle(async ({ newImage }) => {
@@ -85,8 +85,8 @@ export const orderInsertRoute = defineRoute({
 // REMOVE with only oldImageSchema - newImage is undefined for REMOVE
 export const orderRemoveRoute = defineRoute({
   filters: {
-    eventNames: ['REMOVE'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'REMOVE',
+    eventSourceArn: STREAM_ARN,
   },
   oldImageSchema: oldOrderSchema,
 }).handle(async ({ oldImage }) => {

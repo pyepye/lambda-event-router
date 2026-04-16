@@ -58,7 +58,7 @@ suite('KinesisRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
+        filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -69,8 +69,8 @@ suite('KinesisRouter', () => {
       const dataSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'],
-        partitionKeys: ['partition-key-1'],
+        eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream',
+        partitionKey: 'partition-key-1',
       };
 
       const definition = defineRoute({
@@ -87,7 +87,7 @@ suite('KinesisRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
+        filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -97,11 +97,11 @@ suite('KinesisRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArns', ({ kinesisRecord }) => {
+    test('matches route by eventSourceArn', ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async () => {}),
       );
 
@@ -112,10 +112,26 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArns does not match', ({ kinesisRecord }) => {
+    test('matches route by eventSourceArn array', ({ kinesisRecord }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const eventSourceArn2 = 'arn:aws:kinesis:eu-west-2:987654321098:stream/other-stream';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/other-stream'] },
+          filters: { eventSourceArn: [eventSourceArn, eventSourceArn2] },
+        }).handle(async () => {}),
+      );
+
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when eventSourceArn does not match', ({ kinesisRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream' },
         }).handle(async () => {}),
       );
 
@@ -126,10 +142,10 @@ suite('KinesisRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by partitionKeys', ({ kinesisRecord }) => {
+    test('matches route by partitionKey', ({ kinesisRecord }) => {
       router.route(
         defineRoute({
-          filters: { partitionKeys: ['partition-key-1'] },
+          filters: { partitionKey: 'partition-key-1' },
         }).handle(async () => {}),
       );
 
@@ -140,10 +156,24 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when partitionKeys does not match', ({ kinesisRecord }) => {
+    test('matches route by partitionKey array', ({ kinesisRecord }) => {
       router.route(
         defineRoute({
-          filters: { partitionKeys: ['partition-key-2'] },
+          filters: { partitionKey: ['partition-key-1', 'partition-key-2'] },
+        }).handle(async () => {}),
+      );
+
+      const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(record, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when partitionKey does not match', ({ kinesisRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'partition-key-2' },
         }).handle(async () => {}),
       );
 
@@ -207,12 +237,12 @@ suite('KinesisRouter', () => {
       const secondHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
+          filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-stream'] },
+          filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' },
         }).handle(secondHandler),
       );
 
@@ -226,13 +256,13 @@ suite('KinesisRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when both eventSourceArns and partitionKeys match', ({ kinesisRecord }) => {
+    test('matches when both eventSourceArn and partitionKey match', ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            partitionKeys: ['partition-key-1'],
+            eventSourceArn: eventSourceArn,
+            partitionKey: 'partition-key-1',
           },
         }).handle(async () => {}),
       );
@@ -247,13 +277,13 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArns matches but partitionKeys does not', ({ kinesisRecord }) => {
+    test('does not match when eventSourceArn matches but partitionKey does not', ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            partitionKeys: ['partition-key-2'],
+            eventSourceArn: eventSourceArn,
+            partitionKey: 'partition-key-2',
           },
         }).handle(async () => {}),
       );
@@ -268,12 +298,12 @@ suite('KinesisRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when partitionKeys matches but eventSourceArns does not', ({ kinesisRecord }) => {
+    test('does not match when partitionKey matches but eventSourceArn does not', ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/other-stream'],
-            partitionKeys: ['partition-key-1'],
+            eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream',
+            partitionKey: 'partition-key-1',
           },
         }).handle(async () => {}),
       );
@@ -295,7 +325,7 @@ suite('KinesisRouter', () => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
 
       const definition = defineRoute({
-        filters: { eventSourceArns: [eventSourceArn] },
+        filters: { eventSourceArn: eventSourceArn },
       }).handle(handler);
       router.route(definition);
 
@@ -333,7 +363,7 @@ suite('KinesisRouter', () => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async () => {
           throw new Error('handler exploded');
         }),
@@ -349,7 +379,7 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async (request) => {
           const eventId = request.record.eventID;
           callOrder.push(`start-${eventId}`);
@@ -406,7 +436,7 @@ suite('KinesisRouter', () => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async () => {}),
       );
 
@@ -436,7 +466,7 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async (request) => {
           handler(request.record.eventID);
           if (request.record.eventID === record2.eventID) {
@@ -471,7 +501,7 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
           dataSchema,
         }).handle(handler),
       );
@@ -498,7 +528,7 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
           dataSchema,
         }).handle(async () => {}),
       );
@@ -519,7 +549,7 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
           dataSchema,
         }).handle(async () => {}),
       );
@@ -540,7 +570,7 @@ suite('KinesisRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(handler),
       );
 
@@ -557,7 +587,7 @@ suite('KinesisRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(handler),
       );
 
@@ -578,7 +608,7 @@ suite('KinesisRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(handler),
       );
 
@@ -600,12 +630,12 @@ suite('KinesisRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [streamAArn] },
+          filters: { eventSourceArn: streamAArn },
         }).handle(streamAHandler),
       );
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [streamBArn] },
+          filters: { eventSourceArn: streamBArn },
         }).handle(streamBHandler),
       );
 

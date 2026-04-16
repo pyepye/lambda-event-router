@@ -48,8 +48,8 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     return this.route({
       filters: {
         ...input.filters,
-        operations: ['PUBLISH'],
-        channelNamespaces: [input.channelNamespace],
+        operation: 'PUBLISH',
+        channelNamespace: input.channelNamespace,
       },
       handler: input.handler,
     });
@@ -59,8 +59,8 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     return this.route({
       filters: {
         ...input.filters,
-        operations: ['SUBSCRIBE'],
-        channelNamespaces: [input.channelNamespace],
+        operation: 'SUBSCRIBE',
+        channelNamespace: input.channelNamespace,
       },
       handler: input.handler,
     });
@@ -104,12 +104,17 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
 
       const operationTyped = operation as AppSyncEventsEvent['info']['operation'];
 
-      if (filters.operations && !filters.operations.includes(operationTyped)) {
-        return false;
+      if (filters.operation) {
+        const operations = Array.isArray(filters.operation) ? filters.operation : [filters.operation];
+        if (!operations.includes(operationTyped)) {
+          return false;
+        }
       }
 
-      if (filters.channelNamespaces) {
-        const matchesNamespace = filters.channelNamespaces.some((pattern) =>
+      if (filters.channelNamespace) {
+        const { channelNamespace: filterNamespace } = filters;
+        const channelNamespaces = Array.isArray(filterNamespace) ? filterNamespace : [filterNamespace];
+        const matchesNamespace = channelNamespaces.some((pattern) =>
           matchChannelNamespace(pattern, channelPath, channelNamespace),
         );
         if (!matchesNamespace) return false;

@@ -154,9 +154,11 @@ export interface TypedRouteDefinition<
 
 // Input filters for defineRoute
 export interface RouteInputFilters<TTrigger extends CognitoTriggerSource> {
-  triggerSources?: readonly TTrigger[];
-  userPoolIds?: readonly PreSignUpTriggerEvent['userPoolId'][];
-  clientIds?: readonly PreSignUpTriggerEvent['callerContext']['clientId'][];
+  triggerSource?: TTrigger | readonly TTrigger[];
+  userPoolId?: PreSignUpTriggerEvent['userPoolId'] | readonly PreSignUpTriggerEvent['userPoolId'][];
+  clientId?:
+    | PreSignUpTriggerEvent['callerContext']['clientId']
+    | readonly PreSignUpTriggerEvent['callerContext']['clientId'][];
   userAttributes?: Record<string, string | RegExp | ((value: string) => boolean)>;
 }
 

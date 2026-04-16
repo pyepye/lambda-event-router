@@ -13,8 +13,8 @@ import { orderDocumentKeySchema } from '../orderSchemas.js';
 //   updateDescription - only present on 'update' events
 export const deleteRoute = defineRoute({
   filters: {
-    operationTypes: ['delete'],
-    eventSourceArns: [CLUSTER_ARN],
+    operationType: 'delete',
+    eventSourceArn: CLUSTER_ARN,
     // No fullDocumentBeforeChange filter here - this handler only needs the documentKey
   },
   documentKeySchema: orderDocumentKeySchema,

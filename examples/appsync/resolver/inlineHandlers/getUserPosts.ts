@@ -4,8 +4,8 @@ import { defineRoute } from '@lambda-event-router/appsync';
 // `source` contains the parent User object returned by the parent resolver.
 export const getUserPostsRoute = defineRoute({
   filters: {
-    parentTypeNames: ['User'],
-    fieldNames: ['posts'],
+    parentTypeName: 'User',
+    fieldName: 'posts',
   },
 }).handle(async (request) => {
   const { source, arguments: args, info } = request;

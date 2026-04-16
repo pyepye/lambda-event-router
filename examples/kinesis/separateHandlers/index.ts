@@ -13,7 +13,7 @@ const ORDER_STREAM_ARN = 'arn:aws:kinesis:us-east-1:123456789012:stream/order-ev
 // Route with eventSourceArns filter
 kinesisRouter.route({
   filters: {
-    eventSourceArns: [ORDER_STREAM_ARN],
+    eventSourceArn: ORDER_STREAM_ARN,
   },
   handler: processOrder,
   dataSchema: OrderDataSchema,
@@ -22,7 +22,7 @@ kinesisRouter.route({
 // Route with partitionKeys filter
 kinesisRouter.route({
   filters: {
-    partitionKeys: ['orders-us-east', 'orders-us-west'],
+    partitionKey: ['orders-us-east', 'orders-us-west'],
   },
   handler: processOrder,
   dataSchema: OrderDataSchema,
@@ -37,7 +37,7 @@ function isLargeOrder({ data }: KinesisFilterInput): boolean {
 
 kinesisRouter.route({
   filters: {
-    eventSourceArns: [ORDER_STREAM_ARN],
+    eventSourceArn: ORDER_STREAM_ARN,
     customFilter: isLargeOrder,
   },
   handler: processOrder,

@@ -14,7 +14,7 @@ const DeployParametersSchema = z.object({
 // The router calls putJobSuccessResult with the outputVariables map.
 export const deployActionRoute = defineRoute({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
   },
   userParametersSchema: DeployParametersSchema,
 }).handle(async ({ jobId, userParameters }) => {
@@ -32,7 +32,7 @@ export const deployActionRoute = defineRoute({
 // Match deploy actions that have input artifacts and a continuation token - multi-stage deploy logic
 export const continuationDeployRoute = defineRoute({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     customFilter: ({ hasInputArtifacts, hasContinuationToken }: CodePipelineFilterInput) => {
       // Only match jobs that are resuming with artifacts - built-in filters can't express this combination
       return hasInputArtifacts && hasContinuationToken;

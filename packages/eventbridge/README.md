@@ -37,8 +37,8 @@ const eventBridgeRouter = createEventBridgeRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineRoute({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created'],
+    source: 'myapp.orders',
+    detailType: 'Order Created',
   },
   detailSchema: z.object({ orderId: z.string(), customerId: z.string() }),
 }).handle(async ({ source, detailType, detail }) => {
@@ -58,8 +58,8 @@ const eventBridgeRouter = createEventBridgeRouter()
 // Separate handler to define routes and handlers in different places
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created'],
+    source: 'myapp.orders',
+    detailType: 'Order Created',
   },
   detailSchema: OrderDetailSchema,
   handler: processOrder,
@@ -83,8 +83,8 @@ const eventBridgeRouter = createEventBridgeRouter()
 
 const processOrder = defineRoute({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created', 'Order Updated'],
+    source: 'myapp.orders',
+    detailType: ['Order Created', 'Order Updated'],
   },
   detailSchema: OrderDetailSchema,
 }).handle(async ({ detailType, detail }) => {
@@ -103,8 +103,8 @@ const eventBridgeRouter = createEventBridgeRouter()
 
 eventBridgeRouter.route({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created', 'Order Updated'],
+    source: 'myapp.orders',
+    detailType: ['Order Created', 'Order Updated'],
   },
   detailSchema: OrderDetailSchema,
   handler: processOrder,
@@ -120,11 +120,11 @@ async function processOrder({ detailType, detail }) {
 ```ts
 defineRoute({
   filters: {
-    sources: ['aws.ec2'],
-    detailTypes: ['EC2 Instance State-change Notification'],
-    accounts: ['123456789012'],
-    regions: ['us-east-1'],
-    resources: ['arn:aws:ec2:us-east-1:123456789:instance/i-1234'],
+    source: 'aws.ec2',
+    detailType: 'EC2 Instance State-change Notification',
+    account: '123456789012',
+    region: 'us-east-1',
+    resource: 'arn:aws:ec2:us-east-1:123456789:instance/i-1234',
     customFilter: ({ detail }) => detail.state === 'running',
   },
 })
@@ -136,8 +136,8 @@ defineRoute({
 // EC2 state changes - types are automatically inferred
 defineRoute({
   filters: {
-    sources: ['aws.ec2'],
-    detailTypes: ['EC2 Instance State-change Notification'],
+    source: 'aws.ec2',
+    detailType: 'EC2 Instance State-change Notification',
   },
 }).handle(async ({ detail, account, region, time }) => {
   console.log(`Instance ${detail['instance-id']} changed to ${detail.state}`)
@@ -146,8 +146,8 @@ defineRoute({
 // Scheduled rules
 defineRoute({
   filters: {
-    sources: ['aws.events'],
-    detailTypes: ['Scheduled Event'],
+    source: 'aws.events',
+    detailType: 'Scheduled Event',
   },
 }).handle(async ({ time, resources }) => {
   console.log(`Scheduled rule triggered at ${time}`)
@@ -165,8 +165,8 @@ const OrderDetailSchema = z.object({
 
 defineRoute({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created', 'Order Updated'],
+    source: 'myapp.orders',
+    detailType: ['Order Created', 'Order Updated'],
   },
   detailSchema: OrderDetailSchema,
 }).handle(async ({ detailType, detail }) => {

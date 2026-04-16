@@ -20,9 +20,9 @@ export interface CognitoFilterInput<TTriggerSource extends string = string> {
 
 // Filters for routing
 export interface CognitoFilters<TTriggerSource extends string = string> {
-  triggerSources?: TTriggerSource[];
-  userPoolIds?: PreSignUpTriggerEvent['userPoolId'][];
-  clientIds?: PreSignUpTriggerEvent['callerContext']['clientId'][];
+  triggerSource?: TTriggerSource | TTriggerSource[];
+  userPoolId?: PreSignUpTriggerEvent['userPoolId'] | PreSignUpTriggerEvent['userPoolId'][];
+  clientId?: PreSignUpTriggerEvent['callerContext']['clientId'] | PreSignUpTriggerEvent['callerContext']['clientId'][];
   userAttributes?: Record<string, UserAttributeFilter>;
   customFilter?: (input: CognitoFilterInput<TTriggerSource>) => boolean;
 }

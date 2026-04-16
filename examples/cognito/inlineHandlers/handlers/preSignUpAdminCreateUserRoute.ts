@@ -5,8 +5,9 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const preSignUpAdminCreateUserRoute = defineRoute({
   filters: {
-    // triggerSources filter is optional since we use preSignUpAdminCreateUser()
-    triggerSources: ['PreSignUp_AdminCreateUser'],
+    // TODO: This is wrong?
+    // triggerSource filter is optional since we use preSignUpAdminCreateUser()
+    triggerSource: 'PreSignUp_AdminCreateUser',
   },
 }).handle(async ({ event }) => {
   console.log(`Admin creating user: ${event.userName}`);

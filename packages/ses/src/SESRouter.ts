@@ -66,46 +66,68 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.recipients) {
-        const hasMatchingRecipient = receipt.recipients.some((recipient) => filters.recipients?.includes(recipient));
+      if (filters.recipient) {
+        const recipients = Array.isArray(filters.recipient) ? filters.recipient : [filters.recipient];
+        const hasMatchingRecipient = receipt.recipients.some((recipient) => recipients?.includes(recipient));
         if (!hasMatchingRecipient) return false;
       }
 
-      if (filters.senders && !filters.senders.includes(mail.source)) {
-        return false;
+      if (filters.sender) {
+        const senders = Array.isArray(filters.sender) ? filters.sender : [filters.sender];
+        if (!senders.includes(mail.source)) {
+          return false;
+        }
       }
 
-      if (filters.senderDomains) {
+      if (filters.senderDomain) {
+        const senderDomains = Array.isArray(filters.senderDomain) ? filters.senderDomain : [filters.senderDomain];
         const senderDomain = extractDomain(mail.source);
-        if (!filters.senderDomains.includes(senderDomain)) return false;
+        if (!senderDomains.includes(senderDomain)) return false;
       }
 
-      if (filters.recipientDomains) {
+      if (filters.recipientDomain) {
+        const { recipientDomain: filterRecipientDomain } = filters;
+        const recipientDomains = Array.isArray(filterRecipientDomain) ? filterRecipientDomain : [filterRecipientDomain];
         const hasMatchingDomain = receipt.recipients.some((recipient) => {
           const domain = extractDomain(recipient);
-          return filters.recipientDomains?.includes(domain);
+          return recipientDomains.includes(domain);
         });
         if (!hasMatchingDomain) return false;
       }
 
-      if (filters.spamVerdict && !filters.spamVerdict.includes(receipt.spamVerdict.status)) {
-        return false;
+      if (filters.spamVerdict) {
+        const spamVerdicts = Array.isArray(filters.spamVerdict) ? filters.spamVerdict : [filters.spamVerdict];
+        if (!spamVerdicts.includes(receipt.spamVerdict.status)) {
+          return false;
+        }
       }
 
-      if (filters.virusVerdict && !filters.virusVerdict.includes(receipt.virusVerdict.status)) {
-        return false;
+      if (filters.virusVerdict) {
+        const virusVerdicts = Array.isArray(filters.virusVerdict) ? filters.virusVerdict : [filters.virusVerdict];
+        if (!virusVerdicts.includes(receipt.virusVerdict.status)) {
+          return false;
+        }
       }
 
-      if (filters.spfVerdict && !filters.spfVerdict.includes(receipt.spfVerdict.status)) {
-        return false;
+      if (filters.spfVerdict) {
+        const spfVerdicts = Array.isArray(filters.spfVerdict) ? filters.spfVerdict : [filters.spfVerdict];
+        if (!spfVerdicts.includes(receipt.spfVerdict.status)) {
+          return false;
+        }
       }
 
-      if (filters.dkimVerdict && !filters.dkimVerdict.includes(receipt.dkimVerdict.status)) {
-        return false;
+      if (filters.dkimVerdict) {
+        const dkimVerdicts = Array.isArray(filters.dkimVerdict) ? filters.dkimVerdict : [filters.dkimVerdict];
+        if (!dkimVerdicts.includes(receipt.dkimVerdict.status)) {
+          return false;
+        }
       }
 
-      if (filters.dmarcVerdict && !filters.dmarcVerdict.includes(receipt.dmarcVerdict.status)) {
-        return false;
+      if (filters.dmarcVerdict) {
+        const dmarcVerdicts = Array.isArray(filters.dmarcVerdict) ? filters.dmarcVerdict : [filters.dmarcVerdict];
+        if (!dmarcVerdicts.includes(receipt.dmarcVerdict.status)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

@@ -5,9 +5,9 @@ import { BOT_ID } from '../constants.js';
 // DialogCodeHook for OrderPizza intent - validates slots before fulfillment
 export const dialogHookRoute = defineRoute({
   filters: {
-    invocationSources: ['DialogCodeHook'],
-    intentNames: ['OrderPizza'],
-    botIds: [BOT_ID],
+    invocationSource: 'DialogCodeHook',
+    intentName: 'OrderPizza',
+    botId: BOT_ID,
   },
 }).handle(async ({ intentName, slots, sessionAttributes }) => {
   console.log(`Dialog hook for ${intentName} - slots: ${JSON.stringify(slots)}`);

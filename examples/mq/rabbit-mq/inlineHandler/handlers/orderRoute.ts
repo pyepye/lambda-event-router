@@ -6,9 +6,9 @@ import { orderSchema } from '../orderSchemas.js';
 // Route with Zod schema validation on decoded message body
 export const orderRoute = defineRabbitMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    queues: ['orders-queue'],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    queue: 'orders-queue',
+    contentType: 'application/json',
   },
   bodySchema: orderSchema,
 }).handle(async ({ body }) => {
@@ -19,8 +19,8 @@ export const orderRoute = defineRabbitMQRoute({
 // Match orders from retry queues using customFilter on queue name pattern
 export const retryOrderRoute = defineRabbitMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    contentType: 'application/json',
     customFilter: ({ queue }: RabbitMQFilterInput) => {
       // Match messages from any retry/dead-letter queue
       const retrySuffix = '-retry';

@@ -4,8 +4,8 @@ import { INSTANCE_ARN } from '../constants.js';
 
 export const chatRoute = defineRoute({
   filters: {
-    channels: ['CHAT'],
-    instanceArns: [INSTANCE_ARN],
+    channel: 'CHAT',
+    instanceArn: INSTANCE_ARN,
   },
 }).handle(async ({ contactData, parameters }) => {
   const customerName = contactData.Attributes.customerName;

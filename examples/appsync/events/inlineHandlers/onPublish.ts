@@ -4,8 +4,8 @@ import { type AppSyncEventsFilterInput, defineEventsRoute } from '@lambda-event-
 // Can transform, validate, or reject events before they reach subscribers.
 export const onPublishRoute = defineEventsRoute({
   filters: {
-    operations: ['PUBLISH'],
-    channelNamespaces: ['/default/*'],
+    operation: 'PUBLISH',
+    channelNamespace: '/default/*',
   },
 }).handle(async (request) => {
   const { channel, events } = request;
@@ -24,8 +24,8 @@ export const onPublishRoute = defineEventsRoute({
 // Match publish events containing message-type payloads - filters on event data, not channel path
 export const messageEventPublishRoute = defineEventsRoute({
   filters: {
-    operations: ['PUBLISH'],
-    channelNamespaces: ['/default/chat/*'],
+    operation: 'PUBLISH',
+    channelNamespace: '/default/chat/*',
     customFilter: ({ event }: AppSyncEventsFilterInput) => {
       return Object.keys(event.stash ?? {}).length > 1;
     },

@@ -5,8 +5,8 @@ import { BROKER_ARN } from '../constants.js';
 // Route filtered by content type from basicProperties
 export const contentTypeRoute = defineRabbitMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    contentType: 'application/json',
   },
 }).handle(async ({ message, queue }) => {
   console.log(`JSON message from ${queue}: ${message.data}`);

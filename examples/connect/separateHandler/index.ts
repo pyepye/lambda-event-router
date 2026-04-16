@@ -20,17 +20,17 @@ const connectRouter = createConnectRouter();
 // Using .route() with inline filter objects
 connectRouter.route({
   filters: {
-    channels: ['VOICE'],
-    initiationMethods: ['INBOUND'],
-    instanceArns: [INSTANCE_ARN],
+    channel: 'VOICE',
+    initiationMethod: 'INBOUND',
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleVoiceCall,
 });
 
 connectRouter.route({
   filters: {
-    channels: ['CHAT'],
-    instanceArns: [INSTANCE_ARN],
+    channel: 'CHAT',
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleChatMessage,
 });
@@ -38,21 +38,21 @@ connectRouter.route({
 // Using convenience methods for channels
 connectRouter.voice({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleVoiceCall,
 });
 
 connectRouter.chat({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleChatMessage,
 });
 
 connectRouter.email({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleEmailMessage,
 });
@@ -60,35 +60,35 @@ connectRouter.email({
 // Using convenience methods for initiation methods
 connectRouter.inbound({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleInboundCall,
 });
 
 connectRouter.outbound({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleOutboundCall,
 });
 
 connectRouter.transfer({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleTransferCall,
 });
 
 connectRouter.callback({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleCallbackCall,
 });
 
 connectRouter.api({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
   handler: handleApiCall,
 });
@@ -100,7 +100,7 @@ function isVipCaller({ event }: ConnectFilterInput): boolean {
 
 connectRouter.voice({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
     customFilter: isVipCaller,
   },
   handler: handleVoiceCall,

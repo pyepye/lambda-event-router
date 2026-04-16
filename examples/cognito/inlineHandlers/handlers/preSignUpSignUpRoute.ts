@@ -7,13 +7,13 @@ const userAttributesSchema = z.object({
 });
 
 // Using the individual trigger source method pattern
-// This route only handles PreSignUp_SignUp - no need for triggerSources filter
+// This route only handles PreSignUp_SignUp - no need for triggerSource filter
 // Handlers modify the cloned event and return it
 export const preSignUpSignUpRoute = defineRoute({
   filters: {
-    // triggerSources filter is optional here since we use preSignUpSignUp()
+    // triggerSource filter is optional here since we use preSignUpSignUp()
     // which only accepts 'PreSignUp_SignUp'
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     userAttributes: {
       email: /@(company\.com|partner\.org)$/,
     },

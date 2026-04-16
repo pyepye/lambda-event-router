@@ -51,7 +51,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   voice(definition: ConnectChannelRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, channels: ['VOICE'] },
+      filters: { ...definition.filters, channel: 'VOICE' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -59,7 +59,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   chat(definition: ConnectChannelRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, channels: ['CHAT'] },
+      filters: { ...definition.filters, channel: 'CHAT' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -67,7 +67,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   email(definition: ConnectChannelRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, channels: ['EMAIL'] },
+      filters: { ...definition.filters, channel: 'EMAIL' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -75,7 +75,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   inbound(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, initiationMethods: ['INBOUND'] },
+      filters: { ...definition.filters, initiationMethod: 'INBOUND' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -83,7 +83,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   outbound(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, initiationMethods: ['OUTBOUND'] },
+      filters: { ...definition.filters, initiationMethod: 'OUTBOUND' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -91,7 +91,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   transfer(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, initiationMethods: ['TRANSFER'] },
+      filters: { ...definition.filters, initiationMethod: 'TRANSFER' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -99,7 +99,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   callback(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, initiationMethods: ['CALLBACK'] },
+      filters: { ...definition.filters, initiationMethod: 'CALLBACK' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -107,7 +107,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
 
   api(definition: ConnectInitiationMethodRouteDefinition): this {
     return this.route({
-      filters: { ...definition.filters, initiationMethods: ['API'] },
+      filters: { ...definition.filters, initiationMethod: 'API' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -135,16 +135,26 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.channels && !filters.channels.includes(contactData.Channel)) {
-        return false;
+      if (filters.channel) {
+        const channels = Array.isArray(filters.channel) ? filters.channel : [filters.channel];
+        if (!channels.includes(contactData.Channel)) {
+          return false;
+        }
       }
 
-      if (filters.initiationMethods && !filters.initiationMethods.includes(contactData.InitiationMethod)) {
-        return false;
+      if (filters.initiationMethod) {
+        const { initiationMethod: filterMethod } = filters;
+        const initiationMethods = Array.isArray(filterMethod) ? filterMethod : [filterMethod];
+        if (!initiationMethods.includes(contactData.InitiationMethod)) {
+          return false;
+        }
       }
 
-      if (filters.instanceArns && !filters.instanceArns.includes(contactData.InstanceARN)) {
-        return false;
+      if (filters.instanceArn) {
+        const instanceArns = Array.isArray(filters.instanceArn) ? filters.instanceArn : [filters.instanceArn];
+        if (!instanceArns.includes(contactData.InstanceARN)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

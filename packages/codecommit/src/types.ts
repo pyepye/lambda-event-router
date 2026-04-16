@@ -56,12 +56,12 @@ export interface CodeCommitFilterInput {
 }
 
 export interface CodeCommitFilters {
-  eventSourceArns?: string[];
-  repositoryNames?: string[];
-  branches?: string[];
-  branchPrefixes?: string[];
-  branchSuffixes?: string[];
-  branchIncludes?: string[];
+  eventSourceArn?: string | string[];
+  repositoryName?: string | string[];
+  branch?: string | string[];
+  branchPrefix?: string | string[];
+  branchSuffix?: string | string[];
+  branchIncludes?: string | string[];
   customFilter?: (input: CodeCommitFilterInput) => boolean;
 }
 

@@ -20,8 +20,8 @@ const cloudWatchLogsRouter = createCloudWatchLogsRouter();
 // Exact log group name match
 cloudWatchLogsRouter.route({
   filters: {
-    logGroups: ['/aws/lambda/my-api-handler'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroup: '/aws/lambda/my-api-handler',
+    messageType: 'DATA_MESSAGE',
   },
   handler: handleLambdaLogs,
 });
@@ -29,8 +29,8 @@ cloudWatchLogsRouter.route({
 // Log group prefix match - all Lambda function logs
 cloudWatchLogsRouter.route({
   filters: {
-    logGroupPrefixes: ['/aws/lambda/'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroupPrefix: '/aws/lambda/',
+    messageType: 'DATA_MESSAGE',
   },
   handler: handleLambdaLogs,
 });
@@ -38,7 +38,7 @@ cloudWatchLogsRouter.route({
 // Log group suffix match - API Gateway logs
 cloudWatchLogsRouter.route({
   filters: {
-    logGroupSuffixes: ['/access-logs', '/execution-logs'],
+    logGroupSuffix: ['/access-logs', '/execution-logs'],
   },
   handler: handleApiGatewayLogs,
 });
@@ -58,7 +58,7 @@ cloudWatchLogsRouter.route({
 // Match by subscription filter name
 cloudWatchLogsRouter.route({
   filters: {
-    subscriptionFilters: ['error-alerts', 'critical-alerts'],
+    subscriptionFilter: ['error-alerts', 'critical-alerts'],
   },
   handler: handleAlertLogs,
 });
@@ -70,7 +70,7 @@ cloudWatchLogsRouter.route({
 // .dataMessage() is equivalent to .route() with messageTypes: ['DATA_MESSAGE']
 cloudWatchLogsRouter.dataMessage({
   filters: {
-    logGroupPrefixes: ['/aws/lambda/prod-'],
+    logGroupPrefix: '/aws/lambda/prod-',
   },
   handler: handleLambdaLogs,
 });
@@ -78,7 +78,7 @@ cloudWatchLogsRouter.dataMessage({
 // .controlMessage() is equivalent to .route() with messageTypes: ['CONTROL_MESSAGE']
 cloudWatchLogsRouter.controlMessage({
   filters: {
-    logGroupPrefixes: ['/aws/lambda/'],
+    logGroupPrefix: '/aws/lambda/',
   },
   handler: handleControlMessage,
 });

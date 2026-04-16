@@ -22,9 +22,9 @@ export interface KafkaFilterInput {
 }
 
 export interface KafkaFilters {
-  topics?: string[];
-  eventSourceArns?: string[];
-  bootstrapServers?: string[];
+  topic?: string | string[];
+  eventSourceArn?: string | string[];
+  bootstrapServer?: string | string[];
   customFilter?: (input: KafkaFilterInput) => boolean;
 }
 

@@ -5,8 +5,8 @@ import { STREAM_ARN } from '../constants.js';
 // INSERT only - newImage is guaranteed, oldImage is undefined
 export const insertRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'INSERT',
+    eventSourceArn: STREAM_ARN,
   },
 }).handle(async ({ newImage, keys }) => {
   const { pk, sk } = keys;
@@ -16,8 +16,8 @@ export const insertRoute = defineRoute({
 // Match inserts where the new record has a PENDING status - filters on record data, not source ARN
 export const pendingStatusInsertRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'INSERT',
+    eventSourceArn: STREAM_ARN,
     customFilter: ({ record }: DynamoDBFilterInput) => {
       const statusAttribute = record.dynamodb?.NewImage?.status;
       return statusAttribute?.S === 'PENDING';

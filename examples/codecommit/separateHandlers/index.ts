@@ -22,8 +22,8 @@ const REPO_NAME = 'my-repo';
 // Filter by full eventSourceArn
 codeCommitRouter.route({
   filters: {
-    eventSourceArns: [REPO_ARN],
-    branches: ['main'],
+    eventSourceArn: REPO_ARN,
+    branch: 'main',
   },
   handler: processMainPush,
 });
@@ -31,8 +31,8 @@ codeCommitRouter.route({
 // Filter by repository name (extracted from the last segment of the ARN)
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branches: ['main'],
+    repositoryName: REPO_NAME,
+    branch: 'main',
   },
   handler: processMainPush,
 });
@@ -44,8 +44,8 @@ codeCommitRouter.route({
 // Exact branch name match
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branches: ['main', 'develop'],
+    repositoryName: REPO_NAME,
+    branch: ['main', 'develop'],
   },
   handler: processMainPush,
 });
@@ -53,8 +53,8 @@ codeCommitRouter.route({
 // Branch prefix match
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branchPrefixes: ['feature/'],
+    repositoryName: REPO_NAME,
+    branchPrefix: 'feature/',
   },
   handler: processFeaturePush,
 });
@@ -62,8 +62,8 @@ codeCommitRouter.route({
 // Branch suffix match
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branchSuffixes: ['-hotfix'],
+    repositoryName: REPO_NAME,
+    branchSuffix: '-hotfix',
   },
   handler: processMainPush,
 });
@@ -71,8 +71,8 @@ codeCommitRouter.route({
 // Branch includes (substring match)
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branchIncludes: ['release'],
+    repositoryName: REPO_NAME,
+    branchIncludes: 'release',
   },
   handler: processMainPush,
 });
@@ -85,8 +85,8 @@ codeCommitRouter.route({
 // (references where created and deleted are both falsy)
 codeCommitRouter.push({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branches: ['main', 'develop'],
+    repositoryName: REPO_NAME,
+    branch: ['main', 'develop'],
   },
   handler: processMainPush,
 });
@@ -94,7 +94,7 @@ codeCommitRouter.push({
 // .branchCreated() matches events with created references
 codeCommitRouter.branchCreated({
   filters: {
-    repositoryNames: [REPO_NAME],
+    repositoryName: REPO_NAME,
   },
   handler: processBranchCreated,
 });
@@ -102,7 +102,7 @@ codeCommitRouter.branchCreated({
 // .branchDeleted() matches events with deleted references
 codeCommitRouter.branchDeleted({
   filters: {
-    repositoryNames: [REPO_NAME],
+    repositoryName: REPO_NAME,
   },
   handler: processBranchDeleted,
 });
@@ -119,7 +119,7 @@ function isMainBranchBySpecificUser({ userIdentityARN, references }: CodeCommitF
 
 codeCommitRouter.route({
   filters: {
-    repositoryNames: [REPO_NAME],
+    repositoryName: REPO_NAME,
     customFilter: isMainBranchBySpecificUser,
   },
   handler: processMainPush,

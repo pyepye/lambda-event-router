@@ -71,7 +71,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       const filters = {
         topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'],
-        messageAttributes: { eventType: ['order.created'] },
+        messageAttributes: { eventType: 'order.created' },
       };
 
       const definition = defineRoute({
@@ -104,7 +104,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async () => {}),
       );
 
@@ -115,11 +115,12 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by topicArn with a single string value', ({ snsRecord }) => {
+    test('matches route by topicArn array', ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const topicArn2 = 'arn:aws:sns:eu-west-2:987654321098:other-topic';
       router.route(
         defineRoute({
-          filters: { topicArn },
+          filters: { topicArn: [topicArn, topicArn2] },
         }).handle(async () => {}),
       );
 
@@ -147,7 +148,7 @@ suite('SNSRouter', () => {
     test('matches route by subject', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subject: ['Order Notification'] },
+          filters: { subject: 'Order Notification' },
         }).handle(async () => {}),
       );
 
@@ -158,10 +159,10 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by subject with a single string value', ({ snsRecord }) => {
+    test('matches route by subject array', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subject: 'Order Notification' },
+          filters: { subject: ['Order Notification', 'Refund Notification'] },
         }).handle(async () => {}),
       );
 
@@ -189,7 +190,7 @@ suite('SNSRouter', () => {
     test('does not match when subject is undefined and subject filter is set', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { subject: ['Order Notification'] },
+          filters: { subject: 'Order Notification' },
         }).handle(async () => {}),
       );
 
@@ -203,7 +204,7 @@ suite('SNSRouter', () => {
     test('matches route by messageAttributes', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(async () => {}),
       );
 
@@ -215,10 +216,10 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by messageAttributes with a single string value', ({ snsRecord }) => {
+    test('matches route by messageAttributes array', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: 'order.created' } },
+          filters: { messageAttributes: { eventType: ['order.created', 'order.refunded'] } },
         }).handle(async () => {}),
       );
 
@@ -248,7 +249,7 @@ suite('SNSRouter', () => {
     test('does not match when messageAttribute key is missing', ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created'] } },
+          filters: { messageAttributes: { eventType: 'order.created' } },
         }).handle(async () => {}),
       );
 
@@ -260,28 +261,13 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when messageAttribute value is one of multiple allowed values', ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { eventType: ['order.created', 'order.updated'] } },
-        }).handle(async () => {}),
-      );
-
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.updated' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
-      // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
-
-      expect(result).toBeDefined();
-    });
-
     test('matches when all messageAttribute filter keys match', ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
             messageAttributes: {
-              eventType: ['order.created'],
-              source: ['checkout-service'],
+              eventType: 'order.created',
+              source: 'checkout-service',
             },
           },
         }).handle(async () => {}),
@@ -303,8 +289,8 @@ suite('SNSRouter', () => {
         defineRoute({
           filters: {
             messageAttributes: {
-              eventType: ['order.created'],
-              source: ['checkout-service'],
+              eventType: 'order.created',
+              source: 'checkout-service',
             },
           },
         }).handle(async () => {}),
@@ -326,8 +312,8 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArn: [topicArn],
-            subject: ['Order Notification'],
+            topicArn,
+            subject: 'Order Notification',
           },
         }).handle(async () => {}),
       );
@@ -344,7 +330,7 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArn: [topicArn],
+            topicArn,
             subject: ['Shipping Update'],
           },
         }).handle(async () => {}),
@@ -362,7 +348,7 @@ suite('SNSRouter', () => {
         defineRoute({
           filters: {
             topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
-            subject: ['Order Notification'],
+            subject: 'Order Notification',
           },
         }).handle(async () => {}),
       );
@@ -381,9 +367,9 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArn: [topicArn],
-            subject: ['Order Notification'],
-            messageAttributes: { eventType: ['order.created'] },
+            topicArn,
+            subject: 'Order Notification',
+            messageAttributes: { eventType: 'order.created' },
           },
         }).handle(async () => {}),
       );
@@ -403,8 +389,8 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArn: [topicArn],
-            subject: ['Order Notification'],
+            topicArn,
+            subject: 'Order Notification',
             messageAttributes: { eventType: ['order.shipped'] },
           },
         }).handle(async () => {}),
@@ -445,7 +431,7 @@ suite('SNSRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            topicArn: [topicArn],
+            topicArn,
             customFilter,
           },
         }).handle(async () => {}),
@@ -557,7 +543,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
 
       const definition = defineRoute({
-        filters: { topicArn: [topicArn] },
+        filters: { topicArn },
       }).handle(handler);
       router.route(definition);
 
@@ -587,7 +573,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async () => {}),
       );
 
@@ -607,7 +593,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async () => {
           throw new Error('handler exploded');
         }),
@@ -622,7 +608,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(handler),
       );
 
@@ -642,7 +628,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(handler),
       );
 
@@ -658,7 +644,7 @@ suite('SNSRouter', () => {
       const callOrder: string[] = [];
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async (request) => {
           const messageId = request.record.Sns.MessageId;
           callOrder.push(`start-${messageId}`);
@@ -689,7 +675,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async () => {}),
       );
 
@@ -708,7 +694,7 @@ suite('SNSRouter', () => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async () => {
           throw new Error('processing failed');
         }),
@@ -734,7 +720,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(async (request) => {
           if (request.record.Sns.MessageId === failingRecord.Sns.MessageId) {
             throw new Error('processing failed');
@@ -758,7 +744,7 @@ suite('SNSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -779,7 +765,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
           bodySchema,
         }).handle(handler),
       );
@@ -807,7 +793,7 @@ suite('SNSRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
           bodySchema,
         }).handle(async () => {}),
       );
@@ -829,7 +815,7 @@ suite('SNSRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
           messageAttributesSchema,
         }).handle(handler),
       );
@@ -863,7 +849,7 @@ suite('SNSRouter', () => {
       const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
           messageAttributesSchema,
         }).handle(async () => {}),
       );
@@ -887,7 +873,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(handler),
       );
 
@@ -904,7 +890,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(handler),
       );
 
@@ -921,7 +907,7 @@ suite('SNSRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { topicArn: [topicArn] },
+          filters: { topicArn },
         }).handle(handler),
       );
 
@@ -970,7 +956,7 @@ suite('SNSRouter', () => {
 
       const orderRoute = defineRoute({
         filters: {
-          messageAttributes: { eventType: ['order.created'] },
+          messageAttributes: { eventType: 'order.created' },
         },
       }).handle(async (request) => {
         receivedCreateRequests.push(request);

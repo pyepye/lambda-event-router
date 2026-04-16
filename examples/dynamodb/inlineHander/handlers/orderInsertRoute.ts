@@ -6,8 +6,8 @@ import { newOrderSchema } from '../orderSchemas.js';
 // INSERT with only newImageSchema - oldImage is undefined for INSERT
 export const orderInsertRoute = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: [STREAM_ARN],
+    eventName: 'INSERT',
+    eventSourceArn: STREAM_ARN,
   },
   newImageSchema: newOrderSchema,
 }).handle(async ({ newImage }) => {

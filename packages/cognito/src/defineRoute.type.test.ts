@@ -35,7 +35,7 @@ suite('defineRoute type inference', () => {
   suite('trigger source narrowing', () => {
     test('narrows handler request to PreSignUpRequest for PreSignUp trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: ['PreSignUp_SignUp'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -48,7 +48,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to PreAuthenticationRequest for PreAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreAuthentication_Authentication'] },
+        filters: { triggerSource: ['PreAuthentication_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -61,7 +61,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to PostAuthenticationRequest for PostAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostAuthentication_Authentication'] },
+        filters: { triggerSource: ['PostAuthentication_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -74,7 +74,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to PostConfirmationRequest for PostConfirmation trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostConfirmation_ConfirmSignUp'] },
+        filters: { triggerSource: ['PostConfirmation_ConfirmSignUp'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -87,7 +87,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to DefineAuthChallengeRequest for DefineAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['DefineAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['DefineAuthChallenge_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -100,7 +100,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to CreateAuthChallengeRequest for CreateAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CreateAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['CreateAuthChallenge_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -113,7 +113,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to VerifyAuthChallengeResponseRequest for VerifyAuthChallengeResponse trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['VerifyAuthChallengeResponse_Authentication'] },
+        filters: { triggerSource: ['VerifyAuthChallengeResponse_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -126,7 +126,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to CustomMessageRequest for CustomMessage trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomMessage_SignUp'] },
+        filters: { triggerSource: ['CustomMessage_SignUp'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -139,7 +139,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to CustomEmailSenderRequest for CustomEmailSender trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomEmailSender_SignUp'] },
+        filters: { triggerSource: ['CustomEmailSender_SignUp'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -152,7 +152,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to PreTokenGenerationRequest for PreTokenGeneration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['TokenGeneration_HostedAuth'] },
+        filters: { triggerSource: ['TokenGeneration_HostedAuth'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -165,7 +165,7 @@ suite('defineRoute type inference', () => {
 
     test('narrows handler request to UserMigrationRequest for UserMigration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['UserMigration_Authentication'] },
+        filters: { triggerSource: ['UserMigration_Authentication'] },
       });
 
       type Handler = Parameters<typeof builder.handle>[0];
@@ -180,7 +180,7 @@ suite('defineRoute type inference', () => {
   suite('RouteBuilder return type', () => {
     test('returns RouteBuilder narrowed to PreSignUp trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: ['PreSignUp_SignUp'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'PreSignUp_SignUp', UserAttributes>>();
@@ -188,7 +188,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to PreAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreAuthentication_Authentication'] },
+        filters: { triggerSource: ['PreAuthentication_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'PreAuthentication_Authentication', UserAttributes>>();
@@ -196,7 +196,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to PostAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostAuthentication_Authentication'] },
+        filters: { triggerSource: ['PostAuthentication_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'PostAuthentication_Authentication', UserAttributes>>();
@@ -204,7 +204,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to PostConfirmation trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostConfirmation_ConfirmSignUp'] },
+        filters: { triggerSource: ['PostConfirmation_ConfirmSignUp'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'PostConfirmation_ConfirmSignUp', UserAttributes>>();
@@ -212,7 +212,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to DefineAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['DefineAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['DefineAuthChallenge_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'DefineAuthChallenge_Authentication', UserAttributes>>();
@@ -220,7 +220,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to CreateAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CreateAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['CreateAuthChallenge_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'CreateAuthChallenge_Authentication', UserAttributes>>();
@@ -228,7 +228,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to VerifyAuthChallengeResponse trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['VerifyAuthChallengeResponse_Authentication'] },
+        filters: { triggerSource: ['VerifyAuthChallengeResponse_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'VerifyAuthChallengeResponse_Authentication', UserAttributes>>();
@@ -236,7 +236,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to CustomMessage trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomMessage_SignUp'] },
+        filters: { triggerSource: ['CustomMessage_SignUp'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'CustomMessage_SignUp', UserAttributes>>();
@@ -244,7 +244,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to CustomEmailSender trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomEmailSender_SignUp'] },
+        filters: { triggerSource: ['CustomEmailSender_SignUp'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'CustomEmailSender_SignUp', UserAttributes>>();
@@ -252,7 +252,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to PreTokenGeneration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['TokenGeneration_HostedAuth'] },
+        filters: { triggerSource: ['TokenGeneration_HostedAuth'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'TokenGeneration_HostedAuth', UserAttributes>>();
@@ -260,7 +260,7 @@ suite('defineRoute type inference', () => {
 
     test('returns RouteBuilder narrowed to UserMigration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['UserMigration_Authentication'] },
+        filters: { triggerSource: ['UserMigration_Authentication'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'UserMigration_Authentication', UserAttributes>>();
@@ -270,7 +270,7 @@ suite('defineRoute type inference', () => {
   suite('handle() return type', () => {
     test('returns TypedRouteDefinition narrowed to PreSignUp trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: ['PreSignUp_SignUp'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -279,7 +279,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to PreAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreAuthentication_Authentication'] },
+        filters: { triggerSource: ['PreAuthentication_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -290,7 +290,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to PostAuthentication trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostAuthentication_Authentication'] },
+        filters: { triggerSource: ['PostAuthentication_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -301,7 +301,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to PostConfirmation trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PostConfirmation_ConfirmSignUp'] },
+        filters: { triggerSource: ['PostConfirmation_ConfirmSignUp'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -312,7 +312,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to DefineAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['DefineAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['DefineAuthChallenge_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -323,7 +323,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to CreateAuthChallenge trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CreateAuthChallenge_Authentication'] },
+        filters: { triggerSource: ['CreateAuthChallenge_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -334,7 +334,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to VerifyAuthChallengeResponse trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['VerifyAuthChallengeResponse_Authentication'] },
+        filters: { triggerSource: ['VerifyAuthChallengeResponse_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -345,7 +345,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to CustomMessage trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomMessage_SignUp'] },
+        filters: { triggerSource: ['CustomMessage_SignUp'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -354,7 +354,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to CustomEmailSender trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['CustomEmailSender_SignUp'] },
+        filters: { triggerSource: ['CustomEmailSender_SignUp'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -363,7 +363,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to PreTokenGeneration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['TokenGeneration_HostedAuth'] },
+        filters: { triggerSource: ['TokenGeneration_HostedAuth'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -372,7 +372,7 @@ suite('defineRoute type inference', () => {
 
     test('returns TypedRouteDefinition narrowed to UserMigration trigger', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['UserMigration_Authentication'] },
+        filters: { triggerSource: ['UserMigration_Authentication'] },
       });
 
       type HandleReturn = ReturnType<typeof builder.handle>;
@@ -385,7 +385,7 @@ suite('defineRoute type inference', () => {
   suite('multiple trigger sources', () => {
     test('narrows to union when multiple trigger sources from same family', () => {
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp', 'PreSignUp_AdminCreateUser'] },
+        filters: { triggerSource: ['PreSignUp_SignUp', 'PreSignUp_AdminCreateUser'] },
       });
 
       expectTypeOf(builder).toEqualTypeOf<
@@ -401,7 +401,7 @@ suite('defineRoute type inference', () => {
     });
   });
 
-  suite('defineRoute with no triggerSources', () => {
+  suite('defineRoute with no triggerSource', () => {
     test('infers broadest union when no filters provided', () => {
       const builder = defineRoute({});
 
@@ -416,7 +416,7 @@ suite('defineRoute type inference', () => {
       const mockSchema = createMockSchema<CustomAttributes>();
 
       const builder = defineRoute({
-        filters: { triggerSources: ['PreSignUp_SignUp'] },
+        filters: { triggerSource: ['PreSignUp_SignUp'] },
         userAttributesSchema: mockSchema,
       });
 

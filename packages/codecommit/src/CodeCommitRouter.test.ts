@@ -53,7 +53,7 @@ suite('CodeCommitRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:my-repo'] },
+        filters: { eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:my-repo' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -63,8 +63,8 @@ suite('CodeCommitRouter', () => {
     test('preserves filters and handler in the definition', () => {
       const handler = vi.fn();
       const filters = {
-        eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:my-repo'],
-        branches: ['main'],
+        eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
+        branch: 'main',
       };
 
       const definition = defineRoute({ filters }).handle(handler);
@@ -245,11 +245,11 @@ suite('CodeCommitRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArns', ({ codeCommitRecord }) => {
+    test('matches route by eventSourceArn', ({ codeCommitRecord }) => {
       const eventSourceArn = 'arn:aws:codecommit:us-east-1:123456789012:my-repo';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(async () => {}),
       );
 
@@ -262,10 +262,28 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArns does not match', ({ codeCommitRecord }) => {
+    test('matches route by eventSourceArn array', ({ codeCommitRecord }) => {
+      const eventSourceArn = 'arn:aws:codecommit:us-east-1:123456789012:my-repo';
+      const eventSourceArn2 = 'arn:aws:codecommit:us-east-1:123456789012:other-repo';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:other-repo'] },
+          filters: { eventSourceArn: [eventSourceArn, eventSourceArn2] },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventSourceArn does not match', ({ codeCommitRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:other-repo' },
         }).handle(async () => {}),
       );
 
@@ -278,10 +296,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by repositoryNames', ({ codeCommitRecord }) => {
+    test('matches route by repositoryName', ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
-          filters: { repositoryNames: ['my-repo'] },
+          filters: { repositoryName: 'my-repo' },
         }).handle(async () => {}),
       );
 
@@ -294,10 +312,26 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when repositoryNames does not match', ({ codeCommitRecord }) => {
+    test('matches route by repositoryName array', ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
-          filters: { repositoryNames: ['other-repo'] },
+          filters: { repositoryName: ['my-repo', 'other-repo'] },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({ eventSourceARN: 'arn:aws:codecommit:us-east-1:123456789012:my-repo' });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when repositoryName does not match', ({ codeCommitRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { repositoryName: 'other-repo' },
         }).handle(async () => {}),
       );
 
@@ -310,10 +344,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by branches', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branch', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branches: ['main'] },
+          filters: { branch: 'main' },
         }).handle(async () => {}),
       );
 
@@ -328,10 +362,28 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when branches does not match', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branch array', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branches: ['develop'] },
+          filters: { branch: ['main', 'other'] },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({
+        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/main' })] },
+      });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when branch does not match', ({ codeCommitRecord, codeCommitReference }) => {
+      router.route(
+        defineRoute({
+          filters: { branch: 'develop' },
         }).handle(async () => {}),
       );
 
@@ -346,10 +398,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by branchPrefixes', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branchPrefix', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchPrefixes: ['feature/'] },
+          filters: { branchPrefix: 'feature/' },
         }).handle(async () => {}),
       );
 
@@ -364,10 +416,28 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when branchPrefixes does not match', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branchPrefix array', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchPrefixes: ['feature/'] },
+          filters: { branchPrefix: ['main', 'feature/'] },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({
+        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/feature/new-thing' })] },
+      });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when branchPrefix does not match', ({ codeCommitRecord, codeCommitReference }) => {
+      router.route(
+        defineRoute({
+          filters: { branchPrefix: 'feature/' },
         }).handle(async () => {}),
       );
 
@@ -382,10 +452,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by branchSuffixes', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branchSuffix', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchSuffixes: ['-release'] },
+          filters: { branchSuffix: '-release' },
         }).handle(async () => {}),
       );
 
@@ -400,10 +470,28 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when branchSuffixes does not match', ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branchSuffix array', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchSuffixes: ['-release'] },
+          filters: { branchSuffix: ['-release', '-hotfix'] },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({
+        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/v2-release' })] },
+      });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when branchSuffix does not match', ({ codeCommitRecord, codeCommitReference }) => {
+      router.route(
+        defineRoute({
+          filters: { branchSuffix: '-release' },
         }).handle(async () => {}),
       );
 
@@ -421,7 +509,25 @@ suite('CodeCommitRouter', () => {
     test('matches route by branchIncludes', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchIncludes: ['deploy'] },
+          filters: { branchIncludes: 'deploy' },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({
+        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/auto-deploy-prod' })] },
+      });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(route, record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by branchIncludes array', ({ codeCommitRecord, codeCommitReference }) => {
+      router.route(
+        defineRoute({
+          filters: { branchIncludes: ['deploy', 'hotfix'] },
         }).handle(async () => {}),
       );
 
@@ -439,7 +545,7 @@ suite('CodeCommitRouter', () => {
     test('does not match route when branchIncludes does not match', ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchIncludes: ['deploy'] },
+          filters: { branchIncludes: 'deploy' },
         }).handle(async () => {}),
       );
 
@@ -541,7 +647,7 @@ suite('CodeCommitRouter', () => {
     }) => {
       router.push(
         defineRoute({
-          filters: { branches: ['main'] },
+          filters: { branch: 'main' },
         }).handle(async () => {}),
       );
 
@@ -614,7 +720,7 @@ suite('CodeCommitRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:other-repo'],
+            eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:other-repo',
             customFilter,
           },
         }).handle(async () => {}),
@@ -634,8 +740,8 @@ suite('CodeCommitRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            branches: ['main'],
+            eventSourceArn: eventSourceArn,
+            branch: 'main',
           },
         }).handle(async () => {}),
       );
@@ -660,8 +766,8 @@ suite('CodeCommitRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            eventSourceArns: [eventSourceArn],
-            branches: ['develop'],
+            eventSourceArn: eventSourceArn,
+            branch: 'develop',
           },
         }).handle(async () => {}),
       );
@@ -684,7 +790,7 @@ suite('CodeCommitRouter', () => {
     }) => {
       router.route(
         defineRoute({
-          filters: { branches: ['feature/deep/nested'] },
+          filters: { branch: 'feature/deep/nested' },
         }).handle(async () => {}),
       );
 
@@ -741,7 +847,7 @@ suite('CodeCommitRouter', () => {
       const handlerB = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:other-repo'] },
+          filters: { eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:other-repo' },
         }).handle(handlerA),
       );
       router.route(defineRoute({ filters: {} }).handle(handlerB));
@@ -758,7 +864,7 @@ suite('CodeCommitRouter', () => {
     test('returns empty array when no routes match', ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:codecommit:us-east-1:123456789012:other-repo'] },
+          filters: { eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:other-repo' },
         }).handle(async () => {}),
       );
 
@@ -954,7 +1060,7 @@ suite('CodeCommitRouter', () => {
       const eventSourceArn = 'arn:aws:codecommit:us-east-1:123456789012:my-repo';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn: eventSourceArn },
         }).handle(handler),
       );
 
@@ -1012,12 +1118,12 @@ suite('CodeCommitRouter', () => {
       const repoBHandler = vi.fn();
       router.route(
         defineRoute({
-          filters: { repositoryNames: ['repo-a'] },
+          filters: { repositoryName: 'repo-a' },
         }).handle(repoAHandler),
       );
       router.route(
         defineRoute({
-          filters: { repositoryNames: ['repo-b'] },
+          filters: { repositoryName: 'repo-b' },
         }).handle(repoBHandler),
       );
 
@@ -1108,7 +1214,7 @@ suite('CodeCommitRouter', () => {
     }) => {
       const mainHandler = vi.fn();
       const catchAllHandler = vi.fn();
-      router.push(defineRoute({ filters: { branches: ['main'] } }).handle(mainHandler));
+      router.push(defineRoute({ filters: { branch: 'main' } }).handle(mainHandler));
       router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
 
       const mainRef = codeCommitReference({ ref: 'refs/heads/main' });

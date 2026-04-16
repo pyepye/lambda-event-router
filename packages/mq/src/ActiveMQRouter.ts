@@ -21,9 +21,9 @@ import type {
 
 export function defineActiveMQRoute<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
-  const TMessageTypes extends readonly ActiveMQMessageType[] | undefined = undefined,
+  const TMessageType extends ActiveMQMessageType | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
->(config: ActiveMQRouteInput<TBodySchema, TMessageTypes>): ActiveMQRouteBuilder<TBody, TMessageTypes> {
+>(config: ActiveMQRouteInput<TBodySchema, TMessageType>): ActiveMQRouteBuilder<TBody, TMessageType> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): ActiveMQRouteDefinition<TBody> {
@@ -58,7 +58,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
   textMessage<TBody>(definition: ActiveMQTextMessageRouteDefinition<TBody>): this {
     this.routes.push({
       ...definition,
-      filters: { ...definition.filters, messageTypes: ['jms/text-message'] },
+      filters: { ...definition.filters, messageType: 'jms/text-message' },
     } as ActiveMQInternalRoute);
     return this;
   }
@@ -66,7 +66,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
   bytesMessage<TBody>(definition: ActiveMQBytesMessageRouteDefinition<TBody>): this {
     this.routes.push({
       ...definition,
-      filters: { ...definition.filters, messageTypes: ['jms/bytes-message'] },
+      filters: { ...definition.filters, messageType: 'jms/bytes-message' },
     } as ActiveMQInternalRoute);
     return this;
   }
@@ -107,16 +107,26 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.eventSourceArns && !filters.eventSourceArns.includes(event.eventSourceArn)) {
-        return false;
+      if (filters.eventSourceArn) {
+        const { eventSourceArn: filterArn } = filters;
+        const eventSourceArns = Array.isArray(filterArn) ? filterArn : [filterArn];
+        if (!eventSourceArns.includes(event.eventSourceArn)) {
+          return false;
+        }
       }
 
-      if (filters.messageTypes && !filters.messageTypes.includes(message.messageType)) {
-        return false;
+      if (filters.messageType) {
+        const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
+        if (!messageTypes.includes(message.messageType)) {
+          return false;
+        }
       }
 
-      if (filters.destinations && !filters.destinations.includes(message.destination.physicalName)) {
-        return false;
+      if (filters.destination) {
+        const destinations = Array.isArray(filters.destination) ? filters.destination : [filters.destination];
+        if (!destinations.includes(message.destination.physicalName)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

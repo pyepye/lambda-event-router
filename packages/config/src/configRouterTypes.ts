@@ -30,10 +30,10 @@ export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Rec
   | ((request: ConfigOversizedRequest<TParams>) => Promise<void>);
 
 export interface ConfigChangeFilters {
-  configRuleNames?: string[];
-  resourceTypes?: string[];
-  configurationItemStatuses?: string[];
-  resourceIds?: string[];
+  configRuleName?: string | string[];
+  resourceType?: string | string[];
+  configurationItemStatus?: string | string[];
+  resourceId?: string | string[];
 }
 
 export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParams = Record<string, string>> {

@@ -6,9 +6,9 @@ import { orderSchema } from '../orderSchemas.js';
 // Route with Zod schema validation on decoded message body
 export const orderRoute = defineActiveMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    destinations: ['orders-queue'],
-    messageTypes: ['jms/text-message'],
+    eventSourceArn: BROKER_ARN,
+    destination: 'orders-queue',
+    messageType: 'jms/text-message',
   },
   bodySchema: orderSchema,
 }).handle(async ({ body }) => {
@@ -19,8 +19,8 @@ export const orderRoute = defineActiveMQRoute({
 // Match priority orders from specific destination pattern using customFilter
 export const priorityOrderRoute = defineActiveMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    messageTypes: ['jms/text-message'],
+    eventSourceArn: BROKER_ARN,
+    messageType: 'jms/text-message',
     customFilter: ({ destination }: ActiveMQFilterInput) => {
       // Match messages from any priority queue destination
       const priorityPrefix = 'priority-';

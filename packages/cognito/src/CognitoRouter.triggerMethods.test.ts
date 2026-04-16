@@ -9,9 +9,9 @@ beforeEach(() => {
 
 suite('CognitoRouter - trigger methods', () => {
   suite('addTriggerRoute', () => {
-    test('uses definition triggerSources when provided', ({ cognitoPreSignUpEvent }) => {
+    test('uses definition triggerSource when provided', ({ cognitoPreSignUpEvent }) => {
       router.preSignUp({
-        filters: { triggerSources: ['PreSignUp_AdminCreateUser'] },
+        filters: { triggerSource: 'PreSignUp_AdminCreateUser' },
         handler: vi.fn(),
       });
 
@@ -26,8 +26,8 @@ suite('CognitoRouter - trigger methods', () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.preSignUp({
         filters: {
-          userPoolIds: ['us-east-1_TestPool'],
-          clientIds: ['test-client-id'],
+          userPoolId: ['us-east-1_TestPool'],
+          clientId: ['test-client-id'],
           userAttributes: { email: 'test@example.com' },
           customFilter,
         },

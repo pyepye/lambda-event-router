@@ -5,8 +5,8 @@ import { REPO_NAME } from '../constants.js';
 // Match pushes to the main branch (commits pushed to an existing branch)
 export const pushRoute = defineRoute({
   filters: {
-    repositoryNames: [REPO_NAME],
-    branches: ['main'],
+    repositoryName: REPO_NAME,
+    branch: 'main',
   },
 }).handle(async ({ references, userIdentityARN, eventTriggerName }) => {
   for (const reference of references) {
@@ -18,7 +18,7 @@ export const pushRoute = defineRoute({
 // Match pushes by deploy bot to any branch using customFilter
 export const deployBotPushRoute = defineRoute({
   filters: {
-    repositoryNames: [REPO_NAME],
+    repositoryName: REPO_NAME,
     customFilter: ({ userIdentityARN }: CodeCommitFilterInput) => {
       // Match automated pushes from the deploy bot IAM role
       const deployBotIdentifier = 'deploy-bot';

@@ -12,7 +12,7 @@ const OrderValueSchema = z.object({
 
 export const orderRoute = defineRoute({
   filters: {
-    topics: [ORDERS_TOPIC],
+    topic: ORDERS_TOPIC,
   },
   valueSchema: OrderValueSchema,
 }).handle(async (request) => {

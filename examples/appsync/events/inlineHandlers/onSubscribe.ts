@@ -4,8 +4,8 @@ import { defineEventsRoute } from '@lambda-event-router/appsync';
 // Return the event to allow, or throw/reject to deny the subscription.
 export const onSubscribeRoute = defineEventsRoute({
   filters: {
-    operations: ['SUBSCRIBE'],
-    channelNamespaces: ['/default/*'],
+    operation: 'SUBSCRIBE',
+    channelNamespace: '/default/*',
   },
 }).handle(async (request) => {
   const { channel, identity } = request;

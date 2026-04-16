@@ -71,7 +71,7 @@ export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } fro
 // defineRoute function
 // =============================================================================
 
-// defineRoute function with type inference from triggerSources
+// defineRoute function with type inference from triggerSource
 // Handlers modify the cloned event and return it
 export function defineRoute<
   const TTrigger extends CognitoTriggerSource,
@@ -520,14 +520,20 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   // =============================================================================
 
   private addTriggerRoute(definition: InternalRouteInput, defaultTriggerSources: CognitoTriggerSource[]): this {
-    const triggerSources = definition.filters?.triggerSources ?? defaultTriggerSources;
+    let triggerSources = defaultTriggerSources;
+    if (definition.filters?.triggerSource) {
+      triggerSources = Array.isArray(definition.filters?.triggerSource)
+        ? definition.filters?.triggerSource
+        : [definition.filters?.triggerSource];
+    }
+
     this.routes.push({
       filters: {
-        userPoolIds: definition.filters?.userPoolIds,
-        clientIds: definition.filters?.clientIds,
+        userPoolId: definition.filters?.userPoolId,
+        clientId: definition.filters?.clientId,
         userAttributes: definition.filters?.userAttributes,
         customFilter: definition.filters?.customFilter,
-        triggerSources,
+        triggerSource: triggerSources,
       },
       userAttributesSchema: definition.userAttributesSchema,
       middleware: definition.middleware,
@@ -569,16 +575,25 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.triggerSources && !filters.triggerSources.includes(triggerSource)) {
-        return false;
+      if (filters.triggerSource) {
+        const triggerSources = Array.isArray(filters.triggerSource) ? filters.triggerSource : [filters.triggerSource];
+        if (!triggerSources.includes(triggerSource)) {
+          return false;
+        }
       }
 
-      if (filters.userPoolIds && !filters.userPoolIds.includes(event.userPoolId)) {
-        return false;
+      if (filters.userPoolId) {
+        const userPoolIds = Array.isArray(filters.userPoolId) ? filters.userPoolId : [filters.userPoolId];
+        if (!userPoolIds.includes(event.userPoolId)) {
+          return false;
+        }
       }
 
-      if (filters.clientIds && !filters.clientIds.includes(event.callerContext.clientId)) {
-        return false;
+      if (filters.clientId) {
+        const clientIds = Array.isArray(filters.clientId) ? filters.clientId : [filters.clientId];
+        if (!clientIds.includes(event.callerContext.clientId)) {
+          return false;
+        }
       }
 
       if (filters.userAttributes && userAttributes) {

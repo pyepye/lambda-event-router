@@ -11,7 +11,7 @@ const userAttributesSchema = z.object({
 // Handlers modify the cloned event and return it
 export const preSignUpRoute = defineRoute({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     // Only match users from allowed domains
     userAttributes: {
       email: /@(company\.com|partner\.org)$/,

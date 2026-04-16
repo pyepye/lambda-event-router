@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const userMigrationRoute = defineRoute({
   filters: {
-    triggerSources: ['UserMigration_Authentication'],
+    triggerSource: 'UserMigration_Authentication',
   },
 }).handle(async ({ event }) => {
   console.log(`User migration: ${event.userName}`);

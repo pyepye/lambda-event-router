@@ -4,8 +4,8 @@ import { defineRoute } from '@lambda-event-router/appsync';
 // Uses stash and prev to coordinate with other resolvers in the pipeline.
 export const updateUserRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Mutation'],
-    fieldNames: ['updateUser'],
+    parentTypeName: 'Mutation',
+    fieldName: 'updateUser',
   },
 }).handle(async (request) => {
   const { arguments: args, stash, prev } = request;

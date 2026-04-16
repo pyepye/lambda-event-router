@@ -38,16 +38,21 @@ export interface EventBridgeDetailTypeMap {
   };
 }
 
+// Normalize bare strings to single-element tuples so LookupDetailType can
+// destructure either form uniformly
+type NormalizeToTuple<T> = T extends readonly string[] ? T : T extends string ? readonly [T] : never;
+
 // Lookup detail type from source and detailType
 // Returns unknown if not found in the map
 export type LookupDetailType<
-  TSources extends readonly string[] | undefined,
-  TDetailTypes extends readonly string[] | undefined,
-> = TSources extends readonly [infer Source extends keyof EventBridgeDetailTypeMap]
-  ? TDetailTypes extends readonly [infer DetailType extends keyof EventBridgeDetailTypeMap[Source]]
-    ? EventBridgeDetailTypeMap[Source][DetailType]
-    : unknown
-  : unknown;
+  TSources extends string | readonly string[] | undefined,
+  TDetailTypes extends string | readonly string[] | undefined,
+> =
+  NormalizeToTuple<TSources> extends readonly [infer Source extends keyof EventBridgeDetailTypeMap]
+    ? NormalizeToTuple<TDetailTypes> extends readonly [infer DetailType extends keyof EventBridgeDetailTypeMap[Source]]
+      ? EventBridgeDetailTypeMap[Source][DetailType]
+      : unknown
+    : unknown;
 
 // =============================================================================
 // Event Types
@@ -90,11 +95,11 @@ export interface EventBridgeFilterInput {
 }
 
 export interface EventBridgeFilters {
-  sources?: string[];
-  detailTypes?: string[];
-  accounts?: string[];
-  regions?: string[];
-  resources?: string[];
+  source?: string | string[];
+  detailType?: string | string[];
+  account?: string | string[];
+  region?: string | string[];
+  resource?: string | string[];
   customFilter?: (input: EventBridgeFilterInput) => boolean;
 }
 

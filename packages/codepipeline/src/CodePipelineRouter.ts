@@ -149,31 +149,31 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     }
   }
 
-  private matchRoute(filterInput: CodePipelineFilterInput): InternalRoute | undefined {
+  private matchRoute(input: CodePipelineFilterInput): InternalRoute | undefined {
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.functionNames && !filters.functionNames.includes(filterInput.functionName)) {
+      if (filters.functionName) {
+        const functionNames = Array.isArray(filters.functionName) ? filters.functionName : [filters.functionName];
+        if (!functionNames.includes(input.functionName)) {
+          return false;
+        }
+      }
+
+      if (filters.hasInputArtifacts !== undefined && filters.hasInputArtifacts !== input.hasInputArtifacts) {
         return false;
       }
 
-      if (filters.hasInputArtifacts !== undefined && filters.hasInputArtifacts !== filterInput.hasInputArtifacts) {
+      if (filters.hasContinuationToken !== undefined && filters.hasContinuationToken !== input.hasContinuationToken) {
         return false;
       }
 
-      if (
-        filters.hasContinuationToken !== undefined &&
-        filters.hasContinuationToken !== filterInput.hasContinuationToken
-      ) {
-        return false;
-      }
-
-      if (filters.userParametersContains && !filterInput.userParameters.includes(filters.userParametersContains)) {
+      if (filters.userParametersContains && !input.userParameters.includes(filters.userParametersContains)) {
         return false;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(filterInput);
+        return filters.customFilter(input);
       }
 
       return true;

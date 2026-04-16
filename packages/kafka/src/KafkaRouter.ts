@@ -164,22 +164,29 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.topics && !filters.topics.includes(record.topic)) {
-        return false;
+      if (filters.topic) {
+        const topics = Array.isArray(filters.topic) ? filters.topic : [filters.topic];
+        if (!topics.includes(record.topic)) {
+          return false;
+        }
       }
 
-      if (filters.eventSourceArns) {
+      if (filters.eventSourceArn) {
         if (!this.isMSKEvent(event)) {
           return false;
         }
-        if (!filters.eventSourceArns.includes(event.eventSourceArn)) {
+        const { eventSourceArn: filterSourceArn } = filters;
+        const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
+        if (!eventSourceArns.includes(event.eventSourceArn)) {
           return false;
         }
       }
 
-      if (filters.bootstrapServers) {
+      if (filters.bootstrapServer) {
+        const { bootstrapServer: filterBootstrap } = filters;
+        const bootstrapServers = Array.isArray(filterBootstrap) ? filterBootstrap : [filterBootstrap];
         const eventServers = event.bootstrapServers.split(',');
-        const hasMatchingServer = filters.bootstrapServers.some((server) => eventServers.includes(server));
+        const hasMatchingServer = bootstrapServers.some((server) => eventServers.includes(server));
         if (!hasMatchingServer) {
           return false;
         }

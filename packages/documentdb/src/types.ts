@@ -122,23 +122,15 @@ export interface DocumentDBFilterInput {
   event: DocumentDBChangeEvent;
 }
 
-interface DocumentDBFilters {
-  operationTypes?: DocumentDBOperationType[];
-  eventSourceArns?: string[];
-  databases?: string[];
-  collections?: string[];
-  fullDocument?: DocumentDBFullDocumentOption[];
-  fullDocumentBeforeChange?: DocumentDBFullDocumentBeforeChangeOption[];
-  customFilter?: (input: DocumentDBFilterInput) => boolean;
-}
-
-// Filters without operationTypes for event-specific methods (insert, update, replace, delete)
-interface DocumentDBEventFilters {
-  eventSourceArns?: string[];
-  databases?: string[];
-  collections?: string[];
-  fullDocument?: DocumentDBFullDocumentOption[];
-  fullDocumentBeforeChange?: DocumentDBFullDocumentBeforeChangeOption[];
+export interface DocumentDBFilters {
+  operationType?: DocumentDBOperationType | readonly DocumentDBOperationType[];
+  eventSourceArn?: string | readonly string[];
+  database?: string | readonly string[];
+  collection?: string | readonly string[];
+  fullDocument?: DocumentDBFullDocumentOption | readonly DocumentDBFullDocumentOption[];
+  fullDocumentBeforeChange?:
+    | DocumentDBFullDocumentBeforeChangeOption
+    | readonly DocumentDBFullDocumentBeforeChangeOption[];
   customFilter?: (input: DocumentDBFilterInput) => boolean;
 }
 
@@ -148,7 +140,7 @@ export interface DocumentDBInsertRouteDefinition<
   TDocumentKey = Record<string, unknown>,
   TFullDocument = Record<string, unknown>,
 > {
-  filters: DocumentDBEventFilters;
+  filters: Omit<DocumentDBFilters, 'operationType'>;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   middleware?: DocumentDBMiddleware<TDocumentKey, TFullDocument>[];
@@ -160,7 +152,7 @@ export interface DocumentDBUpdateRouteDefinition<
   TFullDocument = Record<string, unknown>,
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
-  filters: DocumentDBEventFilters;
+  filters: Omit<DocumentDBFilters, 'operationType'>;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
@@ -173,7 +165,7 @@ export interface DocumentDBReplaceRouteDefinition<
   TFullDocument = Record<string, unknown>,
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
-  filters: DocumentDBEventFilters;
+  filters: Omit<DocumentDBFilters, 'operationType'>;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentSchema?: StandardSchemaV1<unknown, TFullDocument>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
@@ -185,7 +177,7 @@ export interface DocumentDBDeleteRouteDefinition<
   TDocumentKey = Record<string, unknown>,
   TFullDocumentBeforeChange = Record<string, unknown>,
 > {
-  filters: DocumentDBEventFilters;
+  filters: Omit<DocumentDBFilters, 'operationType'>;
   documentKeySchema?: StandardSchemaV1<unknown, TDocumentKey>;
   fullDocumentBeforeChangeSchema?: StandardSchemaV1<unknown, TFullDocumentBeforeChange>;
   middleware?: DocumentDBMiddleware<TDocumentKey, Record<string, unknown>, TFullDocumentBeforeChange>[];

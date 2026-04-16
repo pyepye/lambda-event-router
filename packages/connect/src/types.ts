@@ -25,9 +25,9 @@ export interface ConnectFilterInput {
 }
 
 export interface ConnectFilters {
-  channels?: ConnectChannel[];
-  initiationMethods?: ConnectInitiationMethod[];
-  instanceArns?: string[];
+  channel?: ConnectChannel | ConnectChannel[];
+  initiationMethod?: ConnectInitiationMethod | ConnectInitiationMethod[];
+  instanceArn?: string | string[];
   customFilter?: (input: ConnectFilterInput) => boolean;
 }
 

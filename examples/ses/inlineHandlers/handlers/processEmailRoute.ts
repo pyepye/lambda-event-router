@@ -3,9 +3,9 @@ import { defineRoute, type SESFilterInput } from '@lambda-event-router/ses';
 // Route matching emails to specific recipients with security verdicts
 export const inboundEmailRoute = defineRoute({
   filters: {
-    recipients: ['support@example.com', 'help@example.com'],
-    spamVerdict: ['PASS'],
-    virusVerdict: ['PASS'],
+    recipient: ['support@example.com', 'help@example.com'],
+    spamVerdict: 'PASS',
+    virusVerdict: 'PASS',
   },
 }).handle(async (request) => {
   const { source, subject, recipients } = request;
@@ -15,9 +15,9 @@ export const inboundEmailRoute = defineRoute({
 // Route matching emails from specific senders with failed SPF (e.g. forwarded mail)
 export const partnerEmailRoute = defineRoute({
   filters: {
-    senders: ['notifications@partner.com', 'alerts@partner.com'],
-    spfVerdict: ['FAIL'],
-    dkimVerdict: ['PASS'],
+    sender: ['notifications@partner.com', 'alerts@partner.com'],
+    spfVerdict: 'FAIL',
+    dkimVerdict: 'PASS',
   },
 }).handle(async (request) => {
   const { source, subject } = request;
@@ -27,9 +27,9 @@ export const partnerEmailRoute = defineRoute({
 // Route matching emails by domain
 export const internalEmailRoute = defineRoute({
   filters: {
-    senderDomains: ['internal.example.com'],
-    recipientDomains: ['example.com'],
-    dmarcVerdict: ['PASS'],
+    senderDomain: 'internal.example.com',
+    recipientDomain: 'example.com',
+    dmarcVerdict: 'PASS',
   },
 }).handle(async (request) => {
   const { source, subject, recipients } = request;
@@ -39,9 +39,9 @@ export const internalEmailRoute = defineRoute({
 // Route matching emails with attachments using customFilter
 export const attachmentEmailRoute = defineRoute({
   filters: {
-    recipients: ['uploads@example.com'],
-    spamVerdict: ['PASS'],
-    virusVerdict: ['PASS'],
+    recipient: 'uploads@example.com',
+    spamVerdict: 'PASS',
+    virusVerdict: 'PASS',
     customFilter: ({ mail }: SESFilterInput) => {
       const hasAttachments = mail.commonHeaders.to !== undefined;
       const headerCount = mail.headers.length;

@@ -15,11 +15,11 @@ export interface S3FilterInput {
 
 // Filter options for S3 routes
 export interface S3Filters {
-  eventNames?: S3EventRecord['eventName'][];
-  buckets?: S3EventRecord['s3']['bucket']['name'][];
-  prefixes?: string[];
-  suffixes?: string[];
-  includes?: string[];
+  eventName?: S3EventRecord['eventName'] | S3EventRecord['eventName'][];
+  bucket?: S3EventRecord['s3']['bucket']['name'] | S3EventRecord['s3']['bucket']['name'][];
+  prefix?: string | string[];
+  suffix?: string | string[];
+  includes?: string | string[];
   customFilter?: (input: S3FilterInput) => boolean;
 }
 

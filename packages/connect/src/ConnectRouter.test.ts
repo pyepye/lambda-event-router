@@ -63,10 +63,10 @@ suite('defineRoute', () => {
   test('creates a route definition with filters and handler', () => {
     const handler = vi.fn();
 
-    const definition = defineRoute({ filters: { channels: ['VOICE'] } }).handle(handler);
+    const definition = defineRoute({ filters: { channel: 'VOICE' } }).handle(handler);
 
     expect(definition).toEqual({
-      filters: { channels: ['VOICE'] },
+      filters: { channel: 'VOICE' },
       middleware: [],
       handler,
     });
@@ -77,17 +77,17 @@ suite('defineRoute', () => {
     const customFilter = vi.fn();
     const definition = defineRoute({
       filters: {
-        channels: ['CHAT'],
-        initiationMethods: ['INBOUND'],
-        instanceArns: ['arn:aws:connect:us-east-1:123456789012:instance/abc'],
+        channel: 'CHAT',
+        initiationMethod: 'INBOUND',
+        instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/abc',
         customFilter,
       },
     }).handle(handler);
 
     expect(definition.filters).toEqual({
-      channels: ['CHAT'],
-      initiationMethods: ['INBOUND'],
-      instanceArns: ['arn:aws:connect:us-east-1:123456789012:instance/abc'],
+      channel: 'CHAT',
+      initiationMethod: 'INBOUND',
+      instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/abc',
       customFilter,
     });
   });
@@ -97,16 +97,16 @@ suite('route', () => {
   test('returns this for chaining', () => {
     const handler = vi.fn();
 
-    const result = router.route({ filters: { channels: ['VOICE'] }, handler });
+    const result = router.route({ filters: { channel: 'VOICE' }, handler });
 
     expect(result).toBe(router);
   });
 });
 
 suite('matchRoute', () => {
-  test('matches when channel is in the channels filter', ({ connectEvent }) => {
+  test('matches when channel is in the channel filter', ({ connectEvent }) => {
     const handler = vi.fn();
-    router.route({ filters: { channels: ['VOICE'] }, handler });
+    router.route({ filters: { channel: 'VOICE' }, handler });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
@@ -116,8 +116,20 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when channel is not in the channels filter', ({ connectEvent }) => {
-    router.route({ filters: { channels: ['CHAT'] }, handler: vi.fn() });
+  test('matches when channel is in the channel filter array', ({ connectEvent }) => {
+    const handler = vi.fn();
+    router.route({ filters: { channel: ['VOICE', 'CHAT'] }, handler });
+    const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
+
+    // @ts-expect-error - testing private method
+    const result = router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+
+  test('does not match when channel is not in the channel filter', ({ connectEvent }) => {
+    router.route({ filters: { channel: 'CHAT' }, handler: vi.fn() });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
@@ -126,9 +138,9 @@ suite('matchRoute', () => {
     expect(result).toBeUndefined();
   });
 
-  test('matches when initiation method is in the initiationMethods filter', ({ connectEvent }) => {
+  test('matches when initiation method is in the initiationMethod filter', ({ connectEvent }) => {
     const handler = vi.fn();
-    router.route({ filters: { initiationMethods: ['INBOUND'] }, handler });
+    router.route({ filters: { initiationMethod: 'INBOUND' }, handler });
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
 
     // @ts-expect-error - testing private method
@@ -138,8 +150,20 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when initiation method is not in the initiationMethods filter', ({ connectEvent }) => {
-    router.route({ filters: { initiationMethods: ['OUTBOUND'] }, handler: vi.fn() });
+  test('matches when initiation method is in the initiationMethod filter array', ({ connectEvent }) => {
+    const handler = vi.fn();
+    router.route({ filters: { initiationMethod: ['INBOUND', 'OUTBOUND'] }, handler });
+    const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
+
+    // @ts-expect-error - testing private method
+    const result = router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+
+  test('does not match when initiation method is not in the initiationMethod filter', ({ connectEvent }) => {
+    router.route({ filters: { initiationMethod: 'OUTBOUND' }, handler: vi.fn() });
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
 
     // @ts-expect-error - testing private method
@@ -148,10 +172,10 @@ suite('matchRoute', () => {
     expect(result).toBeUndefined();
   });
 
-  test('matches when instance ARN is in the instanceArns filter', ({ connectEvent }) => {
+  test('matches when instance ARN is in the instanceArn filter', ({ connectEvent }) => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const handler = vi.fn();
-    router.route({ filters: { instanceArns: [instanceArn] }, handler });
+    router.route({ filters: { instanceArn: instanceArn }, handler });
 
     const event = connectEvent({ Details: { ContactData: { InstanceARN: instanceArn } } });
     // @ts-expect-error - testing private method
@@ -161,9 +185,23 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when instance ARN is not in the instanceArns filter', ({ connectEvent }) => {
+  test('matches when instance ARN is in the instanceArn filter array', ({ connectEvent }) => {
+    const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
+    const instanceArn2 = 'arn:aws:connect:us-east-1:123456789012:instance/zyx-wvu-987';
+    const handler = vi.fn();
+    router.route({ filters: { instanceArn: [instanceArn, instanceArn2] }, handler });
+
+    const event = connectEvent({ Details: { ContactData: { InstanceARN: instanceArn } } });
+    // @ts-expect-error - testing private method
+    const result = router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+
+  test('does not match when instance ARN is not in the instanceArn filter', ({ connectEvent }) => {
     router.route({
-      filters: { instanceArns: ['arn:aws:connect:us-east-1:123456789012:instance/other'] },
+      filters: { instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/other' },
       handler: vi.fn(),
     });
 
@@ -178,7 +216,7 @@ suite('matchRoute', () => {
 
   test('matches when a single filter has multiple allowed values', ({ connectEvent }) => {
     const handler = vi.fn();
-    router.route({ filters: { channels: ['VOICE', 'CHAT'] }, handler });
+    router.route({ filters: { channel: ['VOICE', 'CHAT'] }, handler });
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'CHAT' } } });
     // @ts-expect-error - testing private method
@@ -192,7 +230,7 @@ suite('matchRoute', () => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const handler = vi.fn();
     router.route({
-      filters: { channels: ['VOICE'], initiationMethods: ['INBOUND'], instanceArns: [instanceArn] },
+      filters: { channel: 'VOICE', initiationMethod: 'INBOUND', instanceArn: instanceArn },
       handler,
     });
 
@@ -208,7 +246,7 @@ suite('matchRoute', () => {
 
   test('does not match when combined filters partially match', ({ connectEvent }) => {
     router.route({
-      filters: { channels: ['VOICE'], initiationMethods: ['OUTBOUND'] },
+      filters: { channel: 'VOICE', initiationMethod: 'OUTBOUND' },
       handler: vi.fn(),
     });
 
@@ -275,8 +313,8 @@ suite('matchRoute', () => {
   test('first match wins when multiple routes match', ({ connectEvent }) => {
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
-    router.route({ filters: { channels: ['VOICE'] }, handler: firstHandler });
-    router.route({ filters: { channels: ['VOICE'] }, handler: secondHandler });
+    router.route({ filters: { channel: 'VOICE' }, handler: firstHandler });
+    router.route({ filters: { channel: 'VOICE' }, handler: secondHandler });
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
     // @ts-expect-error - testing private method
@@ -421,7 +459,7 @@ suite('handleEvent', () => {
   });
 
   test('throws when no route matches', async ({ connectHandlerEvent }) => {
-    router.route({ filters: { channels: ['CHAT'] }, handler: vi.fn() });
+    router.route({ filters: { channel: 'CHAT' }, handler: vi.fn() });
 
     const { event, context } = connectHandlerEvent({
       event: { Details: { ContactData: { Channel: 'VOICE', InitiationMethod: 'INBOUND' } } },
@@ -446,15 +484,15 @@ suite('full integration', () => {
     const chatInboundHandler = vi.fn().mockResolvedValue({ result: 'chat-inbound' });
     const voiceOutboundHandler = vi.fn().mockResolvedValue({ result: 'voice-outbound' });
     router.voice({
-      filters: { initiationMethods: ['INBOUND'] },
+      filters: { initiationMethod: 'INBOUND' },
       handler: voiceInboundHandler,
     });
     router.chat({
-      filters: { initiationMethods: ['INBOUND'] },
+      filters: { initiationMethod: 'INBOUND' },
       handler: chatInboundHandler,
     });
     router.voice({
-      filters: { initiationMethods: ['OUTBOUND'] },
+      filters: { initiationMethod: 'OUTBOUND' },
       handler: voiceOutboundHandler,
     });
 

@@ -52,7 +52,7 @@ const ENTERPRISE_CLIENT_ID = 'enterprise-app-client-id';
 // Register PreSignUp route with customFilter for enterprise clients
 cognitoRouter.preSignUp({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     customFilter: ({ callerContext }: CognitoFilterInput) => {
       const clientId = callerContext.clientId;
       return clientId === ENTERPRISE_CLIENT_ID;

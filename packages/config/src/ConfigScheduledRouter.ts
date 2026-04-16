@@ -84,12 +84,19 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.configRuleNames && !filters.configRuleNames.includes(configRuleName)) {
-        return false;
+      if (filters.configRuleName) {
+        const { configRuleName: filterConfigRuleName } = filters;
+        const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
+        if (!configRuleNames.includes(configRuleName)) {
+          return false;
+        }
       }
 
-      if (filters.accountIds && !filters.accountIds.includes(accountId)) {
-        return false;
+      if (filters.accountId) {
+        const accountIds = Array.isArray(filters.accountId) ? filters.accountId : [filters.accountId];
+        if (!accountIds.includes(accountId)) {
+          return false;
+        }
       }
 
       return true;

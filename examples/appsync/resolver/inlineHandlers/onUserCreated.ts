@@ -4,8 +4,8 @@ import { defineRoute } from '@lambda-event-router/appsync';
 // Return the event payload to allow the subscription, or null to filter it out.
 export const onUserCreatedRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Subscription'],
-    fieldNames: ['onUserCreated'],
+    parentTypeName: 'Subscription',
+    fieldName: 'onUserCreated',
   },
 }).handle(async (request) => {
   const { arguments: args, identity } = request;

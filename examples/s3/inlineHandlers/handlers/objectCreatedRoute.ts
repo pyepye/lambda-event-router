@@ -3,10 +3,10 @@ import { defineRoute, type S3FilterInput } from '@lambda-event-router/s3';
 // Handle S3 ObjectCreated events with bucket and key filters
 export const objectCreatedRoute = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:*'],
-    buckets: ['my-uploads-bucket'],
-    prefixes: ['uploads/'],
-    suffixes: ['.json'],
+    eventName: 's3:ObjectCreated:*',
+    bucket: 'my-uploads-bucket',
+    prefix: 'uploads/',
+    suffix: '.json',
   },
 }).handle(async ({ bucket, key, objectSize, eventName }) => {
   console.log(`Object created: ${key} in ${bucket}`);
@@ -16,10 +16,10 @@ export const objectCreatedRoute = defineRoute({
 // Handle only PUT events for image uploads (multiple prefixes and suffixes)
 export const objectCreatedPutImageRoute = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:Put'],
-    buckets: ['my-images-bucket'],
-    prefixes: ['images/', 'photos/'],
-    suffixes: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+    eventName: 's3:ObjectCreated:Put',
+    bucket: 'my-images-bucket',
+    prefix: ['images/', 'photos/'],
+    suffix: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
   },
 }).handle(async ({ bucket, key, objectSize }) => {
   console.log(`Image uploaded: ${key} in ${bucket} (${objectSize} bytes)`);
@@ -28,8 +28,8 @@ export const objectCreatedPutImageRoute = defineRoute({
 // Handle PUT events for files containing 'thumbnail' in the key
 export const objectCreatedThumbnailRoute = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:Put'],
-    buckets: ['my-images-bucket'],
+    eventName: 's3:ObjectCreated:Put',
+    bucket: 'my-images-bucket',
     includes: ['thumbnail', 'thumb'],
   },
 }).handle(async ({ bucket, key, objectSize }) => {
@@ -41,8 +41,8 @@ const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024;
 // Match large file uploads using customFilter on object size
 export const largeFileUploadRoute = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:*'],
-    buckets: ['my-uploads-bucket'],
+    eventName: 's3:ObjectCreated:*',
+    bucket: 'my-uploads-bucket',
     customFilter: ({ record }: S3FilterInput) => {
       const objectSize = record.s3.object.size;
       return objectSize >= LARGE_FILE_THRESHOLD_BYTES;

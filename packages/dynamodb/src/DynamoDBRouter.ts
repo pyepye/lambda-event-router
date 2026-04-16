@@ -3,9 +3,9 @@ import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEvent } from 'aws-lambda';
-import type { DynamoDBFilters, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
   DynamoDBEventName,
+  DynamoDBFilters,
   DynamoDBInsertRouteDefinition,
   DynamoDBModifyRouteDefinition,
   DynamoDBRemoveRouteDefinition,
@@ -17,12 +17,92 @@ import type {
 
 type UnmarshallInput = Parameters<typeof unmarshall>[0];
 
+interface InternalRoute {
+  filters: DynamoDBFilters;
+  keysSchema?: StandardSchemaV1;
+  newImageSchema?: StandardSchemaV1;
+  oldImageSchema?: StandardSchemaV1;
+  middleware: Middleware<DynamoDBRequest, void>[];
+  handler: (request: DynamoDBRequest) => Promise<void>;
+}
+
+// Events whose records include newImage / oldImage. Matches the branches of
+// DynamoDBRequest in types.ts
+type EventsWithNewImage = 'INSERT' | 'MODIFY';
+type EventsWithOldImage = 'MODIFY' | 'REMOVE';
+
+// Normalize the eventName filter (single value or array) to its element union
+type EventNameUnion<T> = T extends readonly DynamoDBEventName[] ? T[number] : T extends DynamoDBEventName ? T : never;
+
+// Allow a schema option only when at least one filtered event carries that image.
+// When no eventName filter is set, the option is always allowed.
+type NewImageSchemaOption<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? [Extract<EventNameUnion<TEventNames>, EventsWithNewImage>] extends [never]
+    ? { newImageSchema?: never }
+    : { newImageSchema?: TNewImageSchema }
+  : { newImageSchema?: TNewImageSchema };
+
+type OldImageSchemaOption<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? [Extract<EventNameUnion<TEventNames>, EventsWithOldImage>] extends [never]
+    ? { oldImageSchema?: never }
+    : { oldImageSchema?: TOldImageSchema }
+  : { oldImageSchema?: TOldImageSchema };
+
+type DynamoDBRouteInputFilters<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined,
+> = Omit<DynamoDBFilters, 'eventName' | 'streamViewType'> & {
+  eventName?: TEventNames;
+  streamViewType?: TViewTypes;
+};
+
+type RouteInput<
+  TKeysSchema extends StandardSchemaV1 | undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined,
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined,
+> = {
+  filters: DynamoDBRouteInputFilters<TEventNames, TViewTypes>;
+  keysSchema?: TKeysSchema;
+  middleware?: Middleware<DynamoDBRequest, void>[];
+} & NewImageSchemaOption<TEventNames, TNewImageSchema> &
+  OldImageSchemaOption<TEventNames, TOldImageSchema>;
+
+// Narrow DynamoDBRequest to the branches that match the filtered eventName(s).
+// Relies on DynamoDBRequest being a discriminated union over eventName in types.ts
+type FiltersToRequest<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TKeys,
+  TNewItem,
+  TOldItem,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? Extract<DynamoDBRequest<TKeys, TNewItem, TOldItem>, { eventName: EventNameUnion<TEventNames> }>
+  : DynamoDBRequest<TKeys, TNewItem, TOldItem>;
+
+interface RouteBuilder<
+  TKeys,
+  TNewItem,
+  TOldItem,
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+> {
+  handle(
+    handler: (request: FiltersToRequest<TEventNames, TKeys, TNewItem, TOldItem>) => Promise<void>,
+  ): DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>;
+}
+
 export function defineRoute<
   TKeysSchema extends StandardSchemaV1 | undefined = undefined,
   TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
   TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
-  const TEventNames extends readonly DynamoDBEventName[] | undefined = undefined,
-  const TViewTypes extends readonly DynamoDBViewType[] | undefined = undefined,
+  const TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined = undefined,
+  const TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined = undefined,
   TKeys = TKeysSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TKeysSchema> : Record<string, unknown>,
   TNewItem = TNewImageSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TNewImageSchema>
@@ -36,12 +116,18 @@ export function defineRoute<
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem> {
+      // Casts needed: narrow generic input back to the public route definition shape (contravariance on handler union)
+      const filters = config.filters as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['filters'];
+      const keysSchema = config.keysSchema as StandardSchemaV1<unknown, TKeys> | undefined;
+      const newImageSchema = config.newImageSchema as StandardSchemaV1<unknown, TNewItem> | undefined;
+      const oldImageSchema = config.oldImageSchema as StandardSchemaV1<unknown, TOldItem> | undefined;
+      const middleware = config.middleware as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['middleware'];
       return {
-        filters: config.filters as DynamoDBFilters,
-        keysSchema: config.keysSchema as StandardSchemaV1<unknown, TKeys> | undefined,
-        newImageSchema: config.newImageSchema as StandardSchemaV1<unknown, TNewItem> | undefined,
-        oldImageSchema: config.oldImageSchema as StandardSchemaV1<unknown, TOldItem> | undefined,
-        middleware: config.middleware as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['middleware'],
+        filters,
+        keysSchema,
+        newImageSchema,
+        oldImageSchema,
+        middleware,
         handler: handler as (request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>,
       };
     },
@@ -69,31 +155,48 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
   }
 
   route<TKeys, TNewItem, TOldItem>(definition: DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>): this {
-    return this.addRoute(definition as unknown as InternalRoute);
+    return this.addRoute({
+      filters: definition.filters,
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
   }
 
   insert<TKeys, TNewItem>(definition: DynamoDBInsertRouteDefinition<TKeys, TNewItem>): this {
     return this.addRoute({
-      ...definition,
-      filters: { ...definition.filters, eventNames: ['INSERT'] },
-    } as unknown as InternalRoute);
+      filters: { ...definition.filters, eventName: 'INSERT' },
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
   }
 
   modify<TKeys, TNewItem, TOldItem>(definition: DynamoDBModifyRouteDefinition<TKeys, TNewItem, TOldItem>): this {
     return this.addRoute({
-      ...definition,
-      filters: { ...definition.filters, eventNames: ['MODIFY'] },
-    } as unknown as InternalRoute);
+      filters: { ...definition.filters, eventName: 'MODIFY' },
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
   }
 
   remove<TKeys, TOldItem>(definition: DynamoDBRemoveRouteDefinition<TKeys, TOldItem>): this {
     return this.addRoute({
-      ...definition,
-      filters: { ...definition.filters, eventNames: ['REMOVE'] },
-    } as unknown as InternalRoute);
+      filters: { ...definition.filters, eventName: 'REMOVE' },
+      keysSchema: definition.keysSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
   }
 
-  private addRoute(definition: InternalRoute): this {
+  private addRoute(definition: Omit<InternalRoute, 'middleware'> & { middleware?: InternalRoute['middleware'] }): this {
     this.routes.push({
       ...definition,
       middleware: definition.middleware ?? [],
@@ -198,19 +301,30 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.eventNames && !filters.eventNames.includes(eventName)) {
-        return false;
-      }
-
-      if (filters.eventSourceArns && record.eventSourceARN) {
-        if (!filters.eventSourceArns.includes(record.eventSourceARN)) {
+      if (filters.eventName) {
+        const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
+        if (!eventNames.includes(eventName)) {
           return false;
         }
       }
 
-      if (filters.streamViewTypes && streamViewType) {
-        if (!filters.streamViewTypes.includes(streamViewType)) {
-          return false;
+      if (filters.eventSourceArn) {
+        if (record.eventSourceARN) {
+          const { eventSourceArn: filterSourceArn } = filters;
+          const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
+          if (!eventSourceArns.includes(record.eventSourceARN)) {
+            return false;
+          }
+        }
+      }
+
+      if (filters.streamViewType) {
+        if (streamViewType) {
+          const { streamViewType: filterStreamViewType } = filters;
+          const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
+          if (!streamViewTypes.includes(streamViewType)) {
+            return false;
+          }
         }
       }
 

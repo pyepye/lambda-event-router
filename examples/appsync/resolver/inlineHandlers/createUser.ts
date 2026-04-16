@@ -11,8 +11,8 @@ const CreateUserInputSchema = z.object({
 // Uses argumentsSchema for input validation and headers for tracing context.
 export const createUserRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Mutation'],
-    fieldNames: ['createUser'],
+    parentTypeName: 'Mutation',
+    fieldName: 'createUser',
   },
   argumentsSchema: CreateUserInputSchema,
 }).handle(async (request) => {
@@ -36,8 +36,8 @@ export const createUserRoute = defineRoute({
 // Match admin mutations using customFilter on identity claims
 export const adminCreateUserRoute = defineRoute({
   filters: {
-    parentTypeNames: ['Mutation'],
-    fieldNames: ['createUser'],
+    parentTypeName: 'Mutation',
+    fieldName: 'createUser',
     customFilter: ({ event }: AppSyncResolverFilterInput) => {
       const identity = event.identity;
       if (!(identity && 'claims' in identity)) return false;

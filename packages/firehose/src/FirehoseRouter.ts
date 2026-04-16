@@ -164,13 +164,19 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.deliveryStreamArns && !filters.deliveryStreamArns.includes(event.deliveryStreamArn)) {
-        return false;
+      if (filters.deliveryStreamArn) {
+        const { deliveryStreamArn: filterStreamArn } = filters;
+        const deliveryStreamArns = Array.isArray(filterStreamArn) ? filterStreamArn : [filterStreamArn];
+        if (!deliveryStreamArns.includes(event.deliveryStreamArn)) {
+          return false;
+        }
       }
 
-      if (filters.sourceKinesisStreamArns) {
+      if (filters.sourceKinesisStreamArn) {
+        const { sourceKinesisStreamArn: filterKinesisArn } = filters;
+        const sourceKinesisStreamArns = Array.isArray(filterKinesisArn) ? filterKinesisArn : [filterKinesisArn];
         if (!event.sourceKinesisStreamArn) return false;
-        if (!filters.sourceKinesisStreamArns.includes(event.sourceKinesisStreamArn)) return false;
+        if (!sourceKinesisStreamArns.includes(event.sourceKinesisStreamArn)) return false;
       }
 
       if (filters.customFilter) {

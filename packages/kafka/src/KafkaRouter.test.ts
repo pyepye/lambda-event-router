@@ -30,7 +30,7 @@ suite('KafkaRouter', () => {
     });
 
     test('preserves filters, valueSchema, and handler in the definition', () => {
-      const filters = { topics: ['orders'] };
+      const filters = { topic: 'orders' };
       const valueSchema = createMockSchema();
       const handler = async (): Promise<void> => {};
 
@@ -80,8 +80,8 @@ suite('KafkaRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by topics filter', ({ kafkaRecord, kafkaMSKEvent }) => {
-      router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
+    test('matches by topic filter', ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders' });
       const event = kafkaMSKEvent({ orders: [record] });
@@ -91,8 +91,19 @@ suite('KafkaRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when topics do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
-      router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
+    test('matches by topic filter array', ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(defineRoute({ filters: { topic: ['orders', 'refunds'] } }).handle(async () => {}));
+
+      const record = kafkaRecord({ topic: 'orders' });
+      const event = kafkaMSKEvent({ orders: [record] });
+
+      // @ts-expect-error testing private method
+      const result = router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when topic do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'users' });
       const event = kafkaMSKEvent({ users: [record] });
@@ -102,9 +113,9 @@ suite('KafkaRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by eventSourceArns', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by eventSourceArn', ({ kafkaRecord, kafkaMSKEvent }) => {
       const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
-      router.route(defineRoute({ filters: { eventSourceArns: [arn] } }).handle(async () => {}));
+      router.route(defineRoute({ filters: { eventSourceArn: arn } }).handle(async () => {}));
 
       const record = kafkaRecord();
       const event = kafkaMSKEvent({ 'test-topic': [record] });
@@ -114,10 +125,23 @@ suite('KafkaRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArns do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by eventSourceArn array', ({ kafkaRecord, kafkaMSKEvent }) => {
+      const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
+      const arn2 = 'arn:aws:kafka:eu-west-2:987654321098:cluster/OtherCluster/zxy-987';
+      router.route(defineRoute({ filters: { eventSourceArn: [arn, arn2] } }).handle(async () => {}));
+
+      const record = kafkaRecord();
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      // @ts-expect-error testing private method
+      const result = router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when eventSourceArn do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:kafka:us-east-1:000000000000:cluster/Other/xyz'] },
+          filters: { eventSourceArn: 'arn:aws:kafka:us-east-1:000000000000:cluster/Other/xyz' },
         }).handle(async () => {}),
       );
 
@@ -129,13 +153,13 @@ suite('KafkaRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match eventSourceArns filter for SelfManagedKafka event', ({
+    test('does not match eventSourceArn filter for SelfManagedKafka event', ({
       kafkaRecord,
       kafkaSelfManagedEvent,
     }) => {
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123'] },
+          filters: { eventSourceArn: 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123' },
         }).handle(async () => {}),
       );
 
@@ -147,8 +171,8 @@ suite('KafkaRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by bootstrapServers', ({ kafkaRecord, kafkaMSKEvent }) => {
-      router.route(defineRoute({ filters: { bootstrapServers: ['broker1.example.com:9092'] } }).handle(async () => {}));
+    test('matches by bootstrapServer', ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(defineRoute({ filters: { bootstrapServer: 'broker1.example.com:9092' } }).handle(async () => {}));
 
       const record = kafkaRecord();
       const event = kafkaMSKEvent({ 'test-topic': [record] });
@@ -158,9 +182,24 @@ suite('KafkaRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when bootstrapServers do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by bootstrapServer array', ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
-        defineRoute({ filters: { bootstrapServers: ['other-broker.example.com:9092'] } }).handle(async () => {}),
+        defineRoute({ filters: { bootstrapServer: ['broker1.example.com:9092', 'other9.example.com:9092'] } }).handle(
+          async () => {},
+        ),
+      );
+
+      const record = kafkaRecord();
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      // @ts-expect-error testing private method
+      const result = router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when bootstrapServer do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(
+        defineRoute({ filters: { bootstrapServer: 'other-broker.example.com:9092' } }).handle(async () => {}),
       );
 
       const record = kafkaRecord();
@@ -232,7 +271,7 @@ suite('KafkaRouter', () => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
-          filters: { topics: ['orders'], customFilter },
+          filters: { topic: 'orders', customFilter },
         }).handle(async () => {}),
       );
 
@@ -272,7 +311,7 @@ suite('KafkaRouter', () => {
   });
 
   suite('flattenRecords', () => {
-    test('flattens records from multiple topics into single array', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('flattens records from multiple topic into single array', ({ kafkaRecord, kafkaMSKEvent }) => {
       const recordA = kafkaRecord({ topic: 'topic-a' });
       const recordB = kafkaRecord({ topic: 'topic-b' });
       const recordC = kafkaRecord({ topic: 'topic-a' });
@@ -412,7 +451,7 @@ suite('KafkaRouter', () => {
     });
 
     test('throws when no route matches', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
-      router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(async () => {}));
+      router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'users', partition: 0, offset: 0 });
       const event = kafkaMSKEvent({ users: [record] });
@@ -645,8 +684,8 @@ suite('KafkaRouter', () => {
       const orderHandler = vi.fn();
       const userHandler = vi.fn();
 
-      router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(orderHandler));
-      router.route(defineRoute({ filters: { topics: ['users'] } }).handle(userHandler));
+      router.route(defineRoute({ filters: { topic: 'orders' } }).handle(orderHandler));
+      router.route(defineRoute({ filters: { topic: 'users' } }).handle(userHandler));
 
       const orderRecord = kafkaRecord({ topic: 'orders' });
       const userRecord = kafkaRecord({ topic: 'users' });
@@ -662,7 +701,7 @@ suite('KafkaRouter', () => {
       const handler = vi.fn();
       const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
 
-      router.route(defineRoute({ filters: { eventSourceArns: [arn] } }).handle(handler));
+      router.route(defineRoute({ filters: { eventSourceArn: arn } }).handle(handler));
 
       const record = kafkaRecord();
       const event = kafkaMSKEvent({ 'test-topic': [record] });
@@ -672,13 +711,13 @@ suite('KafkaRouter', () => {
       expect(handler).toHaveBeenCalledTimes(1);
     });
 
-    test('routes SelfManagedKafka event by bootstrapServers', async ({
+    test('routes SelfManagedKafka event by bootstrapServer', async ({
       kafkaRecord,
       kafkaSelfManagedEvent,
       context,
     }) => {
       const handler = vi.fn();
-      router.route(defineRoute({ filters: { bootstrapServers: ['broker1.example.com:9092'] } }).handle(handler));
+      router.route(defineRoute({ filters: { bootstrapServer: 'broker1.example.com:9092' } }).handle(handler));
 
       const record = kafkaRecord();
       const event = kafkaSelfManagedEvent({ 'test-topic': [record] });
@@ -702,10 +741,10 @@ suite('KafkaRouter', () => {
       expect(handler).toHaveBeenCalledTimes(3);
     });
 
-    test('multiple topics in single event routed correctly', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+    test('multiple topic in single event routed correctly', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
       const orderHandler = vi.fn();
       const catchAllHandler = vi.fn();
-      router.route(defineRoute({ filters: { topics: ['orders'] } }).handle(orderHandler));
+      router.route(defineRoute({ filters: { topic: 'orders' } }).handle(orderHandler));
       router.route(defineRoute({ filters: {} }).handle(catchAllHandler));
 
       const orderA = kafkaRecord({ topic: 'orders' });

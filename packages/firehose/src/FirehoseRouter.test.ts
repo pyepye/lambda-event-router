@@ -67,7 +67,7 @@ suite('FirehoseRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream'] },
+        filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -78,7 +78,7 @@ suite('FirehoseRouter', () => {
       const dataSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream'],
+        deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream',
       };
 
       const definition = defineRoute({
@@ -95,7 +95,7 @@ suite('FirehoseRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream'] },
+        filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream' },
       }).handle(async () => Ok());
 
       const result = router.route(definition);
@@ -105,11 +105,11 @@ suite('FirehoseRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by deliveryStreamArns', ({ firehoseRecord }) => {
+    test('matches by deliveryStreamArn', ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [deliveryStreamArn] },
+          filters: { deliveryStreamArn: deliveryStreamArn },
         }).handle(async () => Ok()),
       );
 
@@ -121,10 +121,27 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when deliveryStreamArns does not match', ({ firehoseRecord }) => {
+    test('matches by deliveryStreamArn array', ({ firehoseRecord }) => {
+      const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
+      const deliveryStreamArn2 = 'arn:aws:firehose:eu-west-2:987654321098:deliverystream/other-stream';
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/other-stream'] },
+          filters: { deliveryStreamArn: [deliveryStreamArn, deliveryStreamArn2] },
+        }).handle(async () => Ok()),
+      );
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record], { deliveryStreamArn });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event, record, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when deliveryStreamArn does not match', ({ firehoseRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/other-stream' },
         }).handle(async () => Ok()),
       );
 
@@ -138,11 +155,11 @@ suite('FirehoseRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by sourceKinesisStreamArns', ({ firehoseRecord }) => {
+    test('matches by sourceKinesisStreamArn', ({ firehoseRecord }) => {
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
         defineRoute({
-          filters: { sourceKinesisStreamArns: [sourceKinesisStreamArn] },
+          filters: { sourceKinesisStreamArn: sourceKinesisStreamArn },
         }).handle(async () => Ok()),
       );
 
@@ -154,10 +171,27 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when sourceKinesisStreamArns does not match', ({ firehoseRecord }) => {
+    test('matches by sourceKinesisStreamArn array', ({ firehoseRecord }) => {
+      const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
+      const sourceKinesisStreamArn2 = 'arn:aws:kinesis:eu-west-2:987654321098:stream/other-kinesis-stream';
       router.route(
         defineRoute({
-          filters: { sourceKinesisStreamArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/other-stream'] },
+          filters: { sourceKinesisStreamArn: [sourceKinesisStreamArn, sourceKinesisStreamArn2] },
+        }).handle(async () => Ok()),
+      );
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record], { sourceKinesisStreamArn });
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(event, record, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when sourceKinesisStreamArn does not match', ({ firehoseRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream' },
         }).handle(async () => Ok()),
       );
 
@@ -171,12 +205,12 @@ suite('FirehoseRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when sourceKinesisStreamArns filter set but event has no sourceKinesisStreamArn', ({
+    test('does not match when sourceKinesisStreamArn filter set but event has no sourceKinesisStreamArn', ({
       firehoseRecord,
     }) => {
       router.route(
         defineRoute({
-          filters: { sourceKinesisStreamArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream'] },
+          filters: { sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream' },
         }).handle(async () => Ok()),
       );
 
@@ -246,12 +280,12 @@ suite('FirehoseRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [deliveryStreamArn] },
+          filters: { deliveryStreamArn: deliveryStreamArn },
         }).handle(firstHandler),
       );
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [deliveryStreamArn] },
+          filters: { deliveryStreamArn: deliveryStreamArn },
         }).handle(secondHandler),
       );
 
@@ -264,14 +298,14 @@ suite('FirehoseRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when both deliveryStreamArns and sourceKinesisStreamArns match', ({ firehoseRecord }) => {
+    test('matches when both deliveryStreamArn and sourceKinesisStreamArn match', ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
         defineRoute({
           filters: {
-            deliveryStreamArns: [deliveryStreamArn],
-            sourceKinesisStreamArns: [sourceKinesisStreamArn],
+            deliveryStreamArn: deliveryStreamArn,
+            sourceKinesisStreamArn: sourceKinesisStreamArn,
           },
         }).handle(async () => Ok()),
       );
@@ -284,15 +318,13 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when deliveryStreamArns matches but sourceKinesisStreamArns does not', ({
-      firehoseRecord,
-    }) => {
+    test('does not match when deliveryStreamArn matches but sourceKinesisStreamArn does not', ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(
         defineRoute({
           filters: {
-            deliveryStreamArns: [deliveryStreamArn],
-            sourceKinesisStreamArns: ['arn:aws:kinesis:us-east-1:123456789012:stream/other-stream'],
+            deliveryStreamArn: deliveryStreamArn,
+            sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream',
           },
         }).handle(async () => Ok()),
       );
@@ -308,15 +340,13 @@ suite('FirehoseRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match when sourceKinesisStreamArns matches but deliveryStreamArns does not', ({
-      firehoseRecord,
-    }) => {
+    test('does not match when sourceKinesisStreamArn matches but deliveryStreamArn does not', ({ firehoseRecord }) => {
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
         defineRoute({
           filters: {
-            deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789012:deliverystream/other-stream'],
-            sourceKinesisStreamArns: [sourceKinesisStreamArn],
+            deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/other-stream',
+            sourceKinesisStreamArn: sourceKinesisStreamArn,
           },
         }).handle(async () => Ok()),
       );
@@ -569,7 +599,7 @@ suite('FirehoseRouter', () => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
 
       const definition = defineRoute({
-        filters: { deliveryStreamArns: [deliveryStreamArn] },
+        filters: { deliveryStreamArn: deliveryStreamArn },
       }).handle(handler);
       router.route(definition);
 
@@ -881,12 +911,12 @@ suite('FirehoseRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [streamAArn] },
+          filters: { deliveryStreamArn: streamAArn },
         }).handle(streamAHandler),
       );
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [streamBArn] },
+          filters: { deliveryStreamArn: streamBArn },
         }).handle(streamBHandler),
       );
 
@@ -905,7 +935,7 @@ suite('FirehoseRouter', () => {
       const handler = vi.fn().mockResolvedValue(Ok());
       router.route(
         defineRoute({
-          filters: { deliveryStreamArns: [matchingArn] },
+          filters: { deliveryStreamArn: matchingArn },
         }).handle(handler),
       );
 
@@ -1039,18 +1069,12 @@ suite('FirehoseRouter', () => {
     test('executes multiple route-level middleware in order', async ({ firehoseHandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddlewareOne(
-        request: FirehoseRequest,
-        next: FirehoseNext,
-      ): Promise<FirehoseResponseResult> {
+      async function routeMiddlewareOne(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
         callOrder.push('route-mw1');
         return next(request);
       }
 
-      async function routeMiddlewareTwo(
-        request: FirehoseRequest,
-        next: FirehoseNext,
-      ): Promise<FirehoseResponseResult> {
+      async function routeMiddlewareTwo(request: FirehoseRequest, next: FirehoseNext): Promise<FirehoseResponseResult> {
         callOrder.push('route-mw2');
         return next(request);
       }

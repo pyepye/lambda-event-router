@@ -86,8 +86,10 @@ suite('APIGatewayRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: {
+          method: 'GET',
+          path: '/items',
+        },
       }).handle(async () => NoContent());
 
       const result = router.route(definition);
@@ -105,7 +107,7 @@ suite('APIGatewayRouter', () => {
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
       // @ts-expect-error - calling union of method signatures
-      const result = router[method]({ path, handler });
+      const result = router[method]({ filters: { path }, handler });
 
       expect(result).toBe(router);
     });
@@ -114,8 +116,10 @@ suite('APIGatewayRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: {
+          method: 'GET',
+          path: '/items',
+        },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -129,15 +133,17 @@ suite('APIGatewayRouter', () => {
       const handler = vi.fn();
 
       const definition = defineRoute({
-        method: 'POST',
-        path: '/items/:id',
+        filters: {
+          method: 'POST',
+          path: '/items/:id',
+        },
         querySchema,
         bodySchema,
         responseSchema,
       }).handle(handler);
 
-      expect(definition.method).toBe('POST');
-      expect(definition.path).toBe('/items/:id');
+      expect(definition.filters.method).toBe('POST');
+      expect(definition.filters.path).toBe('/items/:id');
       expect(definition.querySchema).toBe(querySchema);
       expect(definition.bodySchema).toBe(bodySchema);
       expect(definition.responseSchema).toBe(responseSchema);
@@ -150,7 +156,9 @@ suite('APIGatewayRouter', () => {
       apiGatewayV2HandlerEvent,
     }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => Ok({ message: 'hello' }),
       });
 
@@ -166,7 +174,7 @@ suite('APIGatewayRouter', () => {
     });
 
     test('returns 404 when no route matches', async ({ apiGatewayV2HandlerEvent }) => {
-      router.get({ path: '/items', handler: async () => Ok({}) });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
       const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/unknown' } });
       const result = await router.handleEvent(event, context);
@@ -200,7 +208,9 @@ suite('APIGatewayRouter', () => {
 
     test('catches a generic Error and returns 500 with the error message', async ({ apiGatewayV2HandlerEvent }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           throw new Error('something broke');
         },
@@ -219,7 +229,9 @@ suite('APIGatewayRouter', () => {
 
     test('catches a non-Error throw and returns 500 with default message', async ({ apiGatewayV2HandlerEvent }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           throw 'string error';
         },
@@ -241,7 +253,7 @@ suite('APIGatewayRouter', () => {
     }) => {
       const handler = vi.fn();
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
-      router.post({ path: '/', handler, bodySchema });
+      router.post({ filters: { path: '/' }, handler, bodySchema });
 
       const { event, context } = apiGatewayV2HandlerEvent({
         event: { body: { bad: 'data' }, requestContext: { http: { method: 'POST' } } },
@@ -258,7 +270,7 @@ suite('APIGatewayRouter', () => {
 
     test('passes extracted path params to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      router.get({ path: '/items/:id', handler });
+      router.get({ filters: { path: '/items/:id' }, handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/items/42' } });
       const result = await router.handleEvent(event, context);
@@ -269,7 +281,7 @@ suite('APIGatewayRouter', () => {
 
     test('passes query params to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      router.get({ path: '/items', handler });
+      router.get({ filters: { path: '/items' }, handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({
         event: { rawPath: '/items', queryStringParameters: { page: '2', limit: '10' } },
@@ -282,7 +294,7 @@ suite('APIGatewayRouter', () => {
 
     test('passes parsed body to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      router.post({ path: '/items', handler });
+      router.post({ filters: { path: '/items' }, handler });
 
       const { event, context } = apiGatewayV2HandlerEvent({
         event: {
@@ -311,7 +323,9 @@ suite('APIGatewayRouter', () => {
 
       const router = createAPIGatewayRouter({ middleware: [middleware] });
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           callOrder.push('handler');
           return Ok({ message: 'hello' });
@@ -334,7 +348,7 @@ suite('APIGatewayRouter', () => {
       }
 
       const router = createAPIGatewayRouter({ middleware: [addCorsHeaders] });
-      router.get({ path: '/', handler: async () => Ok({ message: 'hello' }) });
+      router.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'hello' }) });
 
       const { event, context } = apiGatewayV2HandlerEvent();
       const result = await router.handleEvent(event, context);
@@ -355,7 +369,7 @@ suite('APIGatewayRouter', () => {
       }
 
       const router = createAPIGatewayRouter({ middleware: [authMiddleware] });
-      router.get({ path: '/', handler });
+      router.get({ filters: { path: '/' }, handler });
 
       const { event, context } = apiGatewayV2HandlerEvent();
       const result = await router.handleEvent(event, context);
@@ -379,7 +393,9 @@ suite('APIGatewayRouter', () => {
 
       const router = createAPIGatewayRouter({ middleware: [middlewareOne, middlewareTwo] });
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           callOrder.push('handler');
           return Ok({});
@@ -403,7 +419,9 @@ suite('APIGatewayRouter', () => {
       }
 
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         middleware: [routeMiddleware],
         handler: async () => {
           callOrder.push('handler');
@@ -425,7 +443,9 @@ suite('APIGatewayRouter', () => {
       }
 
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         middleware: [blockingRouteMiddleware],
         handler,
       });
@@ -451,7 +471,9 @@ suite('APIGatewayRouter', () => {
       }
 
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         middleware: [routeMiddlewareOne, routeMiddlewareTwo],
         handler: async () => {
           callOrder.push('handler');
@@ -473,12 +495,16 @@ suite('APIGatewayRouter', () => {
         );
 
       router.get({
-        path: '/with-mw',
+        filters: {
+          path: '/with-mw',
+        },
         middleware: [routeMiddleware],
         handler: async () => Ok({}),
       });
       router.get({
-        path: '/without-mw',
+        filters: {
+          path: '/without-mw',
+        },
         handler: async () => Ok({}),
       });
 
@@ -502,8 +528,10 @@ suite('APIGatewayRouter', () => {
       }
 
       const route = defineRoute({
-        method: 'GET',
-        path: '/',
+        filters: {
+          method: 'GET',
+          path: '/',
+        },
         middleware: [routeMiddleware],
       }).handle(async () => {
         callOrder.push('handler');
@@ -535,7 +563,9 @@ suite('APIGatewayRouter', () => {
 
       const router = createAPIGatewayRouter({ middleware: [routerMiddleware] });
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         middleware: [routeMiddleware],
         handler: async () => {
           callOrder.push('handler');
@@ -562,7 +592,7 @@ suite('APIGatewayRouter', () => {
       }
 
       const router = createAPIGatewayRouter({ middleware: [blockingMiddleware] });
-      router.get({ path: '/', middleware: [routeMiddleware], handler });
+      router.get({ filters: { path: '/' }, middleware: [routeMiddleware], handler });
 
       const { event, context } = apiGatewayV2HandlerEvent();
       const result = await router.handleEvent(event, context);
@@ -579,7 +609,7 @@ suite('APIGatewayRouter', () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
 
       const router = createAPIGatewayRouter({ middleware: [middleware] });
-      router.post({ path: '/', handler: async () => Ok({}), bodySchema });
+      router.post({ filters: { path: '/' }, handler: async () => Ok({}), bodySchema });
 
       const { event, context } = apiGatewayV2HandlerEvent({
         event: { body: { bad: 'data' }, requestContext: { http: { method: 'POST' } } },
@@ -596,7 +626,7 @@ suite('APIGatewayRouter', () => {
       const middleware = vi.fn();
 
       const router = createAPIGatewayRouter({ middleware: [middleware] });
-      router.get({ path: '/items', handler: async () => Ok({}) });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
       const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/unknown' } });
       const result = await router.handleEvent(event, context);

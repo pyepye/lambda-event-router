@@ -2,6 +2,7 @@ export { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRou
 export type {
   DynamoDBEventName,
   DynamoDBFilterInput,
+  DynamoDBFilters,
   DynamoDBInsertRequest,
   DynamoDBInsertRouteDefinition,
   DynamoDBMiddleware,

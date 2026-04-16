@@ -11,8 +11,8 @@ import { orderFullDocumentSchema } from '../orderSchemas.js';
 //   fullDocumentBeforeChange   - no previous document exists for an insert
 export const insertRoute = defineRoute({
   filters: {
-    operationTypes: ['insert'],
-    eventSourceArns: [CLUSTER_ARN],
+    operationType: 'insert',
+    eventSourceArn: CLUSTER_ARN,
   },
   fullDocumentSchema: orderFullDocumentSchema,
 }).handle(async ({ fullDocument }) => {
@@ -22,8 +22,8 @@ export const insertRoute = defineRoute({
 
 export const insertRoute2 = defineRoute({
   filters: {
-    operationTypes: ['insert'],
-    eventSourceArns: [CLUSTER_ARN],
+    operationType: 'insert',
+    eventSourceArn: CLUSTER_ARN,
   },
 }).handle(async ({ fullDocument, documentKey }) => {
   console.log(`New order created: ${documentKey}`);
@@ -36,10 +36,10 @@ const HIGH_VALUE_ORDER_THRESHOLD = 500;
 // Match high-value order inserts - filters on document content, not database/collection names
 export const highValueOrderInsertRoute = defineRoute({
   filters: {
-    operationTypes: ['insert'],
-    eventSourceArns: [CLUSTER_ARN],
-    databases: ['ecommerce'],
-    collections: ['orders'],
+    operationType: 'insert',
+    eventSourceArn: CLUSTER_ARN,
+    database: 'ecommerce',
+    collection: 'orders',
     customFilter: ({ event }: DocumentDBFilterInput) => {
       const { fullDocument } = event;
       if (typeof fullDocument !== 'object' || fullDocument === null || !('total' in fullDocument)) return false;

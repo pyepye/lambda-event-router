@@ -16,7 +16,7 @@ const FUNCTION_NAME = 'my-pipeline-deploy-function';
 
 codePipelineRouter.route({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     hasInputArtifacts: true,
   },
   userParametersSchema: ArtifactParametersSchema,
@@ -25,7 +25,7 @@ codePipelineRouter.route({
 
 codePipelineRouter.route({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     userParametersContains: 'deploy',
   },
   userParametersSchema: ArtifactParametersSchema,
@@ -34,7 +34,7 @@ codePipelineRouter.route({
 
 codePipelineRouter.continuation({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
   },
   handler: handleContinuation,
 });
@@ -45,7 +45,7 @@ function hasProductionConfig({ userParameters }: CodePipelineFilterInput): boole
 
 codePipelineRouter.route({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     hasInputArtifacts: true,
     customFilter: hasProductionConfig,
   },

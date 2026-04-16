@@ -19,13 +19,13 @@ import { userMigration } from './handlers/userMigration.js';
 const cognitoRouter = createCognitoRouter();
 
 // =============================================================================
-// Option 1: Using grouped method with triggerSources filter
+// Option 1: Using grouped method with  filter
 // =============================================================================
 
 // PreSignUp - self registration with schema validation
 cognitoRouter.preSignUp({
   filters: {
-    triggerSources: ['PreSignUp_SignUp'],
+    triggerSource: 'PreSignUp_SignUp',
     userAttributes: {
       email: /@(company\.com|partner\.org)$/,
     },
@@ -37,7 +37,7 @@ cognitoRouter.preSignUp({
 // PreSignUp - admin created users
 cognitoRouter.preSignUp({
   filters: {
-    triggerSources: ['PreSignUp_AdminCreateUser'],
+    triggerSource: 'PreSignUp_AdminCreateUser',
   },
   handler: preSignUpAdmin,
 });
@@ -109,7 +109,7 @@ cognitoRouter.userMigration({
 // Generic route() method - handles any trigger type with custom filtering
 cognitoRouter.route({
   filters: {
-    userPoolIds: ['us-east-1_abc123'],
+    userPoolId: 'us-east-1_abc123',
     customFilter: isTestUser,
   },
   handler: genericHandler,

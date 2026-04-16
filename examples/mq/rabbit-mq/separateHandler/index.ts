@@ -10,32 +10,32 @@ const rabbitMQRouter = createRabbitMQRouter();
 
 rabbitMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
+    eventSourceArn: BROKER_ARN,
   },
   handler: handleAllMessages,
 });
 
 rabbitMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    queues: ['orders-queue'],
+    eventSourceArn: BROKER_ARN,
+    queue: 'orders-queue',
   },
   handler: handleQueueMessage,
 });
 
 rabbitMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    contentType: 'application/json',
   },
   handler: handleJsonMessage,
 });
 
 rabbitMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    queues: ['orders-queue'],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    queue: 'orders-queue',
+    contentType: 'application/json',
   },
   handler: handleOrderMessage,
 });
@@ -46,8 +46,8 @@ function isRetryQueue({ queue }: RabbitMQFilterInput): boolean {
 
 rabbitMQRouter.route({
   filters: {
-    eventSourceArns: [BROKER_ARN],
-    contentTypes: ['application/json'],
+    eventSourceArn: BROKER_ARN,
+    contentType: 'application/json',
     customFilter: isRetryQueue,
   },
   handler: handleOrderMessage,

@@ -7,7 +7,7 @@ import { FUNCTION_NAME } from '../constants.js';
 // which tells CodePipeline to re-invoke the Lambda with the token.
 export const continuationRoute = defineRoute({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     hasContinuationToken: true,
   },
 }).handle(async ({ jobId, continuationToken }) => {

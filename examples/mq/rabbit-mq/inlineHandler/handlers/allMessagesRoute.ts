@@ -5,7 +5,7 @@ import { BROKER_ARN } from '../constants.js';
 // Route matching all messages from the broker
 export const allMessagesRoute = defineRabbitMQRoute({
   filters: {
-    eventSourceArns: [BROKER_ARN],
+    eventSourceArn: BROKER_ARN,
   },
 }).handle(async ({ message, queue }) => {
   console.log(`Received message on queue ${queue}: ${message.data}`);

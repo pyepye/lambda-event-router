@@ -11,7 +11,7 @@ const OrderDataSchema = z.object({
 
 export const enrichRoute = defineRoute({
   filters: {
-    deliveryStreamArns: [DELIVERY_STREAM_ARN],
+    deliveryStreamArn: DELIVERY_STREAM_ARN,
   },
   dataSchema: OrderDataSchema,
 }).handle(async ({ data, recordId, context, approximateArrivalTimestamp }) => {

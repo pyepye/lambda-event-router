@@ -13,7 +13,7 @@ const CURRENT_STOCK_LEVEL = 50;
 
 export const inventoryRoute = defineRoute({
   filters: {
-    partitionKeys: ['inventory-updates'],
+    partitionKey: 'inventory-updates',
   },
   dataSchema: InventoryDataSchema,
 }).handle(async ({ data, sequenceNumber }) => {

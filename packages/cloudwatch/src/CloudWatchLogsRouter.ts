@@ -120,16 +120,16 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
         if (!hasMatchingSuffix) return false;
       }
 
-      if (filters.logGroupInclude) {
-        const includes = Array.isArray(filters.logGroupInclude) ? filters.logGroupInclude : [filters.logGroupInclude];
+      if (filters.logGroupIncludes) {
+        const { logGroupIncludes: filterIncludes } = filters;
+        const includes = Array.isArray(filterIncludes) ? filterIncludes : [filterIncludes];
         const hasMatchingSubstring = includes.some((substring) => input.logGroup.includes(substring));
         if (!hasMatchingSubstring) return false;
       }
 
       if (filters.subscriptionFilter) {
-        const subFilters = Array.isArray(filters.subscriptionFilter)
-          ? filters.subscriptionFilter
-          : [filters.subscriptionFilter];
+        const { subscriptionFilter } = filters;
+        const subFilters = Array.isArray(subscriptionFilter) ? subscriptionFilter : [subscriptionFilter];
         const hasMatchingFilter = input.subscriptionFilters.some((subFilter) => subFilters.includes(subFilter));
         if (!hasMatchingFilter) return false;
       }

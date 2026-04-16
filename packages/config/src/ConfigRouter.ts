@@ -167,24 +167,32 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.configRuleNames && !filters.configRuleNames.includes(input.configRuleName)) {
-        return false;
-      }
-
-      if (filters.resourceTypes && input.resourceType) {
-        if (!filters.resourceTypes.includes(input.resourceType)) {
+      if (filters.configRuleName) {
+        const { configRuleName: filterConfigRuleName } = filters;
+        const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
+        if (!configRuleNames.includes(input.configRuleName)) {
           return false;
         }
       }
 
-      if (filters.resourceIds && input.resourceId) {
-        if (!filters.resourceIds.includes(input.resourceId)) {
+      if (filters.resourceType && input.resourceType) {
+        const resourceTypes = Array.isArray(filters.resourceType) ? filters.resourceType : [filters.resourceType];
+        if (!resourceTypes.includes(input.resourceType)) {
           return false;
         }
       }
 
-      if (filters.configurationItemStatuses && input.configurationItemStatus) {
-        if (!filters.configurationItemStatuses.includes(input.configurationItemStatus)) {
+      if (filters.resourceId && input.resourceId) {
+        const resourceIds = Array.isArray(filters.resourceId) ? filters.resourceId : [filters.resourceId];
+        if (!resourceIds.includes(input.resourceId)) {
+          return false;
+        }
+      }
+
+      if (filters.configurationItemStatus && input.configurationItemStatus) {
+        const { configurationItemStatus: filterItemStatus } = filters;
+        const configurationItemStatuses = Array.isArray(filterItemStatus) ? filterItemStatus : [filterItemStatus];
+        if (!configurationItemStatuses.includes(input.configurationItemStatus)) {
           return false;
         }
       }

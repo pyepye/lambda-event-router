@@ -5,8 +5,8 @@ import { z } from 'zod';
 // Type is automatically inferred from sources + detailTypes
 export const ec2StateChangeRoute = defineRoute({
   filters: {
-    sources: ['aws.ec2'],
-    detailTypes: ['EC2 Instance State-change Notification'],
+    source: 'aws.ec2',
+    detailType: 'EC2 Instance State-change Notification',
   },
 }).handle(async ({ source, detailType, detail, account, region, time }) => {
   console.log(`EC2 state change from ${source}: ${detailType}`);
@@ -25,8 +25,8 @@ const OrderDetailSchema = z.object({
 // Handle custom order created events from your application
 export const orderCreatedRoute = defineRoute({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Created'],
+    source: 'myapp.orders',
+    detailType: 'Order Created',
   },
   detailSchema: OrderDetailSchema,
 }).handle(async ({ source, detailType, detail, resources }) => {
@@ -39,8 +39,8 @@ export const orderCreatedRoute = defineRoute({
 // Handle order updated events with multiple detail types
 export const orderUpdatedRoute = defineRoute({
   filters: {
-    sources: ['myapp.orders'],
-    detailTypes: ['Order Updated', 'Order Shipped', 'Order Delivered'],
+    source: 'myapp.orders',
+    detailType: ['Order Updated', 'Order Shipped', 'Order Delivered'],
   },
   detailSchema: OrderDetailSchema,
 }).handle(async ({ detailType, detail }) => {
@@ -51,8 +51,8 @@ export const orderUpdatedRoute = defineRoute({
 // Type is automatically inferred - detail is Record<string, never> (empty object)
 export const scheduledRuleRoute = defineRoute({
   filters: {
-    sources: ['aws.events'],
-    detailTypes: ['Scheduled Event'],
+    source: 'aws.events',
+    detailType: 'Scheduled Event',
   },
 }).handle(async ({ time, resources }) => {
   console.log(`Scheduled rule triggered at ${time}`);
@@ -79,8 +79,8 @@ const iamPolicyChangeEvents = ['CreatePolicy', 'DeletePolicy', 'AttachRolePolicy
 
 export const iamPolicyChangeRoute = defineRoute({
   filters: {
-    sources: ['aws.iam'],
-    detailTypes: ['AWS API Call via CloudTrail'],
+    source: 'aws.iam',
+    detailType: 'AWS API Call via CloudTrail',
     customFilter: ({ detail }) => {
       const cloudTrailDetail = detail as Record<string, unknown>;
       return iamPolicyChangeEvents.includes(cloudTrailDetail.eventName as string);
@@ -112,8 +112,8 @@ const PipesOrderDetailSchema = z.object({
 
 export const pipesOrderReceivedRoute = defineRoute({
   filters: {
-    sources: ['myapp.pipes.orders'],
-    detailTypes: ['OrderReceived'],
+    source: 'myapp.pipes.orders',
+    detailType: 'OrderReceived',
   },
   detailSchema: PipesOrderDetailSchema,
 }).handle(async ({ detail, time }) => {
@@ -133,8 +133,8 @@ const CodeBuildDetailSchema = z.object({
 
 export const codeBuildStateChangeRoute = defineRoute({
   filters: {
-    sources: ['aws.codebuild'],
-    detailTypes: ['CodeBuild Build State Change'],
+    source: 'aws.codebuild',
+    detailType: 'CodeBuild Build State Change',
   },
   detailSchema: CodeBuildDetailSchema,
 }).handle(async ({ detail, account, region }) => {

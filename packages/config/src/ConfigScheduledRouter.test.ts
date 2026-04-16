@@ -86,8 +86,19 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches by configRuleNames filter', () => {
-      router.route(defineConfigScheduledRoute({ filters: { configRuleNames: ['my-rule'] } }).handle(async () => {}));
+    test('matches by configRuleName filter', () => {
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute('my-rule', '123456789012');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches by configRuleName filter array', () => {
+      router.route(
+        defineConfigScheduledRoute({ filters: { configRuleName: ['my-rule', 'other-rule'] } }).handle(async () => {}),
+      );
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute('my-rule', '123456789012');
@@ -96,7 +107,7 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('rejects when configRuleName not in filter', () => {
-      router.route(defineConfigScheduledRoute({ filters: { configRuleNames: ['my-rule'] } }).handle(async () => {}));
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute('other-rule', '123456789012');
@@ -104,8 +115,21 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by accountIds filter', () => {
-      router.route(defineConfigScheduledRoute({ filters: { accountIds: ['123456789012'] } }).handle(async () => {}));
+    test('matches by accountId filter', () => {
+      router.route(defineConfigScheduledRoute({ filters: { accountId: '123456789012' } }).handle(async () => {}));
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute('any-rule', '123456789012');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches by accountId filter array', () => {
+      router.route(
+        defineConfigScheduledRoute({ filters: { accountId: ['123456789012', '9876543210987'] } }).handle(
+          async () => {},
+        ),
+      );
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute('any-rule', '123456789012');
@@ -114,7 +138,7 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('rejects when accountId not in filter', () => {
-      router.route(defineConfigScheduledRoute({ filters: { accountIds: ['123456789012'] } }).handle(async () => {}));
+      router.route(defineConfigScheduledRoute({ filters: { accountId: '123456789012' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
       const result = router.matchRoute('any-rule', '999999999999');
@@ -125,7 +149,7 @@ suite('ConfigScheduledRouter', () => {
     test('multiple filters combined - all must match', () => {
       router.route(
         defineConfigScheduledRoute({
-          filters: { configRuleNames: ['my-rule'], accountIds: ['123456789012'] },
+          filters: { configRuleName: 'my-rule', accountId: '123456789012' },
         }).handle(async () => {}),
       );
 
@@ -189,9 +213,7 @@ suite('ConfigScheduledRouter', () => {
     });
 
     test('throws when no route matches', async ({ context }) => {
-      router.route(
-        defineConfigScheduledRoute({ filters: { configRuleNames: ['specific-rule'] } }).handle(async () => {}),
-      );
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'specific-rule' } }).handle(async () => {}));
 
       const event = createScheduledConfigEvent({ configRuleName: 'unknown-rule' });
       await expect(router.handleEvent(event, context())).rejects.toThrow(
@@ -222,14 +244,14 @@ suite('ConfigScheduledRouter', () => {
 
   suite('defineConfigScheduledRoute', () => {
     test('returns builder with handle method', () => {
-      const builder = defineConfigScheduledRoute({ filters: { configRuleNames: ['my-rule'] } });
+      const builder = defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } });
       expect(builder).toHaveProperty('handle');
       expect(builder.handle).toBeTypeOf('function');
     });
 
     test('handle returns a ConfigScheduledRouteDefinition', () => {
       const handler = vi.fn();
-      const filters = { configRuleNames: ['my-rule'] };
+      const filters = { configRuleName: 'my-rule' };
       const definition = defineConfigScheduledRoute({ filters }).handle(handler);
 
       expect(definition).toEqual({

@@ -9,7 +9,6 @@ export type {
   ActiveMQInternalRoute,
   ActiveMQMessage,
   ActiveMQMessageType,
-  ActiveMQMessageTypeFilters,
   ActiveMQMiddleware,
   ActiveMQRequest,
   ActiveMQRouteBuilder,

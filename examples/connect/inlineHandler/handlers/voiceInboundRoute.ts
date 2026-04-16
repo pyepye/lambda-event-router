@@ -4,9 +4,9 @@ import { INSTANCE_ARN } from '../constants.js';
 
 export const voiceInboundRoute = defineRoute({
   filters: {
-    channels: ['VOICE'],
-    initiationMethods: ['INBOUND'],
-    instanceArns: [INSTANCE_ARN],
+    channel: 'VOICE',
+    initiationMethod: 'INBOUND',
+    instanceArn: INSTANCE_ARN,
   },
 }).handle(async ({ contactData }) => {
   const customerNumber = contactData.CustomerEndpoint?.Address;
@@ -19,9 +19,9 @@ export const voiceInboundRoute = defineRoute({
 // Match VIP callers based on contact attributes using customFilter
 export const vipCallerRoute = defineRoute({
   filters: {
-    channels: ['VOICE'],
-    initiationMethods: ['INBOUND'],
-    instanceArns: [INSTANCE_ARN],
+    channel: 'VOICE',
+    initiationMethod: 'INBOUND',
+    instanceArn: INSTANCE_ARN,
     customFilter: ({ event }: ConnectFilterInput) => {
       const contactAttributes = event.Details.ContactData.Attributes;
       const vipTier = 'platinum';

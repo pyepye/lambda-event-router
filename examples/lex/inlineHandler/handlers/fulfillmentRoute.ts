@@ -3,8 +3,8 @@ import { defineRoute, type LexFilterInput } from '@lambda-event-router/lex';
 // FulfillmentCodeHook for OrderPizza intent - processes the completed order
 export const fulfillmentRoute = defineRoute({
   filters: {
-    invocationSources: ['FulfillmentCodeHook'],
-    intentNames: ['OrderPizza'],
+    invocationSource: 'FulfillmentCodeHook',
+    intentName: 'OrderPizza',
   },
 }).handle(async ({ intentName, slots, inputTranscript }) => {
   console.log(`Fulfilling ${intentName} - transcript: ${inputTranscript}`);
@@ -32,8 +32,8 @@ export const fulfillmentRoute = defineRoute({
 // Match fulfillment for premium-tier users - filters on session attributes, not inputMode/botId
 export const premiumFulfillmentRoute = defineRoute({
   filters: {
-    invocationSources: ['FulfillmentCodeHook'],
-    intentNames: ['OrderPizza'],
+    invocationSource: 'FulfillmentCodeHook',
+    intentName: 'OrderPizza',
     customFilter: ({ event }: LexFilterInput) => {
       const tier = event.sessionState?.sessionAttributes?.tier;
       return tier === 'premium';

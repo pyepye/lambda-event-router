@@ -63,15 +63,9 @@ export interface ActiveMQFilterInput {
 }
 
 export interface ActiveMQFilters {
-  eventSourceArns?: string[];
-  destinations?: string[];
-  messageTypes?: ActiveMQMessageType[];
-  customFilter?: (input: ActiveMQFilterInput) => boolean;
-}
-
-export interface ActiveMQMessageTypeFilters {
-  eventSourceArns?: string[];
-  destinations?: string[];
+  eventSourceArn?: string | string[];
+  destination?: string | string[];
+  messageType?: ActiveMQMessageType | ActiveMQMessageType[];
   customFilter?: (input: ActiveMQFilterInput) => boolean;
 }
 
@@ -94,14 +88,14 @@ export interface ActiveMQRouteDefinition<TBody = unknown> {
 }
 
 export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
-  filters: ActiveMQMessageTypeFilters;
+  filters: Omit<ActiveMQFilters, 'messageType'>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   middleware?: ActiveMQMiddleware[];
   handler: (request: ActiveMQTextMessageRequest<TBody>) => Promise<void>;
 }
 
 export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
-  filters: ActiveMQMessageTypeFilters;
+  filters: Omit<ActiveMQFilters, 'messageType'>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   middleware?: ActiveMQMiddleware[];
   handler: (request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>;
@@ -119,31 +113,26 @@ export interface ActiveMQInternalRoute {
 // --- Route Builder Types ---
 
 type MessageTypeToRequest<
-  TMessageTypes extends readonly ActiveMQMessageType[] | undefined,
+  TMessageType extends ActiveMQMessageType | undefined,
   TBody,
-> = TMessageTypes extends readonly ['jms/text-message']
+> = TMessageType extends 'jms/text-message'
   ? ActiveMQTextMessageRequest<TBody>
-  : TMessageTypes extends readonly ['jms/bytes-message']
+  : TMessageType extends 'jms/bytes-message'
     ? ActiveMQBytesMessageRequest<TBody>
     : ActiveMQRequest<TBody>;
 
 export interface ActiveMQRouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
-  TMessageTypes extends readonly ActiveMQMessageType[] | undefined = undefined,
+  TMessageType extends ActiveMQMessageType | undefined = undefined,
 > {
-  filters: {
-    eventSourceArns?: string[];
-    destinations?: string[];
-    messageTypes?: TMessageTypes;
-    customFilter?: (input: ActiveMQFilterInput) => boolean;
-  };
+  filters: Omit<ActiveMQFilters, 'messageType'> & { messageType?: ActiveMQMessageType | ActiveMQMessageType[] };
   middleware?: ActiveMQMiddleware[];
   bodySchema?: TBodySchema;
 }
 
-export interface ActiveMQRouteBuilder<TBody, TMessageTypes extends readonly ActiveMQMessageType[] | undefined> {
+export interface ActiveMQRouteBuilder<TBody, TMessageType extends ActiveMQMessageType | undefined> {
   handle(
-    handler: (request: MessageTypeToRequest<TMessageTypes, TBody>) => Promise<void>,
+    handler: (request: MessageTypeToRequest<TMessageType, TBody>) => Promise<void>,
   ): ActiveMQRouteDefinition<TBody>;
 }
 

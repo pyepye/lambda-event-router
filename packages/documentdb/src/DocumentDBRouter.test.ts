@@ -64,7 +64,7 @@ suite('DocumentDBRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster'] },
+        filters: { eventSourceArn: 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -77,8 +77,8 @@ suite('DocumentDBRouter', () => {
       const fullDocumentBeforeChangeSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster'],
-        databases: ['test-db'],
+        eventSourceArn: 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster',
+        database: 'test-db',
       };
 
       const definition = defineRoute({
@@ -98,7 +98,7 @@ suite('DocumentDBRouter', () => {
 
   test('route, insert, update, replace, and delete return the router instance for chaining', () => {
     const definition = defineRoute({
-      filters: { eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster'] },
+      filters: { eventSourceArn: 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster' },
     }).handle(async () => {});
     const operationArgs = { filters: {}, handler: async () => {} };
 
@@ -166,10 +166,10 @@ suite('DocumentDBRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by operationTypes', () => {
+    test('matches route by operationType', () => {
       router.route(
         defineRoute({
-          filters: { operationTypes: ['insert'] },
+          filters: { operationType: 'insert' },
         }).handle(async () => {}),
       );
 
@@ -180,10 +180,24 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches route by operationType array', () => {
+      router.route(
+        defineRoute({
+          filters: { operationType: ['insert', 'update'] },
+        }).handle(async () => {}),
+      );
+
+      const changeEvent = createDocumentDBUpdateEntry().event;
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result).toBeDefined();
+    });
+
     test('does not match route when operationType does not match', () => {
       router.route(
         defineRoute({
-          filters: { operationTypes: ['insert'] },
+          filters: { operationType: 'insert' },
         }).handle(async () => {}),
       );
 
@@ -194,11 +208,26 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by eventSourceArns', () => {
+    test('matches route by eventSourceArn', () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(
         defineRoute({
-          filters: { eventSourceArns: [eventSourceArn] },
+          filters: { eventSourceArn },
+        }).handle(async () => {}),
+      );
+
+      const changeEvent = createDocumentDBInsertEntry().event;
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(changeEvent, eventSourceArn);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by eventSourceArn array', () => {
+      const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: [eventSourceArn, 'arn:aws:rds:us-east-1:123456789012:cluster:other-cluster'] },
         }).handle(async () => {}),
       );
 
@@ -212,7 +241,7 @@ suite('DocumentDBRouter', () => {
     test('does not match route when eventSourceArn does not match', () => {
       router.route(
         defineRoute({
-          filters: { eventSourceArns: ['arn:aws:rds:us-east-1:123456789012:cluster:other-cluster'] },
+          filters: { eventSourceArn: 'arn:aws:rds:us-east-1:123456789012:cluster:other-cluster' },
         }).handle(async () => {}),
       );
 
@@ -223,10 +252,10 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by databases', () => {
+    test('matches route by database', () => {
       router.route(
         defineRoute({
-          filters: { databases: ['test-db'] },
+          filters: { database: 'test-db' },
         }).handle(async () => {}),
       );
 
@@ -237,10 +266,24 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches route by database array', () => {
+      router.route(
+        defineRoute({
+          filters: { database: ['test-db', 'other-db'] },
+        }).handle(async () => {}),
+      );
+
+      const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'other-db' } }).event;
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result).toBeDefined();
+    });
+
     test('does not match route when database does not match', () => {
       router.route(
         defineRoute({
-          filters: { databases: ['other-db'] },
+          filters: { database: 'other-db' },
         }).handle(async () => {}),
       );
 
@@ -251,10 +294,10 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by collections', () => {
+    test('matches route by collection', () => {
       router.route(
         defineRoute({
-          filters: { collections: ['users'] },
+          filters: { collection: 'users' },
         }).handle(async () => {}),
       );
 
@@ -265,10 +308,24 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches route by collection array', () => {
+      router.route(
+        defineRoute({
+          filters: { collection: ['users', 'orders'] },
+        }).handle(async () => {}),
+      );
+
+      const changeEvent = createDocumentDBInsertEntry({ ns: { coll: 'orders' } }).event;
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result).toBeDefined();
+    });
+
     test('does not match route when collection does not match', () => {
       router.route(
         defineRoute({
-          filters: { collections: ['orders'] },
+          filters: { collection: 'orders' },
         }).handle(async () => {}),
       );
 
@@ -332,7 +389,7 @@ suite('DocumentDBRouter', () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { databases: ['other-db'], customFilter },
+          filters: { database: 'other-db', customFilter },
         }).handle(async () => {}),
       );
 
@@ -376,10 +433,10 @@ suite('DocumentDBRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            operationTypes: ['insert'],
-            eventSourceArns: [eventSourceArn],
-            databases: ['test-db'],
-            collections: ['users'],
+            operationType: 'insert',
+            eventSourceArn: eventSourceArn,
+            database: 'test-db',
+            collection: 'users',
           },
         }).handle(async () => {}),
       );
@@ -396,10 +453,10 @@ suite('DocumentDBRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            operationTypes: ['insert'],
-            eventSourceArns: [eventSourceArn],
-            databases: ['test-db'],
-            collections: ['orders'],
+            operationType: 'insert',
+            eventSourceArn: eventSourceArn,
+            database: 'test-db',
+            collection: 'orders',
           },
         }).handle(async () => {}),
       );
@@ -659,8 +716,8 @@ suite('DocumentDBRouter', () => {
       const usersHandler = vi.fn();
       const ordersHandler = vi.fn();
       router
-        .route(defineRoute({ filters: { collections: ['users'] } }).handle(usersHandler))
-        .route(defineRoute({ filters: { collections: ['orders'] } }).handle(ordersHandler));
+        .route(defineRoute({ filters: { collection: 'users' } }).handle(usersHandler))
+        .route(defineRoute({ filters: { collection: 'orders' } }).handle(ordersHandler));
 
       const entries = [
         createDocumentDBInsertEntry({ ns: { coll: 'users' } }),

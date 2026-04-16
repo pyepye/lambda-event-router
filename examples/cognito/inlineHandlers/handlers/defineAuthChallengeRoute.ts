@@ -4,7 +4,7 @@ import { defineRoute } from '@lambda-event-router/cognito';
 // Handlers modify the cloned event and return it
 export const defineAuthChallengeRoute = defineRoute({
   filters: {
-    triggerSources: ['DefineAuthChallenge_Authentication'],
+    triggerSource: 'DefineAuthChallenge_Authentication',
   },
 }).handle(async ({ event }) => {
   const { session } = event.request;

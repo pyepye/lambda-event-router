@@ -75,8 +75,8 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     return this.route({
       filters: {
         ...input.filters,
-        parentTypeNames: ['Query'],
-        fieldNames: [input.fieldName],
+        parentTypeName: 'Query',
+        fieldName: input.fieldName,
       },
       argumentsSchema: input.argumentsSchema,
       middleware: input.middleware,
@@ -88,8 +88,8 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     return this.route({
       filters: {
         ...input.filters,
-        parentTypeNames: ['Mutation'],
-        fieldNames: [input.fieldName],
+        parentTypeName: 'Mutation',
+        fieldName: input.fieldName,
       },
       argumentsSchema: input.argumentsSchema,
       middleware: input.middleware,
@@ -101,8 +101,8 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     return this.route({
       filters: {
         ...input.filters,
-        parentTypeNames: ['Subscription'],
-        fieldNames: [input.fieldName],
+        parentTypeName: 'Subscription',
+        fieldName: input.fieldName,
       },
       argumentsSchema: input.argumentsSchema,
       middleware: input.middleware,
@@ -149,12 +149,19 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     return this.routes.find((route) => {
       const { filters } = route;
 
-      if (filters.parentTypeNames && !filters.parentTypeNames.includes(parentTypeName)) {
-        return false;
+      if (filters.parentTypeName) {
+        const { parentTypeName: filterParentTypeName } = filters;
+        const parentTypeNames = Array.isArray(filterParentTypeName) ? filterParentTypeName : [filterParentTypeName];
+        if (!parentTypeNames.includes(parentTypeName)) {
+          return false;
+        }
       }
 
-      if (filters.fieldNames && !filters.fieldNames.includes(fieldName)) {
-        return false;
+      if (filters.fieldName) {
+        const fieldNames = Array.isArray(filters.fieldName) ? filters.fieldName : [filters.fieldName];
+        if (!fieldNames.includes(fieldName)) {
+          return false;
+        }
       }
 
       if (filters.customFilter) {

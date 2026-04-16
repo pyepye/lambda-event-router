@@ -390,7 +390,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     handler: InternalHandler,
   ): this {
     this.routes.push({
-      filters: { ...filters, eventNames: [eventName] },
+      filters: { ...filters, eventName: eventName },
       middleware,
       handler,
     });
@@ -482,28 +482,43 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       const { filters } = route;
 
       // Match event names with wildcard support
-      if (filters.eventNames && !this.matchEventName(eventName, filters.eventNames)) {
-        return false;
+      if (filters.eventName) {
+        const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
+        if (!this.matchEventName(eventName, eventNames)) {
+          return false;
+        }
       }
 
       // Match bucket names
-      if (filters.buckets && !filters.buckets.includes(bucket)) {
-        return false;
+      if (filters.bucket) {
+        const buckets = Array.isArray(filters.bucket) ? filters.bucket : [filters.bucket];
+        if (!buckets.includes(bucket)) {
+          return false;
+        }
       }
 
       // Match key prefixes (OR - key starts with any of these)
-      if (filters.prefixes && !filters.prefixes.some((prefix) => key.startsWith(prefix))) {
-        return false;
+      if (filters.prefix) {
+        const prefixes = Array.isArray(filters.prefix) ? filters.prefix : [filters.prefix];
+        if (!prefixes.some((prefix) => key.startsWith(prefix))) {
+          return false;
+        }
       }
 
       // Match key suffixes (OR - key ends with any of these)
-      if (filters.suffixes && !filters.suffixes.some((suffix) => key.endsWith(suffix))) {
-        return false;
+      if (filters.suffix) {
+        const suffixes = Array.isArray(filters.suffix) ? filters.suffix : [filters.suffix];
+        if (!suffixes.some((suffix) => key.endsWith(suffix))) {
+          return false;
+        }
       }
 
       // Match key includes (OR - key contains any of these)
-      if (filters.includes && !filters.includes.some((substring) => key.includes(substring))) {
-        return false;
+      if (filters.includes) {
+        const includes = Array.isArray(filters.includes) ? filters.includes : [filters.includes];
+        if (!includes.some((substring) => key.includes(substring))) {
+          return false;
+        }
       }
 
       // Custom filter

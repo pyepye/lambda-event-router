@@ -5,7 +5,7 @@ import { INSTANCE_ARN } from '../constants.js';
 // Matches all channels and initiation methods for this instance
 export const allChannelsRoute = defineRoute({
   filters: {
-    instanceArns: [INSTANCE_ARN],
+    instanceArn: INSTANCE_ARN,
   },
 }).handle(async ({ contactData }) => {
   const channel = contactData.Channel;

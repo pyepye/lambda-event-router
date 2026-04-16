@@ -1,4 +1,4 @@
-import { Dropped, defineRoute, type FirehoseFilterInput, Ok } from '@lambda-event-router/firehose';
+import { Dropped, Ok, defineRoute, type FirehoseFilterInput } from '@lambda-event-router/firehose';
 import { z } from 'zod';
 
 import { SOURCE_KINESIS_STREAM_ARN } from '../constants.js';
@@ -21,7 +21,7 @@ function isUserEvent({ data }: FirehoseFilterInput): boolean {
 
 export const filterRoute = defineRoute({
   filters: {
-    sourceKinesisStreamArns: [SOURCE_KINESIS_STREAM_ARN],
+    sourceKinesisStreamArn: SOURCE_KINESIS_STREAM_ARN,
     customFilter: isUserEvent,
   },
   dataSchema: EventDataSchema,

@@ -13,7 +13,7 @@ const UserParametersSchema = z.object({
 // userParameters is parsed from JSON and validated against the schema by the router.
 export const processArtifactsRoute = defineRoute({
   filters: {
-    functionNames: [FUNCTION_NAME],
+    functionName: FUNCTION_NAME,
     hasInputArtifacts: true,
   },
   userParametersSchema: UserParametersSchema,

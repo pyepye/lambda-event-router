@@ -39,8 +39,10 @@ suite('VPCLatticeRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        method: 'GET',
-        path: '/items',
+        filters: {
+          method: 'GET',
+          path: '/items',
+        },
       }).handle(async () => NoContent());
 
       const result = router.route(definition);
@@ -58,7 +60,7 @@ suite('VPCLatticeRouter', () => {
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
       // @ts-expect-error - calling union of method signatures
-      const result = router[method]({ path, handler });
+      const result = router[method]({ filters: { path }, handler });
 
       expect(result).toBe(router);
     });
@@ -69,7 +71,9 @@ suite('VPCLatticeRouter', () => {
       vpcLatticeV2HandlerEvent,
     }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => Ok({ message: 'hello' }),
       });
 
@@ -85,7 +89,7 @@ suite('VPCLatticeRouter', () => {
     });
 
     test('returns 404 when no route matches', async ({ vpcLatticeV2HandlerEvent }) => {
-      router.get({ path: '/items', handler: async () => Ok({}) });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 
       const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/unknown' } });
       const result = await router.handleEvent(event, context);
@@ -100,7 +104,9 @@ suite('VPCLatticeRouter', () => {
 
     test('catches a generic Error and returns 500 with the error message', async ({ vpcLatticeV2HandlerEvent }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           throw new Error('something broke');
         },
@@ -119,7 +125,9 @@ suite('VPCLatticeRouter', () => {
 
     test('catches a non-Error throw and returns 500 with default message', async ({ vpcLatticeV2HandlerEvent }) => {
       router.get({
-        path: '/',
+        filters: {
+          path: '/',
+        },
         handler: async () => {
           throw 'string error';
         },
@@ -141,7 +149,7 @@ suite('VPCLatticeRouter', () => {
     }) => {
       const handler = vi.fn();
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
-      router.post({ path: '/', handler, bodySchema });
+      router.post({ filters: { path: '/' }, handler, bodySchema });
 
       const { event, context } = vpcLatticeV2HandlerEvent({
         event: { method: 'POST', body: { bad: 'data' } },
@@ -158,7 +166,7 @@ suite('VPCLatticeRouter', () => {
 
     test('passes extracted path params to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ found: true }));
-      router.get({ path: '/items/:id', handler });
+      router.get({ filters: { path: '/items/:id' }, handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/items/42' } });
       const result = await router.handleEvent(event, context);
@@ -169,7 +177,7 @@ suite('VPCLatticeRouter', () => {
 
     test('passes query params to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ items: [] }));
-      router.get({ path: '/items', handler });
+      router.get({ filters: { path: '/items' }, handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({
         event: { path: '/items', queryStringParameters: { page: ['2'], limit: ['10'] } },
@@ -182,7 +190,7 @@ suite('VPCLatticeRouter', () => {
 
     test('passes parsed body to the handler', async ({ vpcLatticeV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
-      router.post({ path: '/items', handler });
+      router.post({ filters: { path: '/items' }, handler });
 
       const { event, context } = vpcLatticeV2HandlerEvent({
         event: {
