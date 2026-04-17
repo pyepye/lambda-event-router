@@ -26,7 +26,7 @@ interface RouteInput<
   TRouteKey extends string | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
 > {
-  filters: { eventType?: TEventType; routeKey?: TRouteKey };
+  filters: { eventType?: TEventType; routeKey?: TRouteKey; customFilter?: (input: WebSocketFilterInput) => boolean };
   bodySchema?: TBodySchema;
 }
 
@@ -198,6 +198,10 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
 
       if (filters.routeKey && filters.routeKey !== filterInput.routeKey) {
         return false;
+      }
+
+      if (filters.customFilter) {
+        return filters.customFilter(filterInput);
       }
 
       return true;

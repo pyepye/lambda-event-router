@@ -17,6 +17,7 @@ export type WebSocketEventType = 'CONNECT' | 'MESSAGE' | 'DISCONNECT';
 export interface WebSocketFilters {
   eventType?: WebSocketEventType;
   routeKey?: string;
+  customFilter?: (input: WebSocketFilterInput) => boolean;
 }
 
 export interface WebSocketFilterInput {

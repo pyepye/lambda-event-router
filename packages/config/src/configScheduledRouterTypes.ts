@@ -11,9 +11,15 @@ export interface ConfigScheduledRequest<TParams = Record<string, string>> {
   context: Context;
 }
 
+export interface ConfigScheduledFilterInput {
+  configRuleName: string;
+  accountId: string;
+}
+
 export interface ConfigScheduledFilters {
   configRuleName?: string | string[];
   accountId?: string | string[];
+  customFilter?: (input: ConfigScheduledFilterInput) => boolean;
 }
 
 export interface ConfigScheduledRouteDefinition<TParams = Record<string, string>> {

@@ -3,6 +3,7 @@ import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-eve
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
+  ConfigChangeFilterInput,
   ConfigMiddleware,
   ConfigOversizedRequest,
   ConfigRequest,
@@ -158,12 +159,7 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     await handleEventWithMiddleware(allMiddleware, request, handler);
   }
 
-  private matchRoute(input: {
-    configRuleName: string;
-    resourceType?: string;
-    resourceId?: string;
-    configurationItemStatus?: string;
-  }): InternalConfigRoute | undefined {
+  private matchRoute(input: ConfigChangeFilterInput): InternalConfigRoute | undefined {
     return this.routes.find((route) => {
       const { filters } = route;
 
@@ -197,7 +193,9 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
         }
       }
 
-      // TODO: Support custom filter function here
+      if (filters.customFilter) {
+        return filters.customFilter(input);
+      }
 
       return true;
     });

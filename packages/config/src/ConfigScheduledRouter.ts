@@ -3,6 +3,7 @@ import { isObject, validateSchema } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
 import type {
+  ConfigScheduledFilterInput,
   ConfigScheduledRequest,
   ConfigScheduledRouteBuilder,
   ConfigScheduledRouteDefinition,
@@ -57,7 +58,7 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
   async handleEvent(event: ConfigEvent, context: Context): Promise<ConfigResponse> {
     const ruleParameters = JSON.parse(event.ruleParameters || '{}') as Record<string, string>;
 
-    const route = this.matchRoute(event.configRuleName, event.accountId);
+    const route = this.matchRoute({ configRuleName: event.configRuleName, accountId: event.accountId });
     if (!route) {
       throw new Error(`No route matched for scheduled config rule ${event.configRuleName}`);
     }
@@ -80,23 +81,27 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     await route.handler(request);
   }
 
-  private matchRoute(configRuleName: string, accountId: string): InternalConfigScheduledRoute | undefined {
+  private matchRoute(input: ConfigScheduledFilterInput): InternalConfigScheduledRoute | undefined {
     return this.routes.find((route) => {
       const { filters } = route;
 
       if (filters.configRuleName) {
         const { configRuleName: filterConfigRuleName } = filters;
         const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
-        if (!configRuleNames.includes(configRuleName)) {
+        if (!configRuleNames.includes(input.configRuleName)) {
           return false;
         }
       }
 
       if (filters.accountId) {
         const accountIds = Array.isArray(filters.accountId) ? filters.accountId : [filters.accountId];
-        if (!accountIds.includes(accountId)) {
+        if (!accountIds.includes(input.accountId)) {
           return false;
         }
+      }
+
+      if (filters.customFilter) {
+        return filters.customFilter(input);
       }
 
       return true;

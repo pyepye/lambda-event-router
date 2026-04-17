@@ -33,7 +33,7 @@ type InferRequest<TType extends AuthorizerType | undefined> = TType extends 'TOK
     : LambdaAuthorizerRequest;
 
 interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType | undefined> {
-  filters: { type?: TType; method?: string };
+  filters: { type?: TType; method?: string; customFilter?: (input: LambdaAuthorizerFilterInput) => boolean };
 }
 
 interface RouteBuilder<TRequest> {
@@ -263,6 +263,10 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
 
       if (filters.method && filters.method !== filterInput.method) {
         return false;
+      }
+
+      if (filters.customFilter) {
+        return filters.customFilter(filterInput);
       }
 
       return true;

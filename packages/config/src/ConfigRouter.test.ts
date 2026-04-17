@@ -7,7 +7,7 @@ import {
 } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
 import { ConfigRouter, createConfigRouter, defineRoute } from './ConfigRouter.js';
-import type { ConfigOversizedRequest, ConfigRequest } from './configRouterTypes.js';
+import type { ConfigChangeFilterInput, ConfigOversizedRequest, ConfigRequest } from './configRouterTypes.js';
 
 type ConfigRequestUnion = ConfigRequest | ConfigOversizedRequest;
 type ConfigNext = (request: ConfigRequestUnion) => Promise<void>;
@@ -300,6 +300,109 @@ suite('ConfigRouter', () => {
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('matches route by customFilter', () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: ({ configRuleName }: ConfigChangeFilterInput): boolean => configRuleName === 'my-rule',
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute({ configRuleName: 'my-rule' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when customFilter returns false', () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: (): boolean => false,
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute({ configRuleName: 'any-rule' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('passes correct filterInput to customFilter', () => {
+      const customFilter = vi.fn().mockReturnValue(true);
+      router.route(
+        defineRoute({
+          filters: { customFilter },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      router.matchRoute({
+        configRuleName: 'my-rule',
+        resourceType: 'AWS::EC2::Instance',
+        resourceId: 'i-abc123',
+        configurationItemStatus: 'ResourceDiscovered',
+      });
+
+      expect(customFilter).toHaveBeenCalledWith({
+        configRuleName: 'my-rule',
+        resourceType: 'AWS::EC2::Instance',
+        resourceId: 'i-abc123',
+        configurationItemStatus: 'ResourceDiscovered',
+      });
+    });
+
+    test('matches when standard filters and customFilter both pass', () => {
+      router.route(
+        defineRoute({
+          filters: {
+            configRuleName: 'my-rule',
+            customFilter: ({ resourceType }: ConfigChangeFilterInput): boolean => resourceType === 'AWS::EC2::Instance',
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute({ configRuleName: 'my-rule', resourceType: 'AWS::EC2::Instance' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when standard filters pass but customFilter returns false', () => {
+      router.route(
+        defineRoute({
+          filters: {
+            configRuleName: 'my-rule',
+            customFilter: (): boolean => false,
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = router.matchRoute({ configRuleName: 'my-rule' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('customFilter is not called when an earlier filter fails', () => {
+      const customFilter = vi.fn().mockReturnValue(true);
+      router.route(
+        defineRoute({
+          filters: {
+            configRuleName: 'my-rule',
+            customFilter,
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      router.matchRoute({ configRuleName: 'other-rule' });
+
+      expect(customFilter).not.toHaveBeenCalled();
     });
   });
 

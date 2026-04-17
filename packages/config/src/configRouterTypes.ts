@@ -29,11 +29,19 @@ export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Rec
   | ((request: ConfigRequest<TConfig, TParams>) => Promise<void>)
   | ((request: ConfigOversizedRequest<TParams>) => Promise<void>);
 
+export interface ConfigChangeFilterInput {
+  configRuleName: string;
+  resourceType?: string;
+  resourceId?: string;
+  configurationItemStatus?: string;
+}
+
 export interface ConfigChangeFilters {
   configRuleName?: string | string[];
   resourceType?: string | string[];
   configurationItemStatus?: string | string[];
   resourceId?: string | string[];
+  customFilter?: (input: ConfigChangeFilterInput) => boolean;
 }
 
 export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParams = Record<string, string>> {
