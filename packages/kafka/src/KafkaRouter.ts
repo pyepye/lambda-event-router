@@ -51,8 +51,12 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
 
   route<TValue>(definition: KafkaRouteDefinition<TValue>): this {
     this.routes.push({
-      ...(definition as unknown as InternalRoute),
-      middleware: (definition.middleware ?? []) as unknown as Middleware<KafkaRequest, void>[],
+      filters: definition.filters,
+      valueSchema: definition.valueSchema,
+      // @ts-expect-error Contravariance: typed middleware stored in general InternalRoute, safe because schema validates before calling
+      middleware: definition.middleware ?? [],
+      // @ts-expect-error Contravariance: typed handler stored in general InternalRoute, safe because schema validates before calling
+      handler: definition.handler,
     });
     return this;
   }

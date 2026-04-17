@@ -64,8 +64,8 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     this.routes.push({
       filters: definition.filters,
       argumentsSchema: definition.argumentsSchema,
-      // Casts needed: storing typed middleware/handler in general storage (contravariance)
-      middleware: (definition.middleware ?? []) as unknown as Middleware<AppSyncResolverRequest, unknown>[],
+      // @ts-expect-error Contravariance: typed middleware is safe at runtime because schema validates data before calling handlers
+      middleware: definition.middleware ?? [],
       handler: definition.handler as InternalResolverRoute['handler'],
     });
     return this;

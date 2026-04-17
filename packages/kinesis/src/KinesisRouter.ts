@@ -60,8 +60,12 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
 
   route<TData>(definition: KinesisRouteDefinition<TData>): this {
     this.routes.push({
-      ...(definition as unknown as InternalRoute),
-      middleware: (definition.middleware ?? []) as unknown as Middleware<KinesisRequest, void>[],
+      filters: definition.filters,
+      dataSchema: definition.dataSchema,
+      // @ts-expect-error Contravariance: typed middleware stored in general InternalRoute, safe because schema validates before calling
+      middleware: definition.middleware ?? [],
+      // @ts-expect-error Contravariance: typed handler stored in general InternalRoute, safe because schema validates before calling
+      handler: definition.handler,
     });
     return this;
   }

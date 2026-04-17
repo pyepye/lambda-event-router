@@ -134,8 +134,7 @@ export class PathRouter {
       paramNames,
       customFilter,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
-      // Casts needed: storing typed middleware in general storage (contravariance on request parameter)
-      middleware: (config.middleware ?? []) as unknown as Middleware<ApiRequest, ApiResponse>[],
+      middleware: config.middleware ?? [],
       querySchema: config.querySchema,
       bodySchema: config.bodySchema,
       responseSchema: config.responseSchema,

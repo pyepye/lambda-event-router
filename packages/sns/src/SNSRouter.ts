@@ -77,7 +77,8 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       filters: definition.filters,
       bodySchema: definition.bodySchema,
       messageAttributesSchema: definition.messageAttributesSchema,
-      middleware: (definition.middleware ?? []) as unknown as Middleware<SNSRequest, void>[],
+      // @ts-expect-error Contravariance: typed middleware stored in general InternalRoute, safe because schema validates before calling
+      middleware: definition.middleware ?? [],
       handler: definition.handler as SNSRecordHandler,
     });
     return this;

@@ -305,7 +305,7 @@ suite('SecretsManagerRouter', () => {
 
     suite('secretIncludes', () => {
       test('matches when secretId contains the string', () => {
-        router.route(defineRoute({ filters: { secretIncludes: ['123456789012'] } }).handle(async () => {}));
+        router.route(defineRoute({ filters: { secretIncludes: '123456789012' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
@@ -318,7 +318,7 @@ suite('SecretsManagerRouter', () => {
       });
 
       test('does not match when secretId does not contain the string', () => {
-        router.route(defineRoute({ filters: { secretIncludes: ['999999999999'] } }).handle(async () => {}));
+        router.route(defineRoute({ filters: { secretIncludes: '999999999999' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',

@@ -80,8 +80,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       filters: definition.filters,
       bodySchema: definition.bodySchema,
       messageAttributesSchema: definition.messageAttributesSchema,
-      // Casts needed: storing typed middleware/handler in general storage (contravariance)
-      middleware: (definition.middleware ?? []) as unknown as Middleware<SQSRequest, void>[],
+      // @ts-expect-error Contravariance: typed middleware stored in general InternalRoute, safe because schema validates before calling
+      middleware: definition.middleware ?? [],
       handler: definition.handler as SQSRecordHandler,
     });
     return this;

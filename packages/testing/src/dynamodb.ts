@@ -9,7 +9,8 @@ import { type FixtureMap, fixture } from './fixtureHelper.js';
 // while aws-lambda uses string for binary. For test data without binary fields,
 // the runtime values are identical - only the types differ.
 function marshallToLambda(input: Record<string, unknown>): Record<string, AttributeValue> {
-  return marshall(input) as unknown as Record<string, AttributeValue>;
+  // @ts-expect-error SDK AttributeValue uses Uint8Array for binary, aws-lambda uses string
+  return marshall(input);
 }
 
 export interface DynamoDBHandlerEvent {

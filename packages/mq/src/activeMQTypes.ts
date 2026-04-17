@@ -65,7 +65,7 @@ export interface ActiveMQFilterInput {
 export interface ActiveMQFilters {
   eventSourceArn?: string | string[];
   destination?: string | string[];
-  messageType?: ActiveMQMessageType | ActiveMQMessageType[];
+  messageType?: ActiveMQMessageType | (string & {}) | (ActiveMQMessageType | (string & {}))[];
   customFilter?: (input: ActiveMQFilterInput) => boolean;
 }
 
@@ -125,7 +125,9 @@ export interface ActiveMQRouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageType extends ActiveMQMessageType | undefined = undefined,
 > {
-  filters: Omit<ActiveMQFilters, 'messageType'> & { messageType?: ActiveMQMessageType | ActiveMQMessageType[] };
+  filters: Omit<ActiveMQFilters, 'messageType'> & {
+    messageType?: TMessageType | (string & {}) | (TMessageType | (string & {}))[];
+  };
   middleware?: ActiveMQMiddleware[];
   bodySchema?: TBodySchema;
 }

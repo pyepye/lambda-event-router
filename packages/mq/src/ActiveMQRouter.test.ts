@@ -43,8 +43,6 @@ suite('ActiveMQRouter', () => {
       };
 
       const definition = defineActiveMQRoute({
-        // TODO: Fix types to make this work
-        // @ts-expect-error - blah
         filters,
         bodySchema,
       }).handle(handler);

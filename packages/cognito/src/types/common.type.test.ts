@@ -119,6 +119,6 @@ suite('CognitoFilters', () => {
 
   test('narrows triggerSource with generic', () => {
     type Narrowed = NonNullable<CognitoFilters<'PreSignUp_SignUp'>['triggerSource']>;
-    // expectTypeOf<Narrowed>().toEqualTypeOf<'PreSignUp_SignUp'>();
+    expectTypeOf<Narrowed>().toEqualTypeOf<'PreSignUp_SignUp' | 'PreSignUp_SignUp'[]>();
   });
 });
