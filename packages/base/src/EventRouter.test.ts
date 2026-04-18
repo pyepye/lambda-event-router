@@ -23,186 +23,186 @@ suite('EventRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    test('returns false for null', () => {
-      expect(router.canHandleEvent(null)).toBe(false);
+    test('returns false for null', async () => {
+      expect(await router.canHandleEvent(null)).toBe(false);
     });
 
-    test('returns false for a string', () => {
-      expect(router.canHandleEvent('not an event')).toBe(false);
+    test('returns false for a string', async () => {
+      expect(await router.canHandleEvent('not an event')).toBe(false);
     });
 
-    test('returns false for a known SQS event', () => {
+    test('returns false for a known SQS event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:sqs' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known SNS event', () => {
+    test('returns false for a known SNS event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ EventSource: 'aws:sns' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known S3 event', () => {
+    test('returns false for a known S3 event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:s3' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known DynamoDB Stream event', () => {
+    test('returns false for a known DynamoDB Stream event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:dynamodb' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Kinesis event', () => {
+    test('returns false for a known Kinesis event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:kinesis' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known API Gateway V2 event', () => {
+    test('returns false for a known API Gateway V2 event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { rawPath: '/test', requestContext: { http: { method: 'GET' } } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Cognito event', () => {
+    test('returns false for a known Cognito event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { triggerSource: 'PreSignUp_SignUp', userPoolId: 'us-east-1_TestPool' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known CodeCommit event', () => {
+    test('returns false for a known CodeCommit event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:codecommit' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known SES event', () => {
+    test('returns false for a known SES event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:ses' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known DocumentDB event', () => {
+    test('returns false for a known DocumentDB event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { eventSource: 'aws:docdb', events: [] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known ActiveMQ event', () => {
+    test('returns false for a known ActiveMQ event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { eventSource: 'aws:mq', messages: [] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known RabbitMQ event', () => {
+    test('returns false for a known RabbitMQ event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { eventSource: 'aws:rmq', rmqMessagesByQueue: {} };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known ALB event', () => {
+    test('returns false for a known ALB event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { requestContext: { elb: { targetGroupArn: 'arn:aws:elasticloadbalancing:...' } } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known API Gateway V1 event', () => {
+    test('returns false for a known API Gateway V1 event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { httpMethod: 'GET', requestContext: { accountId: '123' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known VPC Lattice V1 event', () => {
+    test('returns false for a known VPC Lattice V1 event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { raw_path: '/test', method: 'GET' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known VPC Lattice V2 event', () => {
+    test('returns false for a known VPC Lattice V2 event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { requestContext: { serviceArn: 'arn:aws:vpc-lattice:...' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known AppSync resolver event', () => {
+    test('returns false for a known AppSync resolver event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { info: { parentTypeName: 'Query', fieldName: 'getItem' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known AppSync channel event', () => {
+    test('returns false for a known AppSync channel event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { info: { channel: '/default/test' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known AppSync Authorizer event', () => {
+    test('returns false for a known AppSync Authorizer event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { authorizationToken: 'Bearer token', requestContext: { apiId: 'abc123' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known CloudWatch Logs event', () => {
+    test('returns false for a known CloudWatch Logs event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { awslogs: { data: 'base64data' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known CodePipeline event', () => {
+    test('returns false for a known CodePipeline event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { 'CodePipeline.job': { id: 'job-123' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Config event', () => {
+    test('returns false for a known Config event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { invokingEvent: '{}', configRuleName: 'my-rule' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Connect event', () => {
+    test('returns false for a known Connect event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Name: 'ContactFlowEvent' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Lex event', () => {
+    test('returns false for a known Lex event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { sessionState: { intent: {} }, bot: { name: 'my-bot' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Secrets Manager event', () => {
+    test('returns false for a known Secrets Manager event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { SecretId: 'arn:aws:secretsmanager:...', Step: 'createSecret' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns true for an arbitrary object when a catch-all route is registered', () => {
+    test('returns true for an arbitrary object when a catch-all route is registered', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
-      expect(router.canHandleEvent({ taskId: 'task-123' })).toBe(true);
+      expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(true);
     });
 
-    test('returns false for a known Kafka (MSK) event', () => {
+    test('returns false for a known Kafka (MSK) event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { eventSource: 'aws:kafka', bootstrapServers: 'b-1.demo:9092', records: { 'topic-1-0': [] } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known self-managed Kafka event', () => {
+    test('returns false for a known self-managed Kafka event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = {
         eventSource: 'SelfManagedKafka',
         bootstrapServers: 'b-1.demo:9092',
         records: { 'topic-1-0': [] },
       };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Firehose event', () => {
+    test('returns false for a known Firehose event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = {
         invocationId: 'invocation-123',
@@ -210,10 +210,10 @@ suite('EventRouter', () => {
         region: 'us-east-1',
         records: [{ recordId: 'record-1', data: 'base64data' }],
       };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known S3 Batch event', () => {
+    test('returns false for a known S3 Batch event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = {
         invocationSchemaVersion: '1.0',
@@ -221,10 +221,10 @@ suite('EventRouter', () => {
         job: { id: 'job-123' },
         tasks: [{ taskId: 'task-1', s3Key: 'key', s3BucketArn: 'arn:aws:s3:::bucket' }],
       };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for an EventBridge envelope event', () => {
+    test('returns false for an EventBridge envelope event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = {
         version: '0',
@@ -237,25 +237,23 @@ suite('EventRouter', () => {
         resources: [],
         detail: {},
       };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    // TODO: Can't work while canHandleEvent is not async and using `event is unknown`
-    test.skip('returns false when no routes are registered', () => {
-      expect(router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
+    test('returns false when no routes are registered', async () => {
+      expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
     });
 
-    // TODO: Can't work while canHandleEvent is not async and using `event is unknown`
-    test.skip('returns false when no routes match via customFilter', () => {
+    test('returns false when no routes match via customFilter', async () => {
       router.route(
         defineEventRoute({
           filters: { customFilter: () => false },
         }).handle(async () => {}),
       );
-      expect(router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
+      expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
     });
 
-    test('returns true when a customFilter matches', () => {
+    test('returns true when a customFilter matches', async () => {
       router.route(
         defineEventRoute({
           filters: {
@@ -266,37 +264,37 @@ suite('EventRouter', () => {
           },
         }).handle(async () => {}),
       );
-      expect(router.canHandleEvent({ taskId: 'task-123' })).toBe(true);
+      expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(true);
     });
 
-    test('returns true for Records array with non-object first element when route matches', () => {
+    test('returns true for Records array with non-object first element when route matches', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [42] };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true for Records array with unknown eventSource when route matches', () => {
+    test('returns true for Records array with unknown eventSource when route matches', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { Records: [{ eventSource: 'aws:unknown' }] };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true for unknown top-level eventSource string when route matches', () => {
+    test('returns true for unknown top-level eventSource string when route matches', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { eventSource: 'custom:unknown' };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true for requestContext without serviceArn or full AppSync Authorizer shape when route matches', () => {
+    test('returns true for requestContext without serviceArn or full AppSync Authorizer shape when route matches', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { requestContext: { apiId: 'abc123' } };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true for info object without parentTypeName or channel when route matches', () => {
+    test('returns true for info object without parentTypeName or channel when route matches', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
       const event = { info: { someOtherField: 'value' } };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
   });
 

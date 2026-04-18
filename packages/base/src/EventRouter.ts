@@ -167,14 +167,11 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     this.middleware = options?.middleware ?? [];
   }
 
-  // async canHandleEvent(event: unknown): event is unknown {
-  canHandleEvent(event: unknown): event is unknown {
+  async canHandleEvent(event: unknown): Promise<boolean> {
     if (!isObject(event)) return false;
     if (isKnownEventSource(event)) return false;
-    return true;
-    // TODO: this function needs to return a boolean which will effect all Routers
-    // const matched = await this.matchRoute(event)
-    // return matched !== undefined;
+    const matched = await this.matchRoute(event);
+    return matched !== undefined;
   }
 
   route<TPayload>(definition: EventRouteDefinition<TPayload, TResponse>): this {
