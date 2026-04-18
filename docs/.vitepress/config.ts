@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress';
 
-// TODO: set `base` to '/lambda-event-manager/' before deploying to
-// https://pyepye.github.io/lambda-event-manager/, or keep '/' for a custom domain.
+// TODO: set `base` to '/lambda-event-router/' before deploying to
+// https://pyepye.github.io/lambda-event-router/, or keep '/' for a custom domain.
 export default defineConfig({
   srcExclude: ['README.md'],
   title: 'Lambda Event Router',
@@ -34,6 +34,7 @@ export default defineConfig({
             { text: 'Routing / Filtering', link: '/docs/routing' },
             { text: 'Handlers', link: '/docs/handlers' },
             { text: 'Middleware', link: '/docs/middleware' },
+            { text: 'Logging', link: '/docs/logging' },
           ],
         },
         {

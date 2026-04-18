@@ -1,4 +1,6 @@
 import type { Context, Handler } from 'aws-lambda';
+
+import { logger as log } from './logging';
 import type { EventTypeRouter } from './types.js';
 
 interface LambdaRouterOptions {
@@ -23,13 +25,11 @@ export class LambdaRouter {
     const otherRouters = options.routers.filter((r) => r.constructor.name !== 'EventRouter');
     this.routers = [...otherRouters, ...customEnvelopeRouters];
     this.middleware = options.middleware ?? [];
+    log.debug(`LambdaRouter middleware (${this.middleware.length}) ${this.middleware.map((m) => m.name)}`);
   }
 
   handler(): Handler {
     return async (event: unknown, context: Context): Promise<unknown> => {
-      if (this.middleware.length === 0) {
-        return this.handleEvent(event, context);
-      }
       return this.handleEventWithMiddleware(event, context, (evt, ctx) => this.handleEvent(evt, ctx));
     };
   }
