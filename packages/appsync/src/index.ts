@@ -12,6 +12,7 @@ export type { AppSyncEventsEvent, AppSyncEventsIdentity, AppSyncEventsOperation 
 export type {
   AppSyncAuthorizerRequest,
   AppSyncAuthorizerRouteDefinition,
+  AppSyncEventsChannelInput,
   AppSyncEventsFilterInput,
   AppSyncEventsFilters,
   AppSyncEventsOperationFilters,
@@ -21,6 +22,7 @@ export type {
   AppSyncPublishInput,
   AppSyncQueryInput,
   AppSyncResolverFieldFilters,
+  AppSyncResolverFieldInput,
   AppSyncResolverFilterInput,
   AppSyncResolverFilters,
   AppSyncResolverMiddleware,

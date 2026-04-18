@@ -54,11 +54,9 @@ export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>>
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
-export interface AppSyncResolverFieldFilters {
-  customFilter?: (input: AppSyncResolverFilterInput) => boolean | Promise<boolean>;
-}
+export type AppSyncResolverFieldFilters = Pick<AppSyncResolverFilters, 'customFilter'>;
 
-export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
+export interface AppSyncResolverFieldInput<TArgs = Record<string, unknown>> {
   fieldName: string;
   filters?: AppSyncResolverFieldFilters;
   argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
@@ -66,21 +64,9 @@ export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
-export interface AppSyncMutationInput<TArgs = Record<string, unknown>> {
-  fieldName: string;
-  filters?: AppSyncResolverFieldFilters;
-  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
-  middleware?: AppSyncResolverMiddleware<TArgs>[];
-  handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
-}
-
-export interface AppSyncSubscriptionInput<TArgs = Record<string, unknown>> {
-  fieldName: string;
-  filters?: AppSyncResolverFieldFilters;
-  argumentsSchema?: StandardSchemaV1<unknown, TArgs>;
-  middleware?: AppSyncResolverMiddleware<TArgs>[];
-  handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
-}
+export type AppSyncQueryInput<TArgs = Record<string, unknown>> = AppSyncResolverFieldInput<TArgs>;
+export type AppSyncMutationInput<TArgs = Record<string, unknown>> = AppSyncResolverFieldInput<TArgs>;
+export type AppSyncSubscriptionInput<TArgs = Record<string, unknown>> = AppSyncResolverFieldInput<TArgs>;
 
 // ─── Resolver Route Builder Types ────────────────────────────────────────────
 
@@ -167,21 +153,16 @@ export interface AppSyncEventsRouteDefinition {
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
-export interface AppSyncEventsOperationFilters {
-  customFilter?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
-}
+export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'customFilter'>;
 
-export interface AppSyncPublishInput {
+export interface AppSyncEventsChannelInput {
   channelNamespace: string;
   filters?: AppSyncEventsOperationFilters;
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
-export interface AppSyncSubscribeInput {
-  channelNamespace: string;
-  filters?: AppSyncEventsOperationFilters;
-  handler: (request: AppSyncEventsRequest) => Promise<unknown>;
-}
+export type AppSyncPublishInput = AppSyncEventsChannelInput;
+export type AppSyncSubscribeInput = AppSyncEventsChannelInput;
 
 // ─── Events Route Builder Types ──────────────────────────────────────────────
 
