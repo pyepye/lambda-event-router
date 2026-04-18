@@ -86,7 +86,7 @@ suite('EventBridgeRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by source filter', ({ eventBridgeEvent }) => {
+    test('matches route by source filter', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { source: 'my.app' },
@@ -95,12 +95,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by source filter array', ({ eventBridgeEvent }) => {
+    test('matches route by source filter array', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { source: ['my.app', 'other.app'] },
@@ -109,12 +109,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when source filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when source filter does not match', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { source: 'other.app' },
@@ -123,12 +123,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by detailType filter', ({ eventBridgeEvent }) => {
+    test('matches route by detailType filter', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { detailType: 'OrderPlaced' },
@@ -137,12 +137,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by detailType filter array', ({ eventBridgeEvent }) => {
+    test('matches route by detailType filter array', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { detailType: ['OrderPlaced', 'OrderRefunded'] },
@@ -151,12 +151,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when detailType filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when detailType filter does not match', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { detailType: 'OrderShipped' },
@@ -165,12 +165,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by account filter', ({ eventBridgeEvent }) => {
+    test('matches route by account filter', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { account: '123456789012' },
@@ -179,12 +179,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by account filter array', ({ eventBridgeEvent }) => {
+    test('matches route by account filter array', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { account: ['123456789012', '987654321098'] },
@@ -193,12 +193,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when account filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when account filter does not match', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { account: '999999999999' },
@@ -207,12 +207,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by region filter', ({ eventBridgeEvent }) => {
+    test('matches route by region filter', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { region: 'us-east-1' },
@@ -221,12 +221,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by region filter array', ({ eventBridgeEvent }) => {
+    test('matches route by region filter array', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { region: ['us-east-1', 'eu-west-2'] },
@@ -235,12 +235,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when region filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when region filter does not match', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { region: 'eu-west-1' },
@@ -249,12 +249,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by resource filter', ({ eventBridgeEvent }) => {
+    test('matches route by resource filter', async ({ eventBridgeEvent }) => {
       const resourceArn = 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0';
       router.route(
         defineRoute({
@@ -264,12 +264,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent({ resources: [resourceArn] });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by resource filter array', ({ eventBridgeEvent }) => {
+    test('matches route by resource filter array', async ({ eventBridgeEvent }) => {
       const resourceArn = 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0';
       const resourceArn2 = 'arn:aws:ec2:eu-west-1:987654321098:instance/i-9876543210zyxwvu9';
       router.route(
@@ -280,12 +280,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent({ resources: [resourceArn] });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when resource filter does not match', ({ eventBridgeEvent }) => {
+    test('does not match route when resource filter does not match', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { resource: 'arn:aws:ec2:us-east-1:123456789012:instance/i-other' },
@@ -296,12 +296,12 @@ suite('EventBridgeRouter', () => {
         resources: ['arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0'],
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when all standard filters match together', ({ eventBridgeEvent }) => {
+    test('matches when all standard filters match together', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -315,12 +315,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when one of multiple standard filters mismatches', ({ eventBridgeEvent }) => {
+    test('does not match when one of multiple standard filters mismatches', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -333,12 +333,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ eventBridgeEvent }) => {
+    test('matches route by customFilter', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -352,12 +352,32 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ eventBridgeEvent }) => {
+    test('matches route by async customFilter', async ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ detail }: EventBridgeFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - detail is unknown, testing filter with known shape
+              return detail.orderId === '12345';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when customFilter returns false', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -368,12 +388,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ eventBridgeEvent }) => {
+    test('selects the first matching route when multiple routes match', async ({ eventBridgeEvent }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
 
@@ -390,13 +410,13 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when standard filters and customFilter both pass', ({ eventBridgeEvent }) => {
+    test('matches when standard filters and customFilter both pass', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -411,12 +431,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', ({ eventBridgeEvent }) => {
+    test('does not match when standard filters pass but customFilter returns false', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
@@ -428,12 +448,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when event has multiple resources and filter matches one', ({ eventBridgeEvent }) => {
+    test('matches when event has multiple resources and filter matches one', async ({ eventBridgeEvent }) => {
       const arnA = 'arn:aws:ec2:us-east-1:123456789012:instance/i-aaaa';
       const arnB = 'arn:aws:ec2:us-east-1:123456789012:instance/i-bbbb';
 
@@ -445,12 +465,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent({ resources: [arnA, arnB] });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('matches when filter source is an array and event source is one of them', ({ eventBridgeEvent }) => {
+    test('matches when filter source is an array and event source is one of them', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: { source: ['my.app', 'other.app'] },
@@ -459,12 +479,12 @@ suite('EventBridgeRouter', () => {
 
       const event = eventBridgeEvent({ source: 'other.app' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('passes correct filterInput to customFilter', ({ eventBridgeEvent }) => {
+    test('passes correct filterInput to customFilter', async ({ eventBridgeEvent }) => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({

@@ -33,7 +33,11 @@ type InferRequest<TType extends AuthorizerType | undefined> = TType extends 'TOK
     : LambdaAuthorizerRequest;
 
 interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType | undefined> {
-  filters: { type?: TType; method?: string; customFilter?: (input: LambdaAuthorizerFilterInput) => boolean };
+  filters: {
+    type?: TType;
+    method?: string;
+    customFilter?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
+  };
 }
 
 interface RouteBuilder<TRequest> {
@@ -160,7 +164,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
   async handleEvent(event: LambdaAuthorizerEvent, context: Context): Promise<LambdaAuthorizerResult> {
     const filterInput = this.extractFilterInput(event);
 
-    const route = this.matchRoute(filterInput);
+    const route = await this.matchRoute(filterInput);
     if (!route) {
       throw new Error(
         `No route matched for Lambda Authorizer event (type: ${filterInput.type}, method: ${filterInput.method ?? 'N/A'})`,
@@ -253,24 +257,25 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     throw new Error('Unrecognized Lambda Authorizer event format');
   }
 
-  private matchRoute(filterInput: LambdaAuthorizerFilterInput): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(filterInput: LambdaAuthorizerFilterInput): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.type && filters.type !== filterInput.type) {
-        return false;
+        continue;
       }
 
       if (filters.method && filters.method !== filterInput.method) {
-        return false;
+        continue;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

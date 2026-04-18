@@ -58,7 +58,7 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
   async handleEvent(event: ConfigEvent, context: Context): Promise<ConfigResponse> {
     const ruleParameters = JSON.parse(event.ruleParameters || '{}') as Record<string, string>;
 
-    const route = this.matchRoute({ configRuleName: event.configRuleName, accountId: event.accountId });
+    const route = await this.matchRoute({ configRuleName: event.configRuleName, accountId: event.accountId });
     if (!route) {
       throw new Error(`No route matched for scheduled config rule ${event.configRuleName}`);
     }
@@ -81,31 +81,32 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     await route.handler(request);
   }
 
-  private matchRoute(input: ConfigScheduledFilterInput): InternalConfigScheduledRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(input: ConfigScheduledFilterInput): Promise<InternalConfigScheduledRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.configRuleName) {
         const { configRuleName: filterConfigRuleName } = filters;
         const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
         if (!configRuleNames.includes(input.configRuleName)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.accountId) {
         const accountIds = Array.isArray(filters.accountId) ? filters.accountId : [filters.accountId];
         if (!accountIds.includes(input.accountId)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(input);
+        const match = filters.customFilter(input);
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

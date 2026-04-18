@@ -26,7 +26,11 @@ interface RouteInput<
   TRouteKey extends string | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
 > {
-  filters: { eventType?: TEventType; routeKey?: TRouteKey; customFilter?: (input: WebSocketFilterInput) => boolean };
+  filters: {
+    eventType?: TEventType;
+    routeKey?: TRouteKey;
+    customFilter?: (input: WebSocketFilterInput) => boolean | Promise<boolean>;
+  };
   bodySchema?: TBodySchema;
 }
 
@@ -153,7 +157,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       routeKey,
     };
 
-    const route = this.matchRoute(filterInput);
+    const route = await this.matchRoute(filterInput);
     if (!route) {
       throw new Error(`No route matched for WebSocket event (eventType: ${eventType}, routeKey: ${routeKey})`);
     }
@@ -188,24 +192,25 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     }
   }
 
-  private matchRoute(filterInput: WebSocketFilterInput): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(filterInput: WebSocketFilterInput): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.eventType && filters.eventType !== filterInput.eventType) {
-        return false;
+        continue;
       }
 
       if (filters.routeKey && filters.routeKey !== filterInput.routeKey) {
-        return false;
+        continue;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 
   private buildResult(response: WebSocketConnectResponse): WebSocketResult {

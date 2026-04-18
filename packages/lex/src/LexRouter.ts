@@ -72,7 +72,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   }
 
   async handleEvent(event: LexV2Event, context: Context): Promise<LexV2Result> {
-    const route = this.matchRoute(event);
+    const route = await this.matchRoute(event);
     if (!route) {
       const intentName = event.sessionState.intent.name;
       throw new Error(
@@ -95,16 +95,16 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(event: LexV2Event): LexRouteDefinition | undefined {
+  private async matchRoute(event: LexV2Event): Promise<LexRouteDefinition | undefined> {
     const intentName = event.sessionState.intent.name;
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.intentName) {
         const intentNames = Array.isArray(filters.intentName) ? filters.intentName : [filters.intentName];
         if (!intentNames.includes(intentName)) {
-          return false;
+          continue;
         }
       }
 
@@ -112,36 +112,39 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
         const { invocationSource: filterSource } = filters;
         const invocationSources = Array.isArray(filterSource) ? filterSource : [filterSource];
         if (!invocationSources.includes(event.invocationSource)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.botId) {
         const botIds = Array.isArray(filters.botId) ? filters.botId : [filters.botId];
         if (!botIds.includes(event.bot.id)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.inputMode) {
         const inputModes = Array.isArray(filters.inputMode) ? filters.inputMode : [filters.inputMode];
         if (!inputModes.includes(event.inputMode)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({
+        const match = await filters.customFilter({
           intentName,
           invocationSource: event.invocationSource,
           inputMode: event.inputMode,
           botId: event.bot.id,
           event,
         });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

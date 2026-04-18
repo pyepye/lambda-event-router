@@ -41,7 +41,7 @@ export interface ConfigChangeFilters {
   resourceType?: string | string[];
   configurationItemStatus?: string | string[];
   resourceId?: string | string[];
-  customFilter?: (input: ConfigChangeFilterInput) => boolean;
+  customFilter?: (input: ConfigChangeFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParams = Record<string, string>> {

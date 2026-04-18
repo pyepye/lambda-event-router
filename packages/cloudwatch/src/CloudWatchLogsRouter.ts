@@ -1,7 +1,7 @@
+import { gunzipSync } from 'node:zlib';
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
-import { gunzipSync } from 'node:zlib';
 import type {
   CloudWatchLogsControlMessageRouteDefinition,
   CloudWatchLogsDataMessageRouteDefinition,
@@ -70,7 +70,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
 
   async handleEvent(event: CloudWatchLogsEvent, context: Context): Promise<undefined> {
     const logData = this.decodeLogData(event.awslogs.data);
-    const route = this.matchRoute(logData);
+    const route = await this.matchRoute(logData);
     if (!route) {
       throw new Error(`No route matched for log group ${logData.logGroup}`);
     }
@@ -94,52 +94,55 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
     return decodedData;
   }
 
-  private matchRoute(input: CloudWatchLogsDecodedData): CloudWatchLogsRouteDefinition | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(input: CloudWatchLogsDecodedData): Promise<CloudWatchLogsRouteDefinition | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.messageType) {
         const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
-        if (!messageTypes.includes(input.messageType as CloudWatchLogsMessageType)) return false;
+        if (!messageTypes.includes(input.messageType as CloudWatchLogsMessageType)) continue;
       }
 
       if (filters.logGroup) {
         const logGroups = Array.isArray(filters.logGroup) ? filters.logGroup : [filters.logGroup];
-        if (!logGroups.includes(input.logGroup)) return false;
+        if (!logGroups.includes(input.logGroup)) continue;
       }
 
       if (filters.logGroupPrefix) {
         const prefixes = Array.isArray(filters.logGroupPrefix) ? filters.logGroupPrefix : [filters.logGroupPrefix];
         const hasMatchingPrefix = prefixes.some((prefix) => input.logGroup.startsWith(prefix));
-        if (!hasMatchingPrefix) return false;
+        if (!hasMatchingPrefix) continue;
       }
 
       if (filters.logGroupSuffix) {
         const suffixes = Array.isArray(filters.logGroupSuffix) ? filters.logGroupSuffix : [filters.logGroupSuffix];
         const hasMatchingSuffix = suffixes.some((suffix) => input.logGroup.endsWith(suffix));
-        if (!hasMatchingSuffix) return false;
+        if (!hasMatchingSuffix) continue;
       }
 
       if (filters.logGroupIncludes) {
         const { logGroupIncludes: filterIncludes } = filters;
         const includes = Array.isArray(filterIncludes) ? filterIncludes : [filterIncludes];
         const hasMatchingSubstring = includes.some((substring) => input.logGroup.includes(substring));
-        if (!hasMatchingSubstring) return false;
+        if (!hasMatchingSubstring) continue;
       }
 
       if (filters.subscriptionFilter) {
         const { subscriptionFilter } = filters;
         const subFilters = Array.isArray(subscriptionFilter) ? subscriptionFilter : [subscriptionFilter];
         const hasMatchingFilter = input.subscriptionFilters.some((subFilter) => subFilters.includes(subFilter));
-        if (!hasMatchingFilter) return false;
+        if (!hasMatchingFilter) continue;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(input);
+        const match = await filters.customFilter(input);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

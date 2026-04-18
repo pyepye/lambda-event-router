@@ -20,7 +20,7 @@ export interface S3Filters {
   prefix?: string | string[];
   suffix?: string | string[];
   includes?: string | string[];
-  customFilter?: (input: S3FilterInput) => boolean;
+  customFilter?: (input: S3FilterInput) => boolean | Promise<boolean>;
 }
 
 // Filters without eventNames - used by convenience methods that set eventNames automatically

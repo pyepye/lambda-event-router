@@ -99,7 +99,7 @@ suite('ActiveMQRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('only matches jms/text-message type messages', ({ activeMQMessage }) => {
+    test('only matches jms/text-message type messages', async ({ activeMQMessage }) => {
       router.textMessage({ filters: {}, handler: async () => {} });
 
       const event = createActiveMQEvent();
@@ -107,9 +107,9 @@ suite('ActiveMQRouter', () => {
       const bytesMessage = activeMQMessage({ messageType: 'jms/bytes-message' });
 
       // @ts-expect-error - testing private method directly
-      const textResult = router.matchRoute(event, textMessage);
+      const textResult = await router.matchRoute(event, textMessage);
       // @ts-expect-error - testing private method directly
-      const bytesResult = router.matchRoute(event, bytesMessage);
+      const bytesResult = await router.matchRoute(event, bytesMessage);
 
       expect(textResult).toBeDefined();
       expect(bytesResult).toBeUndefined();
@@ -126,7 +126,7 @@ suite('ActiveMQRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('only matches jms/bytes-message type messages', ({ activeMQMessage }) => {
+    test('only matches jms/bytes-message type messages', async ({ activeMQMessage }) => {
       router.bytesMessage({ filters: {}, handler: async () => {} });
 
       const event = createActiveMQEvent();
@@ -134,9 +134,9 @@ suite('ActiveMQRouter', () => {
       const bytesMessage = activeMQMessage({ messageType: 'jms/bytes-message' });
 
       // @ts-expect-error - testing private method directly
-      const textResult = router.matchRoute(event, textMessage);
+      const textResult = await router.matchRoute(event, textMessage);
       // @ts-expect-error - testing private method directly
-      const bytesResult = router.matchRoute(event, bytesMessage);
+      const bytesResult = await router.matchRoute(event, bytesMessage);
 
       expect(textResult).toBeUndefined();
       expect(bytesResult).toBeDefined();
@@ -144,7 +144,7 @@ suite('ActiveMQRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArn', ({ activeMQMessage }) => {
+    test('matches route by eventSourceArn', async ({ activeMQMessage }) => {
       const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
       router.route(
         defineActiveMQRoute({
@@ -157,12 +157,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventSourceArn array', ({ activeMQMessage }) => {
+    test('matches route by eventSourceArn array', async ({ activeMQMessage }) => {
       const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
       const arn2 = 'arn:aws:mq:eu-west-2:987654321098:broker:OtherBroker:z-9876';
       router.route(
@@ -176,12 +176,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArn does not match', ({ activeMQMessage }) => {
+    test('does not match when eventSourceArn does not match', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { eventSourceArn: 'arn:aws:mq:us-east-1:123456789012:broker:OtherBroker:b-9999' },
@@ -192,12 +192,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by messageType', ({ activeMQMessage }) => {
+    test('matches route by messageType', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { messageType: 'jms/text-message' },
@@ -208,12 +208,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ messageType: 'jms/text-message' });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by messageType array', ({ activeMQMessage }) => {
+    test('matches route by messageType array', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { messageType: ['jms/text-message', 'jms/bytes-message'] },
@@ -224,12 +224,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ messageType: 'jms/text-message' });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when messageType does not match', ({ activeMQMessage }) => {
+    test('does not match when messageType does not match', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { messageType: 'jms/bytes-message' },
@@ -240,12 +240,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ messageType: 'jms/text-message' });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by destination', ({ activeMQMessage }) => {
+    test('matches route by destination', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { destination: 'orders-queue' },
@@ -256,12 +256,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ destination: { physicalName: 'orders-queue' } });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by destination array', ({ activeMQMessage }) => {
+    test('matches route by destination array', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { destination: ['orders-queue', 'refunds-queue'] },
@@ -272,12 +272,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ destination: { physicalName: 'orders-queue' } });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when destination does not match', ({ activeMQMessage }) => {
+    test('does not match when destination does not match', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { destination: 'orders-queue' },
@@ -288,12 +288,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ destination: { physicalName: 'users-queue' } });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ activeMQMessage }) => {
+    test('matches route by customFilter', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: {
@@ -308,12 +308,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ destination: { physicalName: 'test-queue' } });
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', ({ activeMQMessage }) => {
+    test('does not match when customFilter returns false', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: { customFilter: (): boolean => false },
@@ -324,12 +324,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct ActiveMQFilterInput', ({ activeMQMessage }) => {
+    test('customFilter receives correct ActiveMQFilterInput', async ({ activeMQMessage }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineActiveMQRoute({
@@ -344,7 +344,7 @@ suite('ActiveMQRouter', () => {
       });
 
       // @ts-expect-error - testing private method directly
-      router.matchRoute(event, message);
+      await router.matchRoute(event, message);
 
       expect(filterSpy).toHaveBeenCalledWith({
         messageType: 'jms/text-message',
@@ -353,7 +353,7 @@ suite('ActiveMQRouter', () => {
       });
     });
 
-    test('customFilter is not called when a preceding filter rejects', ({ activeMQMessage }) => {
+    test('customFilter is not called when a preceding filter rejects', async ({ activeMQMessage }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineActiveMQRoute({
@@ -365,12 +365,33 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage({ messageType: 'jms/text-message' });
 
       // @ts-expect-error - testing private method directly
-      router.matchRoute(event, message);
+      await router.matchRoute(event, message);
 
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route with empty filters as a catch-all', ({ activeMQMessage }) => {
+    test('matches route by async customFilter', async ({ activeMQMessage }) => {
+      router.route(
+        defineActiveMQRoute({
+          filters: {
+            customFilter: async ({ destination }: ActiveMQFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return destination === 'test-queue';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const event = createActiveMQEvent();
+      const message = activeMQMessage({ destination: { physicalName: 'test-queue' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: {},
@@ -381,12 +402,12 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ activeMQMessage }) => {
+    test('selects the first matching route when multiple routes match', async ({ activeMQMessage }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineActiveMQRoute({ filters: {} }).handle(firstHandler));
@@ -396,7 +417,7 @@ suite('ActiveMQRouter', () => {
       const message = activeMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, message);
+      const result = await router.matchRoute(event, message);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -505,7 +526,7 @@ suite('ActiveMQRouter', () => {
         defineActiveMQRoute({ filters: {} }).handle(async (request: ActiveMQRequest) => {
           const messageId = request.record.messageID;
           callOrder.push(`start-${messageId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${messageId}`);
         }),
       );

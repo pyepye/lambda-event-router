@@ -131,7 +131,7 @@ export interface DocumentDBFilters {
   fullDocumentBeforeChange?:
     | DocumentDBFullDocumentBeforeChangeOption
     | readonly DocumentDBFullDocumentBeforeChangeOption[];
-  customFilter?: (input: DocumentDBFilterInput) => boolean;
+  customFilter?: (input: DocumentDBFilterInput) => boolean | Promise<boolean>;
 }
 
 // Route definition types - one per operation + generic

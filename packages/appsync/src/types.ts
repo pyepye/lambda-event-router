@@ -39,7 +39,7 @@ export interface AppSyncResolverFilterInput {
 export interface AppSyncResolverFilters {
   parentTypeName?: string | string[];
   fieldName?: string | string[];
-  customFilter?: (input: AppSyncResolverFilterInput) => boolean;
+  customFilter?: (input: AppSyncResolverFilterInput) => boolean | Promise<boolean>;
 }
 
 export type AppSyncResolverMiddleware<TArgs = Record<string, unknown>> = Middleware<
@@ -55,7 +55,7 @@ export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>>
 }
 
 export interface AppSyncResolverFieldFilters {
-  customFilter?: (input: AppSyncResolverFilterInput) => boolean;
+  customFilter?: (input: AppSyncResolverFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface AppSyncQueryInput<TArgs = Record<string, unknown>> {
@@ -159,7 +159,7 @@ export interface AppSyncEventsFilterInput {
 export interface AppSyncEventsFilters {
   operation?: AppSyncEventsOperation | AppSyncEventsOperation[];
   channelNamespace?: string | string[];
-  customFilter?: (input: AppSyncEventsFilterInput) => boolean;
+  customFilter?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface AppSyncEventsRouteDefinition {
@@ -168,7 +168,7 @@ export interface AppSyncEventsRouteDefinition {
 }
 
 export interface AppSyncEventsOperationFilters {
-  customFilter?: (input: AppSyncEventsFilterInput) => boolean;
+  customFilter?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface AppSyncPublishInput {

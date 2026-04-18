@@ -97,7 +97,7 @@ suite('KinesisRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArn', ({ kinesisRecord }) => {
+    test('matches route by eventSourceArn', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
@@ -107,12 +107,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventSourceArn array', ({ kinesisRecord }) => {
+    test('matches route by eventSourceArn array', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const eventSourceArn2 = 'arn:aws:kinesis:eu-west-2:987654321098:stream/other-stream';
       router.route(
@@ -123,12 +123,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArn does not match', ({ kinesisRecord }) => {
+    test('does not match when eventSourceArn does not match', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream' },
@@ -137,12 +137,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by partitionKey', ({ kinesisRecord }) => {
+    test('matches route by partitionKey', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: { partitionKey: 'partition-key-1' },
@@ -151,12 +151,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by partitionKey array', ({ kinesisRecord }) => {
+    test('matches route by partitionKey array', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: { partitionKey: ['partition-key-1', 'partition-key-2'] },
@@ -165,12 +165,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when partitionKey does not match', ({ kinesisRecord }) => {
+    test('does not match when partitionKey does not match', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: { partitionKey: 'partition-key-2' },
@@ -179,12 +179,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ kinesisRecord }) => {
+    test('matches route by customFilter', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -199,12 +199,12 @@ suite('KinesisRouter', () => {
       const record = kinesisRecord();
       const data = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, data);
+      const result = await router.matchRoute(record, data);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', ({ kinesisRecord }) => {
+    test('does not match when customFilter returns false', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -213,12 +213,33 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches with empty filters as catch-all', ({ kinesisRecord }) => {
+    test('matches route by async customFilter', async ({ kinesisRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ data }: KinesisFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - data is unknown, testing filter with known shape
+              return data.action === 'processOrder';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = kinesisRecord();
+      const data = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, data);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches with empty filters as catch-all', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -227,12 +248,12 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('selects first matching route when multiple match', ({ kinesisRecord }) => {
+    test('selects first matching route when multiple match', async ({ kinesisRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(
@@ -250,13 +271,13 @@ suite('KinesisRouter', () => {
         eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when both eventSourceArn and partitionKey match', ({ kinesisRecord }) => {
+    test('matches when both eventSourceArn and partitionKey match', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
@@ -272,12 +293,12 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArn matches but partitionKey does not', ({ kinesisRecord }) => {
+    test('does not match when eventSourceArn matches but partitionKey does not', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(
         defineRoute({
@@ -293,12 +314,12 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when partitionKey matches but eventSourceArn does not', ({ kinesisRecord }) => {
+    test('does not match when partitionKey matches but eventSourceArn does not', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -313,7 +334,7 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {});
+      const result = await router.matchRoute(record, {});
 
       expect(result).toBeUndefined();
     });
@@ -383,7 +404,7 @@ suite('KinesisRouter', () => {
         }).handle(async (request) => {
           const eventId = request.record.eventID;
           callOrder.push(`start-${eventId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${eventId}`);
         }),
       );

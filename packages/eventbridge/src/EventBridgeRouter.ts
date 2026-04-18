@@ -88,7 +88,7 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
   }
 
   async handleEvent(event: EventBridgeEventEnvelope, context: Context): Promise<void> {
-    const route = this.matchRoute(event);
+    const route = await this.matchRoute(event);
     if (!route) {
       throw new Error(`No route matched for EventBridge event: ${event.source} / ${event['detail-type']}`);
     }
@@ -116,7 +116,7 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(event: EventBridgeEventEnvelope): InternalEventBridgeRoute | undefined {
+  private async matchRoute(event: EventBridgeEventEnvelope): Promise<InternalEventBridgeRoute | undefined> {
     const filterInput: EventBridgeFilterInput = {
       event,
       source: event.source,
@@ -124,47 +124,48 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       detail: event.detail,
     };
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.source) {
         const sources = Array.isArray(filters.source) ? filters.source : [filters.source];
         if (!sources.includes(event.source)) {
-          return false;
+          continue;
         }
       }
       if (filters.detailType) {
         const detailTypes = Array.isArray(filters.detailType) ? filters.detailType : [filters.detailType];
         if (!detailTypes.includes(event['detail-type'])) {
-          return false;
+          continue;
         }
       }
       if (filters.account) {
         const accounts = Array.isArray(filters.account) ? filters.account : [filters.account];
         if (!accounts.includes(event.account)) {
-          return false;
+          continue;
         }
       }
       if (filters.region) {
         const regions = Array.isArray(filters.region) ? filters.region : [filters.region];
         if (!regions.includes(event.region)) {
-          return false;
+          continue;
         }
       }
       if (filters.resource) {
         const resources = Array.isArray(filters.resource) ? filters.resource : [filters.resource];
         const hasMatchingResource = event.resources.some((r) => resources?.includes(r));
         if (!hasMatchingResource) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

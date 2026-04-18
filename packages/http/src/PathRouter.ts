@@ -10,7 +10,7 @@ export interface InternalRoute {
   path: string;
   pattern: RegExp;
   paramNames: string[];
-  customFilter?: (input: unknown) => boolean;
+  customFilter?: (input: unknown) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
   middleware: Middleware<ApiRequest, ApiResponse>[];
   querySchema?: StandardSchemaV1;
@@ -20,7 +20,7 @@ export interface InternalRoute {
 
 interface PathRouterFilters<TPathString extends string> {
   path: TPathString;
-  customFilter?: (input: unknown) => boolean;
+  customFilter?: (input: unknown) => boolean | Promise<boolean>;
 }
 
 // Base config shared by all route types
@@ -165,14 +165,14 @@ export class PathRouter {
     return methods;
   }
 
-  match(method: string, path: string, filterInput?: unknown): RouteMatch | null {
+  async match(method: string, path: string, filterInput?: unknown): Promise<RouteMatch | null> {
     for (const route of this.routes) {
       if (route.method !== method) continue;
 
       const match = path.match(route.pattern);
       if (!match) continue;
 
-      if (route.customFilter && !route.customFilter(filterInput)) {
+      if (route.customFilter && !(await route.customFilter(filterInput))) {
         continue;
       }
 

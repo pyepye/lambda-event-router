@@ -80,40 +80,40 @@ suite('KafkaRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by topic filter', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by topic filter', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders' });
       const event = kafkaMSKEvent({ orders: [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('matches by topic filter array', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by topic filter array', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: { topic: ['orders', 'refunds'] } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders' });
       const event = kafkaMSKEvent({ orders: [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('does not match when topic do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('does not match when topic do not match', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'users' });
       const event = kafkaMSKEvent({ users: [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
     });
 
-    test('matches by eventSourceArn', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by eventSourceArn', async ({ kafkaRecord, kafkaMSKEvent }) => {
       const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
       router.route(defineRoute({ filters: { eventSourceArn: arn } }).handle(async () => {}));
 
@@ -121,11 +121,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('matches by eventSourceArn array', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by eventSourceArn array', async ({ kafkaRecord, kafkaMSKEvent }) => {
       const arn = 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123';
       const arn2 = 'arn:aws:kafka:eu-west-2:987654321098:cluster/OtherCluster/zxy-987';
       router.route(defineRoute({ filters: { eventSourceArn: [arn, arn2] } }).handle(async () => {}));
@@ -134,11 +134,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArn do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('does not match when eventSourceArn do not match', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
           filters: { eventSourceArn: 'arn:aws:kafka:us-east-1:000000000000:cluster/Other/xyz' },
@@ -149,11 +149,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
     });
 
-    test('does not match eventSourceArn filter for SelfManagedKafka event', ({
+    test('does not match eventSourceArn filter for SelfManagedKafka event', async ({
       kafkaRecord,
       kafkaSelfManagedEvent,
     }) => {
@@ -167,22 +167,22 @@ suite('KafkaRouter', () => {
       const event = kafkaSelfManagedEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
     });
 
-    test('matches by bootstrapServer', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by bootstrapServer', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: { bootstrapServer: 'broker1.example.com:9092' } }).handle(async () => {}));
 
       const record = kafkaRecord();
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('matches by bootstrapServer array', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by bootstrapServer array', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({ filters: { bootstrapServer: ['broker1.example.com:9092', 'other9.example.com:9092'] } }).handle(
           async () => {},
@@ -193,11 +193,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('does not match when bootstrapServer do not match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('does not match when bootstrapServer do not match', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({ filters: { bootstrapServer: 'other-broker.example.com:9092' } }).handle(async () => {}),
       );
@@ -206,11 +206,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
     });
 
-    test('matches by customFilter', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by customFilter', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
           filters: { customFilter: ({ topic }: KafkaFilterInput): boolean => topic === 'test-topic' },
@@ -221,11 +221,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('does not match when customFilter returns false', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -236,11 +236,11 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct KafkaFilterInput', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('customFilter receives correct KafkaFilterInput', async ({ kafkaRecord, kafkaMSKEvent }) => {
       let receivedInput: KafkaFilterInput | undefined;
       router.route(
         defineRoute({
@@ -259,7 +259,7 @@ suite('KafkaRouter', () => {
       // @ts-expect-error testing private method
       const decodedHeaders = router.decodeHeaders(record.headers);
       // @ts-expect-error testing private method
-      router.matchRoute(record, event, decodedHeaders);
+      await router.matchRoute(record, event, decodedHeaders);
 
       expect(receivedInput).toBeDefined();
       expect(receivedInput?.topic).toBe('my-topic');
@@ -267,7 +267,7 @@ suite('KafkaRouter', () => {
       expect(receivedInput?.record).toBe(record);
     });
 
-    test('customFilter is not called when preceding filter rejects', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('customFilter is not called when preceding filter rejects', async ({ kafkaRecord, kafkaMSKEvent }) => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
@@ -279,23 +279,23 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ users: [record] });
 
       // @ts-expect-error testing private method
-      router.matchRoute(record, event, []);
+      await router.matchRoute(record, event, []);
 
       expect(customFilter).not.toHaveBeenCalled();
     });
 
-    test('empty filters as catch-all', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('empty filters as catch-all', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'anything' });
       const event = kafkaMSKEvent({ anything: [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result).toBeDefined();
     });
 
-    test('first matching route wins when multiple match', ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('first matching route wins when multiple match', async ({ kafkaRecord, kafkaMSKEvent }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
@@ -305,8 +305,28 @@ suite('KafkaRouter', () => {
       const event = kafkaMSKEvent({ 'test-topic': [record] });
 
       // @ts-expect-error testing private method
-      const result = router.matchRoute(record, event, []);
+      const result = await router.matchRoute(record, event, []);
       expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('matches route by async customFilter', async ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ topic }: KafkaFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return topic === 'test-topic';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = kafkaRecord();
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
     });
   });
 
@@ -488,7 +508,7 @@ suite('KafkaRouter', () => {
         defineRoute({ filters: {} }).handle(async (request) => {
           const id = `${request.topic}-${request.offset}`;
           callOrder.push(`start-${id}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${id}`);
         }),
       );

@@ -24,7 +24,7 @@ export interface CognitoFilters<TTriggerSource extends string = string> {
   userPoolId?: PreSignUpTriggerEvent['userPoolId'] | PreSignUpTriggerEvent['userPoolId'][];
   clientId?: PreSignUpTriggerEvent['callerContext']['clientId'] | PreSignUpTriggerEvent['callerContext']['clientId'][];
   userAttributes?: Record<string, UserAttributeFilter>;
-  customFilter?: (input: CognitoFilterInput<TTriggerSource>) => boolean;
+  customFilter?: (input: CognitoFilterInput<TTriggerSource>) => boolean | Promise<boolean>;
 }
 
 // Generic route definition (used internally by the router)

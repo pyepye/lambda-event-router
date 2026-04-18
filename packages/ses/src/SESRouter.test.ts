@@ -86,7 +86,7 @@ suite('SESRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by recipient', ({ sesRecord }) => {
+    test('matches route by recipient', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipient: 'recipient@example.com' },
@@ -95,12 +95,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by recipient array', ({ sesRecord }) => {
+    test('matches route by recipient array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipient: ['recipient@example.com', 'other@example.com'] },
@@ -109,12 +109,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when recipient do not match', ({ sesRecord }) => {
+    test('does not match route when recipient do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipient: 'other@example.com' },
@@ -123,12 +123,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when one of multiple recipient matches', ({ sesRecord }) => {
+    test('matches when one of multiple recipient matches', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipient: 'recipient@example.com' },
@@ -139,12 +139,12 @@ suite('SESRouter', () => {
         ses: { receipt: { recipients: ['nobody@example.com', 'recipient@example.com'] } },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by sender', ({ sesRecord }) => {
+    test('matches route by sender', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { sender: 'sender@example.com' },
@@ -153,12 +153,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'sender@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by sender array', ({ sesRecord }) => {
+    test('matches route by sender array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { sender: ['sender@example.com', 'other@example.com'] },
@@ -167,12 +167,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'sender@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when senders do not match', ({ sesRecord }) => {
+    test('does not match route when senders do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { sender: 'other@example.com' },
@@ -181,12 +181,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'user@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by senderDomain', ({ sesRecord }) => {
+    test('matches route by senderDomain', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { senderDomain: 'example.com' },
@@ -195,12 +195,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'user@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by senderDomain array', ({ sesRecord }) => {
+    test('matches route by senderDomain array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { senderDomain: ['example.com', 'test.com'] },
@@ -209,12 +209,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'user@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when senderDomain do not match', ({ sesRecord }) => {
+    test('does not match route when senderDomain do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { senderDomain: 'other.com' },
@@ -223,12 +223,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { mail: { source: 'user@example.com' } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by recipientDomain', ({ sesRecord }) => {
+    test('matches route by recipientDomain', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipientDomain: 'example.com' },
@@ -237,12 +237,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by recipientDomain array', ({ sesRecord }) => {
+    test('matches route by recipientDomain array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipientDomain: ['example.com', 'test.com'] },
@@ -251,12 +251,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when recipientDomain do not match', ({ sesRecord }) => {
+    test('does not match route when recipientDomain do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipientDomain: 'other.com' },
@@ -265,12 +265,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when one of multiple recipient domains matches', ({ sesRecord }) => {
+    test('matches when one of multiple recipient domains matches', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { recipientDomain: 'example.com' },
@@ -281,7 +281,7 @@ suite('SESRouter', () => {
         ses: { receipt: { recipients: ['nobody@other.com', 'recipient@example.com'] } },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
@@ -289,7 +289,7 @@ suite('SESRouter', () => {
     const verdictTypes = ['spamVerdict', 'virusVerdict', 'spfVerdict', 'dkimVerdict', 'dmarcVerdict'] as const;
 
     for (const verdictType of verdictTypes) {
-      test(`matches route by ${verdictType}`, ({ sesRecord }) => {
+      test(`matches route by ${verdictType}`, async ({ sesRecord }) => {
         router.route(
           defineRoute({
             filters: { [verdictType]: 'PASS' },
@@ -298,12 +298,12 @@ suite('SESRouter', () => {
 
         const record = sesRecord({ ses: { receipt: { [verdictType]: { status: 'PASS' } } } });
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(record);
+        const result = await router.matchRoute(record);
 
         expect(result).toBeDefined();
       });
 
-      test(`matches route by ${verdictType} array`, ({ sesRecord }) => {
+      test(`matches route by ${verdictType} array`, async ({ sesRecord }) => {
         router.route(
           defineRoute({
             filters: { [verdictType]: ['PASS', 'DISABLED'] },
@@ -312,12 +312,12 @@ suite('SESRouter', () => {
 
         const record = sesRecord({ ses: { receipt: { [verdictType]: { status: 'PASS' } } } });
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(record);
+        const result = await router.matchRoute(record);
 
         expect(result).toBeDefined();
       });
 
-      test(`does not match route when ${verdictType} does not match`, ({ sesRecord }) => {
+      test(`does not match route when ${verdictType} does not match`, async ({ sesRecord }) => {
         router.route(
           defineRoute({
             filters: { [verdictType]: 'FAIL' },
@@ -326,13 +326,13 @@ suite('SESRouter', () => {
 
         const record = sesRecord({ ses: { receipt: { [verdictType]: { status: 'PASS' } } } });
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(record);
+        const result = await router.matchRoute(record);
 
         expect(result).toBeUndefined();
       });
     }
 
-    test('matches verdict with multiple allowed values', ({ sesRecord }) => {
+    test('matches verdict with multiple allowed values', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: { spamVerdict: ['PASS', 'GRAY'] },
@@ -341,12 +341,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { spamVerdict: { status: 'GRAY' } } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by customFilter returning true', ({ sesRecord }) => {
+    test('matches route by customFilter returning true', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -357,12 +357,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ sesRecord }) => {
+    test('does not match route when customFilter returns false', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -373,12 +373,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives receipt and mail', ({ sesRecord }) => {
+    test('customFilter receives receipt and mail', async ({ sesRecord }) => {
       const filterSpy = vi.fn((): boolean => true);
       router.route(
         defineRoute({
@@ -388,7 +388,7 @@ suite('SESRouter', () => {
 
       const record = sesRecord();
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record);
+      await router.matchRoute(record);
 
       expect(filterSpy).toHaveBeenCalledWith({
         receipt: record.ses.receipt,
@@ -396,7 +396,7 @@ suite('SESRouter', () => {
       });
     });
 
-    test('customFilter is not evaluated when an earlier filter fails', ({ sesRecord }) => {
+    test('customFilter is not evaluated when an earlier filter fails', async ({ sesRecord }) => {
       const filterSpy = vi.fn((): boolean => true);
       router.route(
         defineRoute({
@@ -409,12 +409,31 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record);
+      await router.matchRoute(record);
 
       expect(filterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route with empty filters as a catch-all', ({ sesRecord }) => {
+    test('matches route by async customFilter returning true', async ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async (): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return true;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -423,12 +442,12 @@ suite('SESRouter', () => {
 
       const record = sesRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ sesRecord }) => {
+    test('selects the first matching route when multiple routes match', async ({ sesRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
 
@@ -445,13 +464,13 @@ suite('SESRouter', () => {
 
       const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when both recipients and senders match', ({ sesRecord }) => {
+    test('matches when both recipients and senders match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -468,12 +487,12 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when recipients match but senders do not', ({ sesRecord }) => {
+    test('does not match when recipients match but senders do not', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -490,12 +509,12 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when senders match but recipients do not', ({ sesRecord }) => {
+    test('does not match when senders match but recipients do not', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -512,12 +531,12 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when both senderDomain and recipientDomain match', ({ sesRecord }) => {
+    test('matches when both senderDomain and recipientDomain match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -534,12 +553,12 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when senderDomain match but recipientDomain do not', ({ sesRecord }) => {
+    test('does not match when senderDomain match but recipientDomain do not', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -556,12 +575,12 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when recipients, spamVerdict, and virusVerdict all match', ({ sesRecord }) => {
+    test('matches when recipients, spamVerdict, and virusVerdict all match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -582,7 +601,7 @@ suite('SESRouter', () => {
         },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record);
+      const result = await router.matchRoute(record);
 
       expect(result).toBeDefined();
     });
@@ -693,7 +712,7 @@ suite('SESRouter', () => {
         }).handle(async (request) => {
           const messageId = request.record.ses.mail.messageId;
           callOrder.push(`start-${messageId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${messageId}`);
         }),
       );

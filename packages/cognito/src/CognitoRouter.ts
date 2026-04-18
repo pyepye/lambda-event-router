@@ -545,7 +545,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   async handleEvent(event: CognitoEvent, context: Context): Promise<CognitoResponse> {
     const triggerSource = event.triggerSource;
 
-    const route = this.matchRoute(event, triggerSource);
+    const route = await this.matchRoute(event, triggerSource);
     if (!route) {
       throw new Error(`No route matched for trigger ${triggerSource}`);
     }
@@ -568,40 +568,48 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     return await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(event: CognitoEvent, triggerSource: CognitoTriggerSource): InternalRoute | undefined {
+  private async matchRoute(
+    event: CognitoEvent,
+    triggerSource: CognitoTriggerSource,
+  ): Promise<InternalRoute | undefined> {
     // UserMigration events don't have userAttributes on request
     const userAttributes = hasUserAttributes(event.request) ? event.request.userAttributes : undefined;
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.triggerSource) {
         const triggerSources = Array.isArray(filters.triggerSource) ? filters.triggerSource : [filters.triggerSource];
         if (!triggerSources.includes(triggerSource)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.userPoolId) {
         const userPoolIds = Array.isArray(filters.userPoolId) ? filters.userPoolId : [filters.userPoolId];
         if (!userPoolIds.includes(event.userPoolId)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.clientId) {
         const clientIds = Array.isArray(filters.clientId) ? filters.clientId : [filters.clientId];
         if (!clientIds.includes(event.callerContext.clientId)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.userAttributes && userAttributes) {
+        let allAttributesMatch = true;
         for (const [key, filter] of Object.entries(filters.userAttributes)) {
           const value = userAttributes[key];
           if (!this.matchUserAttribute(value, filter)) {
-            return false;
+            allAttributesMatch = false;
+            break;
           }
+        }
+        if (!allAttributesMatch) {
+          continue;
         }
       }
 
@@ -614,11 +622,14 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
           request: { userAttributes },
           event,
         };
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 
   private matchUserAttribute(value: string | undefined, filter: UserAttributeFilter): boolean {

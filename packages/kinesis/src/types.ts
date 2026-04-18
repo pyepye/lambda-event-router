@@ -11,7 +11,7 @@ export interface KinesisFilterInput {
 export interface KinesisFilters {
   eventSourceArn?: KinesisStreamRecord['eventSourceARN'] | KinesisStreamRecord['eventSourceARN'][];
   partitionKey?: string | string[];
-  customFilter?: (input: KinesisFilterInput) => boolean;
+  customFilter?: (input: KinesisFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface KinesisRequest<TData = unknown> {

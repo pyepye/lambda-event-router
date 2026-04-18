@@ -9,7 +9,7 @@ import {
   test,
 } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
-import { createDocumentDBRouter, defineRoute, DocumentDBRouter } from './DocumentDBRouter.js';
+import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
 import type { DocumentDBFilterInput, DocumentDBMiddleware, DocumentDBRequest } from './types.js';
 
 type DocumentDBNext = (request: DocumentDBRequest) => Promise<void>;
@@ -109,64 +109,64 @@ suite('DocumentDBRouter', () => {
     expect(router.delete(operationArgs)).toBe(router);
   });
 
-  test('insert only matches insert operations', () => {
+  test('insert only matches insert operations', async () => {
     router.insert({ filters: {}, handler: async () => {} });
 
     const insertEvent = createDocumentDBInsertEntry().event;
     // @ts-expect-error - testing private method directly
-    const insertResult = router.matchRoute(insertEvent, 'arn:test');
+    const insertResult = await router.matchRoute(insertEvent, 'arn:test');
     expect(insertResult).toBeDefined();
 
     const updateEvent = createDocumentDBUpdateEntry().event;
     // @ts-expect-error - testing private method directly
-    const updateResult = router.matchRoute(updateEvent, 'arn:test');
+    const updateResult = await router.matchRoute(updateEvent, 'arn:test');
     expect(updateResult).toBeUndefined();
   });
 
-  test('update only matches update operations', () => {
+  test('update only matches update operations', async () => {
     router.update({ filters: {}, handler: async () => {} });
 
     const updateEvent = createDocumentDBUpdateEntry().event;
     // @ts-expect-error - testing private method directly
-    const updateResult = router.matchRoute(updateEvent, 'arn:test');
+    const updateResult = await router.matchRoute(updateEvent, 'arn:test');
     expect(updateResult).toBeDefined();
 
     const insertEvent = createDocumentDBInsertEntry().event;
     // @ts-expect-error - testing private method directly
-    const insertResult = router.matchRoute(insertEvent, 'arn:test');
+    const insertResult = await router.matchRoute(insertEvent, 'arn:test');
     expect(insertResult).toBeUndefined();
   });
 
-  test('replace only matches replace operations', () => {
+  test('replace only matches replace operations', async () => {
     router.replace({ filters: {}, handler: async () => {} });
 
     const replaceEvent = createDocumentDBReplaceEntry().event;
     // @ts-expect-error - testing private method directly
-    const replaceResult = router.matchRoute(replaceEvent, 'arn:test');
+    const replaceResult = await router.matchRoute(replaceEvent, 'arn:test');
     expect(replaceResult).toBeDefined();
 
     const insertEvent = createDocumentDBInsertEntry().event;
     // @ts-expect-error - testing private method directly
-    const insertResult = router.matchRoute(insertEvent, 'arn:test');
+    const insertResult = await router.matchRoute(insertEvent, 'arn:test');
     expect(insertResult).toBeUndefined();
   });
 
-  test('delete only matches delete operations', () => {
+  test('delete only matches delete operations', async () => {
     router.delete({ filters: {}, handler: async () => {} });
 
     const deleteEvent = createDocumentDBDeleteEntry().event;
     // @ts-expect-error - testing private method directly
-    const deleteResult = router.matchRoute(deleteEvent, 'arn:test');
+    const deleteResult = await router.matchRoute(deleteEvent, 'arn:test');
     expect(deleteResult).toBeDefined();
 
     const insertEvent = createDocumentDBInsertEntry().event;
     // @ts-expect-error - testing private method directly
-    const insertResult = router.matchRoute(insertEvent, 'arn:test');
+    const insertResult = await router.matchRoute(insertEvent, 'arn:test');
     expect(insertResult).toBeUndefined();
   });
 
   suite('matchRoute', () => {
-    test('matches route by operationType', () => {
+    test('matches route by operationType', async () => {
       router.route(
         defineRoute({
           filters: { operationType: 'insert' },
@@ -175,12 +175,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by operationType array', () => {
+    test('matches route by operationType array', async () => {
       router.route(
         defineRoute({
           filters: { operationType: ['insert', 'update'] },
@@ -189,12 +189,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBUpdateEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when operationType does not match', () => {
+    test('does not match route when operationType does not match', async () => {
       router.route(
         defineRoute({
           filters: { operationType: 'insert' },
@@ -203,12 +203,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBDeleteEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by eventSourceArn', () => {
+    test('matches route by eventSourceArn', async () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(
         defineRoute({
@@ -218,12 +218,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, eventSourceArn);
+      const result = await router.matchRoute(changeEvent, eventSourceArn);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventSourceArn array', () => {
+    test('matches route by eventSourceArn array', async () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(
         defineRoute({
@@ -233,12 +233,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, eventSourceArn);
+      const result = await router.matchRoute(changeEvent, eventSourceArn);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArn does not match', () => {
+    test('does not match route when eventSourceArn does not match', async () => {
       router.route(
         defineRoute({
           filters: { eventSourceArn: 'arn:aws:rds:us-east-1:123456789012:cluster:other-cluster' },
@@ -247,12 +247,15 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster');
+      const result = await router.matchRoute(
+        changeEvent,
+        'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster',
+      );
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by database', () => {
+    test('matches route by database', async () => {
       router.route(
         defineRoute({
           filters: { database: 'test-db' },
@@ -261,12 +264,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by database array', () => {
+    test('matches route by database array', async () => {
       router.route(
         defineRoute({
           filters: { database: ['test-db', 'other-db'] },
@@ -275,12 +278,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'other-db' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when database does not match', () => {
+    test('does not match route when database does not match', async () => {
       router.route(
         defineRoute({
           filters: { database: 'other-db' },
@@ -289,12 +292,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by collection', () => {
+    test('matches route by collection', async () => {
       router.route(
         defineRoute({
           filters: { collection: 'users' },
@@ -303,12 +306,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { coll: 'users' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by collection array', () => {
+    test('matches route by collection array', async () => {
       router.route(
         defineRoute({
           filters: { collection: ['users', 'orders'] },
@@ -317,12 +320,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { coll: 'orders' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when collection does not match', () => {
+    test('does not match route when collection does not match', async () => {
       router.route(
         defineRoute({
           filters: { collection: 'orders' },
@@ -331,12 +334,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { coll: 'users' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', () => {
+    test('matches route by customFilter', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -347,12 +350,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'special-db' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', () => {
+    test('does not match route when customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -361,12 +364,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct FilterInput', () => {
+    test('customFilter receives correct FilterInput', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -376,7 +379,7 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'my-db', coll: 'my-coll' } }).event;
       // @ts-expect-error - testing private method directly
-      router.matchRoute(changeEvent, 'arn:test');
+      await router.matchRoute(changeEvent, 'arn:test');
 
       expect(customFilter).toHaveBeenCalledWith({
         operationType: 'insert',
@@ -385,7 +388,7 @@ suite('DocumentDBRouter', () => {
       });
     });
 
-    test('customFilter is not called when a prior filter rejects', () => {
+    test('customFilter is not called when a prior filter rejects', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -395,12 +398,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db' } }).event;
       // @ts-expect-error - testing private method directly
-      router.matchRoute(changeEvent, 'arn:test');
+      await router.matchRoute(changeEvent, 'arn:test');
 
       expect(customFilter).not.toHaveBeenCalled();
     });
 
-    test('matches route with empty filters as a catch-all', () => {
+    test('matches route with empty filters as a catch-all', async () => {
       router.route(
         defineRoute({
           filters: {},
@@ -409,12 +412,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', () => {
+    test('selects the first matching route when multiple routes match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
@@ -422,13 +425,13 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry().event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, 'arn:test');
+      const result = await router.matchRoute(changeEvent, 'arn:test');
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when all combined filters match', () => {
+    test('matches when all combined filters match', async () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(
         defineRoute({
@@ -443,12 +446,12 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db', coll: 'users' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, eventSourceArn);
+      const result = await router.matchRoute(changeEvent, eventSourceArn);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when one of the combined filters does not match', () => {
+    test('does not match when one of the combined filters does not match', async () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(
         defineRoute({
@@ -463,9 +466,32 @@ suite('DocumentDBRouter', () => {
 
       const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db', coll: 'users' } }).event;
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(changeEvent, eventSourceArn);
+      const result = await router.matchRoute(changeEvent, eventSourceArn);
 
       expect(result).toBeUndefined();
+    });
+
+    test('matches route by async customFilter', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ ns }: DocumentDBFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return ns.db === 'async-db';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const matchingEvent = createDocumentDBInsertEntry({ ns: { db: 'async-db' } }).event;
+      // @ts-expect-error - testing private method directly
+      const matchResult = await router.matchRoute(matchingEvent, 'arn:test');
+      expect(matchResult).toBeDefined();
+
+      const nonMatchingEvent = createDocumentDBInsertEntry({ ns: { db: 'other-db' } }).event;
+      // @ts-expect-error - testing private method directly
+      const noMatchResult = await router.matchRoute(nonMatchingEvent, 'arn:test');
+      expect(noMatchResult).toBeUndefined();
     });
   });
 
@@ -526,7 +552,7 @@ suite('DocumentDBRouter', () => {
         defineRoute({ filters: {} }).handle(async (request) => {
           const opType = request.operationType;
           callOrder.push(`start-${opType}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${opType}`);
         }),
       );

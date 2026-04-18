@@ -568,76 +568,76 @@ suite('LambdaAuthorizerRouter', () => {
   });
 
   suite('matchRoute (private)', () => {
-    test('matches route with matching type filter', () => {
+    test('matches route with matching type filter', async () => {
       router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'TOKEN' });
+      const result = await router.matchRoute({ type: 'TOKEN' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route with different type filter', () => {
+    test('does not match route with different type filter', async () => {
       router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'GET' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route with matching method filter', () => {
+    test('matches route with matching method filter', async () => {
       router.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'POST' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'POST' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route with different method filter', () => {
+    test('does not match route with different method filter', async () => {
       router.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'GET' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
 
       expect(result).toBeUndefined();
     });
 
-    test('route without type filter matches any type', () => {
+    test('route without type filter matches any type', async () => {
       const definition = defineLambdaAuthorizerRoute({ filters: {} }).handle(async () =>
         generatePolicy('user', 'Allow', 'arn:...'),
       );
       router.route(definition);
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'TOKEN' });
+      const result = await router.matchRoute({ type: 'TOKEN' });
 
       expect(result).toBeDefined();
     });
 
-    test('route without method filter matches any method', () => {
+    test('route without method filter matches any method', async () => {
       router.request({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'DELETE' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'DELETE' });
 
       expect(result).toBeDefined();
     });
 
-    test('returns first matching route when multiple match', () => {
+    test('returns first matching route when multiple match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.request({ handler: firstHandler });
       router.request({ handler: secondHandler });
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'GET' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
 
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches route by customFilter', () => {
+    test('matches route by customFilter', async () => {
       router.route(
         defineLambdaAuthorizerRoute({
           filters: {
@@ -647,12 +647,30 @@ suite('LambdaAuthorizerRouter', () => {
       );
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'TOKEN' });
+      const result = await router.matchRoute({ type: 'TOKEN' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', () => {
+    test('matches route by async customFilter', async () => {
+      router.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            customFilter: async ({ type }: LambdaAuthorizerFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return type === 'TOKEN';
+            },
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when customFilter returns false', async () => {
       router.route(
         defineLambdaAuthorizerRoute({
           filters: {
@@ -662,12 +680,12 @@ suite('LambdaAuthorizerRouter', () => {
       );
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'TOKEN' });
+      const result = await router.matchRoute({ type: 'TOKEN' });
 
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', () => {
+    test('passes correct filterInput to customFilter', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineLambdaAuthorizerRoute({
@@ -684,7 +702,7 @@ suite('LambdaAuthorizerRouter', () => {
       });
     });
 
-    test('matches when standard filters and customFilter both pass', () => {
+    test('matches when standard filters and customFilter both pass', async () => {
       router.route(
         defineLambdaAuthorizerRoute({
           filters: {
@@ -695,12 +713,12 @@ suite('LambdaAuthorizerRouter', () => {
       );
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'POST' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'POST' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', () => {
+    test('does not match when standard filters pass but customFilter returns false', async () => {
       router.route(
         defineLambdaAuthorizerRoute({
           filters: {
@@ -711,7 +729,7 @@ suite('LambdaAuthorizerRouter', () => {
       );
 
       // @ts-expect-error - testing private method
-      const result = router.matchRoute({ type: 'REQUEST', method: 'POST' });
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'POST' });
 
       expect(result).toBeUndefined();
     });

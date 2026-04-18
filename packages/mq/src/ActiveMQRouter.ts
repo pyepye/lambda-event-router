@@ -77,7 +77,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       const decodedMessage = { ...message, data: decodedData };
       const destination = message.destination.physicalName;
 
-      const route = this.matchRoute(event, decodedMessage);
+      const route = await this.matchRoute(event, decodedMessage);
       if (!route) {
         throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
       }
@@ -103,29 +103,29 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     }
   }
 
-  private matchRoute(event: ActiveMQEvent, message: ActiveMQMessage): ActiveMQInternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(event: ActiveMQEvent, message: ActiveMQMessage): Promise<ActiveMQInternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.eventSourceArn) {
         const { eventSourceArn: filterArn } = filters;
         const eventSourceArns = Array.isArray(filterArn) ? filterArn : [filterArn];
         if (!eventSourceArns.includes(event.eventSourceArn)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.messageType) {
         const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
         if (!messageTypes.includes(message.messageType)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.destination) {
         const destinations = Array.isArray(filters.destination) ? filters.destination : [filters.destination];
         if (!destinations.includes(message.destination.physicalName)) {
-          return false;
+          continue;
         }
       }
 
@@ -135,11 +135,14 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
           destination: message.destination.physicalName,
           record: message,
         };
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

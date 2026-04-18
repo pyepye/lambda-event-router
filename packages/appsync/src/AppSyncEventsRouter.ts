@@ -71,7 +71,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     const channelPath = event.info.channel.path;
     const channelNamespace = event.info.channelNamespace.name;
 
-    const route = this.matchRoute(operation, channelPath, channelNamespace, event);
+    const route = await this.matchRoute(operation, channelPath, channelNamespace, event);
     if (!route) {
       throw new Error(`No route matched for ${operation} on channel ${channelPath}`);
     }
@@ -93,13 +93,13 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     return route.handler(request);
   }
 
-  private matchRoute(
+  private async matchRoute(
     operation: string,
     channelPath: string,
     channelNamespace: string,
     event: AppSyncEventsEvent,
-  ): InternalEventsRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalEventsRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       const operationTyped = operation as AppSyncEventsEvent['info']['operation'];
@@ -107,7 +107,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       if (filters.operation) {
         const operations = Array.isArray(filters.operation) ? filters.operation : [filters.operation];
         if (!operations.includes(operationTyped)) {
-          return false;
+          continue;
         }
       }
 
@@ -117,20 +117,23 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
         const matchesNamespace = channelNamespaces.some((pattern) =>
           matchChannelNamespace(pattern, channelPath, channelNamespace),
         );
-        if (!matchesNamespace) return false;
+        if (!matchesNamespace) {
+          continue;
+        }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({
+        const match = filters.customFilter({
           operation: operationTyped,
           channelNamespace,
           channel: channelPath,
           event,
         });
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

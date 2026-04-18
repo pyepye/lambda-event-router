@@ -16,4 +16,4 @@ export type {
 export { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';
 export type { Middleware } from './middleware.js';
 export { handleEventWithMiddleware } from './middleware.js';
-export type { EventTypeRouter, StandardSchemaV1 } from './types.js';
+export type { EventTypeRouter } from './types.js';

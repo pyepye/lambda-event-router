@@ -7,7 +7,7 @@ export interface EventFilterInput<TPayload = unknown> {
 }
 
 export interface EventFilters<TPayload = unknown> {
-  customFilter?: (input: EventFilterInput<TPayload>) => boolean;
+  customFilter?: (input: EventFilterInput<TPayload>) => boolean | Promise<boolean>;
 }
 
 export type EventRouterMiddleware<TPayload = unknown, TResponse = unknown> = Middleware<

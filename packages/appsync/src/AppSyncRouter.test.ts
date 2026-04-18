@@ -135,96 +135,115 @@ suite('AppSyncRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by parentTypeName', () => {
+    test('matches by parentTypeName', async () => {
       const handler = vi.fn();
       router.route({ filters: { parentTypeName: 'Query' }, handler });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
       expect(matched?.handler).toBe(handler);
     });
 
-    test('matches by parentTypeName array', () => {
+    test('matches by parentTypeName array', async () => {
       const handler = vi.fn();
       router.route({ filters: { parentTypeName: ['Query', 'Other'] }, handler });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
       expect(matched?.handler).toBe(handler);
     });
 
-    test('does not match when parentTypeName is different', () => {
+    test('does not match when parentTypeName is different', async () => {
       router.route({ filters: { parentTypeName: 'Query' }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Mutation' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Mutation', 'createUser', event);
+      const matched = await router.matchRoute('Mutation', 'createUser', event);
       expect(matched).toBeUndefined();
     });
 
-    test('matches by fieldName', () => {
+    test('matches by fieldName', async () => {
       const handler = vi.fn();
       router.route({ filters: { fieldName: 'getUser' }, handler });
 
       const event = createAppSyncResolverEvent({ info: { fieldName: 'getUser' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
       expect(matched?.handler).toBe(handler);
     });
 
-    test('matches by fieldName array', () => {
+    test('matches by fieldName array', async () => {
       const handler = vi.fn();
       router.route({ filters: { fieldName: ['getUser', 'createUser'] }, handler });
 
       const event = createAppSyncResolverEvent({ info: { fieldName: 'getUser' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
       expect(matched?.handler).toBe(handler);
     });
 
-    test('does not match when fieldName is different', () => {
+    test('does not match when fieldName is different', async () => {
       router.route({ filters: { fieldName: 'getUser' }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent({ info: { fieldName: 'listUsers' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'listUsers', event);
+      const matched = await router.matchRoute('Query', 'listUsers', event);
       expect(matched).toBeUndefined();
     });
 
-    test('matches when customFilter returns true', () => {
+    test('matches when customFilter returns true', async () => {
       const handler = vi.fn();
       router.route({ filters: { customFilter: () => true }, handler });
 
       const event = createAppSyncResolverEvent();
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', () => {
+    test('matches when async customFilter returns true', async () => {
+      const handler = vi.fn();
+      router.route({
+        filters: {
+          customFilter: async () => {
+            await new Promise((r) => setTimeout(r, 1));
+            return true;
+          },
+        },
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('Query', 'getUser', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when customFilter returns false', async () => {
       router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent();
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeUndefined();
     });
 
-    test('first route wins when multiple match', () => {
+    test('first route wins when multiple match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route({ filters: { parentTypeName: 'Query' }, handler: firstHandler });
@@ -233,11 +252,11 @@ suite('AppSyncRouter', () => {
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched?.handler).toBe(firstHandler);
     });
 
-    test('matches when combined filters and customFilter all pass', () => {
+    test('matches when combined filters and customFilter all pass', async () => {
       const handler = vi.fn();
       router.route({
         filters: {
@@ -251,11 +270,11 @@ suite('AppSyncRouter', () => {
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query', fieldName: 'getUser' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeDefined();
     });
 
-    test('does not match when combined filters pass but customFilter fails', () => {
+    test('does not match when combined filters pass but customFilter fails', async () => {
       router.route({
         filters: {
           parentTypeName: 'Query',
@@ -268,7 +287,7 @@ suite('AppSyncRouter', () => {
       const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query', fieldName: 'getUser' } });
 
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute('Query', 'getUser', event);
+      const matched = await router.matchRoute('Query', 'getUser', event);
       expect(matched).toBeUndefined();
     });
   });

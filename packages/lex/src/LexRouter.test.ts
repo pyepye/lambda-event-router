@@ -144,155 +144,155 @@ suite('route', () => {
 });
 
 suite('matchRoute', () => {
-  test('matches when intentName is in the intentName filter', ({ lexEvent }) => {
+  test('matches when intentName is in the intentName filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { intentName: 'CheckBalance' }, handler });
 
     const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when intentName is in the intentName filter array', ({ lexEvent }) => {
+  test('matches when intentName is in the intentName filter array', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { intentName: ['CheckBalance', 'UpdateBalance'] }, handler });
 
     const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when intentName is not in the intentName filter', ({ lexEvent }) => {
+  test('does not match when intentName is not in the intentName filter', async ({ lexEvent }) => {
     router.route({ filters: { intentName: 'OrderDrink' }, handler: vi.fn() });
 
     const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when invocationSource is in the invocationSource filter', ({ lexEvent }) => {
+  test('matches when invocationSource is in the invocationSource filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { invocationSource: 'FulfillmentCodeHook' }, handler });
 
     const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when invocationSource is in the invocationSource filter array', ({ lexEvent }) => {
+  test('matches when invocationSource is in the invocationSource filter array', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { invocationSource: ['FulfillmentCodeHook', 'DialogCodeHook'] }, handler });
 
     const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when invocationSource is not in the invocationSource filter', ({ lexEvent }) => {
+  test('does not match when invocationSource is not in the invocationSource filter', async ({ lexEvent }) => {
     router.route({ filters: { invocationSource: 'FulfillmentCodeHook' }, handler: vi.fn() });
 
     const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when botId is in the botId filter', ({ lexEvent }) => {
+  test('matches when botId is in the botId filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { botId: 'MYBOTID' }, handler });
 
     const event = lexEvent({ bot: { id: 'MYBOTID' } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when botId is in the botId filter array', ({ lexEvent }) => {
+  test('matches when botId is in the botId filter array', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { botId: ['MYBOTID', 'OTHERBOTID'] }, handler });
 
     const event = lexEvent({ bot: { id: 'MYBOTID' } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when botId is not in the botId filter', ({ lexEvent }) => {
+  test('does not match when botId is not in the botId filter', async ({ lexEvent }) => {
     router.route({ filters: { botId: 'OTHERBOTID' }, handler: vi.fn() });
 
     const event = lexEvent({ bot: { id: 'TESTBOTID' } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when inputMode is in the inputMode filter', ({ lexEvent }) => {
+  test('matches when inputMode is in the inputMode filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { inputMode: 'Speech' }, handler });
 
     const event = lexEvent({ inputMode: 'Speech' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when inputMode is in the inputMode filter array', ({ lexEvent }) => {
+  test('matches when inputMode is in the inputMode filter array', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { inputMode: ['Speech', 'Text'] }, handler });
 
     const event = lexEvent({ inputMode: 'Speech' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when inputMode is not in the inputMode filter', ({ lexEvent }) => {
+  test('does not match when inputMode is not in the inputMode filter', async ({ lexEvent }) => {
     router.route({ filters: { inputMode: 'Speech' }, handler: vi.fn() });
 
     const event = lexEvent({ inputMode: 'Text' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when a single filter has multiple allowed values', ({ lexEvent }) => {
+  test('matches when a single filter has multiple allowed values', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { intentName: ['OrderPizza', 'OrderDrink'] }, handler });
 
     const event = lexEvent({ sessionState: { intent: { name: 'OrderDrink' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when all combined filters match', ({ lexEvent }) => {
+  test('matches when all combined filters match', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({
       filters: {
@@ -311,13 +311,13 @@ suite('matchRoute', () => {
       inputMode: 'Text',
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when combined filters partially match', ({ lexEvent }) => {
+  test('does not match when combined filters partially match', async ({ lexEvent }) => {
     router.route({
       filters: { intentName: 'OrderPizza', invocationSource: 'FulfillmentCodeHook' },
       handler: vi.fn(),
@@ -328,34 +328,72 @@ suite('matchRoute', () => {
       invocationSource: 'DialogCodeHook',
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when custom filter returns true', ({ lexEvent }) => {
+  test('matches when custom filter returns true', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { customFilter: () => true }, handler });
 
     const event = lexEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when custom filter returns false', ({ lexEvent }) => {
+  test('does not match when custom filter returns false', async ({ lexEvent }) => {
     router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
 
     const event = lexEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('custom filter receives correct input', ({ lexEvent }) => {
+  test('matches when async custom filter resolves to true', async ({ lexEvent }) => {
+    const handler = vi.fn();
+    router.route({
+      filters: {
+        customFilter: async () => {
+          await new Promise((r) => setTimeout(r, 1));
+          return true;
+        },
+      },
+      handler,
+    });
+
+    const event = lexEvent();
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+
+  test('does not match when async custom filter resolves to false', async ({ lexEvent }) => {
+    router.route({
+      filters: {
+        customFilter: async () => {
+          await new Promise((r) => setTimeout(r, 1));
+          return false;
+        },
+      },
+      handler: vi.fn(),
+    });
+
+    const event = lexEvent();
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeUndefined();
+  });
+
+  test('custom filter receives correct input', async ({ lexEvent }) => {
     const customFilter = vi.fn().mockReturnValue(true);
     router.route({ filters: { customFilter }, handler: vi.fn() });
 
@@ -366,7 +404,7 @@ suite('matchRoute', () => {
       bot: { id: 'MYBOTID' },
     });
     // @ts-expect-error - testing private method
-    router.matchRoute(event);
+    await router.matchRoute(event);
 
     expect(customFilter).toHaveBeenCalledWith({
       intentName: 'OrderPizza',
@@ -377,7 +415,7 @@ suite('matchRoute', () => {
     } satisfies LexFilterInput);
   });
 
-  test('custom filter is checked after other filters', ({ lexEvent }) => {
+  test('custom filter is checked after other filters', async ({ lexEvent }) => {
     const customFilter = vi.fn().mockReturnValue(true);
     router.route({
       filters: { intentName: 'OrderDrink', customFilter },
@@ -386,24 +424,24 @@ suite('matchRoute', () => {
 
     const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
-    router.matchRoute(event);
+    await router.matchRoute(event);
 
     expect(customFilter).not.toHaveBeenCalled();
   });
 
-  test('matches any event when filters are empty (catch-all)', ({ lexEvent }) => {
+  test('matches any event when filters are empty (catch-all)', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: {}, handler });
 
     const event = lexEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('first match wins when multiple routes match', ({ lexEvent }) => {
+  test('first match wins when multiple routes match', async ({ lexEvent }) => {
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
     router.route({ filters: { intentName: 'OrderPizza' }, handler: firstHandler });
@@ -411,35 +449,35 @@ suite('matchRoute', () => {
 
     const event = lexEvent({ sessionState: { intent: { name: 'OrderPizza' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result?.handler).toBe(firstHandler);
   });
 });
 
 suite('convenience methods', () => {
-  test('dialogCodeHook sets the DialogCodeHook invocationSource filter', ({ lexEvent }) => {
+  test('dialogCodeHook sets the DialogCodeHook invocationSource filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.dialogCodeHook({ filters: {}, handler });
 
     const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
   });
 
-  test('dialogCodeHook does not match FulfillmentCodeHook events', ({ lexEvent }) => {
+  test('dialogCodeHook does not match FulfillmentCodeHook events', async ({ lexEvent }) => {
     router.dialogCodeHook({ filters: {}, handler: vi.fn() });
 
     const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('dialogCodeHook preserves additional filters', ({ lexEvent }) => {
+  test('dialogCodeHook preserves additional filters', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.dialogCodeHook({ filters: { intentName: 'OrderPizza' }, handler });
 
@@ -448,34 +486,34 @@ suite('convenience methods', () => {
       sessionState: { intent: { name: 'OrderPizza' } },
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('fulfillmentCodeHook sets the FulfillmentCodeHook invocationSource filter', ({ lexEvent }) => {
+  test('fulfillmentCodeHook sets the FulfillmentCodeHook invocationSource filter', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.fulfillmentCodeHook({ filters: {}, handler });
 
     const event = lexEvent({ invocationSource: 'FulfillmentCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
   });
 
-  test('fulfillmentCodeHook does not match DialogCodeHook events', ({ lexEvent }) => {
+  test('fulfillmentCodeHook does not match DialogCodeHook events', async ({ lexEvent }) => {
     router.fulfillmentCodeHook({ filters: {}, handler: vi.fn() });
 
     const event = lexEvent({ invocationSource: 'DialogCodeHook' });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('fulfillmentCodeHook preserves additional filters', ({ lexEvent }) => {
+  test('fulfillmentCodeHook preserves additional filters', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.fulfillmentCodeHook({ filters: { intentName: 'OrderPizza', botId: 'TESTBOTID' }, handler });
 
@@ -485,7 +523,7 @@ suite('convenience methods', () => {
       bot: { id: 'TESTBOTID' },
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);

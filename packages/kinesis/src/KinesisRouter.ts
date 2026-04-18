@@ -111,7 +111,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     const rawData = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
     const data = safeJsonParse(rawData);
 
-    const route = this.matchRoute(record, data);
+    const route = await this.matchRoute(record, data);
     if (!route) {
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
@@ -132,31 +132,34 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(record: KinesisStreamRecord, data: unknown): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(record: KinesisStreamRecord, data: unknown): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.eventSourceArn) {
         const { eventSourceArn: filterSourceArn } = filters;
         const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
         if (!eventSourceArns.includes(record.eventSourceARN)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.partitionKey) {
         const partitionKeys = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
         if (!partitionKeys.includes(record.kinesis.partitionKey)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ data, partitionKey: record.kinesis.partitionKey, record });
+        const match = await filters.customFilter({ data, partitionKey: record.kinesis.partitionKey, record });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

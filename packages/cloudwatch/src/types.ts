@@ -15,7 +15,7 @@ export interface CloudWatchLogsFilters {
   logGroupIncludes?: string | string[];
   subscriptionFilter?: string | string[];
   messageType?: CloudWatchLogsMessageType | CloudWatchLogsMessageType[];
-  customFilter?: (input: CloudWatchLogsDecodedData) => boolean;
+  customFilter?: (input: CloudWatchLogsDecodedData) => boolean | Promise<boolean>;
 }
 
 export type CloudWatchLogsEventFilters = Omit<CloudWatchLogsFilters, 'messageType'>;

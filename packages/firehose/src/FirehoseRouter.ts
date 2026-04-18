@@ -96,7 +96,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       const rawData = Buffer.from(record.data, 'base64').toString('utf-8');
       const data = safeJsonParse(rawData);
 
-      const route = this.matchRoute(event, record, data);
+      const route = await this.matchRoute(event, record, data);
       if (!route) {
         return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
       }
@@ -156,41 +156,44 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     };
   }
 
-  private matchRoute(
+  private async matchRoute(
     event: FirehoseTransformationEvent,
     record: FirehoseTransformationEventRecord,
     data: unknown,
-  ): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.deliveryStreamArn) {
         const { deliveryStreamArn: filterStreamArn } = filters;
         const deliveryStreamArns = Array.isArray(filterStreamArn) ? filterStreamArn : [filterStreamArn];
         if (!deliveryStreamArns.includes(event.deliveryStreamArn)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.sourceKinesisStreamArn) {
         const { sourceKinesisStreamArn: filterKinesisArn } = filters;
         const sourceKinesisStreamArns = Array.isArray(filterKinesisArn) ? filterKinesisArn : [filterKinesisArn];
-        if (!event.sourceKinesisStreamArn) return false;
-        if (!sourceKinesisStreamArns.includes(event.sourceKinesisStreamArn)) return false;
+        if (!event.sourceKinesisStreamArn) continue;
+        if (!sourceKinesisStreamArns.includes(event.sourceKinesisStreamArn)) continue;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({
+        const match = await filters.customFilter({
           data,
           recordId: record.recordId,
           approximateArrivalTimestamp: record.approximateArrivalTimestamp,
           record,
           metadata: record.kinesisRecordMetadata,
         });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

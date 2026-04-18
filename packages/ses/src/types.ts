@@ -34,7 +34,7 @@ export interface SESFilters {
   spfVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
   dkimVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
   dmarcVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
-  customFilter?: (input: SESFilterInput) => boolean;
+  customFilter?: (input: SESFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface SESRouteDefinition {

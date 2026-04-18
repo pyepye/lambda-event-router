@@ -105,7 +105,7 @@ suite('FirehoseRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches by deliveryStreamArn', ({ firehoseRecord }) => {
+    test('matches by deliveryStreamArn', async ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(
         defineRoute({
@@ -116,12 +116,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { deliveryStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('matches by deliveryStreamArn array', ({ firehoseRecord }) => {
+    test('matches by deliveryStreamArn array', async ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       const deliveryStreamArn2 = 'arn:aws:firehose:eu-west-2:987654321098:deliverystream/other-stream';
       router.route(
@@ -133,12 +133,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { deliveryStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when deliveryStreamArn does not match', ({ firehoseRecord }) => {
+    test('does not match when deliveryStreamArn does not match', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/other-stream' },
@@ -150,12 +150,12 @@ suite('FirehoseRouter', () => {
         deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches by sourceKinesisStreamArn', ({ firehoseRecord }) => {
+    test('matches by sourceKinesisStreamArn', async ({ firehoseRecord }) => {
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
         defineRoute({
@@ -166,12 +166,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { sourceKinesisStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('matches by sourceKinesisStreamArn array', ({ firehoseRecord }) => {
+    test('matches by sourceKinesisStreamArn array', async ({ firehoseRecord }) => {
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       const sourceKinesisStreamArn2 = 'arn:aws:kinesis:eu-west-2:987654321098:stream/other-kinesis-stream';
       router.route(
@@ -183,12 +183,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { sourceKinesisStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when sourceKinesisStreamArn does not match', ({ firehoseRecord }) => {
+    test('does not match when sourceKinesisStreamArn does not match', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: { sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/other-stream' },
@@ -200,12 +200,12 @@ suite('FirehoseRouter', () => {
         sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when sourceKinesisStreamArn filter set but event has no sourceKinesisStreamArn', ({
+    test('does not match when sourceKinesisStreamArn filter set but event has no sourceKinesisStreamArn', async ({
       firehoseRecord,
     }) => {
       router.route(
@@ -217,12 +217,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record]);
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches by customFilter', ({ firehoseRecord }) => {
+    test('matches by customFilter', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -238,12 +238,34 @@ suite('FirehoseRouter', () => {
       const event = createFirehoseEvent([record]);
       const data = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, data);
+      const result = await router.matchRoute(event, record, data);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', ({ firehoseRecord }) => {
+    test('matches by async customFilter', async ({ firehoseRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ data }: FirehoseFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - data is unknown, testing filter with known shape
+              return data.action === 'processOrder';
+            },
+          },
+        }).handle(async () => Ok()),
+      );
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record]);
+      const data = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, record, data);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when customFilter returns false', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -253,12 +275,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record]);
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches with empty filters as catch-all', ({ firehoseRecord }) => {
+    test('matches with empty filters as catch-all', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -268,12 +290,12 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record]);
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('selects first matching route when multiple match', ({ firehoseRecord }) => {
+    test('selects first matching route when multiple match', async ({ firehoseRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
@@ -292,13 +314,13 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { deliveryStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when both deliveryStreamArn and sourceKinesisStreamArn match', ({ firehoseRecord }) => {
+    test('matches when both deliveryStreamArn and sourceKinesisStreamArn match', async ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
@@ -313,12 +335,14 @@ suite('FirehoseRouter', () => {
       const record = firehoseRecord();
       const event = createFirehoseEvent([record], { deliveryStreamArn, sourceKinesisStreamArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when deliveryStreamArn matches but sourceKinesisStreamArn does not', ({ firehoseRecord }) => {
+    test('does not match when deliveryStreamArn matches but sourceKinesisStreamArn does not', async ({
+      firehoseRecord,
+    }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(
         defineRoute({
@@ -335,12 +359,14 @@ suite('FirehoseRouter', () => {
         sourceKinesisStreamArn: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when sourceKinesisStreamArn matches but deliveryStreamArn does not', ({ firehoseRecord }) => {
+    test('does not match when sourceKinesisStreamArn matches but deliveryStreamArn does not', async ({
+      firehoseRecord,
+    }) => {
       const sourceKinesisStreamArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-kinesis-stream';
       router.route(
         defineRoute({
@@ -357,12 +383,12 @@ suite('FirehoseRouter', () => {
         sourceKinesisStreamArn,
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event, record, {});
+      const result = await router.matchRoute(event, record, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct FirehoseFilterInput', ({ firehoseRecord }) => {
+    test('customFilter receives correct FirehoseFilterInput', async ({ firehoseRecord }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -384,7 +410,7 @@ suite('FirehoseRouter', () => {
       const event = createFirehoseEvent([record]);
       const data = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      router.matchRoute(event, record, data);
+      await router.matchRoute(event, record, data);
 
       expect(filterSpy).toHaveBeenCalledWith({
         data,
@@ -692,7 +718,7 @@ suite('FirehoseRouter', () => {
         }).handle(async (request) => {
           const recordId = request.recordId;
           callOrder.push(`start-${recordId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${recordId}`);
           return Ok();
         }),

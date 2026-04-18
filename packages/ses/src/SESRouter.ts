@@ -60,29 +60,29 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
     await Promise.all(recordPromises);
   }
 
-  private matchRoute(record: SESEventRecord): SESRouteDefinition | undefined {
+  private async matchRoute(record: SESEventRecord): Promise<SESRouteDefinition | undefined> {
     const { mail, receipt } = record.ses;
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.recipient) {
         const recipients = Array.isArray(filters.recipient) ? filters.recipient : [filters.recipient];
         const hasMatchingRecipient = receipt.recipients.some((recipient) => recipients?.includes(recipient));
-        if (!hasMatchingRecipient) return false;
+        if (!hasMatchingRecipient) continue;
       }
 
       if (filters.sender) {
         const senders = Array.isArray(filters.sender) ? filters.sender : [filters.sender];
         if (!senders.includes(mail.source)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.senderDomain) {
         const senderDomains = Array.isArray(filters.senderDomain) ? filters.senderDomain : [filters.senderDomain];
         const senderDomain = extractDomain(mail.source);
-        if (!senderDomains.includes(senderDomain)) return false;
+        if (!senderDomains.includes(senderDomain)) continue;
       }
 
       if (filters.recipientDomain) {
@@ -92,50 +92,53 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
           const domain = extractDomain(recipient);
           return recipientDomains.includes(domain);
         });
-        if (!hasMatchingDomain) return false;
+        if (!hasMatchingDomain) continue;
       }
 
       if (filters.spamVerdict) {
         const spamVerdicts = Array.isArray(filters.spamVerdict) ? filters.spamVerdict : [filters.spamVerdict];
         if (!spamVerdicts.includes(receipt.spamVerdict.status)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.virusVerdict) {
         const virusVerdicts = Array.isArray(filters.virusVerdict) ? filters.virusVerdict : [filters.virusVerdict];
         if (!virusVerdicts.includes(receipt.virusVerdict.status)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.spfVerdict) {
         const spfVerdicts = Array.isArray(filters.spfVerdict) ? filters.spfVerdict : [filters.spfVerdict];
         if (!spfVerdicts.includes(receipt.spfVerdict.status)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.dkimVerdict) {
         const dkimVerdicts = Array.isArray(filters.dkimVerdict) ? filters.dkimVerdict : [filters.dkimVerdict];
         if (!dkimVerdicts.includes(receipt.dkimVerdict.status)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.dmarcVerdict) {
         const dmarcVerdicts = Array.isArray(filters.dmarcVerdict) ? filters.dmarcVerdict : [filters.dmarcVerdict];
         if (!dmarcVerdicts.includes(receipt.dmarcVerdict.status)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ receipt, mail });
+        const match = await filters.customFilter({ receipt, mail });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 
   private buildRequest(record: SESEventRecord, mail: SESMail, receipt: SESReceipt, context: Context): SESRequest {
@@ -151,7 +154,7 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
   }
 
   private async processRecord(record: SESEventRecord, context: Context): Promise<void> {
-    const route = this.matchRoute(record);
+    const route = await this.matchRoute(record);
     if (!route) {
       throw new Error(`No route matched for SES record ${record.ses.mail.messageId}`);
     }

@@ -100,7 +100,7 @@ suite('SNSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by topicArn', ({ snsRecord }) => {
+    test('matches route by topicArn', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -110,12 +110,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: topicArn } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by topicArn array', ({ snsRecord }) => {
+    test('matches route by topicArn array', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const topicArn2 = 'arn:aws:sns:eu-west-2:987654321098:other-topic';
       router.route(
@@ -126,12 +126,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: topicArn } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when topicArn does not match', ({ snsRecord }) => {
+    test('does not match route when topicArn does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'] },
@@ -140,12 +140,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by subject', ({ snsRecord }) => {
+    test('matches route by subject', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { subject: 'Order Notification' },
@@ -154,12 +154,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by subject array', ({ snsRecord }) => {
+    test('matches route by subject array', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { subject: ['Order Notification', 'Refund Notification'] },
@@ -168,12 +168,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when subject does not match', ({ snsRecord }) => {
+    test('does not match route when subject does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { subject: ['Shipping Update'] },
@@ -182,12 +182,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when subject is undefined and subject filter is set', ({ snsRecord }) => {
+    test('does not match when subject is undefined and subject filter is set', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { subject: 'Order Notification' },
@@ -196,12 +196,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { Subject: undefined } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by messageAttributes', ({ snsRecord }) => {
+    test('matches route by messageAttributes', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: 'order.created' } },
@@ -211,12 +211,12 @@ suite('SNSRouter', () => {
       const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by messageAttributes array', ({ snsRecord }) => {
+    test('matches route by messageAttributes array', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.created', 'order.refunded'] } },
@@ -226,12 +226,12 @@ suite('SNSRouter', () => {
       const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when messageAttributes does not match', ({ snsRecord }) => {
+    test('does not match route when messageAttributes does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.shipped'] } },
@@ -241,12 +241,12 @@ suite('SNSRouter', () => {
       const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when messageAttribute key is missing', ({ snsRecord }) => {
+    test('does not match when messageAttribute key is missing', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: 'order.created' } },
@@ -256,12 +256,12 @@ suite('SNSRouter', () => {
       const rawAttributes = { otherKey: { Type: 'String', Value: 'some-value' } };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when all messageAttribute filter keys match', ({ snsRecord }) => {
+    test('matches when all messageAttribute filter keys match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -279,12 +279,12 @@ suite('SNSRouter', () => {
       };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when one of multiple messageAttribute filter keys does not match', ({ snsRecord }) => {
+    test('does not match when one of multiple messageAttribute filter keys does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -302,12 +302,12 @@ suite('SNSRouter', () => {
       };
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route when both topicArn and subject match', ({ snsRecord }) => {
+    test('matches route when both topicArn and subject match', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -320,12 +320,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when topicArn matches but subject does not', ({ snsRecord }) => {
+    test('does not match when topicArn matches but subject does not', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -338,12 +338,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when subject matches but topicArn does not', ({ snsRecord }) => {
+    test('does not match when subject matches but topicArn does not', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -357,12 +357,12 @@ suite('SNSRouter', () => {
         Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic', Subject: 'Order Notification' },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route when topicArn, subject, and messageAttributes all match', ({ snsRecord }) => {
+    test('matches route when topicArn, subject, and messageAttributes all match', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -379,12 +379,12 @@ suite('SNSRouter', () => {
         Sns: { TopicArn: topicArn, Subject: 'Order Notification', MessageAttributes: rawAttributes },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when topicArn and subject match but messageAttributes does not', ({ snsRecord }) => {
+    test('does not match when topicArn and subject match but messageAttributes does not', async ({ snsRecord }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -401,12 +401,12 @@ suite('SNSRouter', () => {
         Sns: { TopicArn: topicArn, Subject: 'Order Notification', MessageAttributes: rawAttributes },
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, rawAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not evaluated when topicArn does not match', ({ snsRecord }) => {
+    test('customFilter is not evaluated when topicArn does not match', async ({ snsRecord }) => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
@@ -419,13 +419,13 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
       expect(customFilter).not.toHaveBeenCalled();
     });
 
-    test('customFilter is evaluated when other filters match', ({ snsRecord }) => {
+    test('customFilter is evaluated when other filters match', async ({ snsRecord }) => {
       const customFilter = vi.fn(() => true);
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
@@ -439,13 +439,13 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: topicArn } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
       expect(customFilter).toHaveBeenCalledOnce();
     });
 
-    test('customFilter receives body, messageAttributes, and record', ({ snsRecord }) => {
+    test('customFilter receives body, messageAttributes, and record', async ({ snsRecord }) => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
@@ -457,7 +457,7 @@ suite('SNSRouter', () => {
       const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
       const body = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record, body, rawAttributes);
+      await router.matchRoute(record, body, rawAttributes);
 
       expect(customFilter).toHaveBeenCalledWith({
         body,
@@ -466,7 +466,7 @@ suite('SNSRouter', () => {
       });
     });
 
-    test('matches route by customFilter', ({ snsRecord }) => {
+    test('matches route by customFilter', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -481,12 +481,33 @@ suite('SNSRouter', () => {
       const record = snsRecord();
       const body = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, body, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, body, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ snsRecord }) => {
+    test('matches route by async customFilter', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ body }: SNSFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - body is unknown, testing filter with known shape
+              return body.action === 'processOrder';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      const body = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, body, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when customFilter returns false', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -495,12 +516,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route with empty filters as a catch-all', ({ snsRecord }) => {
+    test('matches route with empty filters as a catch-all', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -509,12 +530,12 @@ suite('SNSRouter', () => {
 
       const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ snsRecord }) => {
+    test('selects the first matching route when multiple routes match', async ({ snsRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(
@@ -530,7 +551,7 @@ suite('SNSRouter', () => {
 
       const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, record.Sns.MessageAttributes);
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -648,7 +669,7 @@ suite('SNSRouter', () => {
         }).handle(async (request) => {
           const messageId = request.record.Sns.MessageId;
           callOrder.push(`start-${messageId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${messageId}`);
         }),
       );

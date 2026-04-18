@@ -2,7 +2,7 @@ import { LambdaRouter } from '@lambda-event-router/base';
 import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice';
 import type { Handler } from 'aws-lambda';
 
-import { createItem, CreateItemBodySchema, QuerySchema } from './createItem.js';
+import { CreateItemBodySchema, createItem, QuerySchema } from './createItem.js';
 
 const apiRouter = createVPCLatticeRouter();
 

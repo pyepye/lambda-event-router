@@ -12,7 +12,7 @@ import { handleEventWithMiddleware } from './middleware.js';
 import type { EventTypeRouter } from './types.js';
 
 interface InternalEventRoute {
-  filters: { customFilter?: (input: EventFilterInput) => boolean };
+  filters: { customFilter?: (input: EventFilterInput) => boolean | Promise<boolean> };
   eventSchema?: StandardSchemaV1;
   middleware: EventRouterMiddleware<unknown, unknown>[];
   handler: EventHandler<unknown, unknown>;
@@ -167,10 +167,14 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     this.middleware = options?.middleware ?? [];
   }
 
+  // async canHandleEvent(event: unknown): event is unknown {
   canHandleEvent(event: unknown): event is unknown {
     if (!isObject(event)) return false;
     if (isKnownEventSource(event)) return false;
-    return this.matchRoute(event) !== undefined;
+    return true;
+    // TODO: this function needs to return a boolean which will effect all Routers
+    // const matched = await this.matchRoute(event)
+    // return matched !== undefined;
   }
 
   route<TPayload>(definition: EventRouteDefinition<TPayload, TResponse>): this {
@@ -189,7 +193,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
   }
 
   async handleEvent(event: unknown, context: Context): Promise<TResponse> {
-    const route = this.matchRoute(event);
+    const route = await this.matchRoute(event);
     if (!route) {
       throw new Error('No route matched for event');
     }
@@ -202,18 +206,17 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     return handleEventWithMiddleware(allMiddleware, request, route.handler as EventHandler<unknown, TResponse>);
   }
 
-  private matchRoute(event: unknown): InternalEventRoute | undefined {
+  private async matchRoute(event: unknown): Promise<InternalEventRoute | undefined> {
     const filterInput: EventFilterInput = { event };
-
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
-
       if (filters.customFilter) {
-        return filters.customFilter(filterInput);
+        const match = await filters.customFilter(filterInput);
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

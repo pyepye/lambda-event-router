@@ -144,33 +144,43 @@ suite('S3Router', () => {
       { method: 'reducedRedundancyLostObject', eventName: 's3:ReducedRedundancyLostObject' },
       { method: 'intelligentTiering', eventName: 's3:IntelligentTiering' },
       { method: 'testEvent', eventName: 's3:TestEvent' },
-    ])('$method sets eventName filter to $eventName', ({ method, eventName }) => {
+    ])('$method sets eventName filter to $eventName', async ({ method, eventName }) => {
       const handler = vi.fn();
       // @ts-expect-error - dynamic method access for convenience method testing
       router[method]({ handler });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({}, 'my-bucket', 'uploads/test.txt', eventName);
+      const result = await router.matchRoute({}, 'my-bucket', 'uploads/test.txt', eventName);
 
       expect(result).toBeDefined();
     });
 
-    test('merges user-provided filters with auto-set eventName', ({ s3Record }) => {
+    test('merges user-provided filters with auto-set eventName', async ({ s3Record }) => {
       const handler = vi.fn();
       router.objectCreatedPut({ filters: { bucket: 'specific-bucket', prefix: 'uploads/' }, handler });
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const matchingResult = router.matchRoute(record, 'specific-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const matchingResult = await router.matchRoute(
+        record,
+        'specific-bucket',
+        'uploads/test.txt',
+        's3:ObjectCreated:Put',
+      );
       expect(matchingResult).toBeDefined();
 
       // @ts-expect-error - testing private method directly
-      const nonMatchingResult = router.matchRoute(record, 'other-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const nonMatchingResult = await router.matchRoute(
+        record,
+        'other-bucket',
+        'uploads/test.txt',
+        's3:ObjectCreated:Put',
+      );
       expect(nonMatchingResult).toBeUndefined();
     });
   });
 
   suite('matchRoute', () => {
-    test('matches route by exact eventName', ({ s3Record }) => {
+    test('matches route by exact eventName', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { eventName: 's3:ObjectCreated:Put' },
@@ -179,12 +189,12 @@ suite('S3Router', () => {
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by exact eventName array', ({ s3Record }) => {
+    test('matches route by exact eventName array', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { eventName: ['s3:ObjectCreated:Put', 's3:ObjectCreated:Get'] },
@@ -193,12 +203,12 @@ suite('S3Router', () => {
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by wildcard eventName', ({ s3Record }) => {
+    test('matches route by wildcard eventName', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { eventName: 's3:ObjectCreated:*' },
@@ -207,12 +217,12 @@ suite('S3Router', () => {
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventName does not match', ({ s3Record }) => {
+    test('does not match route when eventName does not match', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { eventName: 's3:ObjectRemoved:Delete' },
@@ -221,12 +231,12 @@ suite('S3Router', () => {
 
       const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by bucket name', ({ s3Record }) => {
+    test('matches route by bucket name', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { bucket: 'my-bucket' },
@@ -235,12 +245,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by bucket name array', ({ s3Record }) => {
+    test('matches route by bucket name array', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { bucket: ['my-bucket', 'other-bucket'] },
@@ -249,12 +259,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when bucket does not match', ({ s3Record }) => {
+    test('does not match route when bucket does not match', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { bucket: 'other-bucket' },
@@ -263,12 +273,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key starts with prefix', ({ s3Record }) => {
+    test('matches route when key starts with prefix', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { prefix: 'uploads/' },
@@ -277,12 +287,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route when key starts with prefix array', ({ s3Record }) => {
+    test('matches route when key starts with prefix array', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { prefix: ['images/', 'uploads/'] },
@@ -291,12 +301,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when key does not start with any prefix', ({ s3Record }) => {
+    test('does not match route when key does not start with any prefix', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { prefix: ['images/', 'docs/'] },
@@ -305,12 +315,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key ends with suffix', ({ s3Record }) => {
+    test('matches route when key ends with suffix', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { suffix: '.txt' },
@@ -319,12 +329,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route when key ends with suffix array', ({ s3Record }) => {
+    test('matches route when key ends with suffix array', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { suffix: ['.jpg', '.txt'] },
@@ -333,12 +343,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when key does not end with any suffix', ({ s3Record }) => {
+    test('does not match route when key does not end with any suffix', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { suffix: ['.jpg', '.png'] },
@@ -347,12 +357,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route when key contains substring', ({ s3Record }) => {
+    test('matches route when key contains substring', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { includes: 'test' },
@@ -361,12 +371,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route when key contains substring array', ({ s3Record }) => {
+    test('matches route when key contains substring array', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { includes: ['archive', 'test'] },
@@ -375,12 +385,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when key does not contain any substring', ({ s3Record }) => {
+    test('does not match route when key does not contain any substring', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { includes: ['archive', 'backup'] },
@@ -389,12 +399,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ s3Record }) => {
+    test('matches route by customFilter', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
@@ -407,12 +417,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ s3Record }) => {
+    test('does not match route when customFilter returns false', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -421,12 +431,31 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives bucket, key, eventName, and record', ({ s3Record }) => {
+    test('matches route by async customFilter', async ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ bucket, key }: S3FilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return bucket === 'my-bucket' && key.startsWith('uploads/');
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+
+      expect(result).toBeDefined();
+    });
+
+    test('customFilter receives bucket, key, eventName, and record', async ({ s3Record }) => {
       const filterFn = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -436,7 +465,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(filterFn).toHaveBeenCalledWith({
         bucket: 'my-bucket',
@@ -446,7 +475,7 @@ suite('S3Router', () => {
       });
     });
 
-    test('matches when both bucket and prefix filters pass', ({ s3Record }) => {
+    test('matches when both bucket and prefix filters pass', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { bucket: 'my-bucket', prefix: 'uploads/' },
@@ -455,12 +484,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when bucket passes but prefix fails', ({ s3Record }) => {
+    test('does not match when bucket passes but prefix fails', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: { bucket: 'my-bucket', prefix: 'images/' },
@@ -469,12 +498,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when bucket and customFilter both pass', ({ s3Record }) => {
+    test('matches when bucket and customFilter both pass', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
@@ -486,12 +515,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when bucket passes but customFilter rejects', ({ s3Record }) => {
+    test('does not match when bucket passes but customFilter rejects', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
@@ -503,22 +532,22 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route with empty filters as a catch-all', ({ s3Record }) => {
+    test('matches route with empty filters as a catch-all', async ({ s3Record }) => {
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'any-bucket', 'any/key.xyz', 's3:ObjectRemoved:Delete');
+      const result = await router.matchRoute(record, 'any-bucket', 'any/key.xyz', 's3:ObjectRemoved:Delete');
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ s3Record }) => {
+    test('selects the first matching route when multiple routes match', async ({ s3Record }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: { bucket: 'my-bucket' } }).handle(firstHandler));
@@ -526,7 +555,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -563,7 +592,7 @@ suite('S3Router', () => {
       router.route(
         defineRoute({ filters: {} }).handle(async (request) => {
           callOrder.push(`start-${request.key}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${request.key}`);
         }),
       );

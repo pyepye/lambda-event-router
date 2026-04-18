@@ -129,7 +129,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
   private async processRecord(record: KafkaRecord, event: KafkaEvent, context: Context): Promise<void> {
     const decodedHeaders = this.decodeHeaders(record.headers);
 
-    const route = this.matchRoute(record, event, decodedHeaders);
+    const route = await this.matchRoute(record, event, decodedHeaders);
     if (!route) {
       throw new Error(`No route matched for record on topic ${record.topic} partition ${record.partition}`);
     }
@@ -160,29 +160,29 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(
+  private async matchRoute(
     record: KafkaRecord,
     event: KafkaEvent,
     decodedHeaders: KafkaDecodedHeader[],
-  ): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.topic) {
         const topics = Array.isArray(filters.topic) ? filters.topic : [filters.topic];
         if (!topics.includes(record.topic)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.eventSourceArn) {
         if (!this.isMSKEvent(event)) {
-          return false;
+          continue;
         }
         const { eventSourceArn: filterSourceArn } = filters;
         const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
         if (!eventSourceArns.includes(event.eventSourceArn)) {
-          return false;
+          continue;
         }
       }
 
@@ -192,16 +192,19 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
         const eventServers = event.bootstrapServers.split(',');
         const hasMatchingServer = bootstrapServers.some((server) => eventServers.includes(server));
         if (!hasMatchingServer) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ headers: decodedHeaders, topic: record.topic, record });
+        const match = await filters.customFilter({ headers: decodedHeaders, topic: record.topic, record });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

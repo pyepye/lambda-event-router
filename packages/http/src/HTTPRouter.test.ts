@@ -409,6 +409,40 @@ suite('HTTPRouter', () => {
         event,
       });
     });
+
+    test('matches route when customFilter is async and resolves true', async () => {
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: async () => {
+            await new Promise((r) => setTimeout(r, 1));
+            return true;
+          },
+        },
+        handler: async () => Ok({ matched: true }),
+      });
+      const event = createMockEvent({ method: 'GET', path: '/items' });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+      expect(result.statusCode).toBe(200);
+    });
+
+    test('returns 404 when async customFilter resolves false', async () => {
+      router.get({
+        filters: {
+          path: '/items',
+          customFilter: async () => {
+            await new Promise((r) => setTimeout(r, 1));
+            return false;
+          },
+        },
+        handler: async () => Ok({ matched: true }),
+      });
+      const event = createMockEvent({ method: 'GET', path: '/items' });
+      const context = createMockContext();
+      const result = await router.handleEvent(event, context);
+      expect(result.statusCode).toBe(404);
+    });
   });
 
   suite('router-level middleware', () => {

@@ -116,7 +116,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   async handleEvent(event: ConnectContactFlowEvent, context: Context): Promise<ConnectContactFlowResult> {
     const { ContactData: contactData, Parameters: parameters } = event.Details;
 
-    const route = this.matchRoute(event);
+    const route = await this.matchRoute(event);
     if (!route) {
       throw new Error(
         `No route matched for Amazon Connect event (channel: ${contactData.Channel}, initiationMethod: ${contactData.InitiationMethod})`,
@@ -129,16 +129,16 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(event: ConnectContactFlowEvent): ConnectRouteDefinition | undefined {
+  private async matchRoute(event: ConnectContactFlowEvent): Promise<ConnectRouteDefinition | undefined> {
     const { ContactData: contactData } = event.Details;
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.channel) {
         const channels = Array.isArray(filters.channel) ? filters.channel : [filters.channel];
         if (!channels.includes(contactData.Channel)) {
-          return false;
+          continue;
         }
       }
 
@@ -146,27 +146,28 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
         const { initiationMethod: filterMethod } = filters;
         const initiationMethods = Array.isArray(filterMethod) ? filterMethod : [filterMethod];
         if (!initiationMethods.includes(contactData.InitiationMethod)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.instanceArn) {
         const instanceArns = Array.isArray(filters.instanceArn) ? filters.instanceArn : [filters.instanceArn];
         if (!instanceArns.includes(contactData.InstanceARN)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({
+        const match = await filters.customFilter({
           channel: contactData.Channel,
           initiationMethod: contactData.InitiationMethod,
           event,
         });
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

@@ -119,7 +119,7 @@ suite('SecretsManagerRouter', () => {
       'setSecret',
       'testSecret',
       'finishSecret',
-    ] as const)('%s adds route with correct step filter', (step) => {
+    ] as const)('%s adds route with correct step filter', async (step) => {
       const handler = vi.fn();
 
       router[step]({ filters: {}, handler });
@@ -130,11 +130,11 @@ suite('SecretsManagerRouter', () => {
         step,
       };
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute(request);
+      const matched = await router.matchRoute(request);
       expect(matched).toBeDefined();
     });
 
-    test('preserves other filters alongside injected steps', () => {
+    test('preserves other filters alongside injected steps', async () => {
       const handler = vi.fn();
       const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
 
@@ -146,7 +146,7 @@ suite('SecretsManagerRouter', () => {
         step: 'createSecret',
       };
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute(matchingRequest);
+      const matched = await router.matchRoute(matchingRequest);
       expect(matched).toBeDefined();
 
       const nonMatchingRequest: SecretsManagerFilterInput = {
@@ -155,7 +155,7 @@ suite('SecretsManagerRouter', () => {
         step: 'createSecret',
       };
       // @ts-expect-error - testing private method directly
-      const notMatched = router.matchRoute(nonMatchingRequest);
+      const notMatched = await router.matchRoute(nonMatchingRequest);
       expect(notMatched).toBeUndefined();
     });
 
@@ -170,17 +170,17 @@ suite('SecretsManagerRouter', () => {
 
   suite('matchRoute', () => {
     suite('secretIds', () => {
-      test('matches on secretId', () => {
+      test('matches on secretId', async () => {
         const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
         router.route(defineRoute({ filters: { secretId: secretId } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretId', () => {
+      test('does not match when secretId', async () => {
         router.route(
           defineRoute({
             filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other' },
@@ -193,11 +193,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when secretId is one of multiple allowed', () => {
+      test('matches when secretId is one of multiple allowed', async () => {
         const secretIdA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a';
         const secretIdB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b';
         router.route(defineRoute({ filters: { secretId: [secretIdA, secretIdB] } }).handle(async () => {}));
@@ -208,13 +208,13 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
     });
 
     suite('secretPrefixes', () => {
-      test('matches when secretId starts with prefix', () => {
+      test('matches when secretId starts with prefix', async () => {
         router.route(
           defineRoute({ filters: { secretPrefix: 'arn:aws:secretsmanager:us-east-1' } }).handle(async () => {}),
         );
@@ -225,11 +225,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretId does not start with prefix', () => {
+      test('does not match when secretId does not start with prefix', async () => {
         router.route(
           defineRoute({ filters: { secretPrefix: 'arn:aws:secretsmanager:eu-west-1' } }).handle(async () => {}),
         );
@@ -240,11 +240,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when secretId starts with one of multiple prefixes', () => {
+      test('matches when secretId starts with one of multiple prefixes', async () => {
         router.route(
           defineRoute({
             filters: { secretPrefix: ['arn:aws:secretsmanager:eu-west-1', 'arn:aws:secretsmanager:us-east-1'] },
@@ -257,13 +257,13 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
     });
 
     suite('secretSuffixes', () => {
-      test('matches when secretId ends with suffix', () => {
+      test('matches when secretId ends with suffix', async () => {
         router.route(defineRoute({ filters: { secretSuffix: 'my-secret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -272,11 +272,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretId does not end with suffix', () => {
+      test('does not match when secretId does not end with suffix', async () => {
         router.route(defineRoute({ filters: { secretSuffix: 'other-secret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -285,11 +285,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when secretId ends with one of multiple suffixes', () => {
+      test('matches when secretId ends with one of multiple suffixes', async () => {
         router.route(defineRoute({ filters: { secretSuffix: ['other-secret', 'my-secret'] } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -298,13 +298,13 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
     });
 
     suite('secretIncludes', () => {
-      test('matches when secretId contains the string', () => {
+      test('matches when secretId contains the string', async () => {
         router.route(defineRoute({ filters: { secretIncludes: '123456789012' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -313,11 +313,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretId does not contain the string', () => {
+      test('does not match when secretId does not contain the string', async () => {
         router.route(defineRoute({ filters: { secretIncludes: '999999999999' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -326,11 +326,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when secretId contains one of multiple strings', () => {
+      test('matches when secretId contains one of multiple strings', async () => {
         router.route(
           defineRoute({ filters: { secretIncludes: ['999999999999', '123456789012'] } }).handle(async () => {}),
         );
@@ -341,13 +341,13 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
     });
 
     suite('steps', () => {
-      test('matches when step', () => {
+      test('matches when step', async () => {
         router.route(defineRoute({ filters: { step: 'createSecret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -356,11 +356,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when step', () => {
+      test('does not match when step', async () => {
         router.route(defineRoute({ filters: { step: 'setSecret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -369,11 +369,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when step is one of multiple allowed', () => {
+      test('matches when step is one of multiple allowed', async () => {
         router.route(defineRoute({ filters: { step: ['createSecret', 'setSecret'] } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -382,13 +382,13 @@ suite('SecretsManagerRouter', () => {
           step: 'setSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
     });
 
     suite('customFilter', () => {
-      test('matches when customFilter returns true', () => {
+      test('matches when customFilter returns true', async () => {
         router.route(
           defineRoute({
             filters: { customFilter: () => true },
@@ -401,11 +401,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when customFilter returns false', () => {
+      test('does not match when customFilter returns false', async () => {
         router.route(
           defineRoute({
             filters: { customFilter: () => false },
@@ -418,11 +418,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('receives correct input shape', () => {
+      test('receives correct input shape', async () => {
         const customFilter = vi.fn().mockReturnValue(true);
         router.route(defineRoute({ filters: { customFilter } }).handle(async () => {}));
 
@@ -432,7 +432,7 @@ suite('SecretsManagerRouter', () => {
           step: 'testSecret',
         };
         // @ts-expect-error - testing private method directly
-        router.matchRoute(request);
+        await router.matchRoute(request);
 
         expect(customFilter).toHaveBeenCalledWith({
           secretId: 'my-secret',
@@ -440,30 +440,49 @@ suite('SecretsManagerRouter', () => {
           step: 'testSecret',
         });
       });
+
+      test('matches route by async customFilter', async () => {
+        const asyncFilter = vi.fn().mockResolvedValue(true);
+        router.route(
+          defineRoute({
+            filters: { customFilter: asyncFilter },
+          }).handle(async () => {}),
+        );
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeDefined();
+        expect(asyncFilter).toHaveBeenCalledWith(request);
+      });
     });
 
     suite('combined filters (AND logic)', () => {
-      test('matches when both secretIds and steps match', () => {
+      test('matches when both secretIds and steps match', async () => {
         const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
         router.route(defineRoute({ filters: { secretId: secretId, step: 'createSecret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretIds matches but steps does not', () => {
+      test('does not match when secretIds matches but steps does not', async () => {
         const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
         router.route(defineRoute({ filters: { secretId: secretId, step: 'setSecret' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('does not match when steps matches but secretIds does not', () => {
+      test('does not match when steps matches but secretIds does not', async () => {
         router.route(
           defineRoute({
             filters: {
@@ -479,11 +498,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('matches when prefix and customFilter both pass', () => {
+      test('matches when prefix and customFilter both pass', async () => {
         router.route(
           defineRoute({
             filters: {
@@ -499,11 +518,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('does not match when prefix matches but customFilter fails', () => {
+      test('does not match when prefix matches but customFilter fails', async () => {
         router.route(
           defineRoute({
             filters: {
@@ -519,13 +538,13 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
     });
 
     suite('edge saSecretsManager', () => {
-      test('empty filters act as catch-all', () => {
+      test('empty filters act as catch-all', async () => {
         router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
@@ -534,11 +553,11 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
-      test('first matching route wins', () => {
+      test('first matching route wins', async () => {
         const firstHandler = vi.fn();
         const secondHandler = vi.fn();
 
@@ -551,24 +570,24 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeDefined();
         // @ts-expect-error - result is asserted as defined above
         expect(result.handler).toBe(firstHandler);
       });
 
-      test('returns undefined when no routes are defined', () => {
+      test('returns undefined when no routes are defined', async () => {
         const request: SecretsManagerFilterInput = {
           secretId: 'any-secret',
           clientRequestToken: 'any-token',
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(request);
+        const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
       });
 
-      test('customFilter is not called when an earlier filter fails', () => {
+      test('customFilter is not called when an earlier filter fails', async () => {
         const customFilter = vi.fn().mockReturnValue(true);
         router.route(
           defineRoute({
@@ -585,7 +604,7 @@ suite('SecretsManagerRouter', () => {
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
-        router.matchRoute(request);
+        await router.matchRoute(request);
         expect(customFilter).not.toHaveBeenCalled();
       });
     });

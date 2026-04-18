@@ -135,7 +135,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
 
   private async processEntry(entry: DocumentDBEventEntry, eventSourceArn: string, context: Context): Promise<void> {
     const changeEvent = entry.event;
-    const route = this.matchRoute(changeEvent, eventSourceArn);
+    const route = await this.matchRoute(changeEvent, eventSourceArn);
 
     if (!route) {
       throw new Error(`No route matched for record ${JSON.stringify(changeEvent.documentKey)} from ${eventSourceArn}`);
@@ -180,48 +180,54 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(changeEvent: DocumentDBChangeEvent, eventSourceArn: string): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(
+    changeEvent: DocumentDBChangeEvent,
+    eventSourceArn: string,
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.operationType) {
         const operationTypes = Array.isArray(filters.operationType) ? filters.operationType : [filters.operationType];
         if (!operationTypes.includes(changeEvent.operationType)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.eventSourceArn) {
         const arns = Array.isArray(filters.eventSourceArn) ? filters.eventSourceArn : [filters.eventSourceArn];
         if (!arns.includes(eventSourceArn)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.database) {
         const databases = Array.isArray(filters.database) ? filters.database : [filters.database];
         if (!databases.includes(changeEvent.ns.db)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.collection) {
         const collections = Array.isArray(filters.collection) ? filters.collection : [filters.collection];
         if (!collections.includes(changeEvent.ns.coll)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({
+        const match = await filters.customFilter({
           operationType: changeEvent.operationType,
           ns: changeEvent.ns,
           event: changeEvent,
         });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

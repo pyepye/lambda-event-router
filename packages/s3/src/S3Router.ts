@@ -466,7 +466,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     const key = decodeURIComponent(record.s3.object.key.replace(/\+/g, ' '));
     const eventName = record.eventName;
 
-    const route = this.matchRoute(record, bucket, key, eventName);
+    const route = await this.matchRoute(record, bucket, key, eventName);
     if (!route) {
       throw new Error(`No route matched for record from bucket ${bucket}, key ${key}`);
     }
@@ -477,15 +477,20 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(record: S3EventRecord, bucket: string, key: string, eventName: string): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(
+    record: S3EventRecord,
+    bucket: string,
+    key: string,
+    eventName: string,
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       // Match event names with wildcard support
       if (filters.eventName) {
         const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
         if (!this.matchEventName(eventName, eventNames)) {
-          return false;
+          continue;
         }
       }
 
@@ -493,7 +498,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       if (filters.bucket) {
         const buckets = Array.isArray(filters.bucket) ? filters.bucket : [filters.bucket];
         if (!buckets.includes(bucket)) {
-          return false;
+          continue;
         }
       }
 
@@ -501,7 +506,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       if (filters.prefix) {
         const prefixes = Array.isArray(filters.prefix) ? filters.prefix : [filters.prefix];
         if (!prefixes.some((prefix) => key.startsWith(prefix))) {
-          return false;
+          continue;
         }
       }
 
@@ -509,7 +514,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       if (filters.suffix) {
         const suffixes = Array.isArray(filters.suffix) ? filters.suffix : [filters.suffix];
         if (!suffixes.some((suffix) => key.endsWith(suffix))) {
-          return false;
+          continue;
         }
       }
 
@@ -517,18 +522,20 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       if (filters.includes) {
         const includes = Array.isArray(filters.includes) ? filters.includes : [filters.includes];
         if (!includes.some((substring) => key.includes(substring))) {
-          return false;
+          continue;
         }
       }
 
       // Custom filter
       if (filters.customFilter) {
         const input: S3FilterInput = { bucket, key, eventName, record };
-        return filters.customFilter(input);
+        const match = await filters.customFilter(input);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 
   /**

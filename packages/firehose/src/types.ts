@@ -14,7 +14,7 @@ export interface FirehoseFilterInput {
 export interface FirehoseFilters {
   deliveryStreamArn?: string | string[];
   sourceKinesisStreamArn?: string | string[];
-  customFilter?: (input: FirehoseFilterInput) => boolean;
+  customFilter?: (input: FirehoseFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface FirehoseRequest<TData = unknown> {

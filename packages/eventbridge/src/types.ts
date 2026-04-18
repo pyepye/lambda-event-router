@@ -100,7 +100,7 @@ export interface EventBridgeFilters {
   account?: string | string[];
   region?: string | string[];
   resource?: string | string[];
-  customFilter?: (input: EventBridgeFilterInput) => boolean;
+  customFilter?: (input: EventBridgeFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface EventBridgeRouteDefinition<TDetail = unknown> {

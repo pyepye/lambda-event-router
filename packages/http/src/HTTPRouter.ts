@@ -37,7 +37,7 @@ interface RouteInput<
   filters: {
     method: AnyHttpMethod;
     path: TPathString;
-    customFilter?: (input: HTTPFilterInput) => boolean;
+    customFilter?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   };
   middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>[];
   querySchema?: TQuerySchema;
@@ -207,7 +207,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       auth: normalizedEvent.auth,
       event,
     };
-    const routeData = this.router.match(method, path, filterInput);
+    const routeData = await this.router.match(method, path, filterInput);
     if (!routeData) {
       // TODO: Could / should these notFound responses deal with CORS so we don't have to repeat here? Does it make sense?
       const notFoundResponse = this.response.notFound();

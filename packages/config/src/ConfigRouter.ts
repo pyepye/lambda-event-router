@@ -94,7 +94,7 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       ? configurationItemSummary?.configurationItemStatus
       : configurationItem?.configurationItemStatus;
 
-    const route = this.matchRoute({
+    const route = await this.matchRoute({
       configRuleName: event.configRuleName,
       resourceType,
       resourceId,
@@ -159,29 +159,29 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     await handleEventWithMiddleware(allMiddleware, request, handler);
   }
 
-  private matchRoute(input: ConfigChangeFilterInput): InternalConfigRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(input: ConfigChangeFilterInput): Promise<InternalConfigRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.configRuleName) {
         const { configRuleName: filterConfigRuleName } = filters;
         const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
         if (!configRuleNames.includes(input.configRuleName)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.resourceType && input.resourceType) {
         const resourceTypes = Array.isArray(filters.resourceType) ? filters.resourceType : [filters.resourceType];
         if (!resourceTypes.includes(input.resourceType)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.resourceId && input.resourceId) {
         const resourceIds = Array.isArray(filters.resourceId) ? filters.resourceId : [filters.resourceId];
         if (!resourceIds.includes(input.resourceId)) {
-          return false;
+          continue;
         }
       }
 
@@ -189,16 +189,19 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
         const { configurationItemStatus: filterItemStatus } = filters;
         const configurationItemStatuses = Array.isArray(filterItemStatus) ? filterItemStatus : [filterItemStatus];
         if (!configurationItemStatuses.includes(input.configurationItemStatus)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(input);
+        const match = await filters.customFilter(input);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

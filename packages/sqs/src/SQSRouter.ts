@@ -203,44 +203,51 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     return result;
   }
 
-  private matchRoute(
+  private async matchRoute(
     record: AWSSQSRecord,
     body: unknown,
     messageAttributes: SQSMessageAttributes,
-  ): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.eventSourceArn) {
         const arns = Array.isArray(filters.eventSourceArn) ? filters.eventSourceArn : [filters.eventSourceArn];
         if (!arns.includes(record.eventSourceARN)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.messageAttributes) {
+        let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
           const allowedValues = Array.isArray(allowed) ? allowed : [allowed];
           const value = messageAttributes[key];
           if (value === undefined || typeof value === 'object' || !allowedValues.includes(value)) {
-            return false;
+            matched = false;
+            break;
           }
+        }
+        if (!matched) {
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ body, messageAttributes, record });
+        const match = await filters.customFilter({ body, messageAttributes, record });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 
   private async processRecord(record: AWSSQSRecord, context: Context): Promise<void> {
     const parsedBody = safeJsonParse(record.body);
     const convertedAttributes = this.convertMessageAttributes(record.messageAttributes);
 
-    const route = this.matchRoute(record, parsedBody, convertedAttributes);
+    const route = await this.matchRoute(record, parsedBody, convertedAttributes);
     if (!route) {
       throw new Error(`No route matched for record from ${record.eventSourceARN}`);
     }

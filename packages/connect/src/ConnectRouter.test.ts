@@ -104,88 +104,88 @@ suite('route', () => {
 });
 
 suite('matchRoute', () => {
-  test('matches when channel is in the channel filter', ({ connectEvent }) => {
+  test('matches when channel is in the channel filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { channel: 'VOICE' }, handler });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when channel is in the channel filter array', ({ connectEvent }) => {
+  test('matches when channel is in the channel filter array', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { channel: ['VOICE', 'CHAT'] }, handler });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when channel is not in the channel filter', ({ connectEvent }) => {
+  test('does not match when channel is not in the channel filter', async ({ connectEvent }) => {
     router.route({ filters: { channel: 'CHAT' }, handler: vi.fn() });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when initiation method is in the initiationMethod filter', ({ connectEvent }) => {
+  test('matches when initiation method is in the initiationMethod filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { initiationMethod: 'INBOUND' }, handler });
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when initiation method is in the initiationMethod filter array', ({ connectEvent }) => {
+  test('matches when initiation method is in the initiationMethod filter array', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { initiationMethod: ['INBOUND', 'OUTBOUND'] }, handler });
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when initiation method is not in the initiationMethod filter', ({ connectEvent }) => {
+  test('does not match when initiation method is not in the initiationMethod filter', async ({ connectEvent }) => {
     router.route({ filters: { initiationMethod: 'OUTBOUND' }, handler: vi.fn() });
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when instance ARN is in the instanceArn filter', ({ connectEvent }) => {
+  test('matches when instance ARN is in the instanceArn filter', async ({ connectEvent }) => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const handler = vi.fn();
     router.route({ filters: { instanceArn: instanceArn }, handler });
 
     const event = connectEvent({ Details: { ContactData: { InstanceARN: instanceArn } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when instance ARN is in the instanceArn filter array', ({ connectEvent }) => {
+  test('matches when instance ARN is in the instanceArn filter array', async ({ connectEvent }) => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const instanceArn2 = 'arn:aws:connect:us-east-1:123456789012:instance/zyx-wvu-987';
     const handler = vi.fn();
@@ -193,13 +193,13 @@ suite('matchRoute', () => {
 
     const event = connectEvent({ Details: { ContactData: { InstanceARN: instanceArn } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when instance ARN is not in the instanceArn filter', ({ connectEvent }) => {
+  test('does not match when instance ARN is not in the instanceArn filter', async ({ connectEvent }) => {
     router.route({
       filters: { instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/other' },
       handler: vi.fn(),
@@ -209,24 +209,24 @@ suite('matchRoute', () => {
       Details: { ContactData: { InstanceARN: 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123' } },
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when a single filter has multiple allowed values', ({ connectEvent }) => {
+  test('matches when a single filter has multiple allowed values', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { channel: ['VOICE', 'CHAT'] }, handler });
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'CHAT' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when all combined filters match', ({ connectEvent }) => {
+  test('matches when all combined filters match', async ({ connectEvent }) => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const handler = vi.fn();
     router.route({
@@ -238,13 +238,13 @@ suite('matchRoute', () => {
       Details: { ContactData: { Channel: 'VOICE', InitiationMethod: 'INBOUND', InstanceARN: instanceArn } },
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when combined filters partially match', ({ connectEvent }) => {
+  test('does not match when combined filters partially match', async ({ connectEvent }) => {
     router.route({
       filters: { channel: 'VOICE', initiationMethod: 'OUTBOUND' },
       handler: vi.fn(),
@@ -254,34 +254,54 @@ suite('matchRoute', () => {
       Details: { ContactData: { Channel: 'VOICE', InitiationMethod: 'INBOUND' } },
     });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('matches when custom filter returns true', ({ connectEvent }) => {
+  test('matches when customFilter returns true', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { customFilter: () => true }, handler });
 
     const event = connectEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when custom filter returns false', ({ connectEvent }) => {
+  test('matches when async customFilter returns true', async ({ connectEvent }) => {
+    const handler = vi.fn();
+    router.route({
+      filters: {
+        customFilter: async (): Promise<boolean> => {
+          await new Promise((r) => setTimeout(r, 1));
+          return true;
+        },
+      },
+      handler,
+    });
+
+    const event = connectEvent();
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+
+  test('does not match when customFilter returns false', async ({ connectEvent }) => {
     router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
 
     const event = connectEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeUndefined();
   });
 
-  test('custom filter receives correct input', ({ connectEvent }) => {
+  test('customFilter receives correct input', async ({ connectEvent }) => {
     const customFilter = vi.fn().mockReturnValue(true);
     router.route({ filters: { customFilter }, handler: vi.fn() });
 
@@ -298,19 +318,19 @@ suite('matchRoute', () => {
     });
   });
 
-  test('matches any event when filters are empty (catch-all)', ({ connectEvent }) => {
+  test('matches any event when filters are empty (catch-all)', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: {}, handler });
 
     const event = connectEvent();
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('first match wins when multiple routes match', ({ connectEvent }) => {
+  test('first match wins when multiple routes match', async ({ connectEvent }) => {
     const firstHandler = vi.fn();
     const secondHandler = vi.fn();
     router.route({ filters: { channel: 'VOICE' }, handler: firstHandler });
@@ -318,7 +338,7 @@ suite('matchRoute', () => {
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result?.handler).toBe(firstHandler);
   });
@@ -333,37 +353,37 @@ suite('channel convenience methods', () => {
     expect(result).toBe(router);
   });
 
-  test('voice sets the VOICE channel filter', ({ connectEvent }) => {
+  test('voice sets the VOICE channel filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.voice({ filters: {}, handler });
     const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
 
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('chat sets the CHAT channel filter', ({ connectEvent }) => {
+  test('chat sets the CHAT channel filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.chat({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'CHAT' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('email sets the EMAIL channel filter', ({ connectEvent }) => {
+  test('email sets the EMAIL channel filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.email({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { Channel: 'EMAIL' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
@@ -371,61 +391,61 @@ suite('channel convenience methods', () => {
 });
 
 suite('initiation method convenience methods', () => {
-  test('inbound sets the INBOUND initiation method filter', ({ connectEvent }) => {
+  test('inbound sets the INBOUND initiation method filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.inbound({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'INBOUND' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('outbound sets the OUTBOUND initiation method filter', ({ connectEvent }) => {
+  test('outbound sets the OUTBOUND initiation method filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.outbound({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'OUTBOUND' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('transfer sets the TRANSFER initiation method filter', ({ connectEvent }) => {
+  test('transfer sets the TRANSFER initiation method filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.transfer({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'TRANSFER' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('callback sets the CALLBACK initiation method filter', ({ connectEvent }) => {
+  test('callback sets the CALLBACK initiation method filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.callback({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'CALLBACK' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
   });
 
-  test('api sets the API initiation method filter', ({ connectEvent }) => {
+  test('api sets the API initiation method filter', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.api({ filters: {}, handler });
 
     const event = connectEvent({ Details: { ContactData: { InitiationMethod: 'API' } } });
     // @ts-expect-error - testing private method
-    const result = router.matchRoute(event);
+    const result = await router.matchRoute(event);
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);

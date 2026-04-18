@@ -28,7 +28,7 @@ export interface SecretsManagerFilters {
   secretSuffix?: string | string[];
   secretIncludes?: string | string[];
   step?: SecretsManagerRotationEventStep | SecretsManagerRotationEventStep[];
-  customFilter?: (input: SecretsManagerFilterInput) => boolean;
+  customFilter?: (input: SecretsManagerFilterInput) => boolean | Promise<boolean>;
 }
 
 export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'steps'>;

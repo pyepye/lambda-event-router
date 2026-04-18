@@ -111,7 +111,7 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
   }
 
   // Test a single route against a record, returning the matched references if it passes all filters
-  private matchRoute(route: InternalRoute, record: CodeCommitRecord): MatchResult | undefined {
+  private async matchRoute(route: InternalRoute, record: CodeCommitRecord): Promise<MatchResult | undefined> {
     const { filters, referenceFilter } = route;
 
     // Apply reference filter if set
@@ -186,7 +186,8 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
         eventSourceARN: record.eventSourceARN,
         eventTriggerName: record.eventTriggerName,
       };
-      if (!customFilter(filterInput)) return undefined;
+      const result = await customFilter(filterInput);
+      if (!result) return undefined;
     }
 
     return { route, references: effectiveReferences };
@@ -196,10 +197,10 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
   // A single record can contain references of different types (push, branch create, branch delete)
   // so multiple routes can legitimately match the same record with different reference subsets.
   // First-match would silently drop valid matches depending on route registration order.
-  private matchRoutes(record: CodeCommitRecord): MatchResult[] {
+  private async matchRoutes(record: CodeCommitRecord): Promise<MatchResult[]> {
     const matches: MatchResult[] = [];
     for (const route of this.routes) {
-      const result = this.matchRoute(route, record);
+      const result = await this.matchRoute(route, record);
       if (result) {
         matches.push(result);
       }
@@ -208,7 +209,7 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
   }
 
   private async processRecord(record: CodeCommitRecord, context: Context): Promise<void> {
-    const matchResults = this.matchRoutes(record);
+    const matchResults = await this.matchRoutes(record);
     if (matchResults.length === 0) {
       throw new Error(`No route matched for CodeCommit record ${record.eventId}`);
     }

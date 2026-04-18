@@ -75,7 +75,7 @@ export interface DynamoDBFilters {
   eventName?: DynamoDBEventName | DynamoDBEventName[];
   eventSourceArn?: DynamoDBRecord['eventSourceARN'] | DynamoDBRecord['eventSourceARN'][];
   streamViewType?: DynamoDBViewType | DynamoDBViewType[];
-  customFilter?: (input: DynamoDBFilterInput) => boolean;
+  customFilter?: (input: DynamoDBFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface DynamoDBInsertRouteDefinition<TKeys = Record<string, unknown>, TNewItem = Record<string, unknown>> {

@@ -66,7 +66,7 @@ export interface ActiveMQFilters {
   eventSourceArn?: string | string[];
   destination?: string | string[];
   messageType?: ActiveMQMessageType | (string & {}) | (ActiveMQMessageType | (string & {}))[];
-  customFilter?: (input: ActiveMQFilterInput) => boolean;
+  customFilter?: (input: ActiveMQFilterInput) => boolean | Promise<boolean>;
 }
 
 // --- Handler Types ---

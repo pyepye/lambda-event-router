@@ -86,16 +86,16 @@ suite('ConfigRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('adds multiple routes', () => {
+    test('adds multiple routes', async () => {
       const definitionA = defineRoute({ filters: { configRuleName: 'rule-a' } }).handle(async () => {});
       const definitionB = defineRoute({ filters: { configRuleName: 'rule-b' } }).handle(async () => {});
 
       router.route(definitionA).route(definitionB);
 
       // @ts-expect-error - testing private method directly
-      const matchA = router.matchRoute({ configRuleName: 'rule-a' });
+      const matchA = await router.matchRoute({ configRuleName: 'rule-a' });
       // @ts-expect-error - testing private method directly
-      const matchB = router.matchRoute({ configRuleName: 'rule-b' });
+      const matchB = await router.matchRoute({ configRuleName: 'rule-b' });
 
       expect(matchA).toBeDefined();
       expect(matchB).toBeDefined();
@@ -103,121 +103,121 @@ suite('ConfigRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches when no filters set', () => {
+    test('matches when no filters set', async () => {
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'any-rule' });
+      const result = await router.matchRoute({ configRuleName: 'any-rule' });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by configRuleName filter', () => {
+    test('matches by configRuleName filter', async () => {
       router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by configRuleName filter array', () => {
+    test('matches by configRuleName filter array', async () => {
       router.route(defineRoute({ filters: { configRuleName: ['my-rule', 'other-rule'] } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
 
       expect(result).toBeDefined();
     });
 
-    test('rejects when configRuleName not in filter', () => {
+    test('rejects when configRuleName not in filter', async () => {
       router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'other-rule' });
+      const result = await router.matchRoute({ configRuleName: 'other-rule' });
 
       expect(result).toBeUndefined();
     });
 
-    test('matches by resourceType filter', () => {
+    test('matches by resourceType filter', async () => {
       router.route(defineRoute({ filters: { resourceType: 'AWS::EC2::Instance' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::EC2::Instance' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::EC2::Instance' });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by resourceType filter array', () => {
+    test('matches by resourceType filter array', async () => {
       router.route(
         defineRoute({ filters: { resourceType: ['AWS::EC2::Instance', 'AWS::EC2::Other'] } }).handle(async () => {}),
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::EC2::Instance' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::EC2::Instance' });
 
       expect(result).toBeDefined();
     });
 
-    test('rejects when resourceType not in filter', () => {
+    test('rejects when resourceType not in filter', async () => {
       router.route(defineRoute({ filters: { resourceType: 'AWS::EC2::Instance' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::S3::Bucket' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceType: 'AWS::S3::Bucket' });
 
       expect(result).toBeUndefined();
     });
 
-    test('skips resourceType filter when resourceType is undefined', () => {
+    test('skips resourceType filter when resourceType is undefined', async () => {
       router.route(defineRoute({ filters: { resourceType: 'AWS::EC2::Instance' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceType: undefined });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceType: undefined });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by resourceId filter', () => {
+    test('matches by resourceId filter', async () => {
       router.route(defineRoute({ filters: { resourceId: 'i-abc123' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceId: 'i-abc123' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceId: 'i-abc123' });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by resourceId filter array', () => {
+    test('matches by resourceId filter array', async () => {
       router.route(defineRoute({ filters: { resourceId: ['i-abc123', 'i-xyz789'] } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceId: 'i-abc123' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceId: 'i-abc123' });
 
       expect(result).toBeDefined();
     });
 
-    test('rejects when resourceId not in filter', () => {
+    test('rejects when resourceId not in filter', async () => {
       router.route(defineRoute({ filters: { resourceId: 'i-abc123' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceId: 'i-other' });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceId: 'i-other' });
 
       expect(result).toBeUndefined();
     });
 
-    test('skips resourceId filter when resourceId is undefined', () => {
+    test('skips resourceId filter when resourceId is undefined', async () => {
       router.route(defineRoute({ filters: { resourceId: 'i-abc123' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', resourceId: undefined });
+      const result = await router.matchRoute({ configRuleName: 'rule', resourceId: undefined });
 
       expect(result).toBeDefined();
     });
 
-    test('matches by configurationItemStatus filter', () => {
+    test('matches by configurationItemStatus filter', async () => {
       router.route(defineRoute({ filters: { configurationItemStatus: 'ResourceDiscovered' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({
+      const result = await router.matchRoute({
         configRuleName: 'rule',
         configurationItemStatus: 'ResourceDiscovered',
       });
@@ -225,7 +225,7 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches by configurationItemStatus filter array', () => {
+    test('matches by configurationItemStatus filter array', async () => {
       router.route(
         defineRoute({ filters: { configurationItemStatus: ['ResourceDiscovered', 'ResourceUpdated'] } }).handle(
           async () => {},
@@ -233,7 +233,7 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({
+      const result = await router.matchRoute({
         configRuleName: 'rule',
         configurationItemStatus: 'ResourceDiscovered',
       });
@@ -241,25 +241,25 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('rejects when configurationItemStatus not in filter', () => {
+    test('rejects when configurationItemStatus not in filter', async () => {
       router.route(defineRoute({ filters: { configurationItemStatus: 'ResourceDiscovered' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', configurationItemStatus: 'ResourceDeleted' });
+      const result = await router.matchRoute({ configRuleName: 'rule', configurationItemStatus: 'ResourceDeleted' });
 
       expect(result).toBeUndefined();
     });
 
-    test('skips configurationItemStatus filter when status is undefined', () => {
+    test('skips configurationItemStatus filter when status is undefined', async () => {
       router.route(defineRoute({ filters: { configurationItemStatus: 'ResourceDiscovered' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'rule', configurationItemStatus: undefined });
+      const result = await router.matchRoute({ configRuleName: 'rule', configurationItemStatus: undefined });
 
       expect(result).toBeDefined();
     });
 
-    test('multiple filters combined - all must match', () => {
+    test('multiple filters combined - all must match', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -271,7 +271,7 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({
+      const result = await router.matchRoute({
         configRuleName: 'my-rule',
         resourceType: 'AWS::EC2::Instance',
         resourceId: 'i-abc123',
@@ -280,29 +280,29 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('returns undefined when no routes match', () => {
+    test('returns undefined when no routes match', async () => {
       router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'nonexistent-rule' });
+      const result = await router.matchRoute({ configRuleName: 'nonexistent-rule' });
 
       expect(result).toBeUndefined();
     });
 
-    test('returns first matching route when multiple routes exist', () => {
+    test('returns first matching route when multiple routes exist', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(firstHandler));
       router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(secondHandler));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches route by customFilter', () => {
+    test('matches route by customFilter', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -312,12 +312,12 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', () => {
+    test('does not match route when customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -327,12 +327,12 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'any-rule' });
+      const result = await router.matchRoute({ configRuleName: 'any-rule' });
 
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', () => {
+    test('passes correct filterInput to customFilter', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -341,7 +341,7 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      router.matchRoute({
+      await router.matchRoute({
         configRuleName: 'my-rule',
         resourceType: 'AWS::EC2::Instance',
         resourceId: 'i-abc123',
@@ -356,7 +356,7 @@ suite('ConfigRouter', () => {
       });
     });
 
-    test('matches when standard filters and customFilter both pass', () => {
+    test('matches when standard filters and customFilter both pass', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -367,12 +367,12 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule', resourceType: 'AWS::EC2::Instance' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule', resourceType: 'AWS::EC2::Instance' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', () => {
+    test('does not match when standard filters pass but customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -383,12 +383,12 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ configRuleName: 'my-rule' });
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not called when an earlier filter fails', () => {
+    test('customFilter is not called when an earlier filter fails', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -400,9 +400,27 @@ suite('ConfigRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      router.matchRoute({ configRuleName: 'other-rule' });
+      await router.matchRoute({ configRuleName: 'other-rule' });
 
       expect(customFilter).not.toHaveBeenCalled();
+    });
+
+    test('matches route by async customFilter', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ configRuleName }: ConfigChangeFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return configRuleName === 'my-rule';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
+
+      expect(result).toBeDefined();
     });
   });
 

@@ -33,7 +33,7 @@ export interface SQSFilterInput {
 export interface SQSFilters {
   eventSourceArn?: AWSSQSRecord['eventSourceARN'] | AWSSQSRecord['eventSourceARN'][];
   messageAttributes?: Record<string, string | number | (string | number)[]>;
-  customFilter?: (input: SQSFilterInput) => boolean;
+  customFilter?: (input: SQSFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface SQSRouteDefinition<

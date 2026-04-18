@@ -46,7 +46,7 @@ export interface LexFilters {
   invocationSource?: LexInvocationSource | LexInvocationSource[];
   botId?: string | string[];
   inputMode?: LexInputMode | LexInputMode[];
-  customFilter?: (input: LexFilterInput) => boolean;
+  customFilter?: (input: LexFilterInput) => boolean | Promise<boolean>;
 }
 
 export type LexDialogCodeHookFilters = Omit<LexFilters, 'invocationSources'>;

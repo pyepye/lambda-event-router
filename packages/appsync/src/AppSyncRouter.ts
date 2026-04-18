@@ -113,7 +113,7 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
   async handleEvent(event: AppSyncResolverEvent<Record<string, unknown>>, context: Context): Promise<unknown> {
     const { parentTypeName, fieldName } = event.info;
 
-    const route = this.matchRoute(parentTypeName, fieldName, event);
+    const route = await this.matchRoute(parentTypeName, fieldName, event);
     if (!route) {
       throw new Error(`No route matched for ${parentTypeName}.${fieldName}`);
     }
@@ -141,35 +141,35 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(
+  private async matchRoute(
     parentTypeName: string,
     fieldName: string,
     event: AppSyncResolverEvent<Record<string, unknown>>,
-  ): InternalResolverRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalResolverRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
-
       if (filters.parentTypeName) {
         const { parentTypeName: filterParentTypeName } = filters;
         const parentTypeNames = Array.isArray(filterParentTypeName) ? filterParentTypeName : [filterParentTypeName];
         if (!parentTypeNames.includes(parentTypeName)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.fieldName) {
         const fieldNames = Array.isArray(filters.fieldName) ? filters.fieldName : [filters.fieldName];
         if (!fieldNames.includes(fieldName)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ parentTypeName, fieldName, event });
+        const match = await filters.customFilter({ parentTypeName, fieldName, event });
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 

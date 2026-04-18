@@ -56,7 +56,7 @@ export interface RabbitMQFilters {
   eventSourceArn?: string | string[];
   queue?: string | string[];
   contentType?: string | string[];
-  customFilter?: (input: RabbitMQFilterInput) => boolean;
+  customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
 }
 
 // --- Route Definition Types ---
@@ -86,7 +86,7 @@ export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undef
     eventSourceArn?: string | string[];
     queue?: string | string[];
     contentType?: string | string[];
-    customFilter?: (input: RabbitMQFilterInput) => boolean;
+    customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
   };
   middleware?: RabbitMQMiddleware[];
   bodySchema?: TBodySchema;

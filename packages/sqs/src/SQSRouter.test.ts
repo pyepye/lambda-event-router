@@ -100,7 +100,7 @@ suite('SQSRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventSourceArn', ({ sqsRecord }) => {
+    test('matches route by eventSourceArn', async ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -110,12 +110,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, {});
+      const result = await router.matchRoute(record, {}, {});
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventSourceArn array', ({ sqsRecord }) => {
+    test('matches route by eventSourceArn array', async ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -125,12 +125,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, {});
+      const result = await router.matchRoute(record, {}, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArn does not match', ({ sqsRecord }) => {
+    test('does not match route when eventSourceArn does not match', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:other-queue' },
@@ -139,12 +139,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: 'arn:aws:sqs:us-east-1:123456789012:my-queue' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, {});
+      const result = await router.matchRoute(record, {}, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by messageAttributes with single value', ({ sqsRecord }) => {
+    test('matches route by messageAttributes with single value', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: 'order.created' } },
@@ -153,12 +153,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.created' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when messageAttributes does not match', ({ sqsRecord }) => {
+    test('does not match route when messageAttributes does not match', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: 'order.shipped' } },
@@ -167,12 +167,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.created' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by number messageAttribute value', ({ sqsRecord }) => {
+    test('matches route by number messageAttribute value', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { count: 42 } },
@@ -181,12 +181,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { count: 42 });
+      const result = await router.matchRoute(record, {}, { count: 42 });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when messageAttribute value is a Buffer', ({ sqsRecord }) => {
+    test('does not match when messageAttribute value is a Buffer', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { data: 'some-value' } },
@@ -196,12 +196,12 @@ suite('SQSRouter', () => {
       const record = sqsRecord();
       const bufferValue = Buffer.from('some-value');
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { data: bufferValue });
+      const result = await router.matchRoute(record, {}, { data: bufferValue });
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when value is one of multiple allowed values', ({ sqsRecord }) => {
+    test('matches when value is one of multiple allowed values', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: ['order.created', 'order.updated'] } },
@@ -210,12 +210,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.updated' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.updated' });
 
       expect(result).toBeDefined();
     });
 
-    test('requires all messageAttribute filter keys to match', ({ sqsRecord }) => {
+    test('requires all messageAttribute filter keys to match', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { messageAttributes: { eventType: 'order.created', priority: 'high' } },
@@ -224,15 +224,15 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const matchingResult = router.matchRoute(record, {}, { eventType: 'order.created', priority: 'high' });
+      const matchingResult = await router.matchRoute(record, {}, { eventType: 'order.created', priority: 'high' });
       expect(matchingResult).toBeDefined();
 
       // @ts-expect-error - testing private method directly
-      const partialResult = router.matchRoute(record, {}, { eventType: 'order.created', priority: 'low' });
+      const partialResult = await router.matchRoute(record, {}, { eventType: 'order.created', priority: 'low' });
       expect(partialResult).toBeUndefined();
     });
 
-    test('matches route when both eventSourceArn and messageAttributes match', ({ sqsRecord }) => {
+    test('matches route when both eventSourceArn and messageAttributes match', async ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -245,12 +245,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.created' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when eventSourceArn matches but messageAttributes do not', ({ sqsRecord }) => {
+    test('does not match when eventSourceArn matches but messageAttributes do not', async ({ sqsRecord }) => {
       const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
       router.route(
         defineRoute({
@@ -263,12 +263,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.shipped' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.shipped' });
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match when messageAttributes match but eventSourceArn does not', ({ sqsRecord }) => {
+    test('does not match when messageAttributes match but eventSourceArn does not', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -280,12 +280,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord({ eventSourceARN: 'arn:aws:sqs:us-east-1:123456789012:my-queue' });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.created' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ sqsRecord }) => {
+    test('matches route by customFilter', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -300,12 +300,33 @@ suite('SQSRouter', () => {
       const record = sqsRecord();
       const body = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, body, {});
+      const result = await router.matchRoute(record, body, {});
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ sqsRecord }) => {
+    test('matches route by async customFilter', async ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ body }: SQSFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - body is unknown, testing filter with known shape
+              return body.action === 'processOrder';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      const body = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, body, {});
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when customFilter returns false', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -314,12 +335,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, {});
+      const result = await router.matchRoute(record, {}, {});
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route with empty filters as a catch-all', ({ sqsRecord }) => {
+    test('matches route with empty filters as a catch-all', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -328,12 +349,12 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, {});
+      const result = await router.matchRoute(record, {}, {});
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ sqsRecord }) => {
+    test('selects the first matching route when multiple routes match', async ({ sqsRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(
@@ -349,7 +370,7 @@ suite('SQSRouter', () => {
 
       const record = sqsRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, {}, { eventType: 'order.created' });
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -441,7 +462,7 @@ suite('SQSRouter', () => {
         }).handle(async (request) => {
           const messageId = request.record.messageId;
           callOrder.push(`start-${messageId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${messageId}`);
         }),
       );
@@ -573,7 +594,7 @@ suite('SQSRouter', () => {
         }).handle(async (request) => {
           const messageId = request.record.messageId;
           callOrder.push(`start-${messageId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${messageId}`);
         }),
       );
@@ -609,7 +630,7 @@ suite('SQSRouter', () => {
         }).handle(async (request) => {
           const groupId = request.record.attributes.MessageGroupId;
           callOrder.push(`start-${groupId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${groupId}`);
         }),
       );

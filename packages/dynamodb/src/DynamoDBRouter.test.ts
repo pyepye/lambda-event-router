@@ -1,7 +1,7 @@
 import * as base from '@lambda-event-router/base';
 import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
-import { createDynamoDBRouter, defineRoute, DynamoDBRouter } from './DynamoDBRouter.js';
+import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
 
 type DynamoDBNext = (request: DynamoDBRequest) => Promise<void>;
@@ -104,16 +104,16 @@ suite('DynamoDBRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('only matches INSERT records', ({ dynamoDBInsertRecord }) => {
+    test('only matches INSERT records', async ({ dynamoDBInsertRecord }) => {
       router.insert({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const modifyResult = router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const removeResult = router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
 
       expect(insertResult).toBeDefined();
       expect(modifyResult).toBeUndefined();
@@ -131,16 +131,16 @@ suite('DynamoDBRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('only matches MODIFY records', ({ dynamoDBModifyRecord }) => {
+    test('only matches MODIFY records', async ({ dynamoDBModifyRecord }) => {
       router.modify({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBModifyRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const modifyResult = router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const removeResult = router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
 
       expect(insertResult).toBeUndefined();
       expect(modifyResult).toBeDefined();
@@ -158,16 +158,16 @@ suite('DynamoDBRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('only matches REMOVE records', ({ dynamoDBRemoveRecord }) => {
+    test('only matches REMOVE records', async ({ dynamoDBRemoveRecord }) => {
       router.remove({ filters: {}, handler: async () => {} });
 
       const record = dynamoDBRemoveRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const modifyResult = router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
       // @ts-expect-error - testing private method directly
-      const removeResult = router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
 
       expect(insertResult).toBeUndefined();
       expect(modifyResult).toBeUndefined();
@@ -176,7 +176,7 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by eventName', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventName', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { eventName: 'INSERT' },
@@ -185,12 +185,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventName array', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventName array', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { eventName: ['INSERT', 'MODIFY'] },
@@ -199,12 +199,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventName does not match', ({ dynamoDBInsertRecord }) => {
+    test('does not match route when eventName does not match', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { eventName: 'REMOVE' },
@@ -213,12 +213,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by eventSourceArn', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventSourceArn', async ({ dynamoDBInsertRecord }) => {
       const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
       router.route(
         defineRoute({
@@ -228,12 +228,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by eventSourceArn array', ({ dynamoDBInsertRecord }) => {
+    test('matches route by eventSourceArn array', async ({ dynamoDBInsertRecord }) => {
       const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
       const tableArn2 = 'arn:aws:dynamodb:us-east-1:987654321098:table/refunds/stream/2025-01-01T00:00:00.000';
       router.route(
@@ -244,12 +244,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when eventSourceArn does not match', ({ dynamoDBInsertRecord }) => {
+    test('does not match route when eventSourceArn does not match', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -262,12 +262,12 @@ suite('DynamoDBRouter', () => {
         eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by streamViewType', ({ dynamoDBInsertRecord }) => {
+    test('matches route by streamViewType', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { streamViewType: 'NEW_AND_OLD_IMAGES' },
@@ -276,12 +276,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by streamViewType array', ({ dynamoDBInsertRecord }) => {
+    test('matches route by streamViewType array', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { streamViewType: ['NEW_AND_OLD_IMAGES', 'KEYS_ONLY'] },
@@ -290,12 +290,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when streamViewType does not match', ({ dynamoDBInsertRecord }) => {
+    test('does not match route when streamViewType does not match', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { streamViewType: 'KEYS_ONLY' },
@@ -304,12 +304,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', ({ dynamoDBInsertRecord }) => {
+    test('matches route by customFilter', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -322,12 +322,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', ({ dynamoDBInsertRecord }) => {
+    test('does not match route when customFilter returns false', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -336,12 +336,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct DynamoDBFilterInput', ({ dynamoDBInsertRecord }) => {
+    test('customFilter receives correct DynamoDBFilterInput', async ({ dynamoDBInsertRecord }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -351,7 +351,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(filterSpy).toHaveBeenCalledWith({
         eventName: 'INSERT',
@@ -360,7 +360,7 @@ suite('DynamoDBRouter', () => {
       });
     });
 
-    test('customFilter is not called when a preceding filter rejects', ({ dynamoDBInsertRecord }) => {
+    test('customFilter is not called when a preceding filter rejects', async ({ dynamoDBInsertRecord }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
@@ -370,12 +370,31 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route with empty filters as a catch-all', ({ dynamoDBInsertRecord }) => {
+    test('matches route by async customFilter', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ eventName }: DynamoDBFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return eventName === 'INSERT';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -384,12 +403,12 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
 
-    test('selects the first matching route when multiple routes match', ({ dynamoDBInsertRecord }) => {
+    test('selects the first matching route when multiple routes match', async ({ dynamoDBInsertRecord }) => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
 
@@ -406,13 +425,13 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('does not match when eventName matches but eventSourceArn does not', ({ dynamoDBInsertRecord }) => {
+    test('does not match when eventName matches but eventSourceArn does not', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
@@ -426,12 +445,12 @@ suite('DynamoDBRouter', () => {
         eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
       });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches when all three filters match', ({ dynamoDBInsertRecord }) => {
+    test('matches when all three filters match', async ({ dynamoDBInsertRecord }) => {
       const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
       router.route(
         defineRoute({
@@ -445,7 +464,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
 
       expect(result).toBeDefined();
     });
@@ -548,7 +567,7 @@ suite('DynamoDBRouter', () => {
         handler: async (request: DynamoDBInsertRequest) => {
           const eventId = request.record.eventID;
           callOrder.push(`start-${eventId}`);
-          await new Promise((resolve) => setTimeout(resolve, 10));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           callOrder.push(`end-${eventId}`);
         },
       });

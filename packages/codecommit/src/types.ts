@@ -62,7 +62,7 @@ export interface CodeCommitFilters {
   branchPrefix?: string | string[];
   branchSuffix?: string | string[];
   branchIncludes?: string | string[];
-  customFilter?: (input: CodeCommitFilterInput) => boolean;
+  customFilter?: (input: CodeCommitFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface CodeCommitRouteDefinition {

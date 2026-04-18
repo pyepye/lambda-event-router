@@ -252,7 +252,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     }
 
     const streamViewType = record.dynamodb?.StreamViewType;
-    const route = this.matchRoute(record, eventName, streamViewType);
+    const route = await this.matchRoute(record, eventName, streamViewType);
     if (!route) {
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
@@ -293,18 +293,18 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(
+  private async matchRoute(
     record: DynamoDBRecord,
     eventName: DynamoDBEventName,
     streamViewType: DynamoDBViewType | undefined,
-  ): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.eventName) {
         const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
         if (!eventNames.includes(eventName)) {
-          return false;
+          continue;
         }
       }
 
@@ -313,7 +313,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
           const { eventSourceArn: filterSourceArn } = filters;
           const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
           if (!eventSourceArns.includes(record.eventSourceARN)) {
-            return false;
+            continue;
           }
         }
       }
@@ -323,17 +323,20 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
           const { streamViewType: filterStreamViewType } = filters;
           const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
           if (!streamViewTypes.includes(streamViewType)) {
-            return false;
+            continue;
           }
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ eventName, streamViewType, record });
+        const match = await filters.customFilter({ eventName, streamViewType, record });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

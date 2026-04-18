@@ -110,7 +110,7 @@ suite('CognitoRouter', () => {
 
   suite('matchRoute', () => {
     suite('triggerSource filter', () => {
-      test('matches when triggerSource is in the list', ({ cognitoPreSignUpEvent }) => {
+      test('matches when triggerSource is in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { triggerSource: 'PreSignUp_SignUp' },
           handler: vi.fn(),
@@ -118,12 +118,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('matches when triggerSource array', ({ cognitoPreSignUpEvent }) => {
+      test('matches when triggerSource array', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { triggerSource: ['PreSignUp_SignUp', 'PostConfirmation_ConfirmSignUp'] },
           handler: vi.fn(),
@@ -131,12 +131,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('does not match when triggerSource is not in the list', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when triggerSource is not in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { triggerSource: 'PostConfirmation_ConfirmSignUp' },
           handler: vi.fn(),
@@ -144,26 +144,26 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('matches when triggerSource filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when triggerSource filter is undefined', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           handler: vi.fn(),
         });
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
     });
 
     suite('userPoolId filter', () => {
-      test('matches when userPoolId is in the list', ({ cognitoPreSignUpEvent }) => {
+      test('matches when userPoolId is in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userPoolId: 'us-east-1_TestPool' },
           handler: vi.fn(),
@@ -171,12 +171,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('matches when userPoolId array', ({ cognitoPreSignUpEvent }) => {
+      test('matches when userPoolId array', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userPoolId: ['us-east-1_TestPool', 'us-east-1_OtherPool'] },
           handler: vi.fn(),
@@ -184,12 +184,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('does not match when userPoolId is not in the list', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when userPoolId is not in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userPoolId: 'us-west-2_OtherPool' },
           handler: vi.fn(),
@@ -197,12 +197,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('matches when userPoolId filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when userPoolId filter is undefined', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { triggerSource: 'PreSignUp_SignUp' },
           handler: vi.fn(),
@@ -210,14 +210,14 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
     });
 
     suite('clientId filter', () => {
-      test('matches when clientId is in the list', ({ cognitoPreSignUpEvent }) => {
+      test('matches when clientId is in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { clientId: 'test-client-id' },
           handler: vi.fn(),
@@ -225,12 +225,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('matches when clientId array', ({ cognitoPreSignUpEvent }) => {
+      test('matches when clientId array', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { clientId: ['test-client-id', 'other-id'] },
           handler: vi.fn(),
@@ -238,12 +238,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('does not match when clientId is not in the list', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when clientId is not in the list', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { clientId: ['other-client-id'] },
           handler: vi.fn(),
@@ -251,12 +251,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('matches when clientId filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when clientId filter is undefined', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { triggerSource: 'PreSignUp_SignUp' },
           handler: vi.fn(),
@@ -264,14 +264,14 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
     });
 
     suite('userAttributes filter', () => {
-      test('matches when all userAttributes pass', ({ cognitoPreSignUpEvent }) => {
+      test('matches when all userAttributes pass', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userAttributes: { email: 'test@example.com' } },
           handler: vi.fn(),
@@ -279,12 +279,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('does not match when a userAttribute fails', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when a userAttribute fails', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userAttributes: { email: 'other@example.com' } },
           handler: vi.fn(),
@@ -292,12 +292,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('does not match when attribute key is not present on event', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when attribute key is not present on event', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userAttributes: { phone: '+1234567890' } },
           handler: vi.fn(),
@@ -305,12 +305,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('does not match when one of multiple attributes fails', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when one of multiple attributes fails', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {
             userAttributes: {
@@ -323,12 +323,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('skips userAttributes filter for UserMigration events', ({ cognitoUserMigrationEvent }) => {
+      test('skips userAttributes filter for UserMigration events', async ({ cognitoUserMigrationEvent }) => {
         router.route({
           filters: { userAttributes: { email: 'test@example.com' } },
           handler: vi.fn(),
@@ -336,26 +336,26 @@ suite('CognitoRouter', () => {
 
         const event = cognitoUserMigrationEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('matches when userAttributes filter is undefined', ({ cognitoPreSignUpEvent }) => {
+      test('matches when userAttributes filter is undefined', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           handler: vi.fn(),
         });
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
     });
 
     suite('customFilter', () => {
-      test('matches when customFilter returns true', ({ cognitoPreSignUpEvent }) => {
+      test('matches when customFilter returns true', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { customFilter: () => true },
           handler: vi.fn(),
@@ -363,12 +363,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('does not match when customFilter returns false', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when customFilter returns false', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { customFilter: () => false },
           handler: vi.fn(),
@@ -376,12 +376,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('receives correct filterInput args', ({ cognitoPreSignUpEvent }) => {
+      test('receives correct filterInput args', async ({ cognitoPreSignUpEvent }) => {
         const customFilter = vi.fn().mockReturnValue(true);
         router.route({
           filters: { customFilter },
@@ -390,7 +390,7 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        router.matchRoute(event, event.triggerSource);
+        await router.matchRoute(event, event.triggerSource);
 
         expect(customFilter).toHaveBeenCalledWith({
           triggerSource: 'PreSignUp_SignUp',
@@ -402,7 +402,9 @@ suite('CognitoRouter', () => {
         });
       });
 
-      test('passes undefined userAttributes in filterInput for UserMigration', ({ cognitoUserMigrationEvent }) => {
+      test('passes undefined userAttributes in filterInput for UserMigration', async ({
+        cognitoUserMigrationEvent,
+      }) => {
         const customFilter = vi.fn().mockReturnValue(true);
         router.route({
           filters: { customFilter },
@@ -411,7 +413,7 @@ suite('CognitoRouter', () => {
 
         const event = cognitoUserMigrationEvent();
         // @ts-expect-error - testing private method directly
-        router.matchRoute(event, event.triggerSource);
+        await router.matchRoute(event, event.triggerSource);
 
         expect(customFilter).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -419,10 +421,25 @@ suite('CognitoRouter', () => {
           }),
         );
       });
+
+      test('matches route by async customFilter', async ({ cognitoPreSignUpEvent }) => {
+        const asyncFilter = vi.fn().mockResolvedValue(true);
+        router.route({
+          filters: { customFilter: asyncFilter },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeDefined();
+        expect(asyncFilter).toHaveBeenCalled();
+      });
     });
 
     suite('filter combinations', () => {
-      test('does not match when triggerSource matches but userPoolId does not', ({ cognitoPreSignUpEvent }) => {
+      test('does not match when triggerSource matches but userPoolId does not', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {
             triggerSource: 'PreSignUp_SignUp',
@@ -433,12 +450,12 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });
 
-      test('matches when all filters pass together', ({ cognitoPreSignUpEvent }) => {
+      test('matches when all filters pass together', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {
             triggerSource: 'PreSignUp_SignUp',
@@ -452,14 +469,14 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
     });
 
     suite('route selection', () => {
-      test('selects the first matching route', ({ cognitoPreSignUpEvent }) => {
+      test('selects the first matching route', async ({ cognitoPreSignUpEvent }) => {
         const firstHandler = vi.fn();
         const secondHandler = vi.fn();
         router.route({ handler: firstHandler });
@@ -467,13 +484,13 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
         expect(result?.handler).toBe(firstHandler);
       });
 
-      test('empty filters act as catch-all', ({ cognitoPreSignUpEvent }) => {
+      test('empty filters act as catch-all', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {},
           handler: vi.fn(),
@@ -481,15 +498,15 @@ suite('CognitoRouter', () => {
 
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
       });
 
-      test('returns undefined when no routes are registered', ({ cognitoPreSignUpEvent }) => {
+      test('returns undefined when no routes are registered', async ({ cognitoPreSignUpEvent }) => {
         const event = cognitoPreSignUpEvent();
         // @ts-expect-error - testing private method directly
-        const result = router.matchRoute(event, event.triggerSource);
+        const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
       });

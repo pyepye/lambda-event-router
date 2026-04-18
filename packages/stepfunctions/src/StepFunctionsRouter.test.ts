@@ -171,7 +171,7 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches a route with taskToken filter when event has a TaskToken string', () => {
+    test('matches a route with taskToken filter when event has a TaskToken string', async () => {
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -180,12 +180,12 @@ suite('StepFunctionsRouter', () => {
 
       const event = { TaskToken: 'token-abc', data: 'payload' };
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(event);
+      const result = await router.matchRoute(event);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match a taskToken route when TaskToken is missing', () => {
+    test('does not match a taskToken route when TaskToken is missing', async () => {
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -193,12 +193,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ data: 'no-token' });
+      const result = await router.matchRoute({ data: 'no-token' });
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match a taskToken route when TaskToken is not a string', () => {
+    test('does not match a taskToken route when TaskToken is not a string', async () => {
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -206,12 +206,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ TaskToken: 123 });
+      const result = await router.matchRoute({ TaskToken: 123 });
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match a taskToken route when event is not an object', () => {
+    test('does not match a taskToken route when event is not an object', async () => {
       router.route(
         defineRoute({
           filters: { taskToken: true },
@@ -219,12 +219,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute('not-an-object');
+      const result = await router.matchRoute('not-an-object');
 
       expect(result).toBeUndefined();
     });
 
-    test('matches a route by customFilter', () => {
+    test('matches a route by customFilter', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -237,12 +237,31 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ action: 'process' });
+      const result = await router.matchRoute({ action: 'process' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', () => {
+    test('matches a route by async customFilter', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async ({ event }: StepFunctionsFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'process';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ action: 'process' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: { customFilter: () => false },
@@ -250,12 +269,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ action: 'process' });
+      const result = await router.matchRoute({ action: 'process' });
 
       expect(result).toBeUndefined();
     });
 
-    test('passes { event } to the customFilter', () => {
+    test('passes { event } to the customFilter', async () => {
       const customFilter = vi.fn(() => true);
       router.route(
         defineRoute({
@@ -270,7 +289,7 @@ suite('StepFunctionsRouter', () => {
       expect(customFilter).toHaveBeenCalledWith({ event });
     });
 
-    test('matches a catch-all route with empty filters', () => {
+    test('matches a catch-all route with empty filters', async () => {
       router.route(
         defineRoute({
           filters: {},
@@ -278,12 +297,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ anything: 'goes' });
+      const result = await router.matchRoute({ anything: 'goes' });
 
       expect(result).toBeDefined();
     });
 
-    test('matches a taskToken route with customFilter when both conditions are met', () => {
+    test('matches a taskToken route with customFilter when both conditions are met', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -297,12 +316,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ TaskToken: 'token-1', action: 'approve' });
+      const result = await router.matchRoute({ TaskToken: 'token-1', action: 'approve' });
 
       expect(result).toBeDefined();
     });
 
-    test('does not match a taskToken route with customFilter when customFilter returns false', () => {
+    test('does not match a taskToken route with customFilter when customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -313,12 +332,12 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ TaskToken: 'token-1', action: 'reject' });
+      const result = await router.matchRoute({ TaskToken: 'token-1', action: 'reject' });
 
       expect(result).toBeUndefined();
     });
 
-    test('does not match a taskToken route with customFilter when TaskToken is missing', () => {
+    test('does not match a taskToken route with customFilter when TaskToken is missing', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -329,27 +348,27 @@ suite('StepFunctionsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ action: 'approve' });
+      const result = await router.matchRoute({ action: 'approve' });
 
       expect(result).toBeUndefined();
     });
 
-    test('selects the first matching route when multiple routes match', () => {
+    test('selects the first matching route when multiple routes match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(firstHandler));
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ data: 'test' });
+      const result = await router.matchRoute({ data: 'test' });
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('returns undefined when no routes are registered', () => {
+    test('returns undefined when no routes are registered', async () => {
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute({ data: 'test' });
+      const result = await router.matchRoute({ data: 'test' });
 
       expect(result).toBeUndefined();
     });

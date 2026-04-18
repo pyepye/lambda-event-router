@@ -92,7 +92,7 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('forces messageType to DATA_MESSAGE in filters', () => {
+    test('forces messageType to DATA_MESSAGE in filters', async () => {
       const handler = vi.fn();
       router.dataMessage({ filters: { logGroup: '/aws/lambda/my-function' }, handler });
 
@@ -105,7 +105,7 @@ suite('CloudWatchLogsRouter', () => {
         logEvents: [],
       };
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute(decodedData);
+      const matched = await router.matchRoute(decodedData);
       expect(matched).toBeDefined();
 
       const controlData: CloudWatchLogsDecodedData = {
@@ -113,7 +113,7 @@ suite('CloudWatchLogsRouter', () => {
         messageType: 'CONTROL_MESSAGE',
       };
       // @ts-expect-error - testing private method directly
-      const notMatched = router.matchRoute(controlData);
+      const notMatched = await router.matchRoute(controlData);
       expect(notMatched).toBeUndefined();
     });
   });
@@ -128,7 +128,7 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('forces messageType to CONTROL_MESSAGE in filters', () => {
+    test('forces messageType to CONTROL_MESSAGE in filters', async () => {
       const handler = vi.fn();
 
       router.controlMessage({ filters: { logGroup: '/aws/lambda/my-function' }, handler });
@@ -142,7 +142,7 @@ suite('CloudWatchLogsRouter', () => {
         logEvents: [],
       };
       // @ts-expect-error - testing private method directly
-      const matched = router.matchRoute(decodedData);
+      const matched = await router.matchRoute(decodedData);
       expect(matched).toBeDefined();
 
       const dataMsg: CloudWatchLogsDecodedData = {
@@ -150,7 +150,7 @@ suite('CloudWatchLogsRouter', () => {
         messageType: 'DATA_MESSAGE',
       };
       // @ts-expect-error - testing private method directly
-      const notMatched = router.matchRoute(dataMsg);
+      const notMatched = await router.matchRoute(dataMsg);
       expect(notMatched).toBeUndefined();
     });
   });
@@ -198,7 +198,7 @@ suite('CloudWatchLogsRouter', () => {
       };
     });
 
-    test('matches route by messageType', () => {
+    test('matches route by messageType', async () => {
       router.route(
         defineRoute({
           filters: { messageType: 'DATA_MESSAGE' },
@@ -206,12 +206,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by messageType array', () => {
+    test('matches route by messageType array', async () => {
       router.route(
         defineRoute({
           filters: { messageType: ['DATA_MESSAGE', 'CONTROL_MESSAGE'] },
@@ -219,12 +219,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when messageType does not match', () => {
+    test('does not match when messageType does not match', async () => {
       router.route(
         defineRoute({
           filters: { messageType: 'CONTROL_MESSAGE' },
@@ -232,12 +232,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroup', () => {
+    test('matches route by logGroup', async () => {
       router.route(
         defineRoute({
           filters: { logGroup: '/aws/lambda/my-function' },
@@ -245,12 +245,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by logGroup array', () => {
+    test('matches route by logGroup array', async () => {
       router.route(
         defineRoute({
           filters: { logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'] },
@@ -258,12 +258,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroup does not match', () => {
+    test('does not match when logGroup does not match', async () => {
       router.route(
         defineRoute({
           filters: { logGroup: '/aws/lambda/other-function' },
@@ -271,12 +271,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupPrefix', () => {
+    test('matches route by logGroupPrefix', async () => {
       router.route(
         defineRoute({
           filters: { logGroupPrefix: '/aws/lambda/' },
@@ -284,12 +284,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by logGroupPrefix array', () => {
+    test('matches route by logGroupPrefix array', async () => {
       router.route(
         defineRoute({
           filters: { logGroupPrefix: ['/aws/lambda/', '/aws/cognito/'] },
@@ -297,12 +297,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupPrefix does not match', () => {
+    test('does not match when logGroupPrefix does not match', async () => {
       router.route(
         defineRoute({
           filters: { logGroupPrefix: '/aws/ecs/' },
@@ -310,12 +310,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupSuffix', () => {
+    test('matches route by logGroupSuffix', async () => {
       router.route(
         defineRoute({
           filters: { logGroupSuffix: 'my-function' },
@@ -323,12 +323,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by logGroupSuffix array', () => {
+    test('matches route by logGroupSuffix array', async () => {
       router.route(
         defineRoute({
           filters: { logGroupSuffix: ['my-function', 'other-function'] },
@@ -336,12 +336,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupSuffix does not match', () => {
+    test('does not match when logGroupSuffix does not match', async () => {
       router.route(
         defineRoute({
           filters: { logGroupSuffix: 'other-function' },
@@ -349,12 +349,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupIncludes', () => {
+    test('matches route by logGroupIncludes', async () => {
       router.route(
         defineRoute({
           filters: { logGroupIncludes: 'lambda' },
@@ -362,12 +362,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by logGroupIncludes array', () => {
+    test('matches route by logGroupIncludes array', async () => {
       router.route(
         defineRoute({
           filters: { logGroupIncludes: ['lambda', 'cognito'] },
@@ -375,12 +375,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupIncludes does not match', () => {
+    test('does not match when logGroupIncludes does not match', async () => {
       router.route(
         defineRoute({
           filters: { logGroupIncludes: 'ecs' },
@@ -388,12 +388,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by subscriptionFilter', () => {
+    test('matches route by subscriptionFilter', async () => {
       router.route(
         defineRoute({
           filters: { subscriptionFilter: 'my-filter' },
@@ -401,12 +401,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('matches route by subscriptionFilter array', () => {
+    test('matches route by subscriptionFilter array', async () => {
       router.route(
         defineRoute({
           filters: { subscriptionFilter: ['my-filter', 'other-filter'] },
@@ -414,12 +414,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when subscriptionFilter does not match', () => {
+    test('does not match when subscriptionFilter does not match', async () => {
       router.route(
         defineRoute({
           filters: { subscriptionFilter: 'other-filter' },
@@ -427,12 +427,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', () => {
+    test('matches route by customFilter', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -444,12 +444,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', () => {
+    test('does not match when customFilter returns false', async () => {
       router.route(
         defineRoute({
           filters: { customFilter: (): boolean => false },
@@ -457,12 +457,30 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });
 
-    test('matches with empty filters as catch-all', () => {
+    test('matches route by async customFilter', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            customFilter: async (input: CloudWatchLogsDecodedData): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return input.owner === '123456789012';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(decodedData);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches with empty filters as catch-all', async () => {
       router.route(
         defineRoute({
           filters: {},
@@ -470,12 +488,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('selects first matching route when multiple match', () => {
+    test('selects first matching route when multiple match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
       router.route(
@@ -490,13 +508,13 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when multiple filter types all match', () => {
+    test('matches when multiple filter types all match', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -508,12 +526,12 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeDefined();
     });
 
-    test('does not match when one filter type fails but others match', () => {
+    test('does not match when one filter type fails but others match', async () => {
       router.route(
         defineRoute({
           filters: {
@@ -524,7 +542,7 @@ suite('CloudWatchLogsRouter', () => {
       );
 
       // @ts-expect-error - testing private method directly
-      const result = router.matchRoute(decodedData);
+      const result = await router.matchRoute(decodedData);
 
       expect(result).toBeUndefined();
     });

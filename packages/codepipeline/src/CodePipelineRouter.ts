@@ -112,7 +112,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         hasContinuationToken: job.data.continuationToken !== undefined,
       };
 
-      const route = this.matchRoute(filterInput);
+      const route = await this.matchRoute(filterInput);
       if (!route) {
         throw new Error(`No route matched for CodePipeline job ${jobId} (function: ${functionName})`);
       }
@@ -149,35 +149,38 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     }
   }
 
-  private matchRoute(input: CodePipelineFilterInput): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(input: CodePipelineFilterInput): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.functionName) {
         const functionNames = Array.isArray(filters.functionName) ? filters.functionName : [filters.functionName];
         if (!functionNames.includes(input.functionName)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.hasInputArtifacts !== undefined && filters.hasInputArtifacts !== input.hasInputArtifacts) {
-        return false;
+        continue;
       }
 
       if (filters.hasContinuationToken !== undefined && filters.hasContinuationToken !== input.hasContinuationToken) {
-        return false;
+        continue;
       }
 
       if (filters.userParametersContains && !input.userParameters.includes(filters.userParametersContains)) {
-        return false;
+        continue;
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(input);
+        const match = await filters.customFilter(input);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 
   private async reportSuccess(jobId: string, response: CodePipelineResponse): Promise<void> {

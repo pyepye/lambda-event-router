@@ -103,19 +103,19 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     return result;
   }
 
-  private matchRoute(
+  private async matchRoute(
     record: SNSEventRecord,
     body: unknown,
     rawMessageAttributes: SNSRawMessageAttributes,
-  ): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  ): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
       const sns = record.Sns;
 
       if (filters.topicArn) {
         const arns = Array.isArray(filters.topicArn) ? filters.topicArn : [filters.topicArn];
         if (!arns.includes(sns.TopicArn)) {
-          return false;
+          continue;
         }
       }
 
@@ -123,34 +123,41 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
         const subjects = Array.isArray(filters.subject) ? filters.subject : [filters.subject];
         const subject = sns.Subject;
         if (subject === undefined || !subjects.includes(subject)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.messageAttributes) {
+        let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
           const allowedValues = Array.isArray(allowed) ? allowed : [allowed];
           const attr = rawMessageAttributes[key];
           const attrMatchesFilter = attr && allowedValues.includes(attr.Value);
           if (!attrMatchesFilter) {
-            return false;
+            matched = false;
+            break;
           }
+        }
+        if (!matched) {
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ body, messageAttributes: rawMessageAttributes, record });
+        const match = await filters.customFilter({ body, messageAttributes: rawMessageAttributes, record });
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 
   private async processRecord(record: SNSEventRecord, context: Context): Promise<void> {
     const parsedBody = safeJsonParse(record.Sns.Message);
     const rawMessageAttributes = record.Sns.MessageAttributes;
 
-    const route = this.matchRoute(record, parsedBody, rawMessageAttributes);
+    const route = await this.matchRoute(record, parsedBody, rawMessageAttributes);
     if (!route) {
       throw new Error(`No route matched for record from ${record.Sns.TopicArn}`);
     }

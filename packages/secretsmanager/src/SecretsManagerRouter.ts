@@ -98,7 +98,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     const step = event.Step;
     const filterInput: SecretsManagerFilterInput = { secretId, clientRequestToken, step };
 
-    const route = this.matchRoute(filterInput);
+    const route = await this.matchRoute(filterInput);
     if (!route) {
       throw new Error(
         `No route matched for Secrets Manager rotation event (step: ${event.Step}, secretId: ${event.SecretId})`,
@@ -110,51 +110,54 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchRoute(request: SecretsManagerFilterInput): SecretsManagerRouteDefinition | undefined {
+  private async matchRoute(request: SecretsManagerFilterInput): Promise<SecretsManagerRouteDefinition | undefined> {
     const { secretId, step } = request;
 
-    return this.routes.find((route) => {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.secretId) {
         const secretIds = Array.isArray(filters.secretId) ? filters.secretId : [filters.secretId];
         if (!secretIds.includes(secretId)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.secretPrefix) {
         const secretPrefixes = Array.isArray(filters.secretPrefix) ? filters.secretPrefix : [filters.secretPrefix];
         const hasMatchingPrefix = secretPrefixes.some((prefix) => secretId.startsWith(prefix));
-        if (!hasMatchingPrefix) return false;
+        if (!hasMatchingPrefix) continue;
       }
 
       if (filters.secretSuffix) {
         const secretSuffixes = Array.isArray(filters.secretSuffix) ? filters.secretSuffix : [filters.secretSuffix];
         const hasMatchingSuffix = secretSuffixes.some((suffix) => secretId.endsWith(suffix));
-        if (!hasMatchingSuffix) return false;
+        if (!hasMatchingSuffix) continue;
       }
 
       if (filters.secretIncludes) {
         const { secretIncludes: filterSecretIncludes } = filters;
         const secretIncludes = Array.isArray(filterSecretIncludes) ? filterSecretIncludes : [filterSecretIncludes];
         const hasMatchingIncludes = secretIncludes.some((str) => secretId.includes(str));
-        if (!hasMatchingIncludes) return false;
+        if (!hasMatchingIncludes) continue;
       }
 
       if (filters.step) {
         const steps = Array.isArray(filters.step) ? filters.step : [filters.step];
         if (!steps.includes(step)) {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter(request);
+        const match = await filters.customFilter(request);
+        if (!match) continue;
       }
 
-      return true;
-    });
+      return route;
+    }
+
+    return undefined;
   }
 }
 

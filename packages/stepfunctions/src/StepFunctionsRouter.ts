@@ -13,8 +13,8 @@ import type {
 interface InternalRoute {
   filters: StepFunctionsFilters;
   eventSchema?: StandardSchemaV1;
-  handler: (input: unknown) => Promise<unknown>;
   isTaskTokenRoute: boolean;
+  handler: (input: unknown) => Promise<unknown>;
 }
 
 interface TaskTokenRouteBuilder<TInput> {
@@ -116,7 +116,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
   }
 
   async handleEvent(event: unknown): Promise<unknown> {
-    const route = this.matchRoute(event);
+    const route = await this.matchRoute(event);
     if (!route) {
       throw new Error('No route matched for Step Functions event');
     }
@@ -151,22 +151,23 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     return route.handler(request);
   }
 
-  private matchRoute(event: unknown): InternalRoute | undefined {
-    return this.routes.find((route) => {
+  private async matchRoute(event: unknown): Promise<InternalRoute | undefined> {
+    for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.taskToken === true) {
         if (!isObject(event) || typeof event.TaskToken !== 'string') {
-          return false;
+          continue;
         }
       }
 
       if (filters.customFilter) {
-        return filters.customFilter({ event });
+        const match = await filters.customFilter({ event });
+        if (!match) continue;
       }
-
-      return true;
-    });
+      return route;
+    }
+    return undefined;
   }
 }
 
