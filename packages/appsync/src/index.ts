@@ -1,33 +1,3 @@
-export {
-  AppSyncAuthorizerRouter,
-  createAppSyncAuthorizerRouter,
-  defineAuthorizerRoute,
-} from './AppSyncAuthorizerRouter.js';
-export { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
-export { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
-export { Authorized, Denied, isAppSyncAuthorizerResponse } from './appSyncAuthorizerResponse.js';
-
-export type { AppSyncEventsEvent, AppSyncEventsIdentity, AppSyncEventsOperation } from './appSyncEventsTypes.js';
-
-export type {
-  AppSyncAuthorizerRequest,
-  AppSyncAuthorizerRouteDefinition,
-  AppSyncEventsChannelInput,
-  AppSyncEventsFilterInput,
-  AppSyncEventsFilters,
-  AppSyncEventsOperationFilters,
-  AppSyncEventsRequest,
-  AppSyncEventsRouteDefinition,
-  AppSyncMutationInput,
-  AppSyncPublishInput,
-  AppSyncQueryInput,
-  AppSyncResolverFieldFilters,
-  AppSyncResolverFieldInput,
-  AppSyncResolverFilterInput,
-  AppSyncResolverFilters,
-  AppSyncResolverMiddleware,
-  AppSyncResolverRequest,
-  AppSyncResolverRouteDefinition,
-  AppSyncSubscribeInput,
-  AppSyncSubscriptionInput,
-} from './types.js';
+export * from './AppSyncAuthorizerRouter';
+export * from './AppSyncEventsRouter';
+export * from './AppSyncRouter';
