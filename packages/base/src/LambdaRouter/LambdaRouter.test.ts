@@ -1,6 +1,7 @@
 import { createMockContext, createSQSEvent } from '@lambda-event-router/testing';
 import type { Context } from 'aws-lambda';
 
+import { Logger, setLogger } from '../logger/index.js';
 import { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';
 import type { EventTypeRouter } from './types.js';
 
@@ -294,6 +295,57 @@ suite('LambdaRouter', () => {
       const result = await handler({}, createMockContext(), vi.fn());
 
       expect(result).toBe('result');
+    });
+  });
+
+  suite('logger key reset', () => {
+    test('calls resetKeys on the active logger at the start of each invocation', async () => {
+      const customLogger = new Logger({ logLevel: 'SILENT' });
+      const resetKeysSpy = vi.spyOn(customLogger, 'resetKeys');
+      setLogger(customLogger);
+
+      const mockRouter: EventTypeRouter = {
+        canHandleEvent(_event: unknown): _event is unknown {
+          return true;
+        },
+        handleEvent: vi.fn().mockResolvedValue(undefined),
+      };
+      const lambdaRouter = createLambdaRouter({ routers: [mockRouter] });
+      const handler = lambdaRouter.handler();
+
+      await handler({}, createMockContext(), vi.fn());
+      expect(resetKeysSpy).toHaveBeenCalledTimes(1);
+
+      await handler({}, createMockContext(), vi.fn());
+      expect(resetKeysSpy).toHaveBeenCalledTimes(2);
+
+      // Restore default logger so other tests are not affected.
+      setLogger(new Logger({ logLevel: 'SILENT' }));
+    });
+
+    test('clears temporary keys appended during a previous invocation', async () => {
+      const customLogger = new Logger({ logLevel: 'SILENT' });
+      setLogger(customLogger);
+      customLogger.appendKeys({ leaked: 'from-prior-invocation' });
+
+      const mockRouter: EventTypeRouter = {
+        canHandleEvent(_event: unknown): _event is unknown {
+          return true;
+        },
+        handleEvent: vi.fn().mockImplementation(() => {
+          customLogger.appendKeys({ fresh: 'this-invocation' });
+          return Promise.resolve(undefined);
+        }),
+      };
+      const lambdaRouter = createLambdaRouter({ routers: [mockRouter] });
+      const handler = lambdaRouter.handler();
+
+      await handler({}, createMockContext(), vi.fn());
+
+      // @ts-expect-error - reading private state to verify the reset happened
+      expect(customLogger.temporaryKeys).toEqual({ fresh: 'this-invocation' });
+
+      setLogger(new Logger({ logLevel: 'SILENT' }));
     });
   });
 });

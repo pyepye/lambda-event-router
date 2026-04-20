@@ -21,6 +21,7 @@ let consoleErrorSpy: MockInstance;
 
 beforeEach(() => {
   delete process.env.AWS_LAMBDA_LOG_LEVEL;
+  delete process.env.AWS_LAMBDA_LOG_FORMAT;
   consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
   consoleDebugSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
   consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -152,6 +153,68 @@ suite('Logger', () => {
       expect(consoleLogSpy).toHaveBeenCalledWith('[INFO]', {
         message: 'hello',
         meta: { a: 'persistent', b: 'temporary', c: 'meta' },
+      });
+    });
+  });
+
+  suite('JSON log format (AWS_LAMBDA_LOG_FORMAT=JSON)', () => {
+    test('string message emits single flattened object with no [LEVEL] prefix', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      const logger = new Logger({ logLevel: 'INFO', serviceName: 'orders' });
+      logger.info('hello', { requestId: 'abc' });
+      expect(consoleLogSpy).toHaveBeenCalledTimes(1);
+      expect(consoleLogSpy).toHaveBeenCalledWith({
+        message: 'hello',
+        serviceName: 'orders',
+        requestId: 'abc',
+      });
+    });
+
+    test('object message is spread into the top level alongside meta', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      const logger = new Logger({ logLevel: 'INFO' });
+      logger.info({ event: 'login', userId: 'u1' }, { requestId: 'abc' });
+      expect(consoleLogSpy).toHaveBeenCalledWith({
+        event: 'login',
+        userId: 'u1',
+        requestId: 'abc',
+      });
+    });
+
+    test('object messages are not stringified', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      const logger = new Logger({ logLevel: 'INFO' });
+      logger.info({ nested: { a: 1 } });
+      const firstCall = consoleLogSpy.mock.calls[0];
+      const firstArg: unknown = firstCall?.[0];
+      expect(firstArg).toEqual({ nested: { a: 1 } });
+      expect(typeof firstArg).toBe('object');
+    });
+
+    test('warn/error/critical also emit structured single-object payloads', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      const logger = new Logger({ logLevel: 'TRACE' });
+      logger.warn('w');
+      logger.error('e');
+      logger.critical('c');
+      expect(consoleWarnSpy).toHaveBeenCalledWith({ message: 'w' });
+      expect(consoleErrorSpy).toHaveBeenNthCalledWith(1, { message: 'e' });
+      expect(consoleErrorSpy).toHaveBeenNthCalledWith(2, { message: 'c' });
+    });
+
+    test('meta order still applies: explicit meta overrides temporary overrides persistent', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      const logger = new Logger({
+        logLevel: 'INFO',
+        persistentLogAttributes: { a: 'persistent', b: 'persistent', c: 'persistent' },
+      });
+      logger.appendKeys({ b: 'temporary', c: 'temporary' });
+      logger.info('hello', { c: 'meta' });
+      expect(consoleLogSpy).toHaveBeenCalledWith({
+        message: 'hello',
+        a: 'persistent',
+        b: 'temporary',
+        c: 'meta',
       });
     });
   });

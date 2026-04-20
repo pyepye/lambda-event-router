@@ -61,3 +61,55 @@ suite('logger proxy', () => {
     expect(result()).toBeUndefined();
   });
 });
+
+suite('powertools auto-resolution', () => {
+  test('uses @aws-lambda-powertools/logger when installed', async () => {
+    vi.resetModules();
+    const powertoolsInfo = vi.fn();
+    class MockPowertoolsLogger {
+      info = powertoolsInfo;
+      resetKeys = vi.fn();
+    }
+    vi.doMock('@aws-lambda-powertools/logger', () => ({ Logger: MockPowertoolsLogger }));
+
+    const { getLogger: getLoggerFresh, logger: loggerFresh } = await import('./logging.js');
+    // Allow the eager dynamic import to resolve.
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    expect(getLoggerFresh()).toBeInstanceOf(MockPowertoolsLogger);
+
+    loggerFresh.info('hello');
+    expect(powertoolsInfo).toHaveBeenCalledWith('hello');
+
+    vi.doUnmock('@aws-lambda-powertools/logger');
+  });
+
+  test('setLogger overrides auto-resolved Powertools logger and remains stable across calls', async () => {
+    vi.resetModules();
+    const powertoolsInfo = vi.fn();
+    class MockPowertoolsLogger {
+      info = powertoolsInfo;
+      resetKeys = vi.fn();
+    }
+    vi.doMock('@aws-lambda-powertools/logger', () => ({ Logger: MockPowertoolsLogger }));
+
+    const { Logger: FreshLogger } = await import('./Logger.js');
+    const { setLogger: setLoggerFresh, getLogger: getLoggerFresh, logger: loggerFresh } = await import('./logging.js');
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    const custom = new FreshLogger({ logLevel: 'INFO', serviceName: 'custom' });
+    setLoggerFresh(custom);
+
+    expect(getLoggerFresh()).toBe(custom);
+    expect(getLoggerFresh()).toBe(custom);
+
+    loggerFresh.info('hello');
+    expect(powertoolsInfo).not.toHaveBeenCalled();
+    expect(consoleLogSpy).toHaveBeenCalledWith('[INFO]', {
+      message: 'hello',
+      meta: { serviceName: 'custom' },
+    });
+
+    vi.doUnmock('@aws-lambda-powertools/logger');
+  });
+});

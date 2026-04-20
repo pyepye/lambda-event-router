@@ -30,6 +30,8 @@ export class LambdaRouter {
 
   handler(): Handler {
     return async (event: unknown, context: Context): Promise<unknown> => {
+      // Clear any temporary logger keys left behind by the previous invocation in this container.
+      log.resetKeys();
       return this.handleEventWithMiddleware(event, context, (evt, ctx) => this.handleEvent(evt, ctx));
     };
   }
