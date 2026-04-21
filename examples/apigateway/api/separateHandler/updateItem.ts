@@ -1,7 +1,7 @@
-import { type ApiRequest, type ApiResponse, BadRequest } from '@lambda-event-router/alb';
+import { type ApiRequest, BadRequest } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
-export const CreateItemBodySchema = z.object({
+export const UpdateItemBodySchema = z.object({
   name: z.string(),
   price: z.number(),
 });
@@ -12,9 +12,9 @@ export const QuerySchema = z.object({
 
 type PathParams = { orgId: string; itemId: string };
 type QueryParams = { dryRun?: string };
-type Body = z.infer<typeof CreateItemBodySchema>;
+type Body = z.infer<typeof UpdateItemBodySchema>;
 
-interface CreateItemResponse {
+interface UpdateItemResponse {
   orgId: string;
   itemId: string;
   name: string;
@@ -22,9 +22,7 @@ interface CreateItemResponse {
   dryRun: boolean;
 }
 
-export async function createItem(
-  request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<CreateItemResponse>> {
+export async function updateItem(request: ApiRequest<PathParams, QueryParams, Body>): Promise<UpdateItemResponse> {
   const { orgId, itemId } = request.path;
   const { dryRun } = request.query;
   const { name, price } = request.body;
@@ -33,8 +31,12 @@ export async function createItem(
     throw BadRequest('Dry run not supported for this');
   }
 
+  return { orgId, itemId, name, price, dryRun: Boolean(dryRun) };
+  /*
+  Will get automatically converted into
   return {
-    statusCode: 201,
+    statusCode: 200,
     body: { orgId, itemId, name, price, dryRun: Boolean(dryRun) },
   };
+  */
 }

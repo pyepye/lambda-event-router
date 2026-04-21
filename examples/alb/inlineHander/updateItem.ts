@@ -1,4 +1,4 @@
-import { Created, defineRoute, Unauthorised } from '@lambda-event-router/alb';
+import { BadRequest, defineRoute } from '@lambda-event-router/alb';
 import { z } from 'zod';
 
 const QuerySchema = z.object({
@@ -18,7 +18,7 @@ const ResponseSchema = z.object({
   dryRun: z.boolean(),
 });
 
-export const createItemRoute = defineRoute({
+export const updateItemRoute = defineRoute({
   filters: {
     method: 'POST',
     path: '/orgs/:orgId/items/:itemId',
@@ -30,9 +30,14 @@ export const createItemRoute = defineRoute({
   const { orgId, itemId } = request.path;
   const { dryRun } = request.query;
   const { name, price } = request.body;
-  const { auth } = request;
-  if (!auth) {
-    throw Unauthorised();
+  if (dryRun) {
+    throw BadRequest('Dry run not supported for this');
   }
-  return Created({ orgId, itemId, name, price, dryRun });
+  return {
+    orgId,
+    itemId,
+    name,
+    price,
+    dryRun,
+  };
 });

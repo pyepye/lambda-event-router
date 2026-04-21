@@ -1,4 +1,4 @@
-import { type ApiRequest, type ApiResponse, BadRequest } from '@lambda-event-router/apigateway';
+import { type ApiRequest, type ApiResponse, BadRequest, Created } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 export const CreateItemBodySchema = z.object({
@@ -33,8 +33,12 @@ export async function createItem(
     throw BadRequest('Dry run not supported for this');
   }
 
+  return Created({ orgId, itemId, name, price, dryRun: Boolean(dryRun) });
+  /*
+  Same as
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun: Boolean(dryRun) },
   };
+  */
 }

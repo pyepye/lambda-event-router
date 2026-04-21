@@ -1,4 +1,4 @@
-import { BadRequest, defineRoute, Unauthorised } from '@lambda-event-router/apigateway';
+import { BadRequest, Created, defineRoute, Unauthorised } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
 
 const QuerySchema = z.object({
@@ -55,8 +55,12 @@ export const updateItemRoute = defineRoute({
   if (dryRun) {
     throw BadRequest('Dry run not supported for this');
   }
+
+  return Created({ orgId, itemId, name, price, dryRun });
+  /*
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun },
   };
+  */
 });

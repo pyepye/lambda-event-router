@@ -18,6 +18,8 @@ type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${inf
 // Clean up the extracted params into a proper object type
 export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;
 
+export type HandlerResponse<TResponse = unknown> = ApiResponse<TResponse> | TResponse;
+
 // TODO: Does this need to be more dynamic based on the type?
 //       If not these types should all come from the actual interfaces like targetGroupArn
 export interface Auth {
@@ -98,14 +100,14 @@ export type HTTPMiddleware<
   TQuery = Record<string, string | undefined>,
   TBody = unknown,
   TResponse = unknown,
-> = Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>;
+> = Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>;
 
 export type ApiHandler<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
   TBody = unknown,
   TResponse = unknown,
-> = (request: ApiRequest<TPath, TQuery, TBody>) => Promise<ApiResponse<TResponse>>;
+> = (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>;
 
 export interface RouteDefinition<
   TPathString extends string = string,

@@ -2,7 +2,8 @@ import { LambdaRouter } from '@lambda-event-router/base';
 import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice';
 import type { Handler } from 'aws-lambda';
 
-import { CreateItemBodySchema, createItem, QuerySchema } from './createItem.js';
+import { createItem, CreateItemBodySchema, QuerySchema } from './createItem.js';
+import { updateItem } from './updateItem.js';
 
 const apiRouter = createVPCLatticeRouter();
 
@@ -24,12 +25,11 @@ apiRouter.route({
   handler: createItem,
 });
 
-apiRouter.route({
+apiRouter.patch({
   filters: {
-    method: 'PUT',
     path: '/orgs/:orgId/items/:itemId',
   },
-  handler: createItem,
+  handler: updateItem,
 });
 
 const lambdaRouter = new LambdaRouter({

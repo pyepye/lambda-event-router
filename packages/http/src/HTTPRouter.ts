@@ -9,8 +9,8 @@ import { Response } from './Response.js';
 import type {
   AnyHttpMethod,
   ApiRequest,
-  ApiResponse,
   FinalizedHTTPResponse,
+  HandlerResponse,
   HTTPAdapter,
   HTTPFilterInput,
   HttpMethod,
@@ -39,7 +39,7 @@ interface RouteInput<
     path: TPathString;
     customFilter?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   };
-  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>[];
+  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
   querySchema?: TQuerySchema;
   bodySchema?: TBodySchema;
   responseSchema?: TResponseSchema;
@@ -48,7 +48,7 @@ interface RouteInput<
 // Builder that provides typed handle method
 interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse> {
   handle(
-    handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<ApiResponse<TResponse>>,
+    handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>,
   ): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>;
 }
 
@@ -76,14 +76,14 @@ export function defineRoute<
 
 interface HTTPRouterOptions<TEvent, TResult> {
   adapter: HTTPAdapter<TEvent, TResult>;
-  middleware?: Middleware<ApiRequest, ApiResponse>[];
+  middleware?: Middleware<ApiRequest, HandlerResponse>[];
   cors?: CorsConfig;
 }
 
 export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
   private router = new PathRouter();
   private response = new Response();
-  private middleware: Middleware<ApiRequest, ApiResponse>[];
+  private middleware: Middleware<ApiRequest, HandlerResponse>[];
   private adapter: HTTPAdapter<TEvent, TResult>;
   private corsConfig: CorsConfig | undefined;
 

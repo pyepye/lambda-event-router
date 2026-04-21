@@ -4,10 +4,10 @@ import { createMockContext, createMockSchema } from '@lambda-event-router/testin
 import type { MockInstance } from 'vitest';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
-import type { ApiRequest, ApiResponse, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
+import type { ApiRequest, FinalizedHTTPResponse, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
-type HTTPNext = (request: ApiRequest) => Promise<ApiResponse>;
+type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
 
 interface MockEvent {
   method: string;
@@ -102,7 +102,7 @@ suite('HTTPRouter', () => {
     });
 
     test('applies router-level middleware from options', async () => {
-      const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
+      const middlewareSpy = vi.fn<Middleware<ApiRequest, HandlerResponse>>((request, next) => next(request));
       const optionsRouter = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareSpy] });
       optionsRouter.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'with middleware' }) });
 
@@ -311,7 +311,7 @@ suite('HTTPRouter', () => {
     });
 
     test('executes route-level middleware before calling the handler', async () => {
-      const middlewareSpy = vi.fn<Middleware<ApiRequest, ApiResponse>>((request, next) => next(request));
+      const middlewareSpy = vi.fn<Middleware<ApiRequest, HandlerResponse>>((request, next) => next(request));
       const route = defineRoute({
         filters: { method: 'GET', path: '/items' },
         // @ts-expect-error - mock middleware uses default generic types, not exact route types
@@ -449,7 +449,7 @@ suite('HTTPRouter', () => {
     test('executes middleware before the route handler', async () => {
       const callOrder: string[] = [];
 
-      const middleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const middleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw-pre');
         const result = await next(request);
         callOrder.push('mw-post');
@@ -475,7 +475,7 @@ suite('HTTPRouter', () => {
     test('allows middleware to short-circuit with an early response', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const authMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+      const authMiddleware: Middleware<ApiRequest, HandlerResponse> = async () => {
         return { statusCode: 401, body: null };
       };
 
@@ -493,12 +493,12 @@ suite('HTTPRouter', () => {
     test('executes multiple router-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const middlewareOne: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const middlewareOne: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw1');
         return next(request);
       };
 
-      const middlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const middlewareTwo: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('mw2');
         return next(request);
       };
@@ -539,7 +539,7 @@ suite('HTTPRouter', () => {
     test('allows route-level middleware to short-circuit by not calling next', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const blockingRouteMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+      const blockingRouteMiddleware: Middleware<ApiRequest, HandlerResponse> = async () => {
         return { statusCode: 403, body: null };
       };
 
@@ -561,12 +561,18 @@ suite('HTTPRouter', () => {
     test('executes multiple route-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const routeMiddlewareOne: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const routeMiddlewareOne: Middleware<ApiRequest, HandlerResponse> = async (
+        request: ApiRequest,
+        next: HTTPNext,
+      ) => {
         callOrder.push('route-mw1');
         return next(request);
       };
 
-      const routeMiddlewareTwo: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const routeMiddlewareTwo: Middleware<ApiRequest, HandlerResponse> = async (
+        request: ApiRequest,
+        next: HTTPNext,
+      ) => {
         callOrder.push('route-mw2');
         return next(request);
       };
@@ -593,12 +599,12 @@ suite('HTTPRouter', () => {
     test('executes router middleware before route middleware', async () => {
       const callOrder: string[] = [];
 
-      const routerMiddleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const routerMiddleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('router-mw');
         return next(request);
       };
 
-      const routeMiddleware: Middleware<ApiRequest, ApiResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      const routeMiddleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
         callOrder.push('route-mw');
         return next(request);
       };
@@ -625,7 +631,7 @@ suite('HTTPRouter', () => {
       const routeMiddleware = vi.fn();
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const blockingMiddleware: Middleware<ApiRequest, ApiResponse> = async () => {
+      const blockingMiddleware: Middleware<ApiRequest, HandlerResponse> = async () => {
         return { statusCode: 403, body: null };
       };
 

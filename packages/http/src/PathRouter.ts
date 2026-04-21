@@ -1,6 +1,14 @@
 import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { ApiHandler, ApiRequest, ApiResponse, HttpMethod, PathParams, RouteDefinition } from './types.js';
+import type {
+  ApiHandler,
+  ApiRequest,
+  ApiResponse,
+  HandlerResponse,
+  HttpMethod,
+  PathParams,
+  RouteDefinition,
+} from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -12,7 +20,7 @@ export interface InternalRoute {
   paramNames: string[];
   customFilter?: (input: unknown) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
-  middleware: Middleware<ApiRequest, ApiResponse>[];
+  middleware: Middleware<ApiRequest, HandlerResponse>[];
   querySchema?: StandardSchemaV1;
   bodySchema?: StandardSchemaV1;
   responseSchema?: StandardSchemaV1;
@@ -118,7 +126,7 @@ export class PathRouter {
     config: {
       filters: PathRouterFilters<TPathString>;
       handler: ApiHandler;
-      middleware?: Middleware<ApiRequest, ApiResponse>[];
+      middleware?: Middleware<ApiRequest, HandlerResponse>[];
       querySchema?: StandardSchemaV1;
       bodySchema?: StandardSchemaV1;
       responseSchema?: StandardSchemaV1;
