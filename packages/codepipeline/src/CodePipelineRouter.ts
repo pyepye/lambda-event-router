@@ -11,9 +11,9 @@ import type { CodePipelineEvent, Context } from 'aws-lambda';
 import type {
   CodePipelineFilterInput,
   CodePipelineFilters,
-  CodePipelineJobHandler,
-  CodePipelineJobRequest,
+  CodePipelineHandler,
   CodePipelineMiddleware,
+  CodePipelineRequest,
   CodePipelineResponse,
   CodePipelineRouteDefinition,
   CodePipelineRouterOptions,
@@ -23,7 +23,7 @@ interface InternalRoute {
   filters: CodePipelineFilters;
   userParametersSchema?: StandardSchemaV1;
   middleware?: CodePipelineMiddleware[];
-  handler: CodePipelineJobHandler;
+  handler: CodePipelineHandler;
 }
 
 interface RouteInput<TUserParametersSchema extends StandardSchemaV1 | undefined = undefined> {
@@ -33,9 +33,9 @@ interface RouteInput<TUserParametersSchema extends StandardSchemaV1 | undefined 
 }
 
 interface RouteBuilder<TUserParameters> {
-  handle(handler: CodePipelineJobHandler<TUserParameters>): CodePipelineRouteDefinition<TUserParameters>;
+  handle(handler: CodePipelineHandler<TUserParameters>): CodePipelineRouteDefinition<TUserParameters>;
   handle(
-    handler: (request: CodePipelineJobRequest<TUserParameters>) => Promise<void>,
+    handler: (request: CodePipelineRequest<TUserParameters>) => Promise<void>,
   ): CodePipelineRouteDefinition<TUserParameters>;
 }
 
@@ -77,7 +77,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
       filters: definition.filters,
       userParametersSchema: definition.userParametersSchema,
       middleware: definition.middleware as CodePipelineMiddleware[] | undefined,
-      handler: definition.handler as CodePipelineJobHandler,
+      handler: definition.handler as CodePipelineHandler,
     });
     return this;
   }
@@ -124,7 +124,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         `UserParameters validation failed for job ${jobId}`,
       );
 
-      const request: CodePipelineJobRequest = {
+      const request: CodePipelineRequest = {
         jobId,
         functionName,
         userParameters: validatedUserParameters,

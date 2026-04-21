@@ -1,4 +1,4 @@
-import type { CodePipelineJobRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
+import type { CodePipelineRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
 
 // Return a continuationToken to signal the job is still in progress.
 // The router calls putJobSuccessResult with the continuation token,
@@ -6,7 +6,7 @@ import type { CodePipelineJobRequest, CodePipelineResponse } from '@lambda-event
 export async function handleContinuation({
   jobId,
   continuationToken,
-}: CodePipelineJobRequest): Promise<CodePipelineResponse> {
+}: CodePipelineRequest): Promise<CodePipelineResponse> {
   const step = Number(continuationToken);
   console.log(`Continuing job ${jobId} at step ${step}`);
 

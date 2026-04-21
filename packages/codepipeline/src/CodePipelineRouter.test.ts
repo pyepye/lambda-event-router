@@ -2,9 +2,9 @@ import * as base from '@lambda-event-router/base';
 import { createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
 import type { Mock, MockInstance } from 'vitest';
 import { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
-import type { CodePipelineFilterInput, CodePipelineJobRequest, CodePipelineResponse } from './types.js';
+import type { CodePipelineFilterInput, CodePipelineRequest, CodePipelineResponse } from './types.js';
 
-type CodePipelineNext = (request: CodePipelineJobRequest) => Promise<CodePipelineResponse>;
+type CodePipelineNext = (request: CodePipelineRequest) => Promise<CodePipelineResponse>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -407,7 +407,7 @@ suite('CodePipelineRouter', () => {
   });
 
   suite('handleEvent', () => {
-    test('calls matched handler with correct CodePipelineJobRequest fields', async ({ context }) => {
+    test('calls matched handler with correct CodePipelineRequest fields', async ({ context }) => {
       const handler = vi.fn().mockResolvedValue(undefined);
       router.route(defineRoute({ filters: {} }).handle(handler));
 
@@ -611,10 +611,7 @@ suite('CodePipelineRouter', () => {
     test('executes middleware before the route handler', async ({ codePipelineHandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middleware(
-        request: CodePipelineJobRequest,
-        next: CodePipelineNext,
-      ): Promise<CodePipelineResponse> {
+      async function middleware(request: CodePipelineRequest, next: CodePipelineNext): Promise<CodePipelineResponse> {
         callOrder.push('mw-pre');
         const result = await next(request);
         callOrder.push('mw-post');
@@ -640,7 +637,7 @@ suite('CodePipelineRouter', () => {
       const handler = vi.fn();
 
       async function skipMiddleware(
-        _request: CodePipelineJobRequest,
+        _request: CodePipelineRequest,
         _next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         return undefined;
@@ -659,7 +656,7 @@ suite('CodePipelineRouter', () => {
       const callOrder: string[] = [];
 
       async function middlewareOne(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('mw1');
@@ -667,7 +664,7 @@ suite('CodePipelineRouter', () => {
       }
 
       async function middlewareTwo(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('mw2');
@@ -695,7 +692,7 @@ suite('CodePipelineRouter', () => {
       const callOrder: string[] = [];
 
       async function routeMiddleware(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('route-mw');
@@ -721,7 +718,7 @@ suite('CodePipelineRouter', () => {
       const handler = vi.fn();
 
       async function blockingRouteMiddleware(
-        _request: CodePipelineJobRequest,
+        _request: CodePipelineRequest,
         _next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         return undefined;
@@ -739,7 +736,7 @@ suite('CodePipelineRouter', () => {
       const callOrder: string[] = [];
 
       async function routeMiddlewareOne(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('route-mw1');
@@ -747,7 +744,7 @@ suite('CodePipelineRouter', () => {
       }
 
       async function routeMiddlewareTwo(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('route-mw2');
@@ -773,7 +770,7 @@ suite('CodePipelineRouter', () => {
       const callOrder: string[] = [];
 
       async function routeMiddleware(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('route-mw');
@@ -799,7 +796,7 @@ suite('CodePipelineRouter', () => {
       const callOrder: string[] = [];
 
       async function routerMiddleware(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('router-mw');
@@ -807,7 +804,7 @@ suite('CodePipelineRouter', () => {
       }
 
       async function routeMiddleware(
-        request: CodePipelineJobRequest,
+        request: CodePipelineRequest,
         next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         callOrder.push('route-mw');
@@ -837,7 +834,7 @@ suite('CodePipelineRouter', () => {
       const handler = vi.fn();
 
       async function blockingRouterMiddleware(
-        _request: CodePipelineJobRequest,
+        _request: CodePipelineRequest,
         _next: CodePipelineNext,
       ): Promise<CodePipelineResponse> {
         return undefined;

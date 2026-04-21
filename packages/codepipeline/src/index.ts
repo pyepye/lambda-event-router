@@ -2,9 +2,9 @@ export { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './Cod
 export type {
   CodePipelineFilterInput,
   CodePipelineFilters,
-  CodePipelineJobHandler,
-  CodePipelineJobRequest,
+  CodePipelineHandler,
   CodePipelineMiddleware,
+  CodePipelineRequest,
   CodePipelineResponse,
   CodePipelineRouteDefinition,
   CodePipelineRouterOptions,

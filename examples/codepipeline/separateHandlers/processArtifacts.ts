@@ -1,4 +1,4 @@
-import type { CodePipelineJobRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
+import type { CodePipelineRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
 import { z } from 'zod';
 
 export const ArtifactParametersSchema = z.object({
@@ -17,7 +17,7 @@ export async function processArtifacts({
   inputArtifacts,
   outputArtifacts,
   artifactCredentials,
-}: CodePipelineJobRequest<ArtifactParameters>): Promise<CodePipelineResponse> {
+}: CodePipelineRequest<ArtifactParameters>): Promise<CodePipelineResponse> {
   const { accessKeyId, secretAccessKey, sessionToken } = artifactCredentials;
   const { targetBucket, prefix } = userParameters;
   console.log(`Processing job ${jobId} with credentials ${accessKeyId}`);
