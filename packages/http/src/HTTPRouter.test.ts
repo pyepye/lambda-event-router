@@ -740,7 +740,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(404);
-      expect(result.headers).toEqual({ Vary: 'Origin' });
+      expect(result.headers?.Vary).toEqual('Origin');
     });
 
     test('returns 204 with dynamic origin function', async () => {
@@ -990,7 +990,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(200);
-      expect(result.headers).toEqual({ Vary: 'Origin' });
+      expect(result.headers?.Vary).toEqual('Origin');
     });
 
     test('includes Vary: Origin for non-wildcard origins', async () => {
@@ -1066,7 +1066,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(200);
-      expect(result.headers).toEqual({ Vary: 'Origin' });
+      expect(result.headers?.Vary).toEqual('Origin');
     });
 
     test('adds CORS headers for allowed function origin on actual request', async () => {
@@ -1104,7 +1104,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(200);
-      expect(result.headers).toEqual({ Vary: 'Origin' });
+      expect(result.headers?.Vary).toEqual('Origin');
     });
 
     test('includes credentials on actual response', async () => {
@@ -1166,7 +1166,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(200);
-      expect(result.headers).toBeUndefined();
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
     });
 
     test('does not handle OPTIONS preflight when cors is not configured', async () => {

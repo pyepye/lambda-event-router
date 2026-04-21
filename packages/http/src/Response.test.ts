@@ -1,4 +1,18 @@
-import { Response } from './Response.js';
+import {
+  BadRequest,
+  Conflict,
+  Created,
+  Forbidden,
+  InternalServerError,
+  NoContent,
+  NotFound,
+  Ok,
+  PermanentRedirect,
+  Response,
+  TemporaryRedirect,
+  Unauthorised,
+  UnprocessableContent,
+} from './Response.js';
 
 suite('Response', () => {
   suite('static factory methods', () => {
@@ -143,79 +157,87 @@ suite('Response', () => {
     test('converts an HTTPResponse to a finalized response', () => {
       const result = response.create(Response.Ok({ message: 'hello' }));
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: JSON.stringify({ message: 'hello' }) }));
+      expect(result).toEqual({
+        statusCode: 200,
+        body: JSON.stringify({ message: 'hello' }),
+        headers: { 'content-type': 'application/json' },
+      });
     });
 
     test('returns a 204 with empty body for null', () => {
       const result = response.create(null);
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
+      expect(result).toEqual({ statusCode: 204, body: '' });
     });
 
     test('returns a 204 with empty body for undefined', () => {
       const result = response.create(undefined);
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
+      expect(result).toEqual({ statusCode: 204, body: '' });
     });
 
     test('returns a 204 for an empty string', () => {
       const result = response.create('');
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
+      expect(result).toEqual({ statusCode: 204, body: '' });
     });
 
     test('returns a 204 for true', () => {
       const result = response.create(true);
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
+      expect(result).toEqual({ statusCode: 204, body: '' });
     });
 
     test('returns a 204 for an empty object', () => {
       const result = response.create({});
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 204, body: '' }));
+      expect(result).toEqual({ statusCode: 204, body: '' });
     });
 
     test('wraps a non-HTTPResponse value in a 200', () => {
       const result = response.create({ data: 'value' });
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: JSON.stringify({ data: 'value' }) }));
+      expect(result).toEqual({
+        statusCode: 200,
+        body: JSON.stringify({ data: 'value' }),
+        headers: { 'content-type': 'application/json' },
+      });
     });
 
     test('converts a string body to a 200 response', () => {
       const result = response.create('hello');
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: 'hello' }));
+      expect(result).toEqual({ statusCode: 200, body: 'hello' });
     });
 
     test('converts a number body to a 200 response', () => {
       const result = response.create(42);
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: '42' }));
+      expect(result).toEqual({ statusCode: 200, body: '42' });
     });
 
     test('preserves headers from the HTTPResponse', () => {
       const result = response.create(Response.TemporaryRedirect('/new-location'));
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 307, headers: { Location: '/new-location' } }));
+      expect(result).toEqual({ statusCode: 307, body: '', headers: { Location: '/new-location' } });
     });
 
     test('returns empty string for a function body', () => {
       const result = response.create(Response.Ok(() => {}));
 
-      expect(result).toEqual(expect.objectContaining({ body: '' }));
+      expect(result).toEqual({ statusCode: 200, body: '' });
     });
 
     test('returns empty string for NaN body', () => {
       const result = response.create(Response.Ok(Number.NaN));
 
-      expect(result).toEqual(expect.objectContaining({ body: '' }));
+      expect(result).toEqual({ statusCode: 200, body: '' });
     });
 
     test('converts a boolean body to its string representation', () => {
       const result = response.create(Response.Ok(false));
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: 'false' }));
+      expect(result).toEqual({ statusCode: 200, body: 'false' });
     });
 
     test('falls back to String() for a body with circular references', () => {
@@ -259,6 +281,26 @@ suite('Response', () => {
       const result = response[method](customMessage);
 
       expect(result).toEqual(expect.objectContaining({ statusCode, body: JSON.stringify({ error: customMessage }) }));
+    });
+  });
+
+  // Behavioral coverage already exists in the static factory method testing above
+  suite('standalone exports', () => {
+    test.each([
+      { name: 'Ok', fn: Ok },
+      { name: 'Created', fn: Created },
+      { name: 'NoContent', fn: NoContent },
+      { name: 'TemporaryRedirect', fn: TemporaryRedirect },
+      { name: 'PermanentRedirect', fn: PermanentRedirect },
+      { name: 'BadRequest', fn: BadRequest },
+      { name: 'Unauthorised', fn: Unauthorised },
+      { name: 'Forbidden', fn: Forbidden },
+      { name: 'NotFound', fn: NotFound },
+      { name: 'Conflict', fn: Conflict },
+      { name: 'UnprocessableContent', fn: UnprocessableContent },
+      { name: 'InternalServerError', fn: InternalServerError },
+    ] as const)('$name is re-exported from the Response class', ({ name, fn }) => {
+      expect(fn).toBe(Response[name]);
     });
   });
 });

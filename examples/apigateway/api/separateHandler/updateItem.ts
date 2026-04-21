@@ -37,6 +37,7 @@ export async function updateItem(request: ApiRequest<PathParams, QueryParams, Bo
   return {
     statusCode: 200,
     body: { orgId, itemId, name, price, dryRun: Boolean(dryRun) },
+    headers: { 'content-type': 'application/json' },
   };
   */
 }

@@ -1,4 +1,4 @@
-import { BadRequest, defineRoute, Unauthorised } from '@lambda-event-router/vpclattice';
+import { BadRequest, defineRoute, Ok, Unauthorised } from '@lambda-event-router/vpclattice';
 import { z } from 'zod';
 
 const QuerySchema = z.object({
@@ -55,8 +55,5 @@ export const updateItemRoute = defineRoute({
   if (dryRun) {
     throw BadRequest('Dry run not supported for this');
   }
-  return {
-    statusCode: 201,
-    body: { orgId, itemId, name, price, dryRun },
-  };
+  return Ok({ orgId, itemId, name, price, dryRun });
 });

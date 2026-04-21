@@ -1,56 +1,64 @@
 import { HTTP_STATUS_CODES } from './constants.js';
-import type { FinalizedHTTPResponse, HTTPResponse } from './types.js';
+import type { ApiResponse, FinalizedHTTPResponse, HTTPResponse } from './types.js';
 
 export class Response {
   // Static factory methods for creating raw response objects (body not yet stringified)
   static BadRequest(): HTTPResponse<{ error: string }>;
-  static BadRequest<T>(body: T): HTTPResponse<T>;
-  static BadRequest<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.BAD_REQUEST, body: body ?? { error: 'Bad request' } };
+  static BadRequest<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static BadRequest<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return { statusCode: HTTP_STATUS_CODES.BAD_REQUEST, body: body ?? { error: 'Bad request' }, headers };
   }
 
   static Unauthorised(): HTTPResponse<{ error: string }>;
-  static Unauthorised<T>(body: T): HTTPResponse<T>;
-  static Unauthorised<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.UNAUTHORIZED, body: body ?? { error: 'Unauthorised' } };
+  static Unauthorised<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static Unauthorised<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return { statusCode: HTTP_STATUS_CODES.UNAUTHORIZED, body: body ?? { error: 'Unauthorised' }, headers };
   }
 
   static Forbidden(): HTTPResponse<{ error: string }>;
-  static Forbidden<T>(body: T): HTTPResponse<T>;
-  static Forbidden<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.FORBIDDEN, body: body ?? { error: 'Forbidden' } };
+  static Forbidden<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static Forbidden<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return { statusCode: HTTP_STATUS_CODES.FORBIDDEN, body: body ?? { error: 'Forbidden' }, headers };
   }
 
   static NotFound(): HTTPResponse<{ error: string }>;
-  static NotFound<T>(body: T): HTTPResponse<T>;
-  static NotFound<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.NOT_FOUND, body: body ?? { error: 'Not found' } };
+  static NotFound<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static NotFound<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return { statusCode: HTTP_STATUS_CODES.NOT_FOUND, body: body ?? { error: 'Not found' }, headers };
   }
 
   static Conflict(): HTTPResponse<{ error: string }>;
-  static Conflict<T>(body: T): HTTPResponse<T>;
-  static Conflict<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.CONFLICT, body: body ?? { error: 'Conflict' } };
+  static Conflict<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static Conflict<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return { statusCode: HTTP_STATUS_CODES.CONFLICT, body: body ?? { error: 'Conflict' }, headers };
   }
 
   static UnprocessableContent(): HTTPResponse<{ error: string }>;
-  static UnprocessableContent<T>(body: T): HTTPResponse<T>;
-  static UnprocessableContent<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY, body: body ?? { error: 'Unprocessable content' } };
+  static UnprocessableContent<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static UnprocessableContent<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return {
+      statusCode: HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY,
+      body: body ?? { error: 'Unprocessable content' },
+      headers,
+    };
   }
 
   static InternalServerError(): HTTPResponse<{ error: string }>;
-  static InternalServerError<T>(body: T): HTTPResponse<T>;
-  static InternalServerError<T>(body?: T): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, body: body ?? { error: 'Internal server error' } };
+  static InternalServerError<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
+  static InternalServerError<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
+    return {
+      statusCode: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
+      body: body ?? { error: 'Internal server error' },
+      headers,
+    };
   }
 
-  static Ok<T>(body: T): HTTPResponse<T> {
-    return { statusCode: HTTP_STATUS_CODES.OK, body };
+  static Ok<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T> {
+    return { statusCode: HTTP_STATUS_CODES.OK, body, headers };
   }
 
-  static Created<T>(body: T): HTTPResponse<T> {
-    return { statusCode: HTTP_STATUS_CODES.CREATED, body };
+  static Created<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T> {
+    return { statusCode: HTTP_STATUS_CODES.CREATED, body, headers };
   }
 
   static NoContent(): HTTPResponse<undefined> {
@@ -71,20 +79,23 @@ export class Response {
 
   private static buildHTTPResponse(response: unknown): HTTPResponse {
     if (Response.isHTTPResponse(response)) {
+      const { body } = response;
+      const bodyIsObject = typeof body === 'object' && body !== null && body.constructor === Object;
+      if (bodyIsObject) {
+        response.headers ??= {};
+        response.headers['content-type'] ??= 'application/json';
+      }
       return response;
     }
 
-    const isEmptyObject =
-      typeof response === 'object' &&
-      response !== null &&
-      response.constructor === Object &&
-      Object.keys(response).length === 0;
-
+    const isObject = typeof response === 'object' && response !== null && response.constructor === Object;
+    const isEmptyObject = isObject && Object.keys(response).length === 0;
     if (response == null || response === '' || response === true || isEmptyObject) {
       return Response.NoContent();
     }
 
-    return Response.Ok(response);
+    const headers = isObject ? { 'content-type': 'application/json' } : undefined;
+    return Response.Ok(response, headers);
   }
 
   private static bodyToString(body: unknown): string {

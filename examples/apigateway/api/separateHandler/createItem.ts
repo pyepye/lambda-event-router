@@ -39,6 +39,7 @@ export async function createItem(
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun: Boolean(dryRun) },
+    headers: { 'content-type': 'application/json' },
   };
   */
 }

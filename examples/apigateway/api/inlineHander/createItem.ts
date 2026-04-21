@@ -37,6 +37,7 @@ export const createItemRoute = defineRoute({
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun },
+    headers: { 'content-type': 'application/json' },
   };
 });
 
@@ -61,6 +62,7 @@ export const updateItemRoute = defineRoute({
   return {
     statusCode: 201,
     body: { orgId, itemId, name, price, dryRun },
+    headers: { 'content-type': 'application/json' },
   };
   */
 });
