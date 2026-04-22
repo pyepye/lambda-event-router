@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createS3Router } from '@lambda-event-router/s3';
-import type { Handler } from 'aws-lambda';
 
 import { batchOperation } from './handlers/batchOperation.js';
 import {

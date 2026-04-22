@@ -1,5 +1,6 @@
-import { type CodePipelineFilterInput, defineRoute } from '@lambda-event-router/codepipeline';
 import { z } from 'zod';
+
+import { type CodePipelineFilterInput, defineRoute } from '@lambda-event-router/codepipeline';
 
 import { FUNCTION_NAME } from '../constants.js';
 

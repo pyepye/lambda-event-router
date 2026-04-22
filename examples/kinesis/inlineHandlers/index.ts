@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createKinesisRouter } from '@lambda-event-router/kinesis';
-import type { Handler } from 'aws-lambda';
 
 import { highPriorityRoute } from './handlers/highPriorityRoute.js';
 import { inventoryRoute } from './handlers/inventoryRoute.js';

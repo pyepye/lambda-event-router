@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createConfigScheduledRouter } from '@lambda-event-router/config';
-import type { Handler } from 'aws-lambda';
 
 import { crossAccountRoute, tagAuditRoute } from './routes.js';
 

@@ -1,4 +1,5 @@
 import { createAppSyncAuthorizerEvent, createMockContext, test } from '@lambda-event-router/testing';
+
 import {
   AppSyncAuthorizerRouter,
   createAppSyncAuthorizerRouter,

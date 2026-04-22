@@ -1,5 +1,6 @@
-import type { CodePipelineRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
 import { z } from 'zod';
+
+import type { CodePipelineRequest, CodePipelineResponse } from '@lambda-event-router/codepipeline';
 
 export const ArtifactParametersSchema = z.object({
   targetBucket: z.string(),

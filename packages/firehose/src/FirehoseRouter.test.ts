@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createFirehoseEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createFirehoseRouter, defineRoute, FirehoseRouter } from './FirehoseRouter.js';
 import type { FirehoseResponseResult } from './response.js';
 import { Dropped, Failed, Ok } from './response.js';

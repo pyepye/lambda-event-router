@@ -1,4 +1,5 @@
 import { createApiGatewayV1Event, createApiGatewayV2Event } from '@lambda-event-router/testing';
+
 import { apiGatewayAdapter } from './apiGatewayAdapter.js';
 
 suite('apiGatewayAdapter', () => {

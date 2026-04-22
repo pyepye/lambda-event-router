@@ -1,9 +1,10 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   APIGatewayEventWebsocketRequestContextV2,
   APIGatewayProxyWebsocketEventV2WithRequestContext,
   Context,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 export interface WebSocketEvent
   extends APIGatewayProxyWebsocketEventV2WithRequestContext<APIGatewayEventWebsocketRequestContextV2> {

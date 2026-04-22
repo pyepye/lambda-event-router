@@ -1,6 +1,8 @@
-import type { EC2StateChangeDetail, EventBridgeRequest, ScheduledEventDetail } from '@lambda-event-router/eventbridge';
 import type { S3ObjectCreatedNotificationEventDetail } from 'aws-lambda';
+
 import { z } from 'zod';
+
+import type { EC2StateChangeDetail, EventBridgeRequest, ScheduledEventDetail } from '@lambda-event-router/eventbridge';
 
 // AWS event types are automatically inferred from the type map
 export async function handleEC2StateChange({

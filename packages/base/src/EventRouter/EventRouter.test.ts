@@ -1,5 +1,6 @@
-import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 import type { MockInstance } from 'vitest';
+
+import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
 import * as data from '../utils/data.js';
 import { createEventRouter, defineEventRoute, EventRouter } from './EventRouter.js';

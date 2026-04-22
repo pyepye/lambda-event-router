@@ -1,6 +1,8 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { AppSyncIdentity, AppSyncResolverEvent, Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // ─── Resolver Types ──────────────────────────────────────────────────────────
 

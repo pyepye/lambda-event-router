@@ -1,4 +1,5 @@
 import type { PostConfirmationTriggerEvent } from 'aws-lambda';
+
 import { testCognitoTriggerTypes } from './common.type.test.js';
 import type {
   PostConfirmationHandler,

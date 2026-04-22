@@ -67,7 +67,6 @@ export type {
   PreSignUpRouteDefinition,
   PreSignUpTriggerSource,
 } from './preSignUp.js';
-
 // PreTokenGeneration types
 export type {
   PreTokenGenerationHandler,

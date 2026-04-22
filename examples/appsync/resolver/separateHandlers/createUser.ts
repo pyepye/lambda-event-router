@@ -1,5 +1,6 @@
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 import { z } from 'zod';
+
+import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
 
 const CreateUserInputSchema = z.object({
   input: z.object({

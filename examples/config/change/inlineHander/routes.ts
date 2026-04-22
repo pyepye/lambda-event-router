@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/config';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/config';
 
 const keyRotationParamsSchema = z.object({
   maxKeyAge: z.string(), // max age in days before non-compliant

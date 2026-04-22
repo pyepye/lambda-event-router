@@ -1,5 +1,3 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   MSKEvent,
@@ -8,6 +6,10 @@ import type {
   SelfManagedKafkaEvent,
   SelfManagedKafkaRecord,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type KafkaRecord = MSKRecord | SelfManagedKafkaRecord;
 

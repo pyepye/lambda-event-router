@@ -1,6 +1,8 @@
+import type { Handler } from 'aws-lambda';
+
 import { createALBRouter } from '@lambda-event-router/alb';
 import { LambdaRouter } from '@lambda-event-router/base';
-import type { Handler } from 'aws-lambda';
+
 import { CreateItemBodySchema, createItem, QuerySchema } from './createItem.js';
 import { updateItem } from './updateItem.js';
 

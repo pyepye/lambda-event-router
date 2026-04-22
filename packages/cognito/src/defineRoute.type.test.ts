@@ -1,4 +1,3 @@
-import { createMockSchema } from '@lambda-event-router/testing';
 import type {
   CreateAuthChallengeTriggerEvent,
   CustomEmailSenderTriggerEvent,
@@ -12,6 +11,9 @@ import type {
   UserMigrationTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
+
+import { createMockSchema } from '@lambda-event-router/testing';
+
 import { defineRoute } from './CognitoRouter.js';
 import type {
   CognitoTriggerSource,

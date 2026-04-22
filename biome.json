@@ -1,6 +1,25 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
-  "assist": { "actions": { "source": { "organizeImports": "on" } } },
+  "assist": {
+    "actions": {
+      "source": {
+        "organizeImports": {
+          "level": "on",
+          "options": {
+            "groups": [
+              [":BUN:", ":NODE:", "@aws-sdk/**", "aws-lambda"],
+              ":BLANK_LINE:",
+              [":PACKAGE:", "!@lambda-event-router/**"],
+              ":BLANK_LINE:",
+              "@lambda-event-router/**",
+              ":BLANK_LINE:",
+              [":ALIAS:", ":PATH:"]
+            ]
+          }
+        }
+      }
+    }
+  },
   "linter": {
     "enabled": true,
     "rules": {

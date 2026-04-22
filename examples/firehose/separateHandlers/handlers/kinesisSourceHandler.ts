@@ -1,5 +1,6 @@
-import { type FirehoseRequest, type FirehoseResponse, Ok } from '@lambda-event-router/firehose';
 import { z } from 'zod';
+
+import { type FirehoseRequest, type FirehoseResponse, Ok } from '@lambda-event-router/firehose';
 
 export const InventoryDataSchema = z.object({
   productId: z.string(),

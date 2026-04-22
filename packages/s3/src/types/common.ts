@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { Context, S3EventRecord } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // =============================================================================
 // Filter Types

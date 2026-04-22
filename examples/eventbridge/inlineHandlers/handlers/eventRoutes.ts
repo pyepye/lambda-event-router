@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/eventbridge';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/eventbridge';
 
 // Handle EC2 instance state changes from AWS
 // Type is automatically inferred from sources + detailTypes

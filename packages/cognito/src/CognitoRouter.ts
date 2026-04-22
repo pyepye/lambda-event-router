@@ -1,6 +1,3 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   CreateAuthChallengeTriggerEvent,
@@ -15,6 +12,12 @@ import type {
   UserMigrationTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+
 import type {
   CognitoFilters,
   CognitoMiddleware,

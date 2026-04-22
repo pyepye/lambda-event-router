@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { type AppSyncResolverFilterInput, createAppSyncRouter } from '@lambda-event-router/appsync';
 import { LambdaRouter } from '@lambda-event-router/base';
-import type { Handler } from 'aws-lambda';
 
 import { CreateUserInputSchema, createUser } from './createUser.js';
 import { getUser } from './getUser.js';

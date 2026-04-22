@@ -1,5 +1,6 @@
-import { BadRequest, Created, defineRoute, Unauthorised } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
+
+import { BadRequest, Created, defineRoute, Unauthorised } from '@lambda-event-router/apigateway';
 
 const QuerySchema = z.object({
   dryRun: z.coerce.boolean().default(false),

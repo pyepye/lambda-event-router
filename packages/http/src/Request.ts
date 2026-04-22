@@ -1,6 +1,8 @@
+import type { Context } from 'aws-lambda';
+
 import type { ValidationResult } from '@lambda-event-router/base';
 import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
-import type { Context } from 'aws-lambda';
+
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
 import type { ApiRequest, Auth, NormalizedHTTPEvent } from './types.js';

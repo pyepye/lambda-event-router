@@ -1,5 +1,6 @@
-import type { StepFunctionsRequest, StepFunctionsTaskTokenRequest } from '@lambda-event-router/stepfunctions';
 import { z } from 'zod';
+
+import type { StepFunctionsRequest, StepFunctionsTaskTokenRequest } from '@lambda-event-router/stepfunctions';
 
 // =============================================================================
 // Schemas

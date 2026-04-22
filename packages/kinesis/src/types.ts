@@ -1,6 +1,8 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, KinesisStreamRecord } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export interface KinesisFilterInput {
   data: unknown;

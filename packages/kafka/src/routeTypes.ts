@@ -1,5 +1,7 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
+
 import type { KafkaFilters, KafkaRequest, KafkaRouteDefinition } from './types.js';
 
 export interface InternalRoute {

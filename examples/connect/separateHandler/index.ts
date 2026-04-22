@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { type ConnectFilterInput, createConnectRouter } from '@lambda-event-router/connect';
-import type { Handler } from 'aws-lambda';
 
 import {
   handleApiCall,

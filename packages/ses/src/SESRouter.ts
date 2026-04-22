@@ -1,6 +1,8 @@
+import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
-import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
+
 import type {
   SESFilters,
   SESMiddleware,

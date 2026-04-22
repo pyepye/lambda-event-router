@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import type { InternalRoute } from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';

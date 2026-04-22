@@ -1,5 +1,6 @@
-import { defineRoute, type KinesisFilterInput } from '@lambda-event-router/kinesis';
 import { z } from 'zod';
+
+import { defineRoute, type KinesisFilterInput } from '@lambda-event-router/kinesis';
 
 const HighPriorityDataSchema = z.object({
   alertId: z.string(),

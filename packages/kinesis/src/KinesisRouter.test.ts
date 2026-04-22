@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createKinesisEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
 import type { KinesisFilterInput, KinesisRequest } from './types.js';
 

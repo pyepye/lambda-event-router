@@ -1,4 +1,5 @@
 import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+
 import { type VPCLatticeEventV1, type VPCLatticeResult, vpcLatticeV1Adapter } from './vpcLatticeV1Adapter.js';
 import { type VPCLatticeEventV2, vpcLatticeV2Adapter } from './vpcLatticeV2Adapter.js';
 

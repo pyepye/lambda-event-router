@@ -1,6 +1,8 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
 export type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';

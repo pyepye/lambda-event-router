@@ -1,6 +1,8 @@
+import type { ALBEvent, ALBResult } from 'aws-lambda';
+
 import type { HTTPMiddleware } from '@lambda-event-router/http';
 import { HTTPRouter } from '@lambda-event-router/http';
-import type { ALBEvent, ALBResult } from 'aws-lambda';
+
 import { albAdapter } from './albAdapter.js';
 
 interface ALBRouterOptions {

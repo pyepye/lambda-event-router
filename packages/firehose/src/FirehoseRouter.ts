@@ -1,6 +1,3 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   FirehoseTransformationEvent,
@@ -8,6 +5,12 @@ import type {
   FirehoseTransformationResult,
   FirehoseTransformationResultRecord,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+
 import type { FirehoseResponseResult } from './response.js';
 import { isFirehoseResponse } from './response.js';
 import type {

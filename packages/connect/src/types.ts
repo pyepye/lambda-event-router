@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type ConnectChannel = ConnectContactFlowEvent['Details']['ContactData']['Channel'];
 

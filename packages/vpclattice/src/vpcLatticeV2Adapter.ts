@@ -1,5 +1,6 @@
 import { isObject } from '@lambda-event-router/base';
 import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+
 import type { VPCLatticeEventBase, VPCLatticeResult } from './vpcLatticeV1Adapter';
 
 // TODO: This needs confirming

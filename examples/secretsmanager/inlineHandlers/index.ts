@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createSecretsManagerRouter } from '@lambda-event-router/secretsmanager';
-import type { Handler } from 'aws-lambda';
 
 import {
   createSecretRoute,

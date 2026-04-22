@@ -1,4 +1,3 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   CreateAuthChallengeTriggerEvent,
@@ -7,6 +6,9 @@ import type {
   PreAuthenticationTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { CognitoFilters, UserAttributes } from './common.js';
 import type { CognitoMiddleware } from './router.js';
 

@@ -1,4 +1,5 @@
 import { createALBEvent } from '@lambda-event-router/testing';
+
 import { albAdapter } from './albAdapter.js';
 
 suite('albAdapter', () => {

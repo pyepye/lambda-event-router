@@ -1,7 +1,9 @@
+import type { MockInstance } from 'vitest';
+
 import type { Middleware } from '@lambda-event-router/base';
 import * as base from '@lambda-event-router/base';
 import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
 import type { ApiRequest, FinalizedHTTPResponse, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';

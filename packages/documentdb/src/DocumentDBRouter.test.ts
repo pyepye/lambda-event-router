@@ -1,3 +1,5 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import {
   createDocumentDBDeleteEntry,
@@ -8,7 +10,7 @@ import {
   createMockSchema,
   test,
 } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createDocumentDBRouter, DocumentDBRouter, defineRoute } from './DocumentDBRouter.js';
 import type { DocumentDBFilterInput, DocumentDBMiddleware, DocumentDBRequest } from './types.js';
 

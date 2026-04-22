@@ -1,13 +1,14 @@
 import type {
-  CreateAuthChallengeRequest,
-  DefineAuthChallengeRequest,
-  VerifyAuthChallengeResponseRequest,
-} from '@lambda-event-router/cognito';
-import type {
   CreateAuthChallengeTriggerEvent,
   DefineAuthChallengeTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
+
+import type {
+  CreateAuthChallengeRequest,
+  DefineAuthChallengeRequest,
+  VerifyAuthChallengeResponseRequest,
+} from '@lambda-event-router/cognito';
 
 // Define the authentication flow
 // Handlers modify the cloned event and return it

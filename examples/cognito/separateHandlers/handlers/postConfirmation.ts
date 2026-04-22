@@ -1,5 +1,6 @@
-import type { PostConfirmationRequest } from '@lambda-event-router/cognito';
 import type { PostConfirmationTriggerEvent } from 'aws-lambda';
+
+import type { PostConfirmationRequest } from '@lambda-event-router/cognito';
 
 // No response modification needed for PostConfirmation
 export async function postConfirmation(request: PostConfirmationRequest): Promise<PostConfirmationTriggerEvent> {

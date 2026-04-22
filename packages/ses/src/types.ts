@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { Context, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type SESReceiptStatusValue = 'PASS' | 'FAIL' | 'GRAY' | 'PROCESSING_FAILED' | 'DISABLED';
 

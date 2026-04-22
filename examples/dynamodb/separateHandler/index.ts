@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createDynamoDBRouter, type DynamoDBFilterInput } from '@lambda-event-router/dynamodb';
-import type { Handler } from 'aws-lambda';
 
 import { createItem, modifyItem, removeItem, updateItem } from './createItem.js';
 

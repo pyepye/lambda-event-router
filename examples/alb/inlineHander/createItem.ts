@@ -1,5 +1,6 @@
-import { Created, defineRoute, Unauthorised } from '@lambda-event-router/alb';
 import { z } from 'zod';
+
+import { Created, defineRoute, Unauthorised } from '@lambda-event-router/alb';
 
 const QuerySchema = z.object({
   dryRun: z.coerce.boolean().default(false),

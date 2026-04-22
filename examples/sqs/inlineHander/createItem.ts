@@ -1,5 +1,6 @@
-import { defineRoute, type SQSFilterInput } from '@lambda-event-router/sqs';
 import { z } from 'zod';
+
+import { defineRoute, type SQSFilterInput } from '@lambda-event-router/sqs';
 
 const SOME_QUEUE_ARN = 'arn:aws:sqs:region:account-id:some-queue';
 const SOME_DL_QUEUE_ARN = 'arn:aws:sqs:region:account-id:some-dl-queue';

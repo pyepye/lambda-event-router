@@ -1,6 +1,8 @@
+import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
-import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
+
 import type {
   LexDialogCodeHookRouteDefinition,
   LexFulfillmentCodeHookRouteDefinition,

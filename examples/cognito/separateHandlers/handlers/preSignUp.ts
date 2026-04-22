@@ -1,6 +1,8 @@
-import type { PreSignUpRequest } from '@lambda-event-router/cognito';
 import type { PreSignUpTriggerEvent } from 'aws-lambda';
+
 import { z } from 'zod';
+
+import type { PreSignUpRequest } from '@lambda-event-router/cognito';
 
 export const UserAttributesSchema = z.object({
   email: z.string().email(),

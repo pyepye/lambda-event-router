@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/kafka';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/kafka';
 
 import { ORDERS_TOPIC } from '../constants.js';
 

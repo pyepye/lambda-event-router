@@ -1,4 +1,5 @@
 import type { Context } from 'aws-lambda';
+
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export function createMockContext(overrides: Partial<Context> = {}): Context {

@@ -1,5 +1,6 @@
-import { defineRoute, type SNSFilterInput } from '@lambda-event-router/sns';
 import { z } from 'zod';
+
+import { defineRoute, type SNSFilterInput } from '@lambda-event-router/sns';
 
 const SOME_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-topic';
 const SOME_DL_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-dl-topic';

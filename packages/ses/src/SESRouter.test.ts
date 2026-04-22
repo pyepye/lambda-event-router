@@ -1,4 +1,5 @@
 import { createSESEvent, test } from '@lambda-event-router/testing';
+
 import { createSESRouter, defineRoute, SESRouter } from './SESRouter.js';
 import type { SESRequest } from './types.js';
 

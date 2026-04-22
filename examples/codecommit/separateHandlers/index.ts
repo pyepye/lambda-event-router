@@ -1,7 +1,8 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import type { CodeCommitFilterInput } from '@lambda-event-router/codecommit';
 import { createCodeCommitRouter } from '@lambda-event-router/codecommit';
-import type { Handler } from 'aws-lambda';
 
 import {
   processBranchCreated,

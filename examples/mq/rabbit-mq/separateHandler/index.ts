@@ -1,7 +1,8 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { createRabbitMQRouter, type RabbitMQFilterInput } from '../../../../packages/mq/src/index.js';
 
+import { LambdaRouter } from '@lambda-event-router/base';
+
+import { createRabbitMQRouter, type RabbitMQFilterInput } from '../../../../packages/mq/src/index.js';
 import { handleAllMessages, handleJsonMessage, handleOrderMessage, handleQueueMessage } from './handlers.js';
 
 const BROKER_ARN = 'arn:aws:mq:region:account-id:broker:MyRabbitBroker:b-1234-5678-9012';

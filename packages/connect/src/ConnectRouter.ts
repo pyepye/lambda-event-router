@@ -1,6 +1,8 @@
+import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
-import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
+
 import type {
   ConnectChannelRouteDefinition,
   ConnectHandler,

@@ -1,5 +1,6 @@
-import { createEventRouter, LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
+
+import { createEventRouter, LambdaRouter } from '@lambda-event-router/base';
 
 import {
   generateReportRoute,

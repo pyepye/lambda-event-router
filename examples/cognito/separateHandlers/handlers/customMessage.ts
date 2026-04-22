@@ -1,5 +1,6 @@
-import type { CustomMessageRequest } from '@lambda-event-router/cognito';
 import type { CustomMessageTriggerEvent } from 'aws-lambda';
+
+import type { CustomMessageRequest } from '@lambda-event-router/cognito';
 
 // Handlers modify the cloned event and return it
 export async function customMessage(request: CustomMessageRequest): Promise<CustomMessageTriggerEvent> {

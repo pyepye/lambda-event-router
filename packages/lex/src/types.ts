@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type LexInvocationSource = LexV2Event['invocationSource'];
 

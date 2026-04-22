@@ -1,5 +1,6 @@
-import type { PreTokenGenerationRequest } from '@lambda-event-router/cognito';
 import type { PreTokenGenerationTriggerEvent } from 'aws-lambda';
+
+import type { PreTokenGenerationRequest } from '@lambda-event-router/cognito';
 
 // Handlers modify the cloned event and return it
 export async function preTokenGeneration(request: PreTokenGenerationRequest): Promise<PreTokenGenerationTriggerEvent> {

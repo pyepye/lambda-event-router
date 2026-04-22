@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createEventBridgeEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './EventBridgeRouter.js';
 import type { EventBridgeFilterInput, EventBridgeRequest } from './types.js';
 

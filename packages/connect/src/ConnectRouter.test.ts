@@ -1,4 +1,5 @@
 import { createConnectEvent, test } from '@lambda-event-router/testing';
+
 import { ConnectRouter, createConnectRouter, defineRoute } from './ConnectRouter.js';
 import type { ConnectRequest, ConnectResponse } from './types.js';
 

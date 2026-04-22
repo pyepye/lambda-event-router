@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createCognitoRouter } from '@lambda-event-router/cognito';
-import type { Handler } from 'aws-lambda';
 
 import {
   createAuthChallenge,

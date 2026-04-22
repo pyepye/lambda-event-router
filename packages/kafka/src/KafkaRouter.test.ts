@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
 import type { KafkaFilterInput, KafkaRequest } from './types.js';
 

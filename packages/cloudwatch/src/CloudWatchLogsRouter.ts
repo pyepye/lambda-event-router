@@ -1,7 +1,9 @@
 import { gunzipSync } from 'node:zlib';
+import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
-import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
+
 import type {
   CloudWatchLogsControlMessageRouteDefinition,
   CloudWatchLogsDataMessageRouteDefinition,

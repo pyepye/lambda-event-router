@@ -1,4 +1,5 @@
 import { createMockSchema } from '@lambda-event-router/testing';
+
 import { isObject, safeJsonParse, validateSchema, validateSchemaResult } from './data.js';
 
 suite('isObject', () => {

@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type CloudWatchLogsMessageType = 'DATA_MESSAGE' | 'CONTROL_MESSAGE';
 

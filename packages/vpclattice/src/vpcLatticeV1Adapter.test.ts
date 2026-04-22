@@ -1,4 +1,5 @@
 import { createVPCLatticeV1Event } from '@lambda-event-router/testing';
+
 import { vpcLatticeV1Adapter } from './vpcLatticeV1Adapter.js';
 
 suite('vpcLatticeV1Adapter', () => {

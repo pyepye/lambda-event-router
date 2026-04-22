@@ -1,5 +1,3 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type {
   Context,
   S3ObjectCreatedNotificationEventDetail,
@@ -7,6 +5,10 @@ import type {
   S3ObjectRestoreCompletedNotificationEventDetail,
   S3ObjectRestoreInitiatedNotificationEventDetail,
 } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // =============================================================================
 // Known AWS Event Detail Types

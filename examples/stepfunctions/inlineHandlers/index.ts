@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions';
-import type { Handler } from 'aws-lambda';
 
 import { enrichDataRoute, humanApprovalRoute, processOrderRoute } from './handlers/taskRoutes.js';
 

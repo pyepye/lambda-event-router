@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/dynamodb';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/dynamodb';
 
 const STREAM_ARN = 'arn:aws:dynamodb:region:account-id:some-stream';
 

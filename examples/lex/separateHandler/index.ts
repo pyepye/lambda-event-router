@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createLexRouter, type LexFilterInput } from '@lambda-event-router/lex';
-import type { Handler } from 'aws-lambda';
 
 import { fulfillPizzaOrder, handleOrder, validatePizzaOrder } from './handlers.js';
 

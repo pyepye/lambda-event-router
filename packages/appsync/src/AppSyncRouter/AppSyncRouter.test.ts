@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createAppSyncResolverEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
 import type { AppSyncResolverRequest } from './types.js';
 

@@ -1,5 +1,6 @@
-import { BadRequest, defineRoute, Ok, Unauthorised } from '@lambda-event-router/vpclattice';
 import { z } from 'zod';
+
+import { BadRequest, defineRoute, Ok, Unauthorised } from '@lambda-event-router/vpclattice';
 
 const QuerySchema = z.object({
   dryRun: z.coerce.boolean().default(false),

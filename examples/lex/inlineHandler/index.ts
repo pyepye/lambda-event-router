@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createLexRouter } from '@lambda-event-router/lex';
-import type { Handler } from 'aws-lambda';
 
 import { allIntentsRoute } from './handlers/allIntentsRoute.js';
 import { confirmRoute } from './handlers/confirmRoute.js';

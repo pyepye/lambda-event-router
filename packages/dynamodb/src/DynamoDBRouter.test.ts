@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
 

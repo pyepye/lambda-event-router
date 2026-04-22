@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createCodePipelineRouter } from '@lambda-event-router/codepipeline';
-import type { Handler } from 'aws-lambda';
 
 import { continuationRoute } from './handlers/continuationRoute.js';
 import { continuationDeployRoute, deployActionRoute } from './handlers/deployActionRoute.js';

@@ -28,6 +28,7 @@ export {
   Unauthorised,
   UnprocessableContent,
 } from '@lambda-event-router/http';
+
 export { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
 export type { VPCLatticeEvent } from './vpcLatticeAdapter.js';
 export { vpcLatticeAdapter } from './vpcLatticeAdapter.js';

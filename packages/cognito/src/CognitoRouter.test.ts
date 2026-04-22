@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { type CognitoRequest, CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 import type { UserAttributes } from './types/common.js';
 import type { CognitoEvent } from './types/router.js';

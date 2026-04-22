@@ -1,6 +1,8 @@
+import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
-import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
+
 import { isAppSyncAuthorizerResponse } from './response.js';
 import type {
   AppSyncAuthorizerRequest,

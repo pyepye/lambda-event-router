@@ -1,6 +1,8 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { SQSRecord as AWSSQSRecord, Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export type SQSMessageAttributeValue = string | number | Buffer;
 export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;

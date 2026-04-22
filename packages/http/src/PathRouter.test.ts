@@ -1,4 +1,5 @@
 import { createMockSchema } from '@lambda-event-router/testing';
+
 import { PathRouter } from './PathRouter.js';
 
 suite('PathRouter', () => {

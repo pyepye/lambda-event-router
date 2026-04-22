@@ -1,6 +1,7 @@
+import type { ALBEvent, ALBResult } from 'aws-lambda';
+
 import { isObject } from '@lambda-event-router/base';
 import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
-import type { ALBEvent, ALBResult } from 'aws-lambda';
 
 // Duplicated from packages/apigateway/src/apiGatewayV1Adapter.ts
 function flattenHeaders(event: ALBEvent): NormalizedHTTPEvent['headers'] {

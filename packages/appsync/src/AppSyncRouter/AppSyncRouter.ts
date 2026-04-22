@@ -1,7 +1,10 @@
+import type { AppSyncResolverEvent, Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { AppSyncResolverEvent, Context } from 'aws-lambda';
+
 import type {
   AppSyncMutationInput,
   AppSyncQueryInput,

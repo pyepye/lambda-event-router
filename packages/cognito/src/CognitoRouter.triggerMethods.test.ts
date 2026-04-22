@@ -1,4 +1,5 @@
 import { test } from '@lambda-event-router/testing';
+
 import { CognitoRouter } from './CognitoRouter.js';
 
 let router: CognitoRouter;

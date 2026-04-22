@@ -1,5 +1,6 @@
-import { createMockContext, createSQSEvent } from '@lambda-event-router/testing';
 import type { Context } from 'aws-lambda';
+
+import { createMockContext, createSQSEvent } from '@lambda-event-router/testing';
 
 import { Logger, setLogger } from '../logger/index.js';
 import { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';

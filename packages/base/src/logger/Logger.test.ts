@@ -1,4 +1,5 @@
 import type { MockInstance } from 'vitest';
+
 import type { LogLevelName } from './Logger.js';
 import { Logger } from './Logger.js';
 

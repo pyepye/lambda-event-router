@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/codepipeline';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/codepipeline';
 
 import { FUNCTION_NAME } from '../constants.js';
 

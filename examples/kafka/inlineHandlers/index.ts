@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createKafkaRouter } from '@lambda-event-router/kafka';
-import type { Handler } from 'aws-lambda';
 
 import { auditRoute } from './handlers/auditRoute.js';
 import { notificationRoute } from './handlers/notificationRoute.js';

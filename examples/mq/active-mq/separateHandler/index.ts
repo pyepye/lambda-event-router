@@ -1,7 +1,8 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { type ActiveMQFilterInput, createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 
+import { LambdaRouter } from '@lambda-event-router/base';
+
+import { type ActiveMQFilterInput, createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 import { handleAllMessages, handleBytesMessage, handleOrderMessage, handleTextMessage } from './handlers.js';
 
 const BROKER_ARN = 'arn:aws:mq:region:account-id:broker:MyBroker:b-1234-5678-9012';

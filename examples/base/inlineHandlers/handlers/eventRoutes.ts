@@ -1,5 +1,6 @@
-import { defineEventRoute } from '@lambda-event-router/base';
 import { z } from 'zod';
+
+import { defineEventRoute } from '@lambda-event-router/base';
 
 // --- EventBridge Scheduler: templated input for scheduled cleanup ---
 

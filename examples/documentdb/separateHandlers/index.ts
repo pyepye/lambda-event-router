@@ -1,7 +1,8 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import type { DocumentDBFilterInput } from '@lambda-event-router/documentdb';
 import { createDocumentDBRouter } from '@lambda-event-router/documentdb';
-import type { Handler } from 'aws-lambda';
 
 import { deleteOrder } from './handlers/deleteOrder.js';
 import { insertOrder } from './handlers/insertOrder.js';

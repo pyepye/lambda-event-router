@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { createLambdaAuthorizerRouter } from '@lambda-event-router/apigateway';
 import { LambdaRouter } from '@lambda-event-router/base';
-import type { Handler } from 'aws-lambda';
 
 import { onRequestAuthRoute } from './onRequestAuth.js';
 import { onRequestAuthSimpleRoute } from './onRequestAuthSimple.js';

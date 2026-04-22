@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createKafkaRouter, type KafkaFilterInput } from '@lambda-event-router/kafka';
-import type { Handler } from 'aws-lambda';
 
 import { OrderValueSchema, processOrder } from './handlers/orderHandler.js';
 

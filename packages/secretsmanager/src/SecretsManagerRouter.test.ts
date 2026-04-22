@@ -1,4 +1,5 @@
 import { createSecretsManagerRotationEvent, test } from '@lambda-event-router/testing';
+
 import { createSecretsManagerRouter, defineRoute, SecretsManagerRouter } from './SecretsManagerRouter.js';
 import type { SecretsManagerFilterInput, SecretsManagerFilters, SecretsManagerRequest } from './types.js';
 

@@ -4,10 +4,13 @@ import {
   PutJobFailureResultCommand,
   PutJobSuccessResultCommand,
 } from '@aws-sdk/client-codepipeline';
+import type { CodePipelineEvent, Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { CodePipelineEvent, Context } from 'aws-lambda';
+
 import type {
   CodePipelineFilterInput,
   CodePipelineFilters,

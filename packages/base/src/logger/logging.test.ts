@@ -1,4 +1,5 @@
 import type { MockInstance } from 'vitest';
+
 import { Logger } from './Logger.js';
 import { getLogger, logger, setLogger } from './logging.js';
 

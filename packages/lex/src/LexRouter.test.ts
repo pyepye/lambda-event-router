@@ -1,5 +1,7 @@
-import { createLexEvent, test } from '@lambda-event-router/testing';
 import type { LexV2Result } from 'aws-lambda';
+
+import { createLexEvent, test } from '@lambda-event-router/testing';
+
 import { createLexRouter, defineRoute, LexRouter } from './LexRouter.js';
 import type { LexFilterInput, LexRequest } from './types.js';
 

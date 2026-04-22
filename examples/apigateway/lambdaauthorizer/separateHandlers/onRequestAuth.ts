@@ -1,6 +1,7 @@
+import type { APIGatewayAuthorizerResult } from 'aws-lambda';
+
 import type { LambdaAuthorizerRequestRequest } from '@lambda-event-router/apigateway';
 import { generatePolicy } from '@lambda-event-router/apigateway';
-import type { APIGatewayAuthorizerResult } from 'aws-lambda';
 
 // Standalone REQUEST authorizer handler (IAM policy response).
 // Uses normalized headers, query, method, and path across V1/V2.

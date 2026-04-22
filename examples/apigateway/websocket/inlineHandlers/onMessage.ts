@@ -1,5 +1,6 @@
-import { defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
+
+import { defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway';
 
 const SendMessageBodySchema = z.object({
   action: z.literal('sendMessage'),

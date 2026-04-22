@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch';
-import type { Handler } from 'aws-lambda';
 
 import {
   alertSubscriptionRoute,

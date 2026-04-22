@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/kinesis';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/kinesis';
 
 import { ORDER_STREAM_ARN } from '../constants.js';
 

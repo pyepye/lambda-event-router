@@ -1,5 +1,3 @@
-import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
 import type {
   APIGatewayAuthorizerResult,
   APIGatewayRequestAuthorizerEvent,
@@ -7,6 +5,10 @@ import type {
   APIGatewayTokenAuthorizerEvent,
   Context,
 } from 'aws-lambda';
+
+import type { EventTypeRouter } from '@lambda-event-router/base';
+import { isObject } from '@lambda-event-router/base';
+
 import { isAuthorizerResponse } from './response.js';
 import type {
   AuthorizerType,

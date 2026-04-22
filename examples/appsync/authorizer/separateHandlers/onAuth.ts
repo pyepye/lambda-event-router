@@ -1,5 +1,6 @@
-import type { AppSyncAuthorizerRequest } from '@lambda-event-router/appsync';
 import type { AppSyncAuthorizerResult } from 'aws-lambda';
+
+import type { AppSyncAuthorizerRequest } from '@lambda-event-router/appsync';
 
 // Standalone AppSync Lambda authorizer handler.
 // Receives flattened fields from the AppSync authorizer event.

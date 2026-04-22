@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // Change case for properties on SecretsManagerRotationEvent
 export interface SecretsManagerRequest {

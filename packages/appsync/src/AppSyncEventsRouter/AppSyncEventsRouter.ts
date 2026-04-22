@@ -1,6 +1,8 @@
+import type { Context } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
-import type { Context } from 'aws-lambda';
+
 import type {
   AppSyncEventsEvent,
   AppSyncEventsRequest,

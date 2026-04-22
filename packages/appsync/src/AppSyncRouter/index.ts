@@ -1,5 +1,4 @@
 export { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
-
 export type {
   AppSyncMutationInput,
   AppSyncQueryInput,

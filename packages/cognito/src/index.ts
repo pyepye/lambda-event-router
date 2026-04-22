@@ -2,7 +2,6 @@
 
 export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoRouter.js';
 export { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
-
 // All type exports
 export type {
   // Common

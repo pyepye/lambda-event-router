@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, createSQSEvent, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
 import type { SQSFilterInput, SQSRequest } from './types.js';
 

@@ -1,6 +1,8 @@
+import type { Mock, MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { Mock, MockInstance } from 'vitest';
+
 import { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
 import type { CodePipelineFilterInput, CodePipelineRequest, CodePipelineResponse } from './types.js';
 

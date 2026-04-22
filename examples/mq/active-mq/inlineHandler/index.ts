@@ -1,7 +1,8 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 
+import { LambdaRouter } from '@lambda-event-router/base';
+
+import { createActiveMQRouter } from '../../../../packages/mq/src/index.js';
 import { allMessagesRoute } from './handlers/allMessagesRoute.js';
 import { bytesMessageRoute } from './handlers/bytesMessageRoute.js';
 import { destinationRoute } from './handlers/destinationRoute.js';

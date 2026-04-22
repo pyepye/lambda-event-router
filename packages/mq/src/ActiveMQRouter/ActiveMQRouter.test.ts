@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createActiveMQEvent, createActiveMQHandlerEvent, createMockSchema, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './ActiveMQRouter.js';
 import type { ActiveMQFilterInput, ActiveMQRequest } from './types.js';
 

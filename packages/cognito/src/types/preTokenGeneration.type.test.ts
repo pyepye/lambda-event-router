@@ -1,4 +1,5 @@
 import type { PreTokenGenerationTriggerEvent } from 'aws-lambda';
+
 import { testCognitoTriggerTypes } from './common.type.test.js';
 import type {
   PreTokenGenerationHandler,

@@ -1,5 +1,6 @@
-import { defineRoute, Ok } from '@lambda-event-router/firehose';
 import { z } from 'zod';
+
+import { defineRoute, Ok } from '@lambda-event-router/firehose';
 
 import { ANALYTICS_DELIVERY_STREAM_ARN } from '../constants.js';
 

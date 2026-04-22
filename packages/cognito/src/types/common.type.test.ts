@@ -1,4 +1,5 @@
 import type { Context, PreSignUpTriggerEvent } from 'aws-lambda';
+
 import type { CognitoFilterInput, CognitoFilters, UserAttributeFilter, UserAttributes } from './index.js';
 
 type CustomAttributes = { email: string } & Record<string, string>;

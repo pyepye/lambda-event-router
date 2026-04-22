@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
 import type { StepFunctionsFilterInput } from './types.js';
 

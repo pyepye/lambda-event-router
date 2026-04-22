@@ -1,5 +1,6 @@
-import type { PostAuthenticationRequest } from '@lambda-event-router/cognito';
 import type { PostAuthenticationTriggerEvent } from 'aws-lambda';
+
+import type { PostAuthenticationRequest } from '@lambda-event-router/cognito';
 
 // No response modification needed for PostAuthentication
 export async function postAuthentication(

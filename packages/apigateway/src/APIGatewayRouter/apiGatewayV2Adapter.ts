@@ -1,5 +1,3 @@
-import { isObject } from '@lambda-event-router/base';
-import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
 import type {
   APIGatewayEventRequestContextIAMAuthorizer,
   APIGatewayEventRequestContextJWTAuthorizer,
@@ -10,6 +8,9 @@ import type {
   APIGatewayProxyEventV2WithLambdaAuthorizer,
   APIGatewayProxyResultV2,
 } from 'aws-lambda';
+
+import { isObject } from '@lambda-event-router/base';
+import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
 
 export type APIGatewayV2EventType =
   | APIGatewayProxyEventV2

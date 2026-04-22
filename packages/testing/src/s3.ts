@@ -1,4 +1,5 @@
 import type { Context, S3BatchEvent, S3BatchEventTask, S3Event, S3EventRecord } from 'aws-lambda';
+
 import { createMockContext } from './context.js';
 import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';

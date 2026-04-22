@@ -1,7 +1,10 @@
+import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { Context } from 'aws-lambda';
+
 import { buildCorsHeaders, type CorsConfig } from './cors.js';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
 import { Request } from './Request.js';

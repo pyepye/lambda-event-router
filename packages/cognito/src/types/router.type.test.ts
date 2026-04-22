@@ -11,6 +11,7 @@ import type {
   UserMigrationTriggerEvent,
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
+
 import type {
   CreateAuthChallengeRequest,
   CustomEmailSenderRequest,

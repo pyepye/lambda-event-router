@@ -1,5 +1,6 @@
-import type { SQSMessageAttributes, SQSRequest, SQSResponse } from '@lambda-event-router/sqs';
 import { z } from 'zod';
+
+import type { SQSMessageAttributes, SQSRequest, SQSResponse } from '@lambda-event-router/sqs';
 
 export const CreateItemBodySchema = z.object({
   orgId: z.string(),

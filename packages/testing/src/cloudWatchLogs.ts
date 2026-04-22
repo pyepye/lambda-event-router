@@ -1,5 +1,6 @@
 import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
+
 import { createMockContext } from './context.js';
 import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';

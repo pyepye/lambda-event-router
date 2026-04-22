@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createKinesisRouter, type KinesisFilterInput } from '@lambda-event-router/kinesis';
-import type { Handler } from 'aws-lambda';
 
 import { OrderDataSchema, processOrder } from './handlers/orderHandler.js';
 

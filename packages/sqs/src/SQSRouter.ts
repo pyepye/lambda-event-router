@@ -1,7 +1,10 @@
+import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
+
 import type {
   SQSFilters,
   SQSMessageAttributes,

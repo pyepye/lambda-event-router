@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import type { WebSocketFilterInput } from './types.js';
 import { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
 

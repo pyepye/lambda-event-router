@@ -1,5 +1,6 @@
-import { Dropped, Failed, type FirehoseRequest, type FirehoseResponse, Ok } from '@lambda-event-router/firehose';
 import { z } from 'zod';
+
+import { Dropped, Failed, type FirehoseRequest, type FirehoseResponse, Ok } from '@lambda-event-router/firehose';
 
 export const LogDataSchema = z.object({
   timestamp: z.string(),

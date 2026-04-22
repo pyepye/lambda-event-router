@@ -1,5 +1,6 @@
-import { type ApiRequest, BadRequest } from '@lambda-event-router/apigateway';
 import { z } from 'zod';
+
+import { type ApiRequest, BadRequest } from '@lambda-event-router/apigateway';
 
 export const UpdateItemBodySchema = z.object({
   name: z.string(),

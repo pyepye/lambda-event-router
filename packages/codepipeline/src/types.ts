@@ -1,7 +1,9 @@
 import type { CodePipelineClient } from '@aws-sdk/client-codepipeline';
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 export interface CodePipelineRequest<TUserParameters = unknown> {
   jobId: string;

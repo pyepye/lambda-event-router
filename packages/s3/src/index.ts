@@ -1,7 +1,6 @@
 export type { S3BatchResponse } from './batchResponse.js';
 export { isS3BatchResponse, PermanentFailure, Succeeded, TemporaryFailure } from './batchResponse.js';
 export { createS3Router, defineRoute, S3Router } from './S3Router.js';
-
 // Re-export all types
 export type {
   // Common types
@@ -73,7 +72,6 @@ export type {
   S3TestEventRequest,
   S3TestEventRouteDefinition,
 } from './types/index.js';
-
 // Re-export event name constants
 export {
   INTELLIGENT_TIERING_EVENT_NAMES,

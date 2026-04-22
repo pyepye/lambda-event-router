@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/cognito';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/cognito';
 
 const userAttributesSchema = z.object({
   email: z.string().email(),

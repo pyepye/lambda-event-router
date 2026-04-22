@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createFirehoseRouter } from '@lambda-event-router/firehose';
-import type { Handler } from 'aws-lambda';
 
 import { enrichRoute } from './handlers/enrichRoute.js';
 import { filterRoute } from './handlers/filterRoute.js';

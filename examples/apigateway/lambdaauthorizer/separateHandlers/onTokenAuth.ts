@@ -1,6 +1,7 @@
+import type { APIGatewayAuthorizerResult } from 'aws-lambda';
+
 import type { LambdaAuthorizerTokenRequest } from '@lambda-event-router/apigateway';
 import { generatePolicy } from '@lambda-event-router/apigateway';
-import type { APIGatewayAuthorizerResult } from 'aws-lambda';
 
 // Standalone TOKEN authorizer handler.
 // Receives authorizationToken (raw value from the token source header) and methodArn.

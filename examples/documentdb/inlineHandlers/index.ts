@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createDocumentDBRouter } from '@lambda-event-router/documentdb';
-import type { Handler } from 'aws-lambda';
 
 import { deleteRoute } from './handlers/deleteRoute.js';
 import { highValueOrderInsertRoute, insertRoute } from './handlers/insertRoute.js';

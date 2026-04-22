@@ -1,5 +1,7 @@
-import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
 import type { APIGatewayProxyResult, APIGatewayProxyResultV2 } from 'aws-lambda';
+
+import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+
 import { type APIGatewayV1EventType, apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
 import { type APIGatewayV2EventType, apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
 

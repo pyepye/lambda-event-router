@@ -1,6 +1,8 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, DynamoDBRecord, StreamRecord } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // Derive event name type from aws-lambda (excludes undefined)
 export type DynamoDBEventName = NonNullable<DynamoDBRecord['eventName']>;

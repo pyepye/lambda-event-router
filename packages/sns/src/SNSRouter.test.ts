@@ -1,6 +1,8 @@
+import type { MockInstance } from 'vitest';
+
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, createSNSEvent, test } from '@lambda-event-router/testing';
-import type { MockInstance } from 'vitest';
+
 import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
 import type { SNSFilterInput, SNSRequest } from './types.js';
 

@@ -1,7 +1,8 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
-import { createRabbitMQRouter } from '../../../../packages/mq/src/index.js';
 
+import { LambdaRouter } from '@lambda-event-router/base';
+
+import { createRabbitMQRouter } from '../../../../packages/mq/src/index.js';
 import { allMessagesRoute } from './handlers/allMessagesRoute.js';
 import { contentTypeRoute } from './handlers/contentTypeRoute.js';
 import { orderRoute, retryOrderRoute } from './handlers/orderRoute.js';

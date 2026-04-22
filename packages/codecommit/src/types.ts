@@ -1,5 +1,6 @@
-import type { Middleware } from '@lambda-event-router/base';
 import type { Context } from 'aws-lambda';
+
+import type { Middleware } from '@lambda-event-router/base';
 
 // AWS CodeCommit Lambda trigger event types
 // No @types/aws-lambda types exist for CodeCommit

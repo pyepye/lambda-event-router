@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createFirehoseRouter } from '@lambda-event-router/firehose';
-import type { Handler } from 'aws-lambda';
 
 import { handleErrorLog, isErrorLog } from './handlers/errorLogHandler.js';
 import { handleKinesisSource, InventoryDataSchema } from './handlers/kinesisSourceHandler.js';

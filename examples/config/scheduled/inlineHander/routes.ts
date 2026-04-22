@@ -1,5 +1,6 @@
-import { defineConfigScheduledRoute } from '@lambda-event-router/config';
 import { z } from 'zod';
+
+import { defineConfigScheduledRoute } from '@lambda-event-router/config';
 
 const tagAuditParamsSchema = z.object({
   requiredTags: z.string(), // JSON-encoded array of tag names

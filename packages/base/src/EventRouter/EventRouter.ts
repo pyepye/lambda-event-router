@@ -1,5 +1,6 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '../LambdaRouter';
 import { handleEventWithMiddleware } from '../middleware';

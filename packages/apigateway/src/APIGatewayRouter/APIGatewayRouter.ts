@@ -1,5 +1,6 @@
 import type { HTTPMiddleware } from '@lambda-event-router/http';
 import { HTTPRouter } from '@lambda-event-router/http';
+
 import { type APIGatewayEvent, type APIGatewayResult, apiGatewayAdapter } from './apiGatewayAdapter.js';
 
 interface APIGatewayRouterOptions {

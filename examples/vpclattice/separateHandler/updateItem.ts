@@ -1,5 +1,6 @@
-import { type ApiRequest, BadRequest } from '@lambda-event-router/vpclattice';
 import { z } from 'zod';
+
+import { type ApiRequest, BadRequest } from '@lambda-event-router/vpclattice';
 
 export const UpdateItemBodySchema = z.object({
   name: z.string(),

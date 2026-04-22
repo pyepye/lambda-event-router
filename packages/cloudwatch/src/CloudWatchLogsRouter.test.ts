@@ -1,5 +1,7 @@
-import { createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
 import type { CloudWatchLogsDecodedData } from 'aws-lambda';
+
+import { createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
+
 import { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchLogsRouter.js';
 import type { CloudWatchLogsRequest } from './types.js';
 

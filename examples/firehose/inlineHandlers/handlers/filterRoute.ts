@@ -1,5 +1,6 @@
-import { Dropped, defineRoute, type FirehoseFilterInput, Ok } from '@lambda-event-router/firehose';
 import { z } from 'zod';
+
+import { Dropped, defineRoute, type FirehoseFilterInput, Ok } from '@lambda-event-router/firehose';
 
 import { SOURCE_KINESIS_STREAM_ARN } from '../constants.js';
 

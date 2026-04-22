@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createSESRouter } from '@lambda-event-router/ses';
-import type { Handler } from 'aws-lambda';
 
 import {
   attachmentEmailRoute,

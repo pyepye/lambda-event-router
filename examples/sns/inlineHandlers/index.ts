@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createSNSRouter } from '@lambda-event-router/sns';
-import type { Handler } from 'aws-lambda';
 
 import { createItemRoute, urgentNotificationRoute } from './createItem.js';
 

@@ -1,6 +1,9 @@
-import type { Middleware } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Context, FirehoseRecordMetadata, FirehoseTransformationEventRecord } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { Middleware } from '@lambda-event-router/base';
+
 import type { FirehoseResponseResult } from './response.js';
 
 export interface FirehoseFilterInput {

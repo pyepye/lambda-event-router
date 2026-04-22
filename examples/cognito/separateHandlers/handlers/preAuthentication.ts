@@ -1,5 +1,6 @@
-import type { PreAuthenticationRequest } from '@lambda-event-router/cognito';
 import type { PreAuthenticationTriggerEvent } from 'aws-lambda';
+
+import type { PreAuthenticationRequest } from '@lambda-event-router/cognito';
 
 // No response modification needed for PreAuthentication
 export async function preAuthentication(request: PreAuthenticationRequest): Promise<PreAuthenticationTriggerEvent> {

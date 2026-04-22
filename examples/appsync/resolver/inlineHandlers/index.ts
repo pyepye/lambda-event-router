@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { createAppSyncRouter } from '@lambda-event-router/appsync';
 import { LambdaRouter } from '@lambda-event-router/base';
-import type { Handler } from 'aws-lambda';
 
 import { adminCreateUserRoute, createUserRoute } from './createUser.js';
 import { getUserRoute } from './getUser.js';

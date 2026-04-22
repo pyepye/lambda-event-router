@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { type CodePipelineFilterInput, createCodePipelineRouter } from '@lambda-event-router/codepipeline';
-import type { Handler } from 'aws-lambda';
 
 import { handleContinuation } from './handleContinuation.js';
 import { ArtifactParametersSchema, processArtifacts } from './processArtifacts.js';

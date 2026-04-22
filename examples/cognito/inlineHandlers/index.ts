@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { type CognitoFilterInput, createCognitoRouter, type PreSignUpRequest } from '@lambda-event-router/cognito';
-import type { Handler } from 'aws-lambda';
 
 import { createAuthChallengeRoute } from './handlers/createAuthChallengeRoute.js';
 import { customMessageForgotPasswordRoute, customMessageSignUpRoute } from './handlers/customMessageRoute.js';

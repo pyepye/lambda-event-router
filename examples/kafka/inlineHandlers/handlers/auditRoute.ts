@@ -1,5 +1,6 @@
-import { defineRoute, type KafkaFilterInput } from '@lambda-event-router/kafka';
 import { z } from 'zod';
+
+import { defineRoute, type KafkaFilterInput } from '@lambda-event-router/kafka';
 
 import { AUDIT_TOPIC } from '../constants.js';
 

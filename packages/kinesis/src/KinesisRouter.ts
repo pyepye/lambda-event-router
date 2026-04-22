@@ -1,8 +1,10 @@
-import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
+
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisStreamRecord } from 'aws-lambda';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+
 import type { KinesisFilters, KinesisRequest, KinesisRouteDefinition, KinesisRouterOptions } from './types.js';
 
 interface InternalRoute {

@@ -4,6 +4,7 @@ import {
   createApiGatewayLambdaAuthorizerTokenEvent,
   test,
 } from '@lambda-event-router/testing';
+
 import {
   createLambdaAuthorizerRouter,
   defineLambdaAuthorizerRoute,

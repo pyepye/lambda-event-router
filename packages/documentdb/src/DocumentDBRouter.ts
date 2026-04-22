@@ -1,7 +1,10 @@
+import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-import type { Context } from 'aws-lambda';
+
 import type { FiltersToRequest, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
   DocumentDBChangeEvent,

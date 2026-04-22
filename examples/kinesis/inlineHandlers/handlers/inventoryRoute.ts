@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/kinesis';
 import { z } from 'zod';
+
+import { defineRoute } from '@lambda-event-router/kinesis';
 
 const InventoryDataSchema = z.object({
   productId: z.string(),

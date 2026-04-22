@@ -1,5 +1,6 @@
-import type { KinesisRequest } from '@lambda-event-router/kinesis';
 import { z } from 'zod';
+
+import type { KinesisRequest } from '@lambda-event-router/kinesis';
 
 export const OrderDataSchema = z.object({
   orderId: z.string(),

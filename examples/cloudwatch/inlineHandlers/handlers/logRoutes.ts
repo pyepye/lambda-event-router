@@ -1,5 +1,6 @@
-import { defineRoute } from '@lambda-event-router/cloudwatch';
 import type { CloudWatchLogsDecodedData } from 'aws-lambda';
+
+import { defineRoute } from '@lambda-event-router/cloudwatch';
 
 // Handle logs from specific Lambda functions using logGroups + logGroupPrefixes
 export const lambdaErrorLogsRoute = defineRoute({

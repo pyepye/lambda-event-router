@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createConfigRouter } from '@lambda-event-router/config';
-import type { Handler } from 'aws-lambda';
 
 import {
   handleIamRoleCompliance,

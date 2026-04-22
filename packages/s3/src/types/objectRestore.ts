@@ -1,4 +1,5 @@
 import type { S3EventRecordGlacierRestoreEventData } from 'aws-lambda';
+
 import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================

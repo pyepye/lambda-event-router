@@ -1,5 +1,6 @@
-import type { KafkaRequest, KafkaResponse } from '@lambda-event-router/kafka';
 import { z } from 'zod';
+
+import type { KafkaRequest, KafkaResponse } from '@lambda-event-router/kafka';
 
 export const OrderValueSchema = z.object({
   orderId: z.string(),

@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { createAppSyncEventsRouter } from '@lambda-event-router/appsync';
 import { LambdaRouter } from '@lambda-event-router/base';
-import type { Handler } from 'aws-lambda';
 
 import { isChatChannel, onPublish } from './onPublish.js';
 import { onSubscribe } from './onSubscribe.js';

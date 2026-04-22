@@ -1,6 +1,7 @@
+import type { Handler } from 'aws-lambda';
+
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice';
-import type { Handler } from 'aws-lambda';
 
 import { CreateItemBodySchema, createItem, QuerySchema } from './createItem.js';
 import { updateItem } from './updateItem.js';

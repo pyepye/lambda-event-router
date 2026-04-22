@@ -1,6 +1,8 @@
+import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
+
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
-import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
+
 import type { S3BatchResponse } from './batchResponse.js';
 import { isS3BatchResponse } from './batchResponse.js';
 import type { S3BatchMiddleware } from './types/batch.js';
