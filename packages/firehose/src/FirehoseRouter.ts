@@ -9,7 +9,7 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
 import type { FirehoseResponseResult } from './response.js';
 import { isFirehoseResponse } from './response.js';
@@ -126,6 +126,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       if (isFirehoseResponse(error)) {
         return this.mapResponseToResult(record, error);
       }
+      logger.error(`Error processing Firehose record ${record.recordId}`, { error });
       return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
     }
   }

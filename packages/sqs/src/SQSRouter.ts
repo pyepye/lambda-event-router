@@ -3,7 +3,7 @@ import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } f
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
 import type {
   SQSFilters,
@@ -129,6 +129,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
         const record = records[idx];
         /* v8 ignore next -- @preserve - Guard is for TS. Record will always exist as it has same length as results */
         if (record) {
+          logger.error(`Error processing SQS record ${record.messageId}`, { error: result.reason });
           batchItemFailures.push({ itemIdentifier: record.messageId });
         }
       }
@@ -166,7 +167,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     for (const [idx, record] of records.entries()) {
       try {
         await this.processRecord(record, context);
-      } catch {
+      } catch (error) {
+        logger.error(`Error processing SQS record ${record.messageId}`, { error });
         for (const remaining of records.slice(idx)) {
           failures.push({ itemIdentifier: remaining.messageId });
         }

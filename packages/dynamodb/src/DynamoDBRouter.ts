@@ -4,7 +4,7 @@ import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEven
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, logger, validateSchema } from '@lambda-event-router/base';
 
 import type {
   DynamoDBEventName,
@@ -234,7 +234,8 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     for (const [idx, record] of records.entries()) {
       try {
         await this.processRecord(record, context);
-      } catch {
+      } catch (error) {
+        logger.error(`Error processing DynamoDB record ${record.eventID}`, { error });
         for (const remaining of records.slice(idx)) {
           /* v8 ignore next -- @preserve - Guard is for TS. eventID is always present in AWS events but typed as optional */
           if (remaining.eventID) {

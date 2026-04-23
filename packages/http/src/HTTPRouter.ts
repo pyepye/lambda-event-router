@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, logger } from '@lambda-event-router/base';
 
 import { buildCorsHeaders, type CorsConfig } from './cors.js';
 import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
@@ -240,6 +240,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
         const responseWithHeaders = this.applyHeaders(response, corsHeaders);
         return this.adapter.buildResult(responseWithHeaders, event);
       }
+      logger.error(`Unhandled error processing HTTP request`, { error });
       const errorMessage = error instanceof Error ? error.message : undefined;
       const errorResponse = this.response.internalServerError(errorMessage);
       const responseWithHeaders = this.applyHeaders(errorResponse, corsHeaders);

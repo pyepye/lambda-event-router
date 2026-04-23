@@ -3,7 +3,7 @@ import type { Context, MSKEvent } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
 import type { InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -104,7 +104,9 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     for (const [index, record] of records.entries()) {
       try {
         await this.processRecord(record, event, context);
-      } catch {
+      } catch (error) {
+        const recordIdentifier = `${record.topic}-${record.partition}-${record.offset}`;
+        logger.error(`Error processing Kafka record ${recordIdentifier}`, { error });
         for (const remaining of records.slice(index)) {
           const itemIdentifier = `${remaining.topic}-${remaining.partition}-${remaining.offset}`;
           failures.push({ itemIdentifier });
