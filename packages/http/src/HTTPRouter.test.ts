@@ -210,6 +210,24 @@ suite('HTTPRouter', () => {
       );
     });
 
+    test('matches a request with a trailing slash against a route registered without one', async () => {
+      router.get({
+        filters: { path: '/items' },
+        handler: async () => Ok({ message: 'items' }),
+      });
+
+      const event = createMockEvent({ path: '/items/' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 200,
+          body: JSON.stringify({ message: 'items' }),
+        }),
+      );
+    });
+
     test('catches a generic Error and returns 500 with the error message', async () => {
       router.get({
         filters: { path: '/' },

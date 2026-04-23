@@ -92,6 +92,12 @@ interface RouteMatch {
   params: Record<string, string>;
 }
 
+// Remove the trailing comma from any paths when matching
+// This will mean `path: '/item'` and `path: "/item/"` match API request to both /item and /item/
+function normalizePath(path: string): string {
+  return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
+}
+
 export class PathRouter {
   private routes: InternalRoute[] = [];
 
@@ -134,7 +140,8 @@ export class PathRouter {
       responseSchema?: StandardSchemaV1;
     },
   ): this {
-    const { path, customFilter } = config.filters;
+    const { customFilter } = config.filters;
+    const path = normalizePath(config.filters.path);
     const { pattern, paramNames } = this.compilePath(path);
 
     this.routes.push({
@@ -166,9 +173,10 @@ export class PathRouter {
   }
 
   getMethodsForPath(path: string): HttpMethod[] {
+    const normalizedPath = normalizePath(path);
     const methods: HttpMethod[] = [];
     for (const route of this.routes) {
-      if (route.pattern.test(path) && !methods.includes(route.method)) {
+      if (route.pattern.test(normalizedPath) && !methods.includes(route.method)) {
         methods.push(route.method);
       }
     }
@@ -176,10 +184,11 @@ export class PathRouter {
   }
 
   async match(method: string, path: string, filterInput?: unknown): Promise<RouteMatch | null> {
+    const normalizedPath = normalizePath(path);
     for (const route of this.routes) {
       if (route.method !== method) continue;
 
-      const match = path.match(route.pattern);
+      const match = normalizedPath.match(route.pattern);
       if (!match) continue;
 
       if (route.customFilter && !(await route.customFilter(filterInput))) {

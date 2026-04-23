@@ -165,6 +165,45 @@ suite('PathRouter', () => {
       expect(result).toBeNull();
     });
 
+    test('matches a request with a trailing slash against a route registered without one', async () => {
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
+
+      const result = await router.match('GET', '/items/');
+
+      expect(result).not.toBeNull();
+      expect(result?.route.path).toBe('/items');
+      expect(result?.params).toEqual({});
+    });
+
+    test('matches a request without a trailing slash against a route registered with one', async () => {
+      router.get({ filters: { path: '/items/' }, handler: vi.fn() });
+
+      const result = await router.match('GET', '/items');
+
+      expect(result).not.toBeNull();
+      expect(result?.route.path).toBe('/items');
+      expect(result?.params).toEqual({});
+    });
+
+    test('matches a parameterized path with a trailing slash and still extracts params', async () => {
+      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
+
+      const result = await router.match('GET', '/items/abc-123/');
+
+      expect(result).not.toBeNull();
+      expect(result?.params).toEqual({ id: 'abc-123' });
+    });
+
+    test('matches the root path and does not match an empty path', async () => {
+      router.get({ filters: { path: '/' }, handler: vi.fn() });
+
+      const rootResult = await router.match('GET', '/');
+      const emptyResult = await router.match('GET', '');
+
+      expect(rootResult).not.toBeNull();
+      expect(emptyResult).toBeNull();
+    });
+
     test('matches the correct method when multiple routes share the same path', async () => {
       const getHandler = vi.fn();
       const postHandler = vi.fn();
@@ -321,6 +360,15 @@ suite('PathRouter', () => {
       });
 
       const methods = router.getMethodsForPath('/items');
+
+      expect(methods).toEqual(['GET', 'POST']);
+    });
+
+    test('returns methods when the requested path has a trailing slash', () => {
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
+      router.post({ filters: { path: '/items' }, handler: vi.fn() });
+
+      const methods = router.getMethodsForPath('/items/');
 
       expect(methods).toEqual(['GET', 'POST']);
     });
