@@ -2,15 +2,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Middleware } from '@lambda-event-router/base';
 
-import type {
-  ApiHandler,
-  ApiRequest,
-  ApiResponse,
-  HandlerResponse,
-  HttpMethod,
-  PathParams,
-  RouteDefinition,
-} from './types.js';
+import type { ApiHandler, ApiRequest, HandlerResponse, HttpMethod, PathParams, RouteDefinition } from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -44,14 +36,14 @@ interface BaseRouteConfig<TPathString extends string, TQuery, TResponse> {
 interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse>
   extends BaseRouteConfig<TPathString, TQuery, TResponse> {
   handler: ApiHandler<TPath, TQuery, undefined, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, undefined>, ApiResponse<TResponse>>[];
+  middleware?: Middleware<ApiRequest<TPath, TQuery, undefined>, HandlerResponse<TResponse>>[];
 }
 
 // Config for HTTP methods that support a request body (POST, PUT, PATCH)
 interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse>
   extends BaseRouteConfig<TPathString, TQuery, TResponse> {
   handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, ApiResponse<TResponse>>[];
+  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 

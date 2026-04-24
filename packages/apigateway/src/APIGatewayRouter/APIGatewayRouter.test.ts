@@ -1,11 +1,11 @@
-import { type ApiRequest, type ApiResponse, defineRoute, NoContent, Ok } from '@lambda-event-router/http';
+import { type ApiRequest, defineRoute, type HandlerResponse, NoContent, Ok, Response } from '@lambda-event-router/http';
 import { createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
 
-type HTTPNext = (request: ApiRequest) => Promise<ApiResponse>;
+type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
 type NoBodyRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, undefined>;
-type NoBodyNext = (request: NoBodyRequest) => Promise<ApiResponse>;
+type NoBodyNext = (request: NoBodyRequest) => Promise<HandlerResponse>;
 
 suite('APIGatewayRouter', () => {
   let router: APIGatewayRouter;
@@ -315,7 +315,7 @@ suite('APIGatewayRouter', () => {
     test('executes middleware before the route handler', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middleware(request: ApiRequest, next: HTTPNext): Promise<ApiResponse> {
+      async function middleware(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
         callOrder.push('mw-pre');
         const response = await next(request);
         callOrder.push('mw-post');
@@ -340,8 +340,9 @@ suite('APIGatewayRouter', () => {
     });
 
     test('allows middleware to modify the response', async ({ apiGatewayV2HandlerEvent }) => {
-      async function addCorsHeaders(request: ApiRequest, next: HTTPNext): Promise<ApiResponse> {
-        const response = await next(request);
+      async function addCorsHeaders(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+        const handlerResponse = await next(request);
+        const response = Response.isHTTPResponse(handlerResponse) ? handlerResponse : Ok(handlerResponse);
         return {
           ...response,
           headers: { ...response.headers, 'Access-Control-Allow-Origin': '*' },
@@ -365,7 +366,7 @@ suite('APIGatewayRouter', () => {
     test('allows middleware to short-circuit with an early response', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function authMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<ApiResponse> {
+      async function authMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<HandlerResponse> {
         return { statusCode: 401, body: null };
       }
 
@@ -382,12 +383,12 @@ suite('APIGatewayRouter', () => {
     test('executes multiple router-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middlewareOne(request: ApiRequest, next: HTTPNext): Promise<ApiResponse> {
+      async function middlewareOne(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
         callOrder.push('mw1');
         return next(request);
       }
 
-      async function middlewareTwo(request: ApiRequest, next: HTTPNext): Promise<ApiResponse> {
+      async function middlewareTwo(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
         callOrder.push('mw2');
         return next(request);
       }
@@ -414,7 +415,7 @@ suite('APIGatewayRouter', () => {
     test('executes route-level middleware for a specific route', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
         callOrder.push('route-mw');
         return next(request);
       }
@@ -439,7 +440,7 @@ suite('APIGatewayRouter', () => {
     test('allows route-level middleware to short-circuit by not calling next', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function blockingRouteMiddleware(_request: NoBodyRequest, _next: NoBodyNext): Promise<ApiResponse> {
+      async function blockingRouteMiddleware(_request: NoBodyRequest, _next: NoBodyNext): Promise<HandlerResponse> {
         return { statusCode: 403, body: null };
       }
 
@@ -461,12 +462,12 @@ suite('APIGatewayRouter', () => {
     test('executes multiple route-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddlewareOne(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+      async function routeMiddlewareOne(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
         callOrder.push('route-mw1');
         return next(request);
       }
 
-      async function routeMiddlewareTwo(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+      async function routeMiddlewareTwo(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
         callOrder.push('route-mw2');
         return next(request);
       }
@@ -491,8 +492,8 @@ suite('APIGatewayRouter', () => {
     test('does not apply route middleware to other routes', async ({ apiGatewayV2HandlerEvent }) => {
       const routeMiddleware = vi
         .fn()
-        .mockImplementation(async (request: NoBodyRequest, next: (request: NoBodyRequest) => Promise<ApiResponse>) =>
-          next(request),
+        .mockImplementation(
+          async (request: NoBodyRequest, next: (request: NoBodyRequest) => Promise<HandlerResponse>) => next(request),
         );
 
       router.get({
@@ -522,8 +523,8 @@ suite('APIGatewayRouter', () => {
         request: ApiRequest<Record<string, never>, Record<string, string | undefined>, unknown>,
         next: (
           request: ApiRequest<Record<string, never>, Record<string, string | undefined>, unknown>,
-        ) => Promise<ApiResponse<unknown>>,
-      ): Promise<ApiResponse<unknown>> {
+        ) => Promise<HandlerResponse<unknown>>,
+      ): Promise<HandlerResponse<unknown>> {
         callOrder.push('route-mw');
         return next(request);
       }
@@ -552,12 +553,12 @@ suite('APIGatewayRouter', () => {
     test('executes router middleware before route middleware', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routerMiddleware(request: ApiRequest, next: HTTPNext): Promise<ApiResponse> {
+      async function routerMiddleware(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
         callOrder.push('router-mw');
         return next(request);
       }
 
-      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<ApiResponse> {
+      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
         callOrder.push('route-mw');
         return next(request);
       }
@@ -583,12 +584,12 @@ suite('APIGatewayRouter', () => {
     test('router middleware can short-circuit before route middleware runs', async ({ apiGatewayV2HandlerEvent }) => {
       const routeMiddleware = vi
         .fn()
-        .mockImplementation(async (request: ApiRequest, next: (request: ApiRequest) => Promise<ApiResponse>) =>
+        .mockImplementation(async (request: ApiRequest, next: (request: ApiRequest) => Promise<HandlerResponse>) =>
           next(request),
         );
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function blockingMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<ApiResponse> {
+      async function blockingMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<HandlerResponse> {
         return { statusCode: 403, body: null };
       }
 

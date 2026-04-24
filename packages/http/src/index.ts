@@ -22,6 +22,7 @@ export type {
   ApiResponse,
   Auth,
   FinalizedHTTPResponse,
+  HandlerResponse,
   HTTPAdapter,
   HTTPFilterInput,
   HTTPFilters,

@@ -4,6 +4,7 @@ export type {
   ApiResponse,
   Auth,
   FinalizedHTTPResponse,
+  HandlerResponse,
   HTTPAdapter,
   HTTPResponse,
   HttpMethod,
