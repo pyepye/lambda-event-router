@@ -67,16 +67,23 @@ type DynamoDBRecordHandler<
   | ((request: DynamoDBModifyRequest<TKeys, TNewItem, TOldItem>) => Promise<void>)
   | ((request: DynamoDBRemoveRequest<TKeys, TOldItem>) => Promise<void>);
 
-export interface DynamoDBFilterInput {
+export interface DynamoDBFilterInput<TNewItem = Record<string, unknown>, TOldItem = Record<string, unknown>> {
   eventName: DynamoDBEventName;
   streamViewType?: DynamoDBViewType;
   record: DynamoDBRecord;
+  keys: Record<string, unknown>;
+  newImage?: TNewItem;
+  oldImage?: TOldItem;
 }
+
+export type DynamoDBKeyValue = string | number;
 
 export interface DynamoDBFilters {
   eventName?: DynamoDBEventName | DynamoDBEventName[];
   eventSourceArn?: DynamoDBRecord['eventSourceARN'] | DynamoDBRecord['eventSourceARN'][];
   streamViewType?: DynamoDBViewType | DynamoDBViewType[];
+  partitionKey?: DynamoDBKeyValue | DynamoDBKeyValue[];
+  sortKey?: DynamoDBKeyValue | DynamoDBKeyValue[];
   customFilter?: (input: DynamoDBFilterInput) => boolean | Promise<boolean>;
 }
 

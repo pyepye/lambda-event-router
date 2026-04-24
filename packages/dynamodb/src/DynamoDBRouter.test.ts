@@ -111,11 +111,20 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
 
       expect(insertResult).toBeDefined();
       expect(modifyResult).toBeUndefined();
@@ -138,11 +147,20 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBModifyRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
 
       expect(insertResult).toBeUndefined();
       expect(modifyResult).toBeDefined();
@@ -165,11 +183,20 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBRemoveRecord();
       // @ts-expect-error - testing private method directly
-      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const insertResult = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES');
+      const modifyResult = await router.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
       // @ts-expect-error - testing private method directly
-      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES');
+      const removeResult = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
 
       expect(insertResult).toBeUndefined();
       expect(modifyResult).toBeUndefined();
@@ -187,7 +214,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -201,7 +228,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -215,7 +242,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeUndefined();
     });
@@ -230,7 +257,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -246,7 +273,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -264,7 +291,7 @@ suite('DynamoDBRouter', () => {
         eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeUndefined();
     });
@@ -278,7 +305,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -292,7 +319,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -306,7 +333,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeUndefined();
     });
@@ -324,7 +351,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -338,7 +365,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeUndefined();
     });
@@ -353,12 +380,13 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(filterSpy).toHaveBeenCalledWith({
         eventName: 'INSERT',
         streamViewType: 'NEW_AND_OLD_IMAGES',
         record,
+        keys: { pk: 'pk-123', sk: 'sk-123' },
       });
     });
 
@@ -372,7 +400,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
@@ -391,7 +419,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -405,7 +433,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
     });
@@ -427,7 +455,7 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -447,7 +475,7 @@ suite('DynamoDBRouter', () => {
         eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeUndefined();
     });
@@ -466,9 +494,188 @@ suite('DynamoDBRouter', () => {
 
       const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES');
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
 
       expect(result).toBeDefined();
+    });
+  });
+
+  suite('partitionKey / sortKey filters', () => {
+    test('matches route when partitionKey equals a single value', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when partitionKey is in an array (mixed string | number)', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: ['items', 42] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42, sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when partitionKey does not match', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'orders', sk: 'sk-1' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route when sortKey equals a single value', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when sortKey is in an array of values', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: ['sk-1', 'sk-2'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-2' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when sortKey does not match', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-9' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches only when both partitionKey and sortKey match', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items', sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const bothMatch = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+      // @ts-expect-error - testing private method directly
+      const sortMiss = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-9' });
+      // @ts-expect-error - testing private method directly
+      const partitionMiss = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'orders',
+        sk: 'sk-1',
+      });
+
+      expect(bothMatch).toBeDefined();
+      expect(sortMiss).toBeUndefined();
+      expect(partitionMiss).toBeUndefined();
+    });
+
+    test('matches numeric partition value', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 42 },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42 });
+
+      expect(result).toBeDefined();
+    });
+
+    test('auto-detects attribute names from the keys object when router has no overrides', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'user-1', sortKey: '2024-01-01' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        userId: 'user-1',
+        createdAt: '2024-01-01',
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    test('partition-only record: sortKey filter never matches but partitionKey still works', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: 'any-value' },
+        }).handle(async () => {}),
+      );
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items' });
+
+      expect(result).toBeDefined();
+      expect(result?.filters.partitionKey).toBe('items');
+    });
+
+    test('partitionKey miss short-circuits before customFilter is called', async ({ dynamoDBInsertRecord }) => {
+      const customFilterSpy = vi.fn().mockReturnValue(true);
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items', customFilter: customFilterSpy },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'orders', sk: 'sk-1' });
+
+      expect(customFilterSpy).not.toHaveBeenCalled();
     });
   });
 

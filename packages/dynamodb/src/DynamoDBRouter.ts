@@ -256,15 +256,15 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     }
 
     const streamViewType = record.dynamodb?.StreamViewType;
-    const route = await this.matchRoute(record, eventName, streamViewType);
-    if (!route) {
-      throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
-    }
-
     /* v8 ignore next -- @preserve - Guard is for TS. Keys is always present in AWS events but typed as optional */
     const keys = record.dynamodb?.Keys ? unmarshall(record.dynamodb.Keys as UnmarshallInput) : {};
     const newImage = record.dynamodb?.NewImage ? unmarshall(record.dynamodb.NewImage as UnmarshallInput) : undefined;
     const oldImage = record.dynamodb?.OldImage ? unmarshall(record.dynamodb.OldImage as UnmarshallInput) : undefined;
+
+    const route = await this.matchRoute(record, eventName, streamViewType, keys, newImage, oldImage);
+    if (!route) {
+      throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
+    }
 
     const validatedKeys = await validateSchema(
       keys,
@@ -301,7 +301,13 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     record: DynamoDBRecord,
     eventName: DynamoDBEventName,
     streamViewType: DynamoDBViewType | undefined,
+    keys: Record<string, unknown>,
+    newImage?: Record<string, unknown>,
+    oldImage?: Record<string, unknown>,
   ): Promise<InternalRoute | undefined> {
+    // record.dynamodb.Keys always comes in the same order, partition key first then sort key
+    const [partitionKeyName, sortKeyName] = Object.keys(keys);
+
     for (const route of this.routes) {
       const { filters } = route;
 
@@ -332,8 +338,24 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         }
       }
 
+      if (filters.partitionKey !== undefined) {
+        if (!partitionKeyName) continue;
+        const partitionKey = keys[partitionKeyName];
+        if (typeof partitionKey !== 'string' && typeof partitionKey !== 'number') continue;
+        const expected = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
+        if (!expected.includes(partitionKey)) continue;
+      }
+
+      if (filters.sortKey !== undefined) {
+        if (!sortKeyName) continue;
+        const sortKey = keys[sortKeyName];
+        if (typeof sortKey !== 'string' && typeof sortKey !== 'number') continue;
+        const expected = Array.isArray(filters.sortKey) ? filters.sortKey : [filters.sortKey];
+        if (!expected.includes(sortKey)) continue;
+      }
+
       if (filters.customFilter) {
-        const match = await filters.customFilter({ eventName, streamViewType, record });
+        const match = await filters.customFilter({ eventName, streamViewType, record, keys, newImage, oldImage });
         if (!match) continue;
       }
 
