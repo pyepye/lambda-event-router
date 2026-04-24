@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type { ConfigEvent, ConfigResponse } from '../types.js';
 import type {
@@ -94,13 +94,13 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
         if (!configRuleNames.includes(input.configRuleName)) {
           continue;
         }
+        const configRuleNameMatch = filterStringMatcher(input.configRuleName, filters.configRuleName);
+        if (!configRuleNameMatch) continue;
       }
 
       if (filters.accountId) {
-        const accountIds = Array.isArray(filters.accountId) ? filters.accountId : [filters.accountId];
-        if (!accountIds.includes(input.accountId)) {
-          continue;
-        }
+        const accountIdMatch = filterStringMatcher(input.accountId, filters.accountId);
+        if (!accountIdMatch) continue;
       }
 
       if (filters.customFilter) {

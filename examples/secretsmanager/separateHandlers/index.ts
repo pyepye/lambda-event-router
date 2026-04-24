@@ -38,38 +38,38 @@ secretsManagerRouter.route({
 });
 
 // =============================================================================
-// Route with secretPrefixes filter
+// Route with secretId wildcard filter
 // =============================================================================
 
 // Match all secrets under the prod/database/ path
 secretsManagerRouter.route({
   filters: {
-    secretPrefix: 'prod/database/',
+    secretId: 'prod/database/*',
     step: ['createSecret', 'setSecret', 'testSecret', 'finishSecret'],
   },
   handler: handleDatabaseRotation,
 });
 
 // =============================================================================
-// Route with secretSuffixes filter
+// Route with secretId wildcard filter
 // =============================================================================
 
 // Match all secrets ending with /password or -credentials
 secretsManagerRouter.route({
   filters: {
-    secretSuffix: ['/password', '-credentials'],
+    secretId: ['*/password', '*-credentials'],
   },
   handler: handleDatabaseRotation,
 });
 
 // =============================================================================
-// Route with secretIncludes filter
+// Route with secretId wildcard filter
 // =============================================================================
 
 // Match any secret containing "redis" in its name/ARN
 secretsManagerRouter.route({
   filters: {
-    secretIncludes: 'redis',
+    secretId: '*redis*',
   },
   handler: handleDatabaseRotation,
 });

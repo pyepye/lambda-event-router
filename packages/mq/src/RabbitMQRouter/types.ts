@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
 
@@ -55,9 +55,9 @@ export interface RabbitMQFilterInput {
 }
 
 export interface RabbitMQFilters {
-  eventSourceArn?: string | string[];
-  queue?: string | string[];
-  contentType?: string | string[];
+  eventSourceArn?: FilterStringMatcher;
+  queue?: FilterStringMatcher;
+  contentType?: FilterStringMatcher;
   customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
 }
 
@@ -84,12 +84,7 @@ export interface RabbitMQInternalRoute {
 // --- Route Builder Types ---
 
 export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undefined = undefined> {
-  filters: {
-    eventSourceArn?: string | string[];
-    queue?: string | string[];
-    contentType?: string | string[];
-    customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
-  };
+  filters: RabbitMQFilters;
   middleware?: RabbitMQMiddleware[];
   bodySchema?: TBodySchema;
 }

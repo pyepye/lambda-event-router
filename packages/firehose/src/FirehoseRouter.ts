@@ -9,7 +9,14 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { FirehoseResponseResult } from './response.js';
 import { isFirehoseResponse } from './response.js';
@@ -169,18 +176,17 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       const { filters } = route;
 
       if (filters.deliveryStreamArn) {
-        const { deliveryStreamArn: filterStreamArn } = filters;
-        const deliveryStreamArns = Array.isArray(filterStreamArn) ? filterStreamArn : [filterStreamArn];
-        if (!deliveryStreamArns.includes(event.deliveryStreamArn)) {
-          continue;
-        }
+        const deliveryStreamArnMatch = filterStringMatcher(event.deliveryStreamArn, filters.deliveryStreamArn);
+        if (!deliveryStreamArnMatch) continue;
       }
 
       if (filters.sourceKinesisStreamArn) {
-        const { sourceKinesisStreamArn: filterKinesisArn } = filters;
-        const sourceKinesisStreamArns = Array.isArray(filterKinesisArn) ? filterKinesisArn : [filterKinesisArn];
         if (!event.sourceKinesisStreamArn) continue;
-        if (!sourceKinesisStreamArns.includes(event.sourceKinesisStreamArn)) continue;
+        const sourceKinesisStreamArnMatch = filterStringMatcher(
+          event.sourceKinesisStreamArn,
+          filters.sourceKinesisStreamArn,
+        );
+        if (!sourceKinesisStreamArnMatch) continue;
       }
 
       if (filters.customFilter) {

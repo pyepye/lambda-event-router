@@ -170,15 +170,6 @@ suite('ConfigRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('skips resourceType filter when resourceType is undefined', async () => {
-      router.route(defineRoute({ filters: { resourceType: 'AWS::EC2::Instance' } }).handle(async () => {}));
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute({ configRuleName: 'rule', resourceType: undefined });
-
-      expect(result).toBeDefined();
-    });
-
     test('matches by resourceId filter', async () => {
       router.route(defineRoute({ filters: { resourceId: 'i-abc123' } }).handle(async () => {}));
 
@@ -204,15 +195,6 @@ suite('ConfigRouter', () => {
       const result = await router.matchRoute({ configRuleName: 'rule', resourceId: 'i-other' });
 
       expect(result).toBeUndefined();
-    });
-
-    test('skips resourceId filter when resourceId is undefined', async () => {
-      router.route(defineRoute({ filters: { resourceId: 'i-abc123' } }).handle(async () => {}));
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute({ configRuleName: 'rule', resourceId: undefined });
-
-      expect(result).toBeDefined();
     });
 
     test('matches by configurationItemStatus filter', async () => {
@@ -250,15 +232,6 @@ suite('ConfigRouter', () => {
       const result = await router.matchRoute({ configRuleName: 'rule', configurationItemStatus: 'ResourceDeleted' });
 
       expect(result).toBeUndefined();
-    });
-
-    test('skips configurationItemStatus filter when status is undefined', async () => {
-      router.route(defineRoute({ filters: { configurationItemStatus: 'ResourceDiscovered' } }).handle(async () => {}));
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute({ configRuleName: 'rule', configurationItemStatus: undefined });
-
-      expect(result).toBeDefined();
     });
 
     test('multiple filters combined - all must match', async () => {

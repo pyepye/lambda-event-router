@@ -1,6 +1,6 @@
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type LexInvocationSource = LexV2Event['invocationSource'];
 
@@ -43,9 +43,9 @@ export interface LexFilterInput {
 }
 
 export interface LexFilters {
-  intentName?: string | string[];
+  intentName?: FilterStringMatcher;
   invocationSource?: LexInvocationSource | LexInvocationSource[];
-  botId?: string | string[];
+  botId?: FilterStringMatcher;
   inputMode?: LexInputMode | LexInputMode[];
   customFilter?: (input: LexFilterInput) => boolean | Promise<boolean>;
 }

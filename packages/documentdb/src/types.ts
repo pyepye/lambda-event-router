@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
 export type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';
@@ -126,9 +126,9 @@ export interface DocumentDBFilterInput {
 
 export interface DocumentDBFilters {
   operationType?: DocumentDBOperationType | readonly DocumentDBOperationType[];
-  eventSourceArn?: string | readonly string[];
-  database?: string | readonly string[];
-  collection?: string | readonly string[];
+  eventSourceArn?: FilterStringMatcher;
+  database?: FilterStringMatcher;
+  collection?: FilterStringMatcher;
   fullDocument?: DocumentDBFullDocumentOption | readonly DocumentDBFullDocumentOption[];
   fullDocumentBeforeChange?:
     | DocumentDBFullDocumentBeforeChangeOption

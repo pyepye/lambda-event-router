@@ -317,7 +317,7 @@ suite('CognitoRouter', () => {
           filters: {
             userAttributes: {
               email: 'test@example.com',
-              phone: '+1234567890',
+              phone: '+9999999999',
             },
           },
           handler: vi.fn(),
@@ -328,19 +328,6 @@ suite('CognitoRouter', () => {
         const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeUndefined();
-      });
-
-      test('skips userAttributes filter for UserMigration events', async ({ cognitoUserMigrationEvent }) => {
-        router.route({
-          filters: { userAttributes: { email: 'test@example.com' } },
-          handler: vi.fn(),
-        });
-
-        const event = cognitoUserMigrationEvent();
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(event, event.triggerSource);
-
-        expect(result).toBeDefined();
       });
 
       test('matches when userAttributes filter is undefined', async ({ cognitoPreSignUpEvent }) => {
@@ -696,46 +683,6 @@ suite('CognitoRouter', () => {
 
       await router.handleEvent(cognitoVerifyAuthChallengeResponseEvent(), mockContext);
       expect(verifyHandler).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  suite('matchUserAttribute', () => {
-    test('matches an exact string value', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', 'test@example.com')).toBe(true);
-    });
-
-    test('does not match a different string value', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', 'other@example.com')).toBe(false);
-    });
-
-    test('matches a RegExp pattern', () => {
-      // match email domain pattern
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', /@example\.com$/)).toBe(true);
-    });
-
-    test('does not match a non-matching RegExp', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', /@other\.com$/)).toBe(false);
-    });
-
-    test('matches when function returns true', () => {
-      const filter = (value: string): boolean => value.includes('@');
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', filter)).toBe(true);
-    });
-
-    test('does not match when function returns false', () => {
-      const filter = (value: string): boolean => value.startsWith('admin');
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute('test@example.com', filter)).toBe(false);
-    });
-
-    test('returns false when value is undefined', () => {
-      // @ts-expect-error - testing private method directly
-      expect(router.matchUserAttribute(undefined, 'test')).toBe(false);
     });
   });
 

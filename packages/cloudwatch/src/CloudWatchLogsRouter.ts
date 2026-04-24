@@ -2,7 +2,7 @@ import { gunzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   CloudWatchLogsControlMessageRouteDefinition,
@@ -106,33 +106,15 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
       }
 
       if (filters.logGroup) {
-        const logGroups = Array.isArray(filters.logGroup) ? filters.logGroup : [filters.logGroup];
-        if (!logGroups.includes(input.logGroup)) continue;
-      }
-
-      if (filters.logGroupPrefix) {
-        const prefixes = Array.isArray(filters.logGroupPrefix) ? filters.logGroupPrefix : [filters.logGroupPrefix];
-        const hasMatchingPrefix = prefixes.some((prefix) => input.logGroup.startsWith(prefix));
-        if (!hasMatchingPrefix) continue;
-      }
-
-      if (filters.logGroupSuffix) {
-        const suffixes = Array.isArray(filters.logGroupSuffix) ? filters.logGroupSuffix : [filters.logGroupSuffix];
-        const hasMatchingSuffix = suffixes.some((suffix) => input.logGroup.endsWith(suffix));
-        if (!hasMatchingSuffix) continue;
-      }
-
-      if (filters.logGroupIncludes) {
-        const { logGroupIncludes: filterIncludes } = filters;
-        const includes = Array.isArray(filterIncludes) ? filterIncludes : [filterIncludes];
-        const hasMatchingSubstring = includes.some((substring) => input.logGroup.includes(substring));
-        if (!hasMatchingSubstring) continue;
+        const logGroupMatch = filterStringMatcher(input.logGroup, filters.logGroup);
+        if (!logGroupMatch) continue;
       }
 
       if (filters.subscriptionFilter) {
-        const { subscriptionFilter } = filters;
-        const subFilters = Array.isArray(subscriptionFilter) ? subscriptionFilter : [subscriptionFilter];
-        const hasMatchingFilter = input.subscriptionFilters.some((subFilter) => subFilters.includes(subFilter));
+        const { subscriptionFilter } = filters; // Needed here due to TS having different scope for  separate function closure
+        const hasMatchingFilter = input.subscriptionFilters.some((subFilter) =>
+          filterStringMatcher(subFilter, subscriptionFilter),
+        );
         if (!hasMatchingFilter) continue;
       }
 

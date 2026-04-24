@@ -19,7 +19,7 @@ export const createSecretRoute = defineRoute({
 // Route for the setSecret step using prefix matching
 export const setSecretRoute = defineRoute({
   filters: {
-    secretPrefix: 'prod/database/',
+    secretId: 'prod/database/*',
     step: 'setSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
@@ -29,7 +29,7 @@ export const setSecretRoute = defineRoute({
 // Route for the testSecret step using suffix matching
 export const testSecretRoute = defineRoute({
   filters: {
-    secretSuffix: ['/password', '-credentials'],
+    secretId: ['*/password', '*-credentials'],
     step: 'testSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
@@ -39,7 +39,7 @@ export const testSecretRoute = defineRoute({
 // Route for the finishSecret step using includes matching
 export const finishSecretRoute = defineRoute({
   filters: {
-    secretIncludes: 'redis',
+    secretId: '*redis*',
     step: 'finishSecret',
   },
 }).handle(async ({ secretId, clientRequestToken }) => {
@@ -89,7 +89,7 @@ const MAINTENANCE_WINDOW_END = 6;
 
 export const maintenanceWindowRotationRoute = defineRoute({
   filters: {
-    secretPrefix: 'prod/',
+    secretId: 'prod/*',
     step: 'createSecret',
     customFilter: () => {
       // Only allow rotation during the maintenance window - time-based logic that built-in filters can't express

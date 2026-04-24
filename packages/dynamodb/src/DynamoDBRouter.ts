@@ -4,7 +4,13 @@ import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEven
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   DynamoDBEventName,
@@ -302,8 +308,8 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     eventName: DynamoDBEventName,
     streamViewType: DynamoDBViewType | undefined,
     keys: Record<string, unknown>,
-    newImage?: Record<string, unknown>,
-    oldImage?: Record<string, unknown>,
+    newImage?: Record<string, unknown>, // TODO Make sure tests cover this
+    oldImage?: Record<string, unknown>, // TODO Make sure tests cover this
   ): Promise<InternalRoute | undefined> {
     // record.dynamodb.Keys always comes in the same order, partition key first then sort key
     const [partitionKeyName, sortKeyName] = Object.keys(keys);
@@ -318,40 +324,44 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         }
       }
 
-      if (filters.eventSourceArn) {
-        if (record.eventSourceARN) {
-          const { eventSourceArn: filterSourceArn } = filters;
-          const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
-          if (!eventSourceArns.includes(record.eventSourceARN)) {
-            continue;
-          }
+      if (filters.eventSourceArn && record.eventSourceARN) {
+        const eventSourceARNMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
+        if (!eventSourceARNMatch) continue;
+      }
+
+      if (filters.streamViewType && streamViewType) {
+        const { streamViewType: filterStreamViewType } = filters;
+        const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
+        if (!streamViewTypes.includes(streamViewType)) {
+          continue;
         }
       }
 
-      if (filters.streamViewType) {
-        if (streamViewType) {
-          const { streamViewType: filterStreamViewType } = filters;
-          const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
-          if (!streamViewTypes.includes(streamViewType)) {
-            continue;
-          }
-        }
-      }
-
-      if (filters.partitionKey !== undefined) {
+      if (filters.partitionKey) {
         if (!partitionKeyName) continue;
         const partitionKey = keys[partitionKeyName];
         if (typeof partitionKey !== 'string' && typeof partitionKey !== 'number') continue;
-        const expected = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
-        if (!expected.includes(partitionKey)) continue;
+        const partitionKeysMap = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
+        if (typeof partitionKey === 'number') {
+          if (!partitionKeysMap.includes(partitionKey)) continue;
+        }
+        const partitionKeyFilters = partitionKeysMap.map((key) => String(key));
+        const resourceIdMatch = filterStringMatcher(String(partitionKey), partitionKeyFilters);
+        if (!resourceIdMatch) continue;
       }
 
-      if (filters.sortKey !== undefined) {
+      if (filters.sortKey) {
         if (!sortKeyName) continue;
         const sortKey = keys[sortKeyName];
         if (typeof sortKey !== 'string' && typeof sortKey !== 'number') continue;
-        const expected = Array.isArray(filters.sortKey) ? filters.sortKey : [filters.sortKey];
-        if (!expected.includes(sortKey)) continue;
+
+        const sortKeysMap = Array.isArray(filters.sortKey) ? filters.sortKey : [filters.sortKey];
+        if (typeof sortKey === 'number') {
+          if (!sortKeysMap.includes(sortKey)) continue;
+        }
+        const sortKeyFilters = sortKeysMap.map((key) => String(key));
+        const resourceIdMatch = filterStringMatcher(String(sortKey), sortKeyFilters);
+        if (!resourceIdMatch) continue;
       }
 
       if (filters.customFilter) {

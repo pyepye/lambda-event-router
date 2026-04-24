@@ -45,7 +45,7 @@ snsRouter.route({
 });
 
 function isHighPriority({ messageAttributes }: SNSFilterInput): boolean {
-  return messageAttributes.Priority?.Value === 'HIGH';
+  return messageAttributes.Priority === 'HIGH';
 }
 
 // Route with customFilter for complex logic

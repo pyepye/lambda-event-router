@@ -278,10 +278,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by logGroupPrefix', async () => {
+    test('matches route by logGroup wildcard', async () => {
       router.route(
         defineRoute({
-          filters: { logGroupPrefix: '/aws/lambda/' },
+          filters: { logGroup: '*lambda*' },
         }).handle(async () => {}),
       );
 
@@ -291,10 +291,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by logGroupPrefix array', async () => {
+    test('matches route by logGroup wilcard array', async () => {
       router.route(
         defineRoute({
-          filters: { logGroupPrefix: ['/aws/lambda/', '/aws/cognito/'] },
+          filters: { logGroup: ['*lambda*', '*cognito*'] },
         }).handle(async () => {}),
       );
 
@@ -304,88 +304,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when logGroupPrefix does not match', async () => {
+    test('does not match when logGroup wildcard does not match', async () => {
       router.route(
         defineRoute({
-          filters: { logGroupPrefix: '/aws/ecs/' },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by logGroupSuffix', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupSuffix: 'my-function' },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches route by logGroupSuffix array', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupSuffix: ['my-function', 'other-function'] },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeDefined();
-    });
-
-    test('does not match when logGroupSuffix does not match', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupSuffix: 'other-function' },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by logGroupIncludes', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupIncludes: 'lambda' },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches route by logGroupIncludes array', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupIncludes: ['lambda', 'cognito'] },
-        }).handle(async () => {}),
-      );
-
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(decodedData);
-
-      expect(result).toBeDefined();
-    });
-
-    test('does not match when logGroupIncludes does not match', async () => {
-      router.route(
-        defineRoute({
-          filters: { logGroupIncludes: 'ecs' },
+          filters: { logGroup: '*ecs*' },
         }).handle(async () => {}),
       );
 
@@ -623,12 +545,12 @@ suite('CloudWatchLogsRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { logGroupPrefix: '/aws/lambda/' },
+          filters: { logGroup: '/aws/lambda/*' },
         }).handle(lambdaHandler),
       );
       router.route(
         defineRoute({
-          filters: { logGroupPrefix: '/aws/ecs/' },
+          filters: { logGroup: '/aws/ecs/*' },
         }).handle(ecsHandler),
       );
 

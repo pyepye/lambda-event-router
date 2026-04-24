@@ -30,7 +30,7 @@ cloudWatchLogsRouter.route({
 // Log group prefix match - all Lambda function logs
 cloudWatchLogsRouter.route({
   filters: {
-    logGroupPrefix: '/aws/lambda/',
+    logGroup: '/aws/lambda/*',
     messageType: 'DATA_MESSAGE',
   },
   handler: handleLambdaLogs,
@@ -39,7 +39,7 @@ cloudWatchLogsRouter.route({
 // Log group suffix match - API Gateway logs
 cloudWatchLogsRouter.route({
   filters: {
-    logGroupSuffix: ['/access-logs', '/execution-logs'],
+    logGroup: ['*/access-logs', '*/execution-logs'],
   },
   handler: handleApiGatewayLogs,
 });
@@ -47,7 +47,7 @@ cloudWatchLogsRouter.route({
 // Log group substring match - ECS/Fargate logs
 cloudWatchLogsRouter.route({
   filters: {
-    logGroupIncludes: ['ecs', 'fargate'],
+    logGroup: ['*ecs*', '*fargate*'],
   },
   handler: handleEcsLogs,
 });
@@ -71,7 +71,7 @@ cloudWatchLogsRouter.route({
 // .dataMessage() is equivalent to .route() with messageTypes: ['DATA_MESSAGE']
 cloudWatchLogsRouter.dataMessage({
   filters: {
-    logGroupPrefix: '/aws/lambda/prod-',
+    logGroup: '/aws/lambda/prod-*',
   },
   handler: handleLambdaLogs,
 });
@@ -79,7 +79,7 @@ cloudWatchLogsRouter.dataMessage({
 // .controlMessage() is equivalent to .route() with messageTypes: ['CONTROL_MESSAGE']
 cloudWatchLogsRouter.controlMessage({
   filters: {
-    logGroupPrefix: '/aws/lambda/',
+    logGroup: '/aws/lambda/*',
   },
   handler: handleControlMessage,
 });

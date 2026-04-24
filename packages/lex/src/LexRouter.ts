@@ -1,7 +1,7 @@
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   LexDialogCodeHookRouteDefinition,
@@ -98,16 +98,12 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   }
 
   private async matchRoute(event: LexV2Event): Promise<LexRouteDefinition | undefined> {
-    const intentName = event.sessionState.intent.name;
-
     for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.intentName) {
-        const intentNames = Array.isArray(filters.intentName) ? filters.intentName : [filters.intentName];
-        if (!intentNames.includes(intentName)) {
-          continue;
-        }
+        const intentNameMatch = filterStringMatcher(event.sessionState.intent.name, filters.intentName);
+        if (!intentNameMatch) continue;
       }
 
       if (filters.invocationSource) {
@@ -119,10 +115,8 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
       }
 
       if (filters.botId) {
-        const botIds = Array.isArray(filters.botId) ? filters.botId : [filters.botId];
-        if (!botIds.includes(event.bot.id)) {
-          continue;
-        }
+        const botIdMatch = filterStringMatcher(event.bot.id, filters.botId);
+        if (!botIdMatch) continue;
       }
 
       if (filters.inputMode) {
@@ -134,7 +128,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
 
       if (filters.customFilter) {
         const match = await filters.customFilter({
-          intentName,
+          intentName: event.sessionState.intent.name,
           invocationSource: event.invocationSource,
           inputMode: event.inputMode,
           botId: event.bot.id,

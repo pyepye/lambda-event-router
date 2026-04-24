@@ -55,7 +55,7 @@ codeCommitRouter.route({
 codeCommitRouter.route({
   filters: {
     repositoryName: REPO_NAME,
-    branchPrefix: 'feature/',
+    branch: 'hotfix/*',
   },
   handler: processFeaturePush,
 });
@@ -64,7 +64,7 @@ codeCommitRouter.route({
 codeCommitRouter.route({
   filters: {
     repositoryName: REPO_NAME,
-    branchSuffix: '-hotfix',
+    branch: '*-hotfix',
   },
   handler: processMainPush,
 });
@@ -73,7 +73,7 @@ codeCommitRouter.route({
 codeCommitRouter.route({
   filters: {
     repositoryName: REPO_NAME,
-    branchIncludes: 'release',
+    branch: '*release*',
   },
   handler: processMainPush,
 });

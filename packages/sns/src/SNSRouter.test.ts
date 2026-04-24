@@ -210,10 +210,9 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
     });
@@ -225,12 +224,40 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
+    });
+
+    test('matches route by number messageAttribute value', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { count: 42 } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { count: 42 });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when messageAttribute value is a Buffer', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { data: 'some-value' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      const bufferValue = Buffer.from('some-value');
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { data: bufferValue });
+
+      expect(result).toBeUndefined();
     });
 
     test('does not match route when messageAttributes does not match', async ({ snsRecord }) => {
@@ -240,10 +267,9 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeUndefined();
     });
@@ -255,10 +281,9 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { otherKey: { Type: 'String', Value: 'some-value' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { otherKey: 'some-value' });
 
       expect(result).toBeUndefined();
     });
@@ -275,13 +300,16 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = {
-        eventType: { Type: 'String', Value: 'order.created' },
-        source: { Type: 'String', Value: 'checkout-service' },
-      };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(
+        record,
+        {},
+        {
+          eventType: 'order.created',
+          source: 'checkout-service',
+        },
+      );
 
       expect(result).toBeDefined();
     });
@@ -298,13 +326,16 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = {
-        eventType: { Type: 'String', Value: 'order.created' },
-        source: { Type: 'String', Value: 'inventory-service' },
-      };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(
+        record,
+        {},
+        {
+          eventType: 'order.created',
+          source: 'inventory-service',
+        },
+      );
 
       expect(result).toBeUndefined();
     });
@@ -376,12 +407,9 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({
-        Sns: { TopicArn: topicArn, Subject: 'Order Notification', MessageAttributes: rawAttributes },
-      });
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeDefined();
     });
@@ -398,12 +426,9 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({
-        Sns: { TopicArn: topicArn, Subject: 'Order Notification', MessageAttributes: rawAttributes },
-      });
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, rawAttributes);
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
 
       expect(result).toBeUndefined();
     });
@@ -455,15 +480,15 @@ suite('SNSRouter', () => {
         }).handle(async () => {}),
       );
 
-      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
-      const record = snsRecord({ Sns: { MessageAttributes: rawAttributes } });
+      const messageAttributes = { eventType: 'order.created' };
+      const record = snsRecord();
       const body = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(record, body, rawAttributes);
+      await router.matchRoute(record, body, messageAttributes);
 
       expect(customFilter).toHaveBeenCalledWith({
         body,
-        messageAttributes: rawAttributes,
+        messageAttributes,
         record,
       });
     });
@@ -943,7 +968,7 @@ suite('SNSRouter', () => {
   });
 
   suite('convertMessageAttributes', () => {
-    test('converts raw attributes to plain key-value pairs', () => {
+    test('converts String attributes to string values', () => {
       const raw = {
         eventType: { Type: 'String', Value: 'order.created' },
         priority: { Type: 'String', Value: 'high' },
@@ -958,6 +983,53 @@ suite('SNSRouter', () => {
         priority: 'high',
         source: 'checkout-service',
       });
+    });
+
+    test('converts Number attributes to numeric values', () => {
+      const raw = {
+        count: { Type: 'Number', Value: '42' },
+        ratio: { Type: 'Number', Value: '1.5' },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ count: 42, ratio: 1.5 });
+    });
+
+    test('converts Binary attributes to Buffer values', () => {
+      const raw = {
+        payload: { Type: 'Binary', Value: Buffer.from('hello').toString('base64') },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      const { payload } = result;
+      expect(Buffer.isBuffer(payload)).toBe(true);
+      expect(Buffer.isBuffer(payload) && payload.toString()).toBe('hello');
+    });
+
+    test('converts String.Array attributes to JSON-parsed arrays', () => {
+      const raw = {
+        tags: { Type: 'String.Array', Value: JSON.stringify(['alpha', 42, true, null]) },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ tags: ['alpha', 42, true, null] });
+    });
+
+    test('throws when String.Array attribute value is not a valid JSON array', () => {
+      const raw = {
+        tags: { Type: 'String.Array', Value: '{"not":"array"}' },
+      };
+
+      expect(() => {
+        // @ts-expect-error - testing private method directly
+        router.convertMessageAttributes(raw);
+      }).toThrow(/Invalid SNS String.Array attribute value/);
     });
 
     test('returns empty object for empty attributes', () => {

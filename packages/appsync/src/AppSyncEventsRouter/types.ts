@@ -1,5 +1,7 @@
 import type { Context } from 'aws-lambda';
 
+import type { FilterStringMatcher } from '@lambda-event-router/base';
+
 export type AppSyncEventsOperation = 'PUBLISH' | 'SUBSCRIBE';
 
 export interface AppSyncEventsIdentity {
@@ -59,7 +61,7 @@ export interface AppSyncEventsFilterInput {
 
 export interface AppSyncEventsFilters {
   operation?: AppSyncEventsOperation | AppSyncEventsOperation[];
-  channelNamespace?: string | string[];
+  channelNamespace?: FilterStringMatcher;
   customFilter?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 

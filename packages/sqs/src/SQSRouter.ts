@@ -2,12 +2,20 @@ import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } f
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   SQSFilters,
   SQSMessageAttributes,
+  SQSMessageAttributeValue,
   SQSRecordHandler,
   SQSRequest,
   SQSRouteDefinition,
@@ -217,25 +225,20 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       const { filters } = route;
 
       if (filters.eventSourceArn) {
-        const arns = Array.isArray(filters.eventSourceArn) ? filters.eventSourceArn : [filters.eventSourceArn];
-        if (!arns.includes(record.eventSourceARN)) {
-          continue;
-        }
+        const eventSourceArnMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.messageAttributes) {
         let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
-          const allowedValues = Array.isArray(allowed) ? allowed : [allowed];
-          const value = messageAttributes[key];
-          if (value === undefined || typeof value === 'object' || !allowedValues.includes(value)) {
+          const attr = messageAttributes[key];
+          if (attr === undefined || !this.matchMessageAttribute(attr, allowed)) {
             matched = false;
             break;
           }
         }
-        if (!matched) {
-          continue;
-        }
+        if (!matched) continue;
       }
 
       if (filters.customFilter) {
@@ -277,6 +280,19 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
 
     const allMiddleware = [...this.middleware, ...route.middleware];
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
+  }
+
+  private matchMessageAttribute(
+    attr: SQSMessageAttributeValue,
+    allowed: FilterStringMatcher | number | number[],
+  ): boolean {
+    if (typeof allowed === 'number') {
+      return attr === allowed;
+    }
+    if (Array.isArray(allowed)) {
+      return allowed.some((item) => this.matchMessageAttribute(attr, item));
+    }
+    return typeof attr === 'string' && filterStringMatcher(attr, allowed);
   }
 }
 

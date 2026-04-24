@@ -187,10 +187,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by senderDomain', async ({ sesRecord }) => {
+    test('matches route by sender wildcard', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senderDomain: 'example.com' },
+          filters: { sender: '*@example.com' },
         }).handle(async () => {}),
       );
 
@@ -201,10 +201,10 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by senderDomain array', async ({ sesRecord }) => {
+    test('matches route by sender wildcard array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senderDomain: ['example.com', 'test.com'] },
+          filters: { sender: ['*@example.com', '*@test.com'] },
         }).handle(async () => {}),
       );
 
@@ -215,10 +215,10 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when senderDomain do not match', async ({ sesRecord }) => {
+    test('does not match route when senderDomain wildcard do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { senderDomain: 'other.com' },
+          filters: { sender: '*@other.com' },
         }).handle(async () => {}),
       );
 
@@ -229,10 +229,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by recipientDomain', async ({ sesRecord }) => {
+    test('matches route by recipient wildcard', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomain: 'example.com' },
+          filters: { recipient: '*@example.com' },
         }).handle(async () => {}),
       );
 
@@ -243,10 +243,10 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by recipientDomain array', async ({ sesRecord }) => {
+    test('matches route by recipient wildcard array', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomain: ['example.com', 'test.com'] },
+          filters: { recipient: ['*@example.com', '*@test.com'] },
         }).handle(async () => {}),
       );
 
@@ -257,10 +257,10 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when recipientDomain do not match', async ({ sesRecord }) => {
+    test('does not match route when recipient wildcard do not match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomain: 'other.com' },
+          filters: { recipient: '*@other.com' },
         }).handle(async () => {}),
       );
 
@@ -271,10 +271,10 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when one of multiple recipient domains matches', async ({ sesRecord }) => {
+    test('matches when one of multiple recipient wildcard matches', async ({ sesRecord }) => {
       router.route(
         defineRoute({
-          filters: { recipientDomain: 'example.com' },
+          filters: { recipient: '*@example.com' },
         }).handle(async () => {}),
       );
 
@@ -537,12 +537,12 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when both senderDomain and recipientDomain match', async ({ sesRecord }) => {
+    test('matches when both sender wildcard and recipient wildcard match', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            senderDomain: 'example.com',
-            recipientDomain: 'example.com',
+            sender: '*@example.com',
+            recipient: '*@example.com',
           },
         }).handle(async () => {}),
       );
@@ -559,12 +559,12 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when senderDomain match but recipientDomain do not', async ({ sesRecord }) => {
+    test('does not match when sender wildcard match but recipient wildcard do not', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            senderDomain: 'example.com',
-            recipientDomain: 'other.com',
+            sender: '*@example.com',
+            recipient: '*@other.com',
           },
         }).handle(async () => {}),
       );
@@ -740,12 +740,12 @@ suite('SESRouter', () => {
 
       router.route(
         defineRoute({
-          filters: { senderDomain: 'internal.com' },
+          filters: { sender: '*@internal.com' },
         }).handle(internalHandler),
       );
       router.route(
         defineRoute({
-          filters: { senderDomain: 'external.com' },
+          filters: { sender: '*@external.com' },
         }).handle(externalHandler),
       );
 

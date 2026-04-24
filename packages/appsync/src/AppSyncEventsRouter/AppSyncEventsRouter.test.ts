@@ -210,7 +210,7 @@ suite('AppSyncEventsRouter', () => {
 
     test('matches channelNamespace by namespace name', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: 'default' }, handler });
+      router.route({ filters: { channelNamespace: '*default*' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -219,9 +219,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace with /namespace shorthand', async () => {
+    test('matches channelNamespace with /namespace wildcard', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '/default' }, handler });
+      router.route({ filters: { channelNamespace: '/default*' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -232,7 +232,7 @@ suite('AppSyncEventsRouter', () => {
 
     test('matches channelNamespace array', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: ['/default', '/fake'] }, handler });
+      router.route({ filters: { channelNamespace: ['/default*', '/fake*'] }, handler });
 
       const event = createAppSyncEventsEvent();
 

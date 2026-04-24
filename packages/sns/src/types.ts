@@ -2,10 +2,12 @@ import type { SNSMessageAttributes as AWSSNSMessageAttributes, Context, SNSEvent
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type SNSRawMessageAttributes = AWSSNSMessageAttributes;
-export type SNSMessageAttributes = Record<string, string>;
+export type SNSStringArrayItem = string | number | boolean | null;
+export type SNSMessageAttributeValue = string | number | Buffer | SNSStringArrayItem[];
+export type SNSMessageAttributes = Record<string, SNSMessageAttributeValue>;
 
 export interface SNSRequest<TBody = unknown, TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes> {
   body: TBody;
@@ -28,14 +30,14 @@ export type SNSRecordHandler<
 
 export interface SNSFilterInput {
   body: unknown;
-  messageAttributes: SNSRawMessageAttributes;
+  messageAttributes: SNSMessageAttributes;
   record: SNSEventRecord;
 }
 
 export interface SNSFilters {
-  topicArn?: string | string[];
-  subject?: string | string[];
-  messageAttributes?: Record<string, string | string[]>;
+  topicArn?: FilterStringMatcher;
+  subject?: FilterStringMatcher;
+  messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
   customFilter?: (input: SNSFilterInput) => boolean | Promise<boolean>;
 }
 

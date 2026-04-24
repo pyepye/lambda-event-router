@@ -2,7 +2,7 @@ import type { SQSRecord as AWSSQSRecord, Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type SQSMessageAttributeValue = string | number | Buffer;
 export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;
@@ -33,8 +33,8 @@ export interface SQSFilterInput {
 }
 
 export interface SQSFilters {
-  eventSourceArn?: AWSSQSRecord['eventSourceARN'] | AWSSQSRecord['eventSourceARN'][];
-  messageAttributes?: Record<string, string | number | (string | number)[]>;
+  eventSourceArn?: FilterStringMatcher;
+  messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
   customFilter?: (input: SQSFilterInput) => boolean | Promise<boolean>;
 }
 

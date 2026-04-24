@@ -1,7 +1,7 @@
 import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   SESFilters,
@@ -27,11 +27,6 @@ export function defineRoute(config: RouteInput): RouteBuilder {
       return { ...config, handler };
     },
   };
-}
-
-function extractDomain(email: string): string {
-  const [, domain = ''] = email.split('@');
-  return domain;
 }
 
 export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
@@ -69,32 +64,14 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
       const { filters } = route;
 
       if (filters.recipient) {
-        const recipients = Array.isArray(filters.recipient) ? filters.recipient : [filters.recipient];
-        const hasMatchingRecipient = receipt.recipients.some((recipient) => recipients?.includes(recipient));
-        if (!hasMatchingRecipient) continue;
+        const { recipient: recipientFilter } = filters; // Needed here due to TS having different scope for  separate function closure
+        const recipientMatch = receipt.recipients.some((recipient) => filterStringMatcher(recipient, recipientFilter));
+        if (!recipientMatch) continue;
       }
 
       if (filters.sender) {
-        const senders = Array.isArray(filters.sender) ? filters.sender : [filters.sender];
-        if (!senders.includes(mail.source)) {
-          continue;
-        }
-      }
-
-      if (filters.senderDomain) {
-        const senderDomains = Array.isArray(filters.senderDomain) ? filters.senderDomain : [filters.senderDomain];
-        const senderDomain = extractDomain(mail.source);
-        if (!senderDomains.includes(senderDomain)) continue;
-      }
-
-      if (filters.recipientDomain) {
-        const { recipientDomain: filterRecipientDomain } = filters;
-        const recipientDomains = Array.isArray(filterRecipientDomain) ? filterRecipientDomain : [filterRecipientDomain];
-        const hasMatchingDomain = receipt.recipients.some((recipient) => {
-          const domain = extractDomain(recipient);
-          return recipientDomains.includes(domain);
-        });
-        if (!hasMatchingDomain) continue;
+        const senderMatch = filterStringMatcher(mail.source, filters.sender);
+        if (!senderMatch) continue;
       }
 
       if (filters.spamVerdict) {

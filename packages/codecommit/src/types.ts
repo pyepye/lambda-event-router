@@ -1,6 +1,6 @@
 import type { Context } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // AWS CodeCommit Lambda trigger event types
 // No @types/aws-lambda types exist for CodeCommit
@@ -57,12 +57,9 @@ export interface CodeCommitFilterInput {
 }
 
 export interface CodeCommitFilters {
-  eventSourceArn?: string | string[];
-  repositoryName?: string | string[];
-  branch?: string | string[];
-  branchPrefix?: string | string[];
-  branchSuffix?: string | string[];
-  branchIncludes?: string | string[];
+  eventSourceArn?: FilterStringMatcher;
+  repositoryName?: FilterStringMatcher;
+  branch?: FilterStringMatcher;
   customFilter?: (input: CodeCommitFilterInput) => boolean | Promise<boolean>;
 }
 

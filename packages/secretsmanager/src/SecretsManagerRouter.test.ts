@@ -212,101 +212,9 @@ suite('SecretsManagerRouter', () => {
         const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
-    });
 
-    suite('secretPrefixes', () => {
-      test('matches when secretId starts with prefix', async () => {
-        router.route(
-          defineRoute({ filters: { secretPrefix: 'arn:aws:secretsmanager:us-east-1' } }).handle(async () => {}),
-        );
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeDefined();
-      });
-
-      test('does not match when secretId does not start with prefix', async () => {
-        router.route(
-          defineRoute({ filters: { secretPrefix: 'arn:aws:secretsmanager:eu-west-1' } }).handle(async () => {}),
-        );
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeUndefined();
-      });
-
-      test('matches when secretId starts with one of multiple prefixes', async () => {
-        router.route(
-          defineRoute({
-            filters: { secretPrefix: ['arn:aws:secretsmanager:eu-west-1', 'arn:aws:secretsmanager:us-east-1'] },
-          }).handle(async () => {}),
-        );
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeDefined();
-      });
-    });
-
-    suite('secretSuffixes', () => {
-      test('matches when secretId ends with suffix', async () => {
-        router.route(defineRoute({ filters: { secretSuffix: 'my-secret' } }).handle(async () => {}));
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeDefined();
-      });
-
-      test('does not match when secretId does not end with suffix', async () => {
-        router.route(defineRoute({ filters: { secretSuffix: 'other-secret' } }).handle(async () => {}));
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeUndefined();
-      });
-
-      test('matches when secretId ends with one of multiple suffixes', async () => {
-        router.route(defineRoute({ filters: { secretSuffix: ['other-secret', 'my-secret'] } }).handle(async () => {}));
-
-        const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
-          clientRequestToken: 'token',
-          step: 'createSecret',
-        };
-        // @ts-expect-error - testing private method directly
-        const result = await router.matchRoute(request);
-        expect(result).toBeDefined();
-      });
-    });
-
-    suite('secretIncludes', () => {
       test('matches when secretId contains the string', async () => {
-        router.route(defineRoute({ filters: { secretIncludes: '123456789012' } }).handle(async () => {}));
+        router.route(defineRoute({ filters: { secretId: '*123456789012*' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
@@ -319,7 +227,7 @@ suite('SecretsManagerRouter', () => {
       });
 
       test('does not match when secretId does not contain the string', async () => {
-        router.route(defineRoute({ filters: { secretIncludes: '999999999999' } }).handle(async () => {}));
+        router.route(defineRoute({ filters: { secretId: '*999999999999*' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
@@ -331,9 +239,9 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when secretId contains one of multiple strings', async () => {
+      test('matches when secretId wildcard contains one of multiple strings', async () => {
         router.route(
-          defineRoute({ filters: { secretIncludes: ['999999999999', '123456789012'] } }).handle(async () => {}),
+          defineRoute({ filters: { secretId: ['*999999999999*', '*123456789012*'] } }).handle(async () => {}),
         );
 
         const request: SecretsManagerFilterInput = {
@@ -503,11 +411,11 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when prefix and customFilter both pass', async () => {
+      test('matches when secredId and customFilter both pass', async () => {
         router.route(
           defineRoute({
             filters: {
-              secretPrefix: 'arn:aws:secretsmanager:us-east-1',
+              secretId: 'arn:aws:secretsmanager:us-east-1*',
               customFilter: () => true,
             },
           }).handle(async () => {}),
@@ -523,11 +431,11 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeDefined();
       });
 
-      test('does not match when prefix matches but customFilter fails', async () => {
+      test('does not match when secretId matches but customFilter fails', async () => {
         router.route(
           defineRoute({
             filters: {
-              secretPrefix: 'arn:aws:secretsmanager:us-east-1',
+              secretId: 'arn:aws:secretsmanager:us-east-1*',
               customFilter: () => false,
             },
           }).handle(async () => {}),

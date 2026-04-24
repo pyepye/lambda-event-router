@@ -1,7 +1,7 @@
 import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { isS3BatchResponse } from './batchResponse.js';
@@ -488,47 +488,21 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     for (const route of this.routes) {
       const { filters } = route;
 
-      // Match event names with wildcard support
       if (filters.eventName) {
-        const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
-        if (!this.matchEventName(eventName, eventNames)) {
-          continue;
-        }
+        const eventNameMatch = filterStringMatcher(eventName, filters.eventName);
+        if (!eventNameMatch) continue;
       }
 
-      // Match bucket names
       if (filters.bucket) {
-        const buckets = Array.isArray(filters.bucket) ? filters.bucket : [filters.bucket];
-        if (!buckets.includes(bucket)) {
-          continue;
-        }
+        const bucketMatch = filterStringMatcher(bucket, filters.bucket);
+        if (!bucketMatch) continue;
       }
 
-      // Match key prefixes (OR - key starts with any of these)
-      if (filters.prefix) {
-        const prefixes = Array.isArray(filters.prefix) ? filters.prefix : [filters.prefix];
-        if (!prefixes.some((prefix) => key.startsWith(prefix))) {
-          continue;
-        }
+      if (filters.key) {
+        const keyMatch = filterStringMatcher(key, filters.key);
+        if (!keyMatch) continue;
       }
 
-      // Match key suffixes (OR - key ends with any of these)
-      if (filters.suffix) {
-        const suffixes = Array.isArray(filters.suffix) ? filters.suffix : [filters.suffix];
-        if (!suffixes.some((suffix) => key.endsWith(suffix))) {
-          continue;
-        }
-      }
-
-      // Match key includes (OR - key contains any of these)
-      if (filters.includes) {
-        const includes = Array.isArray(filters.includes) ? filters.includes : [filters.includes];
-        if (!includes.some((substring) => key.includes(substring))) {
-          continue;
-        }
-      }
-
-      // Custom filter
       if (filters.customFilter) {
         const input: S3FilterInput = { bucket, key, eventName, record };
         const match = await filters.customFilter(input);

@@ -2,7 +2,7 @@ import type { Context, KinesisStreamRecord } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export interface KinesisFilterInput {
   data: unknown;
@@ -11,8 +11,8 @@ export interface KinesisFilterInput {
 }
 
 export interface KinesisFilters {
-  eventSourceArn?: KinesisStreamRecord['eventSourceARN'] | KinesisStreamRecord['eventSourceARN'][];
-  partitionKey?: string | string[];
+  eventSourceArn?: FilterStringMatcher;
+  partitionKey?: FilterStringMatcher;
   customFilter?: (input: KinesisFilterInput) => boolean | Promise<boolean>;
 }
 

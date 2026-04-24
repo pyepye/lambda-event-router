@@ -1,6 +1,6 @@
 import type { Context, S3EventRecord } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // =============================================================================
 // Filter Types
@@ -16,11 +16,9 @@ export interface S3FilterInput {
 
 // Filter options for S3 routes
 export interface S3Filters {
-  eventName?: S3EventRecord['eventName'] | S3EventRecord['eventName'][];
-  bucket?: S3EventRecord['s3']['bucket']['name'] | S3EventRecord['s3']['bucket']['name'][];
-  prefix?: string | string[];
-  suffix?: string | string[];
-  includes?: string | string[];
+  eventName?: FilterStringMatcher;
+  bucket?: FilterStringMatcher;
+  key?: FilterStringMatcher;
   customFilter?: (input: S3FilterInput) => boolean | Promise<boolean>;
 }
 

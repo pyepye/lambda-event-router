@@ -2,7 +2,7 @@ import type { Context, FirehoseRecordMetadata, FirehoseTransformationEventRecord
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 import type { FirehoseResponseResult } from './response.js';
 
@@ -15,8 +15,8 @@ export interface FirehoseFilterInput {
 }
 
 export interface FirehoseFilters {
-  deliveryStreamArn?: string | string[];
-  sourceKinesisStreamArn?: string | string[];
+  deliveryStreamArn?: FilterStringMatcher;
+  sourceKinesisStreamArn?: FilterStringMatcher;
   customFilter?: (input: FirehoseFilterInput) => boolean | Promise<boolean>;
 }
 

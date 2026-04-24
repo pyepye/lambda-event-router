@@ -2,7 +2,7 @@ import type { CloudWatchLogsDecodedData } from 'aws-lambda';
 
 import { defineRoute } from '@lambda-event-router/cloudwatch';
 
-// Handle logs from specific Lambda functions using logGroups + logGroupPrefixes
+// Handle logs from specific Lambda functions using logGroups
 export const lambdaErrorLogsRoute = defineRoute({
   filters: {
     logGroup: '/aws/lambda/my-api-handler',
@@ -20,7 +20,7 @@ export const lambdaErrorLogsRoute = defineRoute({
 // Handle logs from any Lambda function using prefix matching
 export const allLambdaLogsRoute = defineRoute({
   filters: {
-    logGroupPrefix: '/aws/lambda/',
+    logGroup: '/aws/lambda/*',
     messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logEvents }) => {
@@ -40,7 +40,7 @@ export const alertSubscriptionRoute = defineRoute({
 // Handle logs from ECS services using substring matching
 export const ecsServiceLogsRoute = defineRoute({
   filters: {
-    logGroupIncludes: ['ecs', 'fargate'],
+    logGroup: ['*ecs*', '*fargate*'],
     messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logEvents }) => {
@@ -50,7 +50,7 @@ export const ecsServiceLogsRoute = defineRoute({
 // Handle logs from API Gateway using suffix matching
 export const apiGatewayLogsRoute = defineRoute({
   filters: {
-    logGroupSuffix: ['/access-logs', '/execution-logs'],
+    logGroup: ['*/access-logs', '*/execution-logs'],
   },
 }).handle(async ({ logGroup, logStream, logEvents }) => {
   console.log(`API Gateway logs from ${logGroup}`);

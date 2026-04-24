@@ -1,6 +1,128 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
-import { isObject, safeJsonParse, validateSchema, validateSchemaResult } from './data.js';
+import { filterStringMatcher, isObject, safeJsonParse, validateSchema, validateSchemaResult } from './data.js';
+
+suite('filterStringMatcher', () => {
+  suite('plain string matcher', () => {
+    test('returns true when matcher equals the test string', () => {
+      expect(filterStringMatcher('user.created', 'user.created')).toBe(true);
+    });
+
+    test('returns false when matcher does not equal the test string', () => {
+      expect(filterStringMatcher('user.created', 'user.updated')).toBe(false);
+    });
+
+    test('returns false when matcher is a partial match without wildcard', () => {
+      expect(filterStringMatcher('user.created', 'user')).toBe(false);
+      expect(filterStringMatcher('user.created', 'created')).toBe(false);
+    });
+
+    test('matches empty string against empty matcher', () => {
+      expect(filterStringMatcher('', '')).toBe(true);
+    });
+
+    test('returns false for empty matcher against non-empty string', () => {
+      expect(filterStringMatcher('user', '')).toBe(false);
+    });
+
+    test('treats regex special characters as literals', () => {
+      expect(filterStringMatcher('a.b', 'a.b')).toBe(true);
+      expect(filterStringMatcher('axb', 'a.b')).toBe(false);
+      expect(filterStringMatcher('price+tax', 'price+tax')).toBe(true);
+      expect(filterStringMatcher('price', 'price+tax')).toBe(false);
+      expect(filterStringMatcher('group(1)', 'group(1)')).toBe(true);
+      expect(filterStringMatcher('a|b', 'a|b')).toBe(true);
+      expect(filterStringMatcher('a', 'a|b')).toBe(false);
+      expect(filterStringMatcher('path\\to', 'path\\to')).toBe(true);
+    });
+  });
+
+  suite('wildcard string matcher', () => {
+    test('matches any suffix when wildcard is at the end', () => {
+      expect(filterStringMatcher('user.created', 'user.*')).toBe(true);
+      expect(filterStringMatcher('user.updated', 'user.*')).toBe(true);
+      expect(filterStringMatcher('order.created', 'user.*')).toBe(false);
+    });
+
+    test('matches any prefix when wildcard is at the start', () => {
+      expect(filterStringMatcher('user.created', '*.created')).toBe(true);
+      expect(filterStringMatcher('order.created', '*.created')).toBe(true);
+      expect(filterStringMatcher('user.updated', '*.created')).toBe(false);
+    });
+
+    test('matches middle segment with wildcard in the middle', () => {
+      expect(filterStringMatcher('user.123.created', 'user.*.created')).toBe(true);
+      expect(filterStringMatcher('user..created', 'user.*.created')).toBe(true);
+      expect(filterStringMatcher('user.created', 'user.*.created')).toBe(false);
+    });
+
+    test('matches any string with a single wildcard', () => {
+      expect(filterStringMatcher('anything', '*')).toBe(true);
+      expect(filterStringMatcher('', '*')).toBe(true);
+    });
+
+    test('supports multiple wildcards', () => {
+      expect(filterStringMatcher('user.123.created', '*.*.*')).toBe(true);
+      expect(filterStringMatcher('user.created', '*.*.*')).toBe(false);
+    });
+
+    test('is anchored to the full string', () => {
+      expect(filterStringMatcher('prefix-user.created-suffix', 'user.*')).toBe(false);
+    });
+  });
+
+  suite('regex matcher', () => {
+    test('returns true when the regex matches', () => {
+      expect(filterStringMatcher('user.created', /^user\./)).toBe(true);
+    });
+
+    test('returns false when the regex does not match', () => {
+      expect(filterStringMatcher('order.created', /^user\./)).toBe(false);
+    });
+
+    test('matches unanchored patterns anywhere in the string', () => {
+      expect(filterStringMatcher('prefix-user-suffix', /user/)).toBe(true);
+    });
+
+    test('honours regex flags', () => {
+      expect(filterStringMatcher('USER.CREATED', /^user\./i)).toBe(true);
+      expect(filterStringMatcher('USER.CREATED', /^user\./)).toBe(false);
+    });
+  });
+
+  suite('array of matchers', () => {
+    test('returns true when any string in the array matches', () => {
+      expect(filterStringMatcher('user.created', ['order.created', 'user.created'])).toBe(true);
+    });
+
+    test('returns false when no string in the array matches', () => {
+      expect(filterStringMatcher('user.created', ['order.created', 'user.updated'])).toBe(false);
+    });
+
+    test('returns true when any regex in the array matches', () => {
+      expect(filterStringMatcher('user.created', [/^order\./, /^user\./])).toBe(true);
+    });
+
+    test('returns false when no regex in the array matches', () => {
+      expect(filterStringMatcher('user.created', [/^order\./, /^account\./])).toBe(false);
+    });
+
+    test('supports arrays of wildcard strings', () => {
+      expect(filterStringMatcher('user.created', ['order.*', 'user.*'])).toBe(true);
+      expect(filterStringMatcher('account.created', ['order.*', 'user.*'])).toBe(false);
+    });
+
+    test('supports mixed arrays of strings, wildcards, and regexes', () => {
+      expect(filterStringMatcher('user.created', ['order.created', /^user\./])).toBe(true);
+      expect(filterStringMatcher('user.created', ['order.*', /^account\./])).toBe(false);
+      expect(filterStringMatcher('account.created', ['account.created', /^user\./])).toBe(true);
+    });
+
+    test('returns false for an empty array', () => {
+      expect(filterStringMatcher('user.created', [])).toBe(false);
+    });
+  });
+});
 
 suite('isObject', () => {
   test('returns true for plain objects', () => {

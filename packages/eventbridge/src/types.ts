@@ -8,7 +8,7 @@ import type {
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // =============================================================================
 // Known AWS Event Detail Types
@@ -97,11 +97,11 @@ export interface EventBridgeFilterInput {
 }
 
 export interface EventBridgeFilters {
-  source?: string | string[];
-  detailType?: string | string[];
-  account?: string | string[];
-  region?: string | string[];
-  resource?: string | string[];
+  source?: FilterStringMatcher;
+  detailType?: FilterStringMatcher;
+  account?: FilterStringMatcher;
+  region?: FilterStringMatcher;
+  resource?: FilterStringMatcher;
   customFilter?: (input: EventBridgeFilterInput) => boolean | Promise<boolean>;
 }
 

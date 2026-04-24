@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   RabbitMQEvent,
@@ -97,25 +103,18 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
       const { filters } = route;
 
       if (filters.eventSourceArn) {
-        const { eventSourceArn: filterArn } = filters;
-        const eventSourceArns = Array.isArray(filterArn) ? filterArn : [filterArn];
-        if (!eventSourceArns.includes(event.eventSourceArn)) {
-          continue;
-        }
+        const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.queue) {
-        const queues = Array.isArray(filters.queue) ? filters.queue : [filters.queue];
-        if (!queues.includes(queueName)) {
-          continue;
-        }
+        const queueMatch = filterStringMatcher(queueName, filters.queue);
+        if (!queueMatch) continue;
       }
 
       if (filters.contentType) {
-        const contentTypes = Array.isArray(filters.contentType) ? filters.contentType : [filters.contentType];
-        if (!contentTypes.includes(message.basicProperties.contentType)) {
-          continue;
-        }
+        const contentTypeMatch = filterStringMatcher(message.basicProperties.contentType, filters.contentType);
+        if (!contentTypeMatch) continue;
       }
 
       if (filters.customFilter) {

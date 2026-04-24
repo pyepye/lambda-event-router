@@ -34,8 +34,7 @@ const s3Router = createS3Router();
 s3Router.objectCreated({
   filters: {
     bucket: 'my-uploads-bucket',
-    prefix: 'uploads/',
-    suffix: '.json',
+    key: ['uploads/*', '*.json'],
   },
   handler: objectCreated,
 });
@@ -44,8 +43,7 @@ s3Router.objectCreated({
 s3Router.objectCreatedPut({
   filters: {
     bucket: 'my-images-bucket',
-    prefix: ['images/', 'photos/'],
-    suffix: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+    key: ['images/*', 'photos/*', '*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp'],
   },
   handler: objectCreatedPut,
 });
@@ -70,7 +68,7 @@ s3Router.objectCreatedCompleteMultipartUpload({
 
 // Files containing 'thumbnail' or 'thumb' in the key
 s3Router.objectCreatedPut({
-  filters: { bucket: 'my-images-bucket', includes: ['thumbnail', 'thumb'] },
+  filters: { bucket: 'my-images-bucket', key: ['*thumbnail*', '*thumb*'] },
   handler: objectCreatedThumbnail,
 });
 

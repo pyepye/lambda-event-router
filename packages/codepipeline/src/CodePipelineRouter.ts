@@ -9,7 +9,13 @@ import type { CodePipelineEvent, Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   CodePipelineFilterInput,
@@ -157,10 +163,8 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
       const { filters } = route;
 
       if (filters.functionName) {
-        const functionNames = Array.isArray(filters.functionName) ? filters.functionName : [filters.functionName];
-        if (!functionNames.includes(input.functionName)) {
-          continue;
-        }
+        const functionNameMatch = filterStringMatcher(input.functionName, filters.functionName);
+        if (!functionNameMatch) continue;
       }
 
       if (filters.hasInputArtifacts !== undefined && filters.hasInputArtifacts !== input.hasInputArtifacts) {

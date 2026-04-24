@@ -1,6 +1,6 @@
 import type { Context, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type SESReceiptStatusValue = 'PASS' | 'FAIL' | 'GRAY' | 'PROCESSING_FAILED' | 'DISABLED';
 
@@ -26,10 +26,8 @@ export interface SESFilterInput {
 }
 
 export interface SESFilters {
-  recipient?: string | string[];
-  sender?: string | string[];
-  senderDomain?: string | string[];
-  recipientDomain?: string | string[];
+  recipient?: FilterStringMatcher;
+  sender?: FilterStringMatcher;
   spamVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
   virusVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];
   spfVerdict?: SESReceiptStatusValue | SESReceiptStatusValue[];

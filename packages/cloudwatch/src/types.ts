@@ -1,6 +1,6 @@
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, Context } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type CloudWatchLogsMessageType = 'DATA_MESSAGE' | 'CONTROL_MESSAGE';
 
@@ -10,11 +10,8 @@ export interface CloudWatchLogsRequest extends CloudWatchLogsDecodedData {
 }
 
 export interface CloudWatchLogsFilters {
-  logGroup?: string | string[];
-  logGroupPrefix?: string | string[];
-  logGroupSuffix?: string | string[];
-  logGroupIncludes?: string | string[];
-  subscriptionFilter?: string | string[];
+  logGroup?: FilterStringMatcher;
+  subscriptionFilter?: FilterStringMatcher;
   messageType?: CloudWatchLogsMessageType | CloudWatchLogsMessageType[];
   customFilter?: (input: CloudWatchLogsDecodedData) => boolean | Promise<boolean>;
 }

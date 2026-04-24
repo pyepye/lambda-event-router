@@ -27,8 +27,8 @@ export const partnerEmailRoute = defineRoute({
 // Route matching emails by domain
 export const internalEmailRoute = defineRoute({
   filters: {
-    senderDomain: 'internal.example.com',
-    recipientDomain: 'example.com',
+    sender: '*@internal.example.com',
+    recipient: '*@example.com',
     dmarcVerdict: 'PASS',
   },
 }).handle(async (request) => {

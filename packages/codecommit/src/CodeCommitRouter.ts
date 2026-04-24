@@ -1,7 +1,7 @@
 import type { Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   CodeCommitEvent,
@@ -123,60 +123,26 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
       if (effectiveReferences.length === 0) return undefined;
     }
 
-    // eventSourceArns filter
     const { eventSourceArn } = filters;
     if (eventSourceArn) {
-      const eventSourceArns = Array.isArray(eventSourceArn) ? eventSourceArn : [eventSourceArn];
-      if (!eventSourceArns.includes(record.eventSourceARN)) {
-        return undefined;
-      }
+      const eventSourceArnMatch = filterStringMatcher(record.eventSourceARN, eventSourceArn);
+      if (!eventSourceArnMatch) return undefined;
     }
 
     const { repositoryName } = filters;
     if (repositoryName) {
-      const repositoryNames = Array.isArray(repositoryName) ? repositoryName : [repositoryName];
       const sourceRepositoryName = extractRepositoryNameFromArn(record.eventSourceARN);
-      if (!repositoryNames.includes(sourceRepositoryName)) return undefined;
+      const repositoryNameMatch = filterStringMatcher(sourceRepositoryName, repositoryName);
+      if (!repositoryNameMatch) return undefined;
     }
 
     const { branch } = filters;
     if (branch) {
-      const branches = Array.isArray(branch) ? branch : [branch];
       const hasMatchingBranch = effectiveReferences.some((ref) => {
         const branchName = extractBranchNameFromRef(ref.ref);
-        return branches.includes(branchName);
+        return filterStringMatcher(branchName, branch);
       });
       if (!hasMatchingBranch) return undefined;
-    }
-
-    const { branchPrefix } = filters;
-    if (branchPrefix) {
-      const branchPrefixes = Array.isArray(branchPrefix) ? branchPrefix : [branchPrefix];
-      const hasMatchingPrefix = effectiveReferences.some((ref) => {
-        const branchName = extractBranchNameFromRef(ref.ref);
-        return branchPrefixes.some((prefix) => branchName.startsWith(prefix));
-      });
-      if (!hasMatchingPrefix) return undefined;
-    }
-
-    const { branchSuffix } = filters;
-    if (branchSuffix) {
-      const branchSuffixes = Array.isArray(branchSuffix) ? branchSuffix : [branchSuffix];
-      const hasMatchingSuffix = effectiveReferences.some((ref) => {
-        const branchName = extractBranchNameFromRef(ref.ref);
-        return branchSuffixes.some((suffix) => branchName.endsWith(suffix));
-      });
-      if (!hasMatchingSuffix) return undefined;
-    }
-
-    const { branchIncludes: branchIncludesFilter } = filters;
-    if (branchIncludesFilter) {
-      const branchIncludes = Array.isArray(branchIncludesFilter) ? branchIncludesFilter : [branchIncludesFilter];
-      const hasMatchingSubstring = effectiveReferences.some((ref) => {
-        const branchName = extractBranchNameFromRef(ref.ref);
-        return branchIncludes.some((substring) => branchName.includes(substring));
-      });
-      if (!hasMatchingSubstring) return undefined;
     }
 
     // customFilter

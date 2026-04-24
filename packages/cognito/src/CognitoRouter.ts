@@ -16,7 +16,7 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type {
   CognitoFilters,
@@ -57,7 +57,6 @@ import type {
   RouteBuilder,
   RouteInput,
   TypedRouteDefinition,
-  UserAttributeFilter,
   UserAttributes,
   // UserMigration
   UserMigrationRouteDefinition,
@@ -589,31 +588,31 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
       }
 
       if (filters.userPoolId) {
-        const userPoolIds = Array.isArray(filters.userPoolId) ? filters.userPoolId : [filters.userPoolId];
-        if (!userPoolIds.includes(event.userPoolId)) {
-          continue;
-        }
+        const userPoolIdMatch = filterStringMatcher(event.userPoolId, filters.userPoolId);
+        if (!userPoolIdMatch) continue;
       }
 
       if (filters.clientId) {
-        const clientIds = Array.isArray(filters.clientId) ? filters.clientId : [filters.clientId];
-        if (!clientIds.includes(event.callerContext.clientId)) {
-          continue;
-        }
+        const clientIdMatch = filterStringMatcher(event.callerContext.clientId, filters.clientId);
+        if (!clientIdMatch) continue;
       }
 
-      if (filters.userAttributes && userAttributes) {
-        let allAttributesMatch = true;
-        for (const [key, filter] of Object.entries(filters.userAttributes)) {
-          const value = userAttributes[key];
-          if (!this.matchUserAttribute(value, filter)) {
-            allAttributesMatch = false;
+      if (filters.userAttributes) {
+        if (!userAttributes) continue;
+        let matched = true;
+        for (const [key, allowed] of Object.entries(filters.userAttributes)) {
+          const userAttribute = userAttributes[key];
+          if (!userAttribute) {
+            matched = false;
+            break;
+          }
+          const attributeMatch = filterStringMatcher(userAttribute, allowed);
+          if (!attributeMatch) {
+            matched = false;
             break;
           }
         }
-        if (!allAttributesMatch) {
-          continue;
-        }
+        if (!matched) continue;
       }
 
       if (filters.customFilter) {
@@ -633,16 +632,6 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     }
 
     return undefined;
-  }
-
-  private matchUserAttribute(value: string | undefined, filter: UserAttributeFilter): boolean {
-    if (value === undefined) return false;
-    if (typeof filter === 'string') return value === filter;
-    if (filter instanceof RegExp) return filter.test(value);
-    /* v8 ignore next -- @preserve - Always true after string/RegExp checks. Branch unreachable */
-    if (typeof filter === 'function') return filter(value);
-    /* v8 ignore next -- @preserve - Guard is for TS. All UserAttributeFilter variants handled above */
-    return false;
   }
 }
 

@@ -3,7 +3,7 @@ import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lamb
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export interface CodePipelineRequest<TUserParameters = unknown> {
   jobId: string;
@@ -38,10 +38,10 @@ export interface CodePipelineFilterInput {
 }
 
 export interface CodePipelineFilters {
-  functionName?: string | string[];
+  functionName?: FilterStringMatcher;
   hasInputArtifacts?: boolean;
   hasContinuationToken?: boolean;
-  userParametersContains?: string;
+  userParametersContains?: string; // TODO Need to correct how this works? Make it the same as messageAttributes>?
   customFilter?: (input: CodePipelineFilterInput) => boolean | Promise<boolean>;
 }
 

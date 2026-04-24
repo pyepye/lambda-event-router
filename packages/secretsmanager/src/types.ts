@@ -1,6 +1,6 @@
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // Change case for properties on SecretsManagerRotationEvent
 export interface SecretsManagerRequest {
@@ -24,10 +24,7 @@ export interface SecretsManagerFilterInput {
 }
 
 export interface SecretsManagerFilters {
-  secretId?: string | string[];
-  secretPrefix?: string | string[];
-  secretSuffix?: string | string[];
-  secretIncludes?: string | string[];
+  secretId?: FilterStringMatcher;
   step?: SecretsManagerRotationEventStep | SecretsManagerRotationEventStep[];
   customFilter?: (input: SecretsManagerFilterInput) => boolean | Promise<boolean>;
 }

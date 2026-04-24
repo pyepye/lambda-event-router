@@ -9,7 +9,7 @@ import type {
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type KafkaRecord = MSKRecord | SelfManagedKafkaRecord;
 
@@ -24,9 +24,9 @@ export interface KafkaFilterInput {
 }
 
 export interface KafkaFilters {
-  topic?: string | string[];
-  eventSourceArn?: string | string[];
-  bootstrapServer?: string | string[];
+  topic?: FilterStringMatcher;
+  eventSourceArn?: FilterStringMatcher;
+  bootstrapServer?: FilterStringMatcher;
   customFilter?: (input: KafkaFilterInput) => boolean | Promise<boolean>;
 }
 

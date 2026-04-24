@@ -399,118 +399,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by branchPrefix', async ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branch wildcard', async ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchPrefix: 'feature/' },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/feature/new-thing' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches route by branchPrefix array', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchPrefix: ['main', 'feature/'] },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/feature/new-thing' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeDefined();
-    });
-
-    test('does not match route when branchPrefix does not match', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchPrefix: 'feature/' },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/bugfix/thing' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by branchSuffix', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchSuffix: '-release' },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/v2-release' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches route by branchSuffix array', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchSuffix: ['-release', '-hotfix'] },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/v2-release' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeDefined();
-    });
-
-    test('does not match route when branchSuffix does not match', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchSuffix: '-release' },
-        }).handle(async () => {}),
-      );
-
-      const record = codeCommitRecord({
-        codecommit: { references: [codeCommitReference({ ref: 'refs/heads/main' })] },
-      });
-      // @ts-expect-error - testing private method directly
-      const route = router.routes[0];
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(route, record);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches route by branchIncludes', async ({ codeCommitRecord, codeCommitReference }) => {
-      router.route(
-        defineRoute({
-          filters: { branchIncludes: 'deploy' },
+          filters: { branch: '*deploy*' },
         }).handle(async () => {}),
       );
 
@@ -525,10 +417,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by branchIncludes array', async ({ codeCommitRecord, codeCommitReference }) => {
+    test('matches route by branch wildcard array', async ({ codeCommitRecord, codeCommitReference }) => {
       router.route(
         defineRoute({
-          filters: { branchIncludes: ['deploy', 'hotfix'] },
+          filters: { branch: ['*deploy*', '*hotfix*'] },
         }).handle(async () => {}),
       );
 
@@ -543,13 +435,13 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when branchIncludes does not match', async ({
+    test('does not match route when branch wildcard does not match', async ({
       codeCommitRecord,
       codeCommitReference,
     }) => {
       router.route(
         defineRoute({
-          filters: { branchIncludes: 'deploy' },
+          filters: { branch: '*deploy*' },
         }).handle(async () => {}),
       );
 

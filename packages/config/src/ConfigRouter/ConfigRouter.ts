@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type { ConfigEvent, ConfigResponse } from '../types.js';
 import type {
@@ -164,33 +164,29 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
       const { filters } = route;
 
       if (filters.configRuleName) {
-        const { configRuleName: filterConfigRuleName } = filters;
-        const configRuleNames = Array.isArray(filterConfigRuleName) ? filterConfigRuleName : [filterConfigRuleName];
-        if (!configRuleNames.includes(input.configRuleName)) {
-          continue;
-        }
+        const configRuleNameMatch = filterStringMatcher(input.configRuleName, filters.configRuleName);
+        if (!configRuleNameMatch) continue;
       }
 
-      if (filters.resourceType && input.resourceType) {
-        const resourceTypes = Array.isArray(filters.resourceType) ? filters.resourceType : [filters.resourceType];
-        if (!resourceTypes.includes(input.resourceType)) {
-          continue;
-        }
+      if (filters.resourceType) {
+        if (!input.resourceType) continue;
+        const resourceTypeMatch = filterStringMatcher(input.resourceType, filters.resourceType);
+        if (!resourceTypeMatch) continue;
       }
 
-      if (filters.resourceId && input.resourceId) {
-        const resourceIds = Array.isArray(filters.resourceId) ? filters.resourceId : [filters.resourceId];
-        if (!resourceIds.includes(input.resourceId)) {
-          continue;
-        }
+      if (filters.resourceId) {
+        if (!input.resourceId) continue;
+        const resourceIdMatch = filterStringMatcher(input.resourceId, filters.resourceId);
+        if (!resourceIdMatch) continue;
       }
 
-      if (filters.configurationItemStatus && input.configurationItemStatus) {
-        const { configurationItemStatus: filterItemStatus } = filters;
-        const configurationItemStatuses = Array.isArray(filterItemStatus) ? filterItemStatus : [filterItemStatus];
-        if (!configurationItemStatuses.includes(input.configurationItemStatus)) {
-          continue;
-        }
+      if (filters.configurationItemStatus) {
+        if (!input.configurationItemStatus) continue;
+        const configurationItemStatusMatch = filterStringMatcher(
+          input.configurationItemStatus,
+          filters.configurationItemStatus,
+        );
+        if (!configurationItemStatusMatch) continue;
       }
 
       if (filters.customFilter) {

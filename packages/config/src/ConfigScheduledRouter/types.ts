@@ -2,6 +2,8 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
+import type { FilterStringMatcher } from '@lambda-event-router/base';
+
 import type { ConfigEvent } from '../types.js';
 
 export interface ConfigScheduledRequest<TParams = Record<string, string>> {
@@ -19,8 +21,8 @@ export interface ConfigScheduledFilterInput {
 }
 
 export interface ConfigScheduledFilters {
-  configRuleName?: string | string[];
-  accountId?: string | string[];
+  configRuleName?: FilterStringMatcher;
+  accountId?: FilterStringMatcher;
   customFilter?: (input: ConfigScheduledFilterInput) => boolean | Promise<boolean>;
 }
 

@@ -1,7 +1,7 @@
 import type { Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, isObject } from '@lambda-event-router/base';
 
 import type {
   AppSyncEventsEvent,
@@ -114,14 +114,8 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       }
 
       if (filters.channelNamespace) {
-        const { channelNamespace: filterNamespace } = filters;
-        const channelNamespaces = Array.isArray(filterNamespace) ? filterNamespace : [filterNamespace];
-        const matchesNamespace = channelNamespaces.some((pattern) =>
-          matchChannelNamespace(pattern, channelPath, channelNamespace),
-        );
-        if (!matchesNamespace) {
-          continue;
-        }
+        const channelNamespaceMatch = filterStringMatcher(channelPath, filters.channelNamespace);
+        if (!channelNamespaceMatch) continue;
       }
 
       if (filters.customFilter) {
@@ -137,20 +131,6 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     }
     return undefined;
   }
-}
-
-// Matches a channel namespace pattern against a channel path
-// "/*" matches everything, "/foo/*" matches paths starting with "/foo", otherwise exact match
-function matchChannelNamespace(pattern: string, channelPath: string, channelNamespace: string): boolean {
-  if (pattern === '/*') return true;
-
-  if (pattern.endsWith('/*')) {
-    const prefix = pattern.slice(0, -2);
-    // Strip leading slash from prefix for namespace comparison: /default -> default
-    return channelPath.startsWith(prefix) || channelNamespace === prefix.replace(/^\//, '');
-  }
-
-  return channelPath === pattern || channelNamespace === pattern || `/${channelNamespace}` === pattern;
 }
 
 export function createAppSyncEventsRouter(): AppSyncEventsRouter {

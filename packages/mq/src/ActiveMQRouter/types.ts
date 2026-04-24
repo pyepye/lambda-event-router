@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
 
@@ -65,8 +65,8 @@ export interface ActiveMQFilterInput {
 }
 
 export interface ActiveMQFilters {
-  eventSourceArn?: string | string[];
-  destination?: string | string[];
+  eventSourceArn?: FilterStringMatcher;
+  destination?: FilterStringMatcher;
   messageType?: ActiveMQMessageType | (string & {}) | (ActiveMQMessageType | (string & {}))[];
   customFilter?: (input: ActiveMQFilterInput) => boolean | Promise<boolean>;
 }

@@ -3,7 +3,14 @@ import type { Context, MSKEvent } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -174,31 +181,22 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       const { filters } = route;
 
       if (filters.topic) {
-        const topics = Array.isArray(filters.topic) ? filters.topic : [filters.topic];
-        if (!topics.includes(record.topic)) {
-          continue;
-        }
+        const topicMatch = filterStringMatcher(record.topic, filters.topic);
+        if (!topicMatch) continue;
       }
 
       if (filters.eventSourceArn) {
-        if (!this.isMSKEvent(event)) {
-          continue;
-        }
-        const { eventSourceArn: filterSourceArn } = filters;
-        const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
-        if (!eventSourceArns.includes(event.eventSourceArn)) {
-          continue;
-        }
+        if (!this.isMSKEvent(event)) continue;
+
+        const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.bootstrapServer) {
-        const { bootstrapServer: filterBootstrap } = filters;
-        const bootstrapServers = Array.isArray(filterBootstrap) ? filterBootstrap : [filterBootstrap];
-        const eventServers = event.bootstrapServers.split(',');
-        const hasMatchingServer = bootstrapServers.some((server) => eventServers.includes(server));
-        if (!hasMatchingServer) {
-          continue;
-        }
+        const { bootstrapServer } = filters; // Needed here due to TS having different scope for  separate function closure
+        const bootstrapServers = event.bootstrapServers.split(',');
+        const bootstrapServerMatch = bootstrapServers.some((server) => filterStringMatcher(server, bootstrapServer));
+        if (!bootstrapServerMatch) continue;
       }
 
       if (filters.customFilter) {

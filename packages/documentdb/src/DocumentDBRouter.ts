@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type { FiltersToRequest, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -198,24 +198,18 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       }
 
       if (filters.eventSourceArn) {
-        const arns = Array.isArray(filters.eventSourceArn) ? filters.eventSourceArn : [filters.eventSourceArn];
-        if (!arns.includes(eventSourceArn)) {
-          continue;
-        }
+        const eventSourceArnMatch = filterStringMatcher(eventSourceArn, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.database) {
-        const databases = Array.isArray(filters.database) ? filters.database : [filters.database];
-        if (!databases.includes(changeEvent.ns.db)) {
-          continue;
-        }
+        const databaseMatch = filterStringMatcher(changeEvent.ns.db, filters.database);
+        if (!databaseMatch) continue;
       }
 
       if (filters.collection) {
-        const collections = Array.isArray(filters.collection) ? filters.collection : [filters.collection];
-        if (!collections.includes(changeEvent.ns.coll)) {
-          continue;
-        }
+        const collectionMatch = filterStringMatcher(changeEvent.ns.coll, filters.collection);
+        if (!collectionMatch) continue;
       }
 
       if (filters.customFilter) {

@@ -3,7 +3,7 @@ import type { AppSyncResolverEvent, Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type {
   AppSyncMutationInput,
@@ -152,18 +152,13 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     for (const route of this.routes) {
       const { filters } = route;
       if (filters.parentTypeName) {
-        const { parentTypeName: filterParentTypeName } = filters;
-        const parentTypeNames = Array.isArray(filterParentTypeName) ? filterParentTypeName : [filterParentTypeName];
-        if (!parentTypeNames.includes(parentTypeName)) {
-          continue;
-        }
+        const parentTypeNameMatch = filterStringMatcher(parentTypeName, filters.parentTypeName);
+        if (!parentTypeNameMatch) continue;
       }
 
       if (filters.fieldName) {
-        const fieldNames = Array.isArray(filters.fieldName) ? filters.fieldName : [filters.fieldName];
-        if (!fieldNames.includes(fieldName)) {
-          continue;
-        }
+        const fieldNameMatch = filterStringMatcher(fieldName, filters.fieldName);
+        if (!fieldNameMatch) continue;
       }
 
       if (filters.customFilter) {

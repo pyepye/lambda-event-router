@@ -5,14 +5,14 @@ import { createCodeCommitRouter } from '@lambda-event-router/codecommit';
 
 import { branchCreatedRoute } from './handlers/branchCreatedRoute.js';
 import { branchDeletedRoute } from './handlers/branchDeletedRoute.js';
-import { featureBranchRoute } from './handlers/featureBranchRoute.js';
 import { deployBotPushRoute, pushRoute } from './handlers/pushRoute.js';
+import { testBranchRoute } from './handlers/testBranchRoute.js';
 
 const codeCommitRouter = createCodeCommitRouter();
 
 codeCommitRouter
   .route(pushRoute)
-  .route(featureBranchRoute)
+  .route(testBranchRoute)
   .route(branchCreatedRoute)
   .route(branchDeletedRoute)
   .route(deployBotPushRoute);

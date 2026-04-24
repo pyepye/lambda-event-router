@@ -1,7 +1,7 @@
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   SecretsManagerFilterInput,
@@ -119,36 +119,13 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
       const { filters } = route;
 
       if (filters.secretId) {
-        const secretIds = Array.isArray(filters.secretId) ? filters.secretId : [filters.secretId];
-        if (!secretIds.includes(secretId)) {
-          continue;
-        }
-      }
-
-      if (filters.secretPrefix) {
-        const secretPrefixes = Array.isArray(filters.secretPrefix) ? filters.secretPrefix : [filters.secretPrefix];
-        const hasMatchingPrefix = secretPrefixes.some((prefix) => secretId.startsWith(prefix));
-        if (!hasMatchingPrefix) continue;
-      }
-
-      if (filters.secretSuffix) {
-        const secretSuffixes = Array.isArray(filters.secretSuffix) ? filters.secretSuffix : [filters.secretSuffix];
-        const hasMatchingSuffix = secretSuffixes.some((suffix) => secretId.endsWith(suffix));
-        if (!hasMatchingSuffix) continue;
-      }
-
-      if (filters.secretIncludes) {
-        const { secretIncludes: filterSecretIncludes } = filters;
-        const secretIncludes = Array.isArray(filterSecretIncludes) ? filterSecretIncludes : [filterSecretIncludes];
-        const hasMatchingIncludes = secretIncludes.some((str) => secretId.includes(str));
-        if (!hasMatchingIncludes) continue;
+        const secretIdMatch = filterStringMatcher(secretId, filters.secretId);
+        if (!secretIdMatch) continue;
       }
 
       if (filters.step) {
         const steps = Array.isArray(filters.step) ? filters.step : [filters.step];
-        if (!steps.includes(step)) {
-          continue;
-        }
+        if (!steps.includes(step)) continue;
       }
 
       if (filters.customFilter) {

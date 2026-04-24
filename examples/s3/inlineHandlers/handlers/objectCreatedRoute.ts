@@ -5,8 +5,7 @@ export const objectCreatedRoute = defineRoute({
   filters: {
     eventName: 's3:ObjectCreated:*',
     bucket: 'my-uploads-bucket',
-    prefix: 'uploads/',
-    suffix: '.json',
+    key: ['uploads/*', '*.json'],
   },
 }).handle(async ({ bucket, key, objectSize, eventName }) => {
   console.log(`Object created: ${key} in ${bucket}`);
@@ -18,8 +17,7 @@ export const objectCreatedPutImageRoute = defineRoute({
   filters: {
     eventName: 's3:ObjectCreated:Put',
     bucket: 'my-images-bucket',
-    prefix: ['images/', 'photos/'],
-    suffix: ['.jpg', '.jpeg', '.png', '.gif', '.webp'],
+    key: ['images/*', 'photos/*', '*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp'],
   },
 }).handle(async ({ bucket, key, objectSize }) => {
   console.log(`Image uploaded: ${key} in ${bucket} (${objectSize} bytes)`);
@@ -30,7 +28,7 @@ export const objectCreatedThumbnailRoute = defineRoute({
   filters: {
     eventName: 's3:ObjectCreated:Put',
     bucket: 'my-images-bucket',
-    includes: ['thumbnail', 'thumb'],
+    key: ['*thumbnail*', '*thumb*'],
   },
 }).handle(async ({ bucket, key, objectSize }) => {
   console.log(`Thumbnail created: ${key} in ${bucket} (${objectSize} bytes)`);

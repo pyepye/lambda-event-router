@@ -35,8 +35,8 @@ sesRouter.route({
 // Route matching emails by domain with DMARC verification
 sesRouter.route({
   filters: {
-    senderDomain: 'internal.example.com',
-    recipientDomain: 'example.com',
+    sender: '*@internal.example.com',
+    recipient: '*@example.com',
     dmarcVerdict: 'PASS',
   },
   handler: processInternalEmail,
@@ -51,7 +51,7 @@ function isQuarantined({ receipt }: SESFilterInput): boolean {
 // Route with customFilter for complex logic
 sesRouter.route({
   filters: {
-    recipientDomain: 'example.com',
+    recipient: '*@example.com',
     customFilter: isQuarantined,
   },
   handler: processQuarantinedEmail,

@@ -2,17 +2,25 @@ import type { Context, SNSEvent, SNSEventRecord } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import type { EventTypeRouter, FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   SNSFilters,
   SNSMessageAttributes,
+  SNSMessageAttributeValue,
   SNSRawMessageAttributes,
   SNSRecordHandler,
   SNSRequest,
   SNSRouteDefinition,
   SNSRouterOptions,
+  SNSStringArrayItem,
 } from './types.js';
 
 interface InternalRoute {
@@ -101,53 +109,65 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   private convertMessageAttributes(raw: SNSRawMessageAttributes): SNSMessageAttributes {
     const result: SNSMessageAttributes = {};
     for (const [key, attr] of Object.entries(raw)) {
-      result[key] = attr.Value;
+      if (attr.Type === 'Number') {
+        result[key] = Number(attr.Value);
+      } else if (attr.Type === 'Binary') {
+        result[key] = Buffer.from(attr.Value, 'base64');
+      } else if (attr.Type === 'String.Array') {
+        result[key] = this.parseStringArrayValue(attr.Value);
+      } else {
+        result[key] = attr.Value;
+      }
     }
     return result;
+  }
+
+  private isStringArrayItem(value: unknown): value is SNSStringArrayItem {
+    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null;
+  }
+
+  private parseStringArrayValue(rawValue: string): SNSStringArrayItem[] {
+    const parsed: unknown = JSON.parse(rawValue);
+    if (!(Array.isArray(parsed) && parsed.every(this.isStringArrayItem))) {
+      throw new Error(`Invalid SNS String.Array attribute value: ${rawValue}`);
+    }
+    return parsed;
   }
 
   private async matchRoute(
     record: SNSEventRecord,
     body: unknown,
-    rawMessageAttributes: SNSRawMessageAttributes,
+    messageAttributes: SNSMessageAttributes,
   ): Promise<InternalRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
       const sns = record.Sns;
 
       if (filters.topicArn) {
-        const arns = Array.isArray(filters.topicArn) ? filters.topicArn : [filters.topicArn];
-        if (!arns.includes(sns.TopicArn)) {
-          continue;
-        }
+        const topicArnMatch = filterStringMatcher(sns.TopicArn, filters.topicArn);
+        if (!topicArnMatch) continue;
       }
 
       if (filters.subject) {
-        const subjects = Array.isArray(filters.subject) ? filters.subject : [filters.subject];
-        const subject = sns.Subject;
-        if (subject === undefined || !subjects.includes(subject)) {
-          continue;
-        }
+        if (!sns.Subject) continue;
+        const subjectMatch = filterStringMatcher(sns.Subject, filters.subject);
+        if (!subjectMatch) continue;
       }
 
       if (filters.messageAttributes) {
         let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
-          const allowedValues = Array.isArray(allowed) ? allowed : [allowed];
-          const attr = rawMessageAttributes[key];
-          const attrMatchesFilter = attr && allowedValues.includes(attr.Value);
-          if (!attrMatchesFilter) {
+          const attr = messageAttributes[key];
+          if (attr === undefined || !this.matchMessageAttribute(attr, allowed)) {
             matched = false;
             break;
           }
         }
-        if (!matched) {
-          continue;
-        }
+        if (!matched) continue;
       }
 
       if (filters.customFilter) {
-        const match = await filters.customFilter({ body, messageAttributes: rawMessageAttributes, record });
+        const match = await filters.customFilter({ body, messageAttributes, record });
         if (!match) continue;
       }
 
@@ -158,16 +178,15 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
 
   private async processRecord(record: SNSEventRecord, context: Context): Promise<void> {
     const parsedBody = safeJsonParse(record.Sns.Message);
-    const rawMessageAttributes = record.Sns.MessageAttributes;
+    const convertedAttributes = this.convertMessageAttributes(record.Sns.MessageAttributes);
 
-    const route = await this.matchRoute(record, parsedBody, rawMessageAttributes);
+    const route = await this.matchRoute(record, parsedBody, convertedAttributes);
     if (!route) {
       throw new Error(`No route matched for record from ${record.Sns.TopicArn}`);
     }
     const bodyValidationError = `Body validation failed for record ${record.Sns.MessageId}`;
     const body = await validateSchema(parsedBody, route.bodySchema, bodyValidationError);
 
-    const convertedAttributes = this.convertMessageAttributes(rawMessageAttributes);
     const validatedMessageAttributes = await validateSchema(
       convertedAttributes,
       route.messageAttributesSchema,
@@ -183,6 +202,19 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
 
     const allMiddleware = [...this.middleware, ...route.middleware];
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
+  }
+
+  private matchMessageAttribute(
+    attr: SNSMessageAttributeValue,
+    allowed: FilterStringMatcher | number | number[],
+  ): boolean {
+    if (typeof allowed === 'number') {
+      return attr === allowed;
+    }
+    if (Array.isArray(allowed)) {
+      return allowed.some((item) => this.matchMessageAttribute(attr, item));
+    }
+    return typeof attr === 'string' && filterStringMatcher(attr, allowed);
   }
 }
 

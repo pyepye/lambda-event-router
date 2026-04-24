@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 import type { ConfigEvent } from '../types.js';
 
@@ -93,10 +93,10 @@ export interface ConfigChangeFilterInput {
 }
 
 export interface ConfigChangeFilters {
-  configRuleName?: string | string[];
-  resourceType?: string | string[];
-  configurationItemStatus?: string | string[];
-  resourceId?: string | string[];
+  configRuleName?: FilterStringMatcher;
+  resourceType?: FilterStringMatcher;
+  configurationItemStatus?: FilterStringMatcher;
+  resourceId?: FilterStringMatcher;
   customFilter?: (input: ConfigChangeFilterInput) => boolean | Promise<boolean>;
 }
 

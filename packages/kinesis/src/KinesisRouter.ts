@@ -3,7 +3,14 @@ import type { Context, KinesisStreamBatchResponse, KinesisStreamEvent, KinesisSt
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { KinesisFilters, KinesisRequest, KinesisRouteDefinition, KinesisRouterOptions } from './types.js';
 
@@ -140,18 +147,13 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       const { filters } = route;
 
       if (filters.eventSourceArn) {
-        const { eventSourceArn: filterSourceArn } = filters;
-        const eventSourceArns = Array.isArray(filterSourceArn) ? filterSourceArn : [filterSourceArn];
-        if (!eventSourceArns.includes(record.eventSourceARN)) {
-          continue;
-        }
+        const eventSourceArnMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.partitionKey) {
-        const partitionKeys = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
-        if (!partitionKeys.includes(record.kinesis.partitionKey)) {
-          continue;
-        }
+        const partitionKeyMatch = filterStringMatcher(record.kinesis.partitionKey, filters.partitionKey);
+        if (!partitionKeyMatch) continue;
       }
 
       if (filters.customFilter) {

@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   ActiveMQBytesMessageRouteDefinition,
@@ -111,25 +117,19 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       const { filters } = route;
 
       if (filters.eventSourceArn) {
-        const { eventSourceArn: filterArn } = filters;
-        const eventSourceArns = Array.isArray(filterArn) ? filterArn : [filterArn];
-        if (!eventSourceArns.includes(event.eventSourceArn)) {
-          continue;
-        }
+        const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
       }
 
       if (filters.messageType) {
         const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
-        if (!messageTypes.includes(message.messageType)) {
-          continue;
-        }
+        if (!messageTypes.includes(message.messageType)) continue;
       }
 
       if (filters.destination) {
-        const destinations = Array.isArray(filters.destination) ? filters.destination : [filters.destination];
-        if (!destinations.includes(message.destination.physicalName)) {
-          continue;
-        }
+        // Is calling this destination and not physicalName correct?
+        const destinationMatch = filterStringMatcher(message.destination.physicalName, filters.destination);
+        if (!destinationMatch) continue;
       }
 
       if (filters.customFilter) {

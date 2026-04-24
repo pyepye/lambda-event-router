@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type {
   EventBridgeEventEnvelope,
@@ -131,35 +131,25 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       const { filters } = route;
 
       if (filters.source) {
-        const sources = Array.isArray(filters.source) ? filters.source : [filters.source];
-        if (!sources.includes(event.source)) {
-          continue;
-        }
+        const sourceMatch = filterStringMatcher(event.source, filters.source);
+        if (!sourceMatch) continue;
       }
       if (filters.detailType) {
-        const detailTypes = Array.isArray(filters.detailType) ? filters.detailType : [filters.detailType];
-        if (!detailTypes.includes(event['detail-type'])) {
-          continue;
-        }
+        const detailTypeMatch = filterStringMatcher(event['detail-type'], filters.detailType);
+        if (!detailTypeMatch) continue;
       }
       if (filters.account) {
-        const accounts = Array.isArray(filters.account) ? filters.account : [filters.account];
-        if (!accounts.includes(event.account)) {
-          continue;
-        }
+        const accountMatch = filterStringMatcher(event.account, filters.account);
+        if (!accountMatch) continue;
       }
       if (filters.region) {
-        const regions = Array.isArray(filters.region) ? filters.region : [filters.region];
-        if (!regions.includes(event.region)) {
-          continue;
-        }
+        const regionMatch = filterStringMatcher(event.region, filters.region);
+        if (!regionMatch) continue;
       }
       if (filters.resource) {
-        const resources = Array.isArray(filters.resource) ? filters.resource : [filters.resource];
-        const hasMatchingResource = event.resources.some((r) => resources?.includes(r));
-        if (!hasMatchingResource) {
-          continue;
-        }
+        const { resource } = filters; // Needed here due to TS having different scope for  separate function closure
+        const resourceMatch = event.resources.some((res) => filterStringMatcher(res, resource));
+        if (!resourceMatch) continue;
       }
 
       if (filters.customFilter) {

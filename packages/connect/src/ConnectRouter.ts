@@ -1,7 +1,7 @@
 import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   ConnectChannelRouteDefinition,
@@ -153,10 +153,8 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
       }
 
       if (filters.instanceArn) {
-        const instanceArns = Array.isArray(filters.instanceArn) ? filters.instanceArn : [filters.instanceArn];
-        if (!instanceArns.includes(contactData.InstanceARN)) {
-          continue;
-        }
+        const instanceArnMatch = filterStringMatcher(contactData.InstanceARN, filters.instanceArn);
+        if (!instanceArnMatch) continue;
       }
 
       if (filters.customFilter) {

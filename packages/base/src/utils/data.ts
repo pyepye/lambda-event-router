@@ -1,5 +1,25 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
+export type FilterStringMatcher = string | RegExp | Array<string | RegExp>;
+
+export function filterStringMatcher(testString: string, matcher: FilterStringMatcher): boolean {
+  if (Array.isArray(matcher)) {
+    return matcher.some((match) => filterStringMatcher(testString, match));
+  }
+
+  if (matcher instanceof RegExp) {
+    return matcher.test(testString);
+  }
+
+  // Escape special regex characters except for '*'
+  // Then replace '*' with '.*' to match anything
+  const escaped = matcher.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const regexSource = escaped.replace(/\*/g, '.*');
+
+  const regex = new RegExp(`^${regexSource}$`);
+  return regex.test(testString);
+}
+
 export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
