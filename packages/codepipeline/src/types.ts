@@ -30,9 +30,9 @@ export type CodePipelineHandler<TUserParameters = unknown> = (
   request: CodePipelineRequest<TUserParameters>,
 ) => Promise<CodePipelineResponse>;
 
-export interface CodePipelineFilterInput {
+export interface CodePipelineFilterInput<TUserParameters = unknown> {
   functionName: string;
-  userParameters: string;
+  userParameters: TUserParameters;
   hasInputArtifacts: boolean;
   hasContinuationToken: boolean;
 }
@@ -41,7 +41,7 @@ export interface CodePipelineFilters {
   functionName?: FilterStringMatcher;
   hasInputArtifacts?: boolean;
   hasContinuationToken?: boolean;
-  userParametersContains?: string; // TODO Need to correct how this works? Make it the same as messageAttributes>?
+  // userParameters?: FilterStringMatcher;
   customFilter?: (input: CodePipelineFilterInput) => boolean | Promise<boolean>;
 }
 

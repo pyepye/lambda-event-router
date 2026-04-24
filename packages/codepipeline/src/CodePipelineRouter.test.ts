@@ -300,35 +300,35 @@ suite('CodePipelineRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches by userParametersContains', async () => {
-      router.route(defineRoute({ filters: { userParametersContains: 'deploy' } }).handle(async () => undefined));
+    // test('matches by userParametersContains', async () => {
+    //   router.route(defineRoute({ filters: { userParametersContains: 'deploy' } }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: 'deploy-to-staging',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
+    //   const filterInput: CodePipelineFilterInput = {
+    //     functionName: 'my-function',
+    //     userParameters: 'deploy-to-staging',
+    //     hasInputArtifacts: false,
+    //     hasContinuationToken: false,
+    //   };
 
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(filterInput);
-      expect(result).toBeDefined();
-    });
+    //   // @ts-expect-error - testing private method directly
+    //   const result = await router.matchRoute(filterInput);
+    //   expect(result).toBeDefined();
+    // });
 
-    test('rejects when userParametersContains does not match', async () => {
-      router.route(defineRoute({ filters: { userParametersContains: 'deploy' } }).handle(async () => undefined));
+    // test('rejects when userParametersContains does not match', async () => {
+    //   router.route(defineRoute({ filters: { userParametersContains: 'deploy' } }).handle(async () => undefined));
 
-      const filterInput: CodePipelineFilterInput = {
-        functionName: 'my-function',
-        userParameters: 'build-only',
-        hasInputArtifacts: false,
-        hasContinuationToken: false,
-      };
+    //   const filterInput: CodePipelineFilterInput = {
+    //     functionName: 'my-function',
+    //     userParameters: 'build-only',
+    //     hasInputArtifacts: false,
+    //     hasContinuationToken: false,
+    //   };
 
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(filterInput);
-      expect(result).toBeUndefined();
-    });
+    //   // @ts-expect-error - testing private method directly
+    //   const result = await router.matchRoute(filterInput);
+    //   expect(result).toBeUndefined();
+    // });
 
     test('matches by customFilter', async () => {
       const customFilter = (input: CodePipelineFilterInput): boolean => {

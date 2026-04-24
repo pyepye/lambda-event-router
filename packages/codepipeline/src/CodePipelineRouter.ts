@@ -112,11 +112,11 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     try {
       const { configuration } = job.data.actionConfiguration;
       const functionName = configuration.FunctionName;
-      const rawUserParameters = configuration.UserParameters;
+      const parsedUserParameters = safeJsonParse(configuration.UserParameters);
 
       const filterInput: CodePipelineFilterInput = {
         functionName,
-        userParameters: rawUserParameters,
+        userParameters: parsedUserParameters,
         hasInputArtifacts: job.data.inputArtifacts.length > 0,
         hasContinuationToken: job.data.continuationToken !== undefined,
       };
@@ -126,7 +126,6 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         throw new Error(`No route matched for CodePipeline job ${jobId} (function: ${functionName})`);
       }
 
-      const parsedUserParameters = safeJsonParse(rawUserParameters);
       const validatedUserParameters = await validateSchema(
         parsedUserParameters,
         route.userParametersSchema,
@@ -175,9 +174,10 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         continue;
       }
 
-      if (filters.userParametersContains && !input.userParameters.includes(filters.userParametersContains)) {
-        continue;
-      }
+      // if (filters.userParameters) {
+      //   const functionNameMatch = filterStringMatcher(input.userParameters, filters.userParameters);
+      //   if (!functionNameMatch) continue;
+      // }
 
       if (filters.customFilter) {
         const match = await filters.customFilter(input);
