@@ -129,7 +129,13 @@ export interface DynamoDBRouteDefinition<
   handler: DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>;
 }
 
+export interface DynamoDBRouterKeys {
+  partitionKey: string;
+  sortKey?: string;
+}
+
 export interface DynamoDBRouterOptions {
   batchItemFailures?: boolean;
   middleware?: DynamoDBMiddleware[];
+  keys?: DynamoDBRouterKeys;
 }

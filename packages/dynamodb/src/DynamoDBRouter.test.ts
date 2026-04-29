@@ -501,6 +501,10 @@ suite('DynamoDBRouter', () => {
   });
 
   suite('partitionKey / sortKey filters', () => {
+    beforeEach(() => {
+      router = new DynamoDBRouter({ keys: { partitionKey: 'pk', sortKey: 'sk' } });
+    });
+
     test('matches route when partitionKey equals a single value', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
@@ -622,21 +626,19 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('auto-detects attribute names from the keys object when router has no overrides', async ({
+    test('infers partition key from a single-attribute keys map when router has no keys option', async ({
       dynamoDBInsertRecord,
     }) => {
-      router.route(
+      const inferRouter = new DynamoDBRouter();
+      inferRouter.route(
         defineRoute({
-          filters: { partitionKey: 'user-1', sortKey: '2024-01-01' },
+          filters: { partitionKey: 'user-1' },
         }).handle(async () => {}),
       );
 
       const record = dynamoDBInsertRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
-        userId: 'user-1',
-        createdAt: '2024-01-01',
-      });
+      const result = await inferRouter.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { userId: 'user-1' });
 
       expect(result).toBeDefined();
     });
@@ -676,6 +678,102 @@ suite('DynamoDBRouter', () => {
       await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'orders', sk: 'sk-1' });
 
       expect(customFilterSpy).not.toHaveBeenCalled();
+    });
+
+    test('matches partitionKey regardless of Keys map attribute order (regression)', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { sk: 'sk-1', pk: 'items' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('throws when record has multiple key attributes and router has no keys option', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      const unconfiguredRouter = new DynamoDBRouter();
+      unconfiguredRouter.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const matchPromise = unconfiguredRouter.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      await expect(matchPromise).rejects.toThrow(/Cannot infer partitionKey\/sortKey/);
+      await expect(matchPromise).rejects.toThrow(/"keys" option/);
+    });
+
+    test('routes without partitionKey/sortKey filters resolve normally on multi-key records without keys option', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      const unconfiguredRouter = new DynamoDBRouter();
+      unconfiguredRouter.route(
+        defineRoute({
+          filters: { eventName: 'INSERT' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await unconfiguredRouter.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    test('falls back to NewImage when Keys map is empty', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(
+        record,
+        'INSERT',
+        'NEW_AND_OLD_IMAGES',
+        {},
+        { pk: 'items', sk: 'sk-1', other: 'value' },
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    test('falls back to OldImage when Keys map and NewImage do not contain the configured key', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {}, undefined, {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      expect(result).toBeDefined();
     });
   });
 

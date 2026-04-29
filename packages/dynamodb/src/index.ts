@@ -13,6 +13,7 @@ export type {
   DynamoDBRequest,
   DynamoDBResponse,
   DynamoDBRouteDefinition,
+  DynamoDBRouterKeys,
   DynamoDBRouterOptions,
   DynamoDBViewType,
 } from './types.js';

@@ -20,6 +20,7 @@ import type {
   DynamoDBRemoveRouteDefinition,
   DynamoDBRequest,
   DynamoDBRouteDefinition,
+  DynamoDBRouterKeys,
   DynamoDBRouterOptions,
   DynamoDBViewType,
 } from './types.js';
@@ -147,10 +148,12 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
   private routes: InternalRoute[] = [];
   private batchItemFailures: boolean;
   private middleware: Middleware<DynamoDBRequest, void>[];
+  private keys: DynamoDBRouterKeys | undefined;
 
   constructor(options?: DynamoDBRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
     this.middleware = options?.middleware ?? [];
+    this.keys = options?.keys;
   }
 
   canHandleEvent(event: unknown): event is DynamoDBStreamEvent {
@@ -290,7 +293,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       `Image validation failed for OldImage on record ${record.eventID}`,
     );
 
-    const request: DynamoDBRequest = {
+    const request = {
       keys: validatedKeys,
       newImage: validatedNewImage,
       oldImage: validatedOldImage,
@@ -311,9 +314,6 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     newImage?: Record<string, unknown>, // TODO Make sure tests cover this
     oldImage?: Record<string, unknown>, // TODO Make sure tests cover this
   ): Promise<InternalRoute | undefined> {
-    // record.dynamodb.Keys always comes in the same order, partition key first then sort key
-    const [partitionKeyName, sortKeyName] = Object.keys(keys);
-
     for (const route of this.routes) {
       const { filters } = route;
 
@@ -338,8 +338,9 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       }
 
       if (filters.partitionKey) {
+        const { partitionKeyName } = this.resolveKeyNames(keys);
         if (!partitionKeyName) continue;
-        const partitionKey = keys[partitionKeyName];
+        const partitionKey = this.getKeyValue(partitionKeyName, keys, newImage, oldImage);
         if (typeof partitionKey !== 'string' && typeof partitionKey !== 'number') continue;
         const partitionKeysMap = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
         if (typeof partitionKey === 'number') {
@@ -351,8 +352,9 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       }
 
       if (filters.sortKey) {
+        const { sortKeyName } = this.resolveKeyNames(keys);
         if (!sortKeyName) continue;
-        const sortKey = keys[sortKeyName];
+        const sortKey = this.getKeyValue(sortKeyName, keys, newImage, oldImage);
         if (typeof sortKey !== 'string' && typeof sortKey !== 'number') continue;
 
         const sortKeysMap = Array.isArray(filters.sortKey) ? filters.sortKey : [filters.sortKey];
@@ -372,6 +374,34 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       return route;
     }
 
+    return undefined;
+  }
+
+  private resolveKeyNames(keys: Record<string, unknown>): {
+    partitionKeyName: string | undefined;
+    sortKeyName: string | undefined;
+  } {
+    if (this.keys) {
+      return { partitionKeyName: this.keys.partitionKey, sortKeyName: this.keys.sortKey };
+    }
+
+    const keyNames = Object.keys(keys);
+    if (keyNames.length <= 1) {
+      return { partitionKeyName: keyNames[0], sortKeyName: undefined };
+    }
+
+    throw new Error('Cannot infer partitionKey/sortKey. Set the router\'s "keys" option.');
+  }
+
+  private getKeyValue(
+    name: string,
+    keys: Record<string, unknown>,
+    newImage: Record<string, unknown> | undefined,
+    oldImage: Record<string, unknown> | undefined,
+  ): unknown {
+    if (Object.hasOwn(keys, name)) return keys[name];
+    if (newImage && Object.hasOwn(newImage, name)) return newImage[name];
+    if (oldImage && Object.hasOwn(oldImage, name)) return oldImage[name];
     return undefined;
   }
 }
