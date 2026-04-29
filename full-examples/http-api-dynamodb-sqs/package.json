@@ -1,0 +1,40 @@
+{
+  "name": "@lambda-event-router/full-example-http-api-dynamodb-sqs",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --require-approval never",
+    "watch": "cdk watch --hotswap-fallback",
+    "destroy": "cdk destroy --force"
+  },
+  "dependencies": {
+    "@lambda-event-router/apigateway": "workspace:*",
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/dynamodb": "workspace:*",
+    "@lambda-event-router/http": "workspace:*",
+    "@lambda-event-router/sqs": "workspace:*",
+    "@aws-lambda-powertools/tracer": "^2.33.0",
+    "@aws-sdk/client-dynamodb": "^3.1034.0",
+    "@aws-sdk/client-sqs": "^3.1034.0",
+    "@aws-sdk/lib-dynamodb": "^3.1034.0",
+    "@smithy/types": "^4.0.0",
+    "aws-xray-sdk-core": "^3.10.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "aws-cdk": "^2.1000.0",
+    "aws-cdk-lib": "^2.190.0",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:"
+  }
+}
