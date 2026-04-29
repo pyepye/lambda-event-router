@@ -3,8 +3,9 @@
   <h1 align="center">Lambda Event Router</h1>
 </p>
 
-<!-- TODO: Needs work -->
-A TypeScript framework for routing and handling different AWS Lambda events in the same function code in a unified and predictable way. This allows lambdas to be used in a more microservice like architecture, where all of the code for a range of related events / services can be handled by a single lambda or multiple lambdas with shared code.
+A TypeScript framework for routing AWS Lambda events. You define routers for the AWS services you care about - SQS, API Gateway, DynamoDB Streams, S3 and more - and the framework works out which router should handle each event.
+
+This is useful when you want a single Lambda (or a set of Lambdas with shared code) to handle events from multiple sources. Instead of writing your own event detection logic, you declare filters and handlers and let the router do the matching.
 
 <br />
 
@@ -25,23 +26,23 @@ export const handler = lambdaRouter.handler()
 
 
 ## Features
-<!-- TODO: Needs work -->
+
 - **Multi-source routing** - Combine routers from different AWS services in a single Lambda handler
-- **Type-safe routing** - Full TypeScript support with inferred types from schemas and filters for inline handlers
-- **Declarative filters** - Route events by service specific data - ARN, eventType, topic, bucket, event name, detail type, and custom filter functions
-- **25+ AWS services** - Dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more
-- **Schema validation** - Built-in schema validation for request bodies, message attributes, path params, and more. Compatible with any Standard Schema compatible library
-- **Well tested** - Clear and concise tests covering most code branches for each event type
+- **Type-safe** - Full TypeScript support with inferred types from schemas and filters for inline handlers
+- **Declarative filters** - Route events by service-specific data - ARN, eventType, topic, bucket, event name, detail type and custom filter functions
+- **Native support for 29+ AWS services** - Includes dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and more. Any service that emits Lambda events is supported out of the box.
+- **Works with any AWS service** - Even services without native Lambda support can be integrated using CloudTrail and EventBridge using the EventBridgeRouter.
+- **Schema validation** - Built-in validation for request bodies, message attributes, path params and more. Works with any Standard Schema library
+- **Well tested** - Clear tests covering most code branches for each event type
 
-This framework might not be the right fit in every situation, see [When not to use it](#when-not-to-use-it) for more details.
+This framework isn't the right fit in every situation. See [When not to use it](#when-not-to-use-it) for more details.
 
 
-## Packages / Supported AWS Services
-<!-- TODO: Needs work -->
+## Packages / Supported AWS services
 
-Below is an overview of the packages / routers that are included and the AWS services they help handle events for. Each package can be individually installed.
+Below is an overview of the packages and routers included. Each package can be installed individually.
 
-More information out the usage of individual packages and routers can be found in the individual READMEs.
+For usage details, check the individual READMEs linked in the table.
 
 | Service | Feature / Event Source | Package | Router | Link |
 |---------|----------------------|---------|--------|------|
@@ -84,19 +85,24 @@ More information out the usage of individual packages and routers can be found i
 | AWS IoT Core | Rules Engine action | [`@lambda-event-router/iot`](packages/iot/README.md) | `IoTRouter` | [README](packages/iot/README.md) |
 
 
-## Quick Start
+## Quick start
 
 Install the base package and the service router you need:
 
 ```bash
 npm install @lambda-event-router/[package]
-# E.g. npm install @lambda-event-router/apigateway @lambda-event-router/sqs
+```
+
+For example, to install routers for apigateway and sqs
+
+```bash
+npm install @lambda-event-router/apigateway @lambda-event-router/sqs
 ```
 
 
-## Basic Usage
+## Basic usage
 
-Here is some basic for examples of how the handles are defined and work for each router, see their individual READMEs
+Here's a quick look at how you define handlers. For the full details on each router, check their individual READMEs.
 
 ```ts
 // main handler
@@ -155,19 +161,18 @@ sqsRouter.route({
 
 
 ## Examples
-<!-- TODO: Needs work -->
 
-See the [examples](examples/) directory for complete working examples for every supported service.
+See the [examples](examples/) directory for working examples covering every supported service.
+
+There is also a [full-examples](full-examples/) directory with deployable code you can spin up on your own AWS environment with a few commands.
 
 
 ## When not to use it
-<!-- TODO: Needs work -->
 
 If your Lambda handles a single event source in a single way, you probably don't need this. Here are some cases where it isn't the right fit:
 
-- Single event source with no filtering - Your Lambda receives events from one source and processes them all the same way. A plain handler function is simpler
-- Single-purpose Lambdas - Your Lambda does exactly one thing. Routing and filtering add indirection with no upside
-- HTTP-only Lambdas - Dedicated HTTP frameworks (Express, Hono, Fastify) have richer ecosystems for middleware, auth, templating, etc.
-- Performance-critical Lambdas with simple logic - The router iterates through registered routers via canHandleEvent checks and applies middleware chains. For ultra-simple Lambdas where every millisecond counts, a direct handler avoids this
- overhead.
-- One Lambda per event source architecture - If you intentionally map one Lambda to one event source for isolated scaling, permissions, or deployment, there's nothing to route between.
+- **Single event source with no filtering** - Your Lambda receives events from one source and processes them all the same way. A plain handler function is simpler
+- **Single-purpose Lambdas** - Your Lambda does exactly one thing. Routing and filtering add indirection with no upside
+- **HTTP-only Lambdas** - Dedicated HTTP frameworks like Express, Hono and Fastify have richer ecosystems for middleware, auth and templating
+- **Performance-critical Lambdas with simple logic** - The router iterates through registered routers via `canHandleEvent` checks and applies middleware chains. For ultra-simple Lambdas where every millisecond counts, a direct handler avoids this overhead
+- **One Lambda per event source** - If you intentionally map one Lambda to one event source for isolated scaling, permissions or deployment, there's nothing to route between
