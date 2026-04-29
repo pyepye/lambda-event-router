@@ -67,6 +67,7 @@ export class Request {
 
   buildApiRequest(): ApiRequest {
     return {
+      method: this.method,
       path: this.pathParams,
       query: this.queryParams,
       auth: this.auth,

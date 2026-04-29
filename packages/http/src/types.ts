@@ -64,6 +64,7 @@ export interface ApiRequest<
   TBody = unknown,
   TEvent = unknown,
 > {
+  method: string;
   path: TPath;
   query: TQuery;
   body: TBody;
