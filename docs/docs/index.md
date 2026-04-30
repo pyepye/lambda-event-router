@@ -1,37 +1,51 @@
 # Overview
 
-## Introduction
+Lambda Event Router is a TypeScript framework for routing AWS Lambda events. You define routers for the AWS services you care about, register them with a `LambdaRouter` and the framework works out which router should handle each event.
 
-- Can handle any event triggered from an AWS service
-- 28(?) service specific routers with event specific details
-  - Link to AWS docs for support events
-- EventBridge + CloudTrail for any AWS services without defined lambda triggers
-- Link to Packages page for support AWS services
+This is really help when you want a single Lambda, or a set of Lambdas with shared code, to handle events from multiple sources. Instead of writing your own event detection logic, you declare filters and handlers and let the router do the matching.
+
+We cover every AWS service that can [natively invoke a Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-services.html). Check the [packages page](/packages) for the full list. For AWS services without a direct Lambda trigger, you can use the `EventBridgeRouter` with CloudTrail events to cover those too.
 
 
 ## Key concepts
 
-- Standardised routing event triggers and types
-- Helpful filters and data validation based on event data
-- Specific request and response based on expected event and return values
-- Fully typed
+**Standardised routing** - The same pattern works across all AWS services / events. You define routes with filters and handlers regardless of whether you're dealing with SQS, API Gateway or DynamoDB Streams.
+
+**Type-safe simplifed requests and responses** - Each router gives you typed request objects with the data you actually need. Return types are enforced too, so you can't accidentally return the wrong shape for a given event source.
+
+**Declarative filtering** - Route events using service-specific data like ARN, message attributes, event name, HTTP method or detail type. You can also pass custom filter functions for anything more specific. See [routing and filtering](/docs/routing) for more details.
+
+**Schema validation** - Validate parts of the event - body, attributes, path params - using any [Standard Schema](https://github.com/standard-schema/standard-schema) compatible library like Zod, Valibot or ArkType.
 
 
-## Who is Lambda Event Router for?
+## Why Lambda Event Router?
 
-- Want same lambda to handle multiple event for the same service
-  - E.g. API endpoints, different SQS messages
-- Don't need 1000's of individual functions with sprawling deployments
-- Deal with lots of different types of events within lambdas
+The framework handles event detection and routing so you can focus on your business logic. The API is consistent across every supported service, once you understand how the routing works for one event, you understand them all.
 
-
-## Why Lambda Event Router
-
-- Simple routing - Easy tp deal with multiple events from the same AWS services
-- Standard syntax - Easy to jump between different event from different AWS services
-- Focus on business logic
+Everything is fully typed. Inline handlers get automatic type inference, schema validation feeds into your handler types and each router enforces the correct response shape for its event source.
 
 
-## When not to use Lambda Event Router
+## Who is it for?
 
-- <Grab from README>
+Lambda Event Router is a good fit when:
+
+- You use lambdas as your main compute and use different AWS services as event triggers
+- You want one Lambda handling multiple events from the same service. For example, a large number of APIGateway endpoints or several different SQS message types routed to different handlers.
+- You deal with events from multiple different AWS services and want a consistent pattern rather than bespoke event handling for each one.
+- You don't want hundreds of single-purpose Lambdas with sprawling deployments that are hard to manage
+
+
+## When not to use it
+
+If your Lambda handles a single event source in a single way, you probably don't need this. Here are some cases where it isn't the right fit:
+
+- **Single event source with no filtering** - Your Lambda receives events from one source and processes them all the same way. A plain handler function is simpler.
+- **Single-purpose Lambdas** - Your Lambda does exactly one thing. Routing and filtering add indirection with no upside.
+- **HTTP-only Lambdas** - Dedicated HTTP frameworks like Express, Hono and Fastify have richer ecosystems for middleware, auth and templating.
+- **Performance-critical Lambdas with simple logic** - The router iterates through registered routers via `canHandleEvent` checks and applies middleware chains. For ultra-simple Lambdas where every millisecond counts, a direct handler avoids this overhead.
+- **One Lambda per event source** - If you intentionally map one Lambda to one event source for isolated scaling, permissions or deployment, there's nothing to route between.
+
+
+## What next?
+
+Head to the [quick start](/docs/quick-start) to get going.

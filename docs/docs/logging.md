@@ -41,6 +41,16 @@ const logger = new Logger({
 logger.info('My log');
 ```
 
+### Per-invocation keys
+
+`LambdaRouter` calls `resetKeys()` on the active logger at the start of every invocation. This clears any temporary keys added with `appendKeys()` during a previous invocation so that state does not leak across warm-container reuse.
+
+If you need attributes that persist for the lifetime of the container (e.g. region, account id), use `appendPersistentKeys()` / `persistentLogAttributes` instead. Persistent keys are not affected by the per-invocation reset.
+
+### Structured JSON logs
+
+If your Lambda function is configured with log format `JSON` (Advanced Logging Controls), the runtime sets `AWS_LAMBDA_LOG_FORMAT=JSON`. The default `Logger` detects this and emits a single structured object per log call so the runtime can merge its properties into CloudWatch as queryable fields rather than a single stringified `message`. For heavier structured logging (Lambda context injection, sampling, child loggers) install `@aws-lambda-powertools/logger` as shown below.
+
 
 ## Powertools
 
