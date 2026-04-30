@@ -22,15 +22,6 @@ export async function dynamoDBTracingMiddleware(
   const upstreamHeader = readDynamoDBUpstreamHeader(request.record);
   const keyNames = Object.keys(request.record.dynamodb?.Keys ?? {}).join('/');
 
-  logger.info({
-    message: 'TEMP ddb stream middleware entry',
-    upstreamHeader,
-    keyNames,
-    eventName: request.record.eventName,
-    hasNewImage: request.record.dynamodb?.NewImage !== undefined,
-    hasOldImage: request.record.dynamodb?.OldImage !== undefined,
-  });
-
   const opened = openBridgedSegmentWithUpstream(tracer, `DDBStream ${keyNames}`, upstreamHeader);
   logger.appendKeys({ xrayTraceId: upstreamHeader, _X_AMZN_TRACE_ID: process.env._X_AMZN_TRACE_ID });
   try {

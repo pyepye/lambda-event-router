@@ -25,13 +25,6 @@ export async function sqsTracingMiddleware(
   const queueName = readQueueName(request.record.eventSourceARN);
   const routeName = readRouteName(request.messageAttributes);
 
-  logger.info({
-    message: 'TEMP sqs middleware entry',
-    awsTraceHeader: traceHeader,
-    type: routeName,
-    queueName,
-  });
-
   const opened = openBridgedSegmentWithUpstream(tracer, `SQS ${queueName} ${routeName}`, traceHeader);
   logger.appendKeys({ xrayTraceId: traceHeader, _X_AMZN_TRACE_ID: process.env._X_AMZN_TRACE_ID });
   try {

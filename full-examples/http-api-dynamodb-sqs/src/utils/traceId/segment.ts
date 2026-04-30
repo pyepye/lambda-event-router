@@ -1,5 +1,5 @@
 import type { Tracer } from '@aws-lambda-powertools/tracer';
-import { isObject, logger } from '@lambda-event-router/base';
+import { isObject } from '@lambda-event-router/base';
 import { Segment, type Subsegment } from 'aws-xray-sdk-core';
 
 import { parseTraceHeader } from './parseTraceHeader.js';
@@ -65,28 +65,10 @@ export function openBridgedSegmentWithUpstream(
 
   tracer.setSegment(segment);
 
-  logger.info({
-    message: 'TEMP openBridgedSegment',
-    name,
-    upstreamHeader,
-    bridgedTraceId: segment.trace_id,
-    bridgedSegmentId: segment.id,
-    bridgedParentId: segment.parent_id,
-    notTraced: segment.notTraced,
-    previousSegmentId: previousSegment?.id,
-  });
-
   return { segment, previousSegment };
 }
 
 export function closeBridgedSegment(tracer: Tracer, opened: OpenedBridgedSegment): void {
   opened.segment.close();
   if (opened.previousSegment) tracer.setSegment(opened.previousSegment);
-
-  logger.info({
-    message: 'TEMP closeBridgedSegment',
-    bridgedSegmentId: opened.segment.id,
-    bridgedTraceId: opened.segment.trace_id,
-    notTraced: opened.segment.notTraced,
-  });
 }

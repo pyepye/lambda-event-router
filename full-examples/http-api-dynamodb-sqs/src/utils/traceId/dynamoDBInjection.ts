@@ -1,5 +1,5 @@
 import type { ServiceInputTypes, ServiceOutputTypes } from '@aws-sdk/lib-dynamodb';
-import { isObject, logger } from '@lambda-event-router/base';
+import { isObject } from '@lambda-event-router/base';
 import type {
   HandlerExecutionContext,
   InitializeHandler,
@@ -100,13 +100,6 @@ export function traceIdInjectionMiddleware(
   ): Promise<InitializeHandlerOutput<ServiceOutputTypes>> {
     const header = buildHeaderFromSegment(tracer.getSegment());
 
-    logger.info({
-      message: 'TEMP ddb-injection',
-      commandName: context.commandName,
-      header,
-      segmentId: tracer.getSegment()?.id,
-    });
-
     if (!header) return next(args);
 
     const input = args.input;
@@ -116,26 +109,21 @@ export function traceIdInjectionMiddleware(
       case 'PutCommand':
       case 'PutItemCommand':
         stampPutItem(input, header);
-        logger.info({ message: 'TEMP ddb-injection stamped', commandName: context.commandName });
         break;
       case 'UpdateCommand':
       case 'UpdateItemCommand':
         stampUpdateExpression(input, header);
-        logger.info({ message: 'TEMP ddb-injection stamped', commandName: context.commandName });
         break;
       case 'BatchWriteCommand':
       case 'BatchWriteItemCommand':
         stampBatchWrite(input, header);
-        logger.info({ message: 'TEMP ddb-injection stamped', commandName: context.commandName });
         break;
       case 'TransactWriteCommand':
       case 'TransactWriteItemsCommand':
         stampTransactWrite(input, header);
-        logger.info({ message: 'TEMP ddb-injection stamped', commandName: context.commandName });
         break;
       // DeleteCommand: no-op. Stream consumers see OldImage._xrayTraceId of the prior writer.
       default:
-        logger.info({ message: 'TEMP ddb-injection no-op', commandName: context.commandName });
         break;
     }
     return next(args);

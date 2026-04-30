@@ -5,8 +5,6 @@ import {
   SendMessageCommand,
 } from '@aws-sdk/client-sqs';
 
-import { logger } from '@lambda-event-router/base';
-
 import { sqs } from '../config.js';
 import { buildHeaderFromSegment } from './traceId/segment.js';
 import { tracer } from './traceId/tracer.js';
@@ -17,7 +15,6 @@ import { tracer } from './traceId/tracer.js';
 // trace_id all the way through the SQS hop.
 function buildTraceSystemAttributes(): Record<string, MessageSystemAttributeValue> | undefined {
   const header = buildHeaderFromSegment(tracer.getSegment());
-  logger.info({ message: 'TEMP sqs send header', header });
   if (!header) return undefined;
   return { AWSTraceHeader: { DataType: 'String', StringValue: header } };
 }
