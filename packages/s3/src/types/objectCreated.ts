@@ -8,11 +8,11 @@ import type { S3BaseRequest, S3Filters, S3FiltersWithoutEventNames, S3Middleware
 
 /* v8 ignore next 7 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_CREATED_EVENT_NAMES = [
-  's3:ObjectCreated:*',
-  's3:ObjectCreated:Put',
-  's3:ObjectCreated:Post',
-  's3:ObjectCreated:Copy',
-  's3:ObjectCreated:CompleteMultipartUpload',
+  'ObjectCreated:*',
+  'ObjectCreated:Put',
+  'ObjectCreated:Post',
+  'ObjectCreated:Copy',
+  'ObjectCreated:CompleteMultipartUpload',
 ] as const;
 
 export type S3ObjectCreatedEventName = (typeof OBJECT_CREATED_EVENT_NAMES)[number];

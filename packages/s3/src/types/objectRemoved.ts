@@ -6,9 +6,9 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './
 
 /* v8 ignore next 5 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_REMOVED_EVENT_NAMES = [
-  's3:ObjectRemoved:*',
-  's3:ObjectRemoved:Delete',
-  's3:ObjectRemoved:DeleteMarkerCreated',
+  'ObjectRemoved:*',
+  'ObjectRemoved:Delete',
+  'ObjectRemoved:DeleteMarkerCreated',
 ] as const;
 
 export type S3ObjectRemovedEventName = (typeof OBJECT_REMOVED_EVENT_NAMES)[number];

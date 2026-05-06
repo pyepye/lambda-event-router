@@ -5,7 +5,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './
 // =============================================================================
 
 /* v8 ignore next -- @preserve - Constant declaration, no logic to test */
-export const REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES = ['s3:ReducedRedundancyLostObject'] as const;
+export const REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES = ['ReducedRedundancyLostObject'] as const;
 
 export type S3ReducedRedundancyLostObjectEventName = (typeof REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES)[number];
 
@@ -24,7 +24,7 @@ export interface S3ReducedRedundancyLostObjectRouteDefinition {
 // =============================================================================
 
 /* v8 ignore next -- @preserve - Constant declaration, no logic to test */
-export const INTELLIGENT_TIERING_EVENT_NAMES = ['s3:IntelligentTiering'] as const;
+export const INTELLIGENT_TIERING_EVENT_NAMES = ['IntelligentTiering'] as const;
 
 export type S3IntelligentTieringEventName = (typeof INTELLIGENT_TIERING_EVENT_NAMES)[number];
 
@@ -43,7 +43,7 @@ export interface S3IntelligentTieringRouteDefinition {
 // =============================================================================
 
 /* v8 ignore next -- @preserve - Constant declaration, no logic to test */
-export const TEST_EVENT_NAMES = ['s3:TestEvent'] as const;
+export const TEST_EVENT_NAMES = ['TestEvent'] as const;
 
 export type S3TestEventName = (typeof TEST_EVENT_NAMES)[number];
 

@@ -36,10 +36,9 @@ const s3Router = createS3Router()
 // Inline functions allows Typescript to automatic infer types
 const processUpload = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:*'],
-    buckets: ['my-uploads-bucket'],
-    prefixes: ['uploads/'],
-    suffixes: ['.json'],
+    eventName: 'ObjectCreated:*',
+    bucket: 'my-uploads-bucket',
+    key: ['uploads/*', '*.json'],
   },
 }).handle(async ({ bucket, key, objectSize, eventName }) => {
   console.log(`${eventName}: ${key} in ${bucket} (${objectSize} bytes)`)
@@ -83,10 +82,9 @@ const s3Router = createS3Router()
 
 const processUpload = defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:*'],
-    buckets: ['my-uploads-bucket'],
-    prefixes: ['uploads/'],
-    suffixes: ['.json'],
+    eventName: 'ObjectCreated:*',
+    bucket: 'my-uploads-bucket',
+    key: ['uploads/*', '*.json'],
   },
 }).handle(async ({ bucket, key, objectSize, eventName }) => {
   console.log(`${eventName}: ${key} in ${bucket} (${objectSize} bytes)`)
@@ -104,9 +102,8 @@ const s3Router = createS3Router()
 
 s3Router.objectCreated({
   filters: {
-    buckets: ['my-uploads-bucket'],
-    prefixes: ['uploads/'],
-    suffixes: ['.json'],
+    bucket: 'my-uploads-bucket',
+    key: ['uploads/*', '*.json'],
   },
   handler: processUpload,
 })
@@ -161,11 +158,9 @@ s3Router.batchOperation()
 ```ts
 defineRoute({
   filters: {
-    eventNames: ['s3:ObjectCreated:Put'],
-    buckets: ['my-images-bucket'],
-    prefixes: ['images/', 'photos/'],
-    suffixes: ['.jpg', '.png', '.webp'],
-    includes: ['thumbnail'],
+    eventName: 'ObjectCreated:Put',
+    bucket: 'my-images-bucket',
+    key: ['images/*', 'photos/*', '*thumbnail*', '*.jpg', '*.png', '*.webp'],
     customFilter: ({ record }) => record.s3.object.size >= 100 * 1024 * 1024,
   },
 })

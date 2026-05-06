@@ -122,29 +122,29 @@ suite('S3Router', () => {
 
   suite('convenience methods', () => {
     test.each([
-      { method: 'objectCreated', eventName: 's3:ObjectCreated:*' },
-      { method: 'objectCreatedPut', eventName: 's3:ObjectCreated:Put' },
-      { method: 'objectCreatedPost', eventName: 's3:ObjectCreated:Post' },
-      { method: 'objectCreatedCopy', eventName: 's3:ObjectCreated:Copy' },
-      { method: 'objectCreatedCompleteMultipartUpload', eventName: 's3:ObjectCreated:CompleteMultipartUpload' },
-      { method: 'objectRemoved', eventName: 's3:ObjectRemoved:*' },
-      { method: 'objectRemovedDelete', eventName: 's3:ObjectRemoved:Delete' },
-      { method: 'objectRemovedDeleteMarkerCreated', eventName: 's3:ObjectRemoved:DeleteMarkerCreated' },
-      { method: 'objectRestore', eventName: 's3:ObjectRestore:*' },
-      { method: 'objectRestorePost', eventName: 's3:ObjectRestore:Post' },
-      { method: 'objectRestoreCompleted', eventName: 's3:ObjectRestore:Completed' },
-      { method: 'objectRestoreDelete', eventName: 's3:ObjectRestore:Delete' },
-      { method: 'lifecycleExpiration', eventName: 's3:LifecycleExpiration:*' },
-      { method: 'lifecycleExpirationDelete', eventName: 's3:LifecycleExpiration:Delete' },
-      { method: 'lifecycleExpirationDeleteMarkerCreated', eventName: 's3:LifecycleExpiration:DeleteMarkerCreated' },
-      { method: 'lifecycleTransition', eventName: 's3:LifecycleTransition' },
-      { method: 'objectTagging', eventName: 's3:ObjectTagging:*' },
-      { method: 'objectTaggingPut', eventName: 's3:ObjectTagging:Put' },
-      { method: 'objectTaggingDelete', eventName: 's3:ObjectTagging:Delete' },
-      { method: 'objectAclPut', eventName: 's3:ObjectAcl:Put' },
-      { method: 'reducedRedundancyLostObject', eventName: 's3:ReducedRedundancyLostObject' },
-      { method: 'intelligentTiering', eventName: 's3:IntelligentTiering' },
-      { method: 'testEvent', eventName: 's3:TestEvent' },
+      { method: 'objectCreated', eventName: 'ObjectCreated:*' },
+      { method: 'objectCreatedPut', eventName: 'ObjectCreated:Put' },
+      { method: 'objectCreatedPost', eventName: 'ObjectCreated:Post' },
+      { method: 'objectCreatedCopy', eventName: 'ObjectCreated:Copy' },
+      { method: 'objectCreatedCompleteMultipartUpload', eventName: 'ObjectCreated:CompleteMultipartUpload' },
+      { method: 'objectRemoved', eventName: 'ObjectRemoved:*' },
+      { method: 'objectRemovedDelete', eventName: 'ObjectRemoved:Delete' },
+      { method: 'objectRemovedDeleteMarkerCreated', eventName: 'ObjectRemoved:DeleteMarkerCreated' },
+      { method: 'objectRestore', eventName: 'ObjectRestore:*' },
+      { method: 'objectRestorePost', eventName: 'ObjectRestore:Post' },
+      { method: 'objectRestoreCompleted', eventName: 'ObjectRestore:Completed' },
+      { method: 'objectRestoreDelete', eventName: 'ObjectRestore:Delete' },
+      { method: 'lifecycleExpiration', eventName: 'LifecycleExpiration:*' },
+      { method: 'lifecycleExpirationDelete', eventName: 'LifecycleExpiration:Delete' },
+      { method: 'lifecycleExpirationDeleteMarkerCreated', eventName: 'LifecycleExpiration:DeleteMarkerCreated' },
+      { method: 'lifecycleTransition', eventName: 'LifecycleTransition' },
+      { method: 'objectTagging', eventName: 'ObjectTagging:*' },
+      { method: 'objectTaggingPut', eventName: 'ObjectTagging:Put' },
+      { method: 'objectTaggingDelete', eventName: 'ObjectTagging:Delete' },
+      { method: 'objectAclPut', eventName: 'ObjectAcl:Put' },
+      { method: 'reducedRedundancyLostObject', eventName: 'ReducedRedundancyLostObject' },
+      { method: 'intelligentTiering', eventName: 'IntelligentTiering' },
+      { method: 'testEvent', eventName: 'TestEvent' },
     ])('$method sets eventName filter to $eventName', async ({ method, eventName }) => {
       const handler = vi.fn();
       // @ts-expect-error - dynamic method access for convenience method testing
@@ -159,13 +159,13 @@ suite('S3Router', () => {
       const handler = vi.fn();
       router.objectCreatedPut({ filters: { bucket: 'specific-bucket', key: 'uploads/*' }, handler });
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
       const matchingResult = await router.matchRoute(
         record,
         'specific-bucket',
         'uploads/test.txt',
-        's3:ObjectCreated:Put',
+        'ObjectCreated:Put',
       );
       expect(matchingResult).toBeDefined();
 
@@ -174,7 +174,7 @@ suite('S3Router', () => {
         record,
         'other-bucket',
         'uploads/test.txt',
-        's3:ObjectCreated:Put',
+        'ObjectCreated:Put',
       );
       expect(nonMatchingResult).toBeUndefined();
     });
@@ -184,13 +184,13 @@ suite('S3Router', () => {
     test('matches route by exact eventName', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventName: 's3:ObjectCreated:Put' },
+          filters: { eventName: 'ObjectCreated:Put' },
         }).handle(async () => {}),
       );
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -198,13 +198,13 @@ suite('S3Router', () => {
     test('matches route by exact eventName array', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventName: ['s3:ObjectCreated:Put', 's3:ObjectCreated:Get'] },
+          filters: { eventName: ['ObjectCreated:Put', 'ObjectCreated:Get'] },
         }).handle(async () => {}),
       );
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -212,13 +212,13 @@ suite('S3Router', () => {
     test('matches route by wildcard eventName', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventName: 's3:ObjectCreated:*' },
+          filters: { eventName: 'ObjectCreated:*' },
         }).handle(async () => {}),
       );
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -226,13 +226,13 @@ suite('S3Router', () => {
     test('does not match route when eventName does not match', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventName: 's3:ObjectRemoved:Delete' },
+          filters: { eventName: 'ObjectRemoved:Delete' },
         }).handle(async () => {}),
       );
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -246,7 +246,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -260,7 +260,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -274,7 +274,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -288,7 +288,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -302,7 +302,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -316,7 +316,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test-file.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -334,7 +334,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -348,7 +348,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -367,7 +367,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -382,12 +382,12 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(filterFn).toHaveBeenCalledWith({
         bucket: 'my-bucket',
         key: 'uploads/test.txt',
-        eventName: 's3:ObjectCreated:Put',
+        eventName: 'ObjectCreated:Put',
         record,
       });
     });
@@ -401,7 +401,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -415,7 +415,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -432,7 +432,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
     });
@@ -449,7 +449,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeUndefined();
     });
@@ -459,7 +459,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'any-bucket', 'any/key.xyz', 's3:ObjectRemoved:Delete');
+      const result = await router.matchRoute(record, 'any-bucket', 'any/key.xyz', 'ObjectRemoved:Delete');
 
       expect(result).toBeDefined();
     });
@@ -472,7 +472,7 @@ suite('S3Router', () => {
 
       const record = s3Record();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 's3:ObjectCreated:Put');
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -484,11 +484,11 @@ suite('S3Router', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { eventName: 's3:ObjectCreated:Put' },
+          filters: { eventName: 'ObjectCreated:Put' },
         }).handle(handler),
       );
 
-      const record = s3Record({ eventName: 's3:ObjectCreated:Put' });
+      const record = s3Record({ eventName: 'ObjectCreated:Put' });
       const { event, context } = s3HandlerEvent({ records: [record] });
       await router.handleEvent(event, context);
 
@@ -496,7 +496,7 @@ suite('S3Router', () => {
         expect.objectContaining({
           bucket: 'my-bucket',
           key: 'uploads/test-file.txt',
-          eventName: 's3:ObjectCreated:Put',
+          eventName: 'ObjectCreated:Put',
           record: event.Records[0],
           context,
         }),
@@ -646,32 +646,6 @@ suite('S3Router', () => {
     });
   });
 
-  suite('matchEventName', () => {
-    test('returns true for exact match', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:Put']);
-      expect(result).toBe(true);
-    });
-
-    test('returns true when wildcard matches', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectCreated:*']);
-      expect(result).toBe(true);
-    });
-
-    test('returns false when wildcard does not match different category', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectRemoved:Delete', ['s3:ObjectCreated:*']);
-      expect(result).toBe(false);
-    });
-
-    test('returns false when no filter matches', () => {
-      // @ts-expect-error - testing private method directly
-      const result = router.matchEventName('s3:ObjectCreated:Put', ['s3:ObjectRemoved:Delete']);
-      expect(result).toBe(false);
-    });
-  });
-
   suite('processRecord', () => {
     test('URL-decodes key from record', async ({ s3Record, context }) => {
       const handler = vi.fn();
@@ -697,7 +671,7 @@ suite('S3Router', () => {
   suite('buildRequest', () => {
     test('ObjectCreated events include objectSize and eTag', ({ s3Record, context }) => {
       const record = s3Record({
-        eventName: 's3:ObjectCreated:Put',
+        eventName: 'ObjectCreated:Put',
         s3: { object: { size: 2048, eTag: 'abc123' } },
       });
       // @ts-expect-error - testing private method directly
@@ -712,7 +686,7 @@ suite('S3Router', () => {
         lifecycleRestoreStorageClass: 'STANDARD',
       };
       const record = s3Record({
-        eventName: 's3:ObjectRestore:Completed',
+        eventName: 'ObjectRestore:Completed',
         glacierEventData: { restoreEventData },
       });
       // @ts-expect-error - testing private method directly
@@ -722,7 +696,7 @@ suite('S3Router', () => {
     });
 
     test('other events return base request only', ({ s3Record, context }) => {
-      const record = s3Record({ eventName: 's3:ObjectRemoved:Delete' });
+      const record = s3Record({ eventName: 'ObjectRemoved:Delete' });
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, context(), 'my-bucket', 'uploads/test.txt');
 
@@ -735,7 +709,7 @@ suite('S3Router', () => {
       s3Record,
       context,
     }) => {
-      const record = s3Record({ eventName: 's3:ObjectRemoved:Delete' });
+      const record = s3Record({ eventName: 'ObjectRemoved:Delete' });
       const ctx = context();
       // @ts-expect-error - testing private method directly
       const result = router.buildRequest(record, ctx, 'my-bucket', 'uploads/test.txt');
@@ -744,7 +718,7 @@ suite('S3Router', () => {
         expect.objectContaining({
           bucket: 'my-bucket',
           key: 'uploads/test.txt',
-          eventName: 's3:ObjectRemoved:Delete',
+          eventName: 'ObjectRemoved:Delete',
           eventTime: record.eventTime,
           versionId: record.s3.object.versionId,
           record,
@@ -762,9 +736,9 @@ suite('S3Router', () => {
       router.objectRemoved({ handler: deleteHandler });
 
       const records = [
-        s3Record({ eventName: 's3:ObjectCreated:Put' }),
-        s3Record({ eventName: 's3:ObjectCreated:Copy' }),
-        s3Record({ eventName: 's3:ObjectRemoved:Delete' }),
+        s3Record({ eventName: 'ObjectCreated:Put' }),
+        s3Record({ eventName: 'ObjectCreated:Copy' }),
+        s3Record({ eventName: 'ObjectRemoved:Delete' }),
       ];
       const { event, context } = s3HandlerEvent({ records });
       await router.handleEvent(event, context);

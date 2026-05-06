@@ -5,11 +5,7 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './
 // =============================================================================
 
 /* v8 ignore next 5 -- @preserve - Constant declaration, no logic to test */
-export const OBJECT_TAGGING_EVENT_NAMES = [
-  's3:ObjectTagging:*',
-  's3:ObjectTagging:Put',
-  's3:ObjectTagging:Delete',
-] as const;
+export const OBJECT_TAGGING_EVENT_NAMES = ['ObjectTagging:*', 'ObjectTagging:Put', 'ObjectTagging:Delete'] as const;
 
 export type S3ObjectTaggingEventName = (typeof OBJECT_TAGGING_EVENT_NAMES)[number];
 

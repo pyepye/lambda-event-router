@@ -3,7 +3,7 @@ import { defineRoute, type S3FilterInput } from '@lambda-event-router/s3';
 // Handle S3 ObjectCreated events with bucket and key filters
 export const objectCreatedRoute = defineRoute({
   filters: {
-    eventName: 's3:ObjectCreated:*',
+    eventName: 'ObjectCreated:*',
     bucket: 'my-uploads-bucket',
     key: ['uploads/*', '*.json'],
   },
@@ -15,7 +15,7 @@ export const objectCreatedRoute = defineRoute({
 // Handle only PUT events for image uploads (multiple prefixes and suffixes)
 export const objectCreatedPutImageRoute = defineRoute({
   filters: {
-    eventName: 's3:ObjectCreated:Put',
+    eventName: 'ObjectCreated:Put',
     bucket: 'my-images-bucket',
     key: ['images/*', 'photos/*', '*.jpg', '*.jpeg', '*.png', '*.gif', '*.webp'],
   },
@@ -26,7 +26,7 @@ export const objectCreatedPutImageRoute = defineRoute({
 // Handle PUT events for files containing 'thumbnail' in the key
 export const objectCreatedThumbnailRoute = defineRoute({
   filters: {
-    eventName: 's3:ObjectCreated:Put',
+    eventName: 'ObjectCreated:Put',
     bucket: 'my-images-bucket',
     key: ['*thumbnail*', '*thumb*'],
   },
@@ -39,7 +39,7 @@ const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024;
 // Match large file uploads using customFilter on object size
 export const largeFileUploadRoute = defineRoute({
   filters: {
-    eventName: 's3:ObjectCreated:*',
+    eventName: 'ObjectCreated:*',
     bucket: 'my-uploads-bucket',
     customFilter: ({ record }: S3FilterInput) => {
       const objectSize = record.s3.object.size;

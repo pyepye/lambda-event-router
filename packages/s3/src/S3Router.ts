@@ -127,7 +127,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectCreated(definition: S3ObjectCreatedConvenienceRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectCreated:*',
+      'ObjectCreated:*',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -136,7 +136,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectCreatedPut(definition: S3ObjectCreatedConvenienceRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectCreated:Put',
+      'ObjectCreated:Put',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -145,7 +145,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectCreatedPost(definition: S3ObjectCreatedConvenienceRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectCreated:Post',
+      'ObjectCreated:Post',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -154,7 +154,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectCreatedCopy(definition: S3ObjectCreatedConvenienceRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectCreated:Copy',
+      'ObjectCreated:Copy',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -163,7 +163,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectCreatedCompleteMultipartUpload(definition: S3ObjectCreatedConvenienceRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectCreated:CompleteMultipartUpload',
+      'ObjectCreated:CompleteMultipartUpload',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -176,7 +176,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRemoved(definition: S3ObjectRemovedRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRemoved:*',
+      'ObjectRemoved:*',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -185,7 +185,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRemovedDelete(definition: S3ObjectRemovedRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRemoved:Delete',
+      'ObjectRemoved:Delete',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -194,7 +194,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRemovedDeleteMarkerCreated(definition: S3ObjectRemovedRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRemoved:DeleteMarkerCreated',
+      'ObjectRemoved:DeleteMarkerCreated',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -207,7 +207,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRestore(definition: S3ObjectRestoreRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRestore:*',
+      'ObjectRestore:*',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -216,7 +216,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRestorePost(definition: S3ObjectRestoreRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRestore:Post',
+      'ObjectRestore:Post',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -225,7 +225,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRestoreCompleted(definition: S3ObjectRestoreRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRestore:Completed',
+      'ObjectRestore:Completed',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -234,7 +234,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectRestoreDelete(definition: S3ObjectRestoreRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectRestore:Delete',
+      'ObjectRestore:Delete',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -247,7 +247,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   lifecycleExpiration(definition: S3LifecycleExpirationRouteDefinition): this {
     return this.addRoute(
-      's3:LifecycleExpiration:*',
+      'LifecycleExpiration:*',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -256,7 +256,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   lifecycleExpirationDelete(definition: S3LifecycleExpirationRouteDefinition): this {
     return this.addRoute(
-      's3:LifecycleExpiration:Delete',
+      'LifecycleExpiration:Delete',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -265,7 +265,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   lifecycleExpirationDeleteMarkerCreated(definition: S3LifecycleExpirationRouteDefinition): this {
     return this.addRoute(
-      's3:LifecycleExpiration:DeleteMarkerCreated',
+      'LifecycleExpiration:DeleteMarkerCreated',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -274,7 +274,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   lifecycleTransition(definition: S3LifecycleTransitionRouteDefinition): this {
     return this.addRoute(
-      's3:LifecycleTransition',
+      'LifecycleTransition',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -287,7 +287,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectTagging(definition: S3ObjectTaggingRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectTagging:*',
+      'ObjectTagging:*',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -296,7 +296,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectTaggingPut(definition: S3ObjectTaggingRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectTagging:Put',
+      'ObjectTagging:Put',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -305,7 +305,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectTaggingDelete(definition: S3ObjectTaggingRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectTagging:Delete',
+      'ObjectTagging:Delete',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -318,7 +318,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   objectAclPut(definition: S3ObjectAclRouteDefinition): this {
     return this.addRoute(
-      's3:ObjectAcl:Put',
+      'ObjectAcl:Put',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -331,7 +331,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   reducedRedundancyLostObject(definition: S3ReducedRedundancyLostObjectRouteDefinition): this {
     return this.addRoute(
-      's3:ReducedRedundancyLostObject',
+      'ReducedRedundancyLostObject',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -340,7 +340,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   intelligentTiering(definition: S3IntelligentTieringRouteDefinition): this {
     return this.addRoute(
-      's3:IntelligentTiering',
+      'IntelligentTiering',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -349,7 +349,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
 
   testEvent(definition: S3TestEventRouteDefinition): this {
     return this.addRoute(
-      's3:TestEvent',
+      'TestEvent',
       definition.filters,
       definition.middleware ?? [],
       definition.handler as InternalHandler,
@@ -514,23 +514,6 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     return undefined;
   }
 
-  /**
-   * Match event name with wildcard support.
-   * 's3:ObjectCreated:*' matches 's3:ObjectCreated:Put', 's3:ObjectCreated:Copy', etc.
-   */
-  private matchEventName(recordEventName: string, filterEventNames: string[]): boolean {
-    for (const filterName of filterEventNames) {
-      // Wildcard match: 's3:ObjectCreated:*' matches any ObjectCreated event
-      if (filterName.endsWith(':*')) {
-        const prefix = filterName.slice(0, -1);
-        if (recordEventName.startsWith(prefix)) return true;
-      }
-      // Exact match
-      if (recordEventName === filterName) return true;
-    }
-    return false;
-  }
-
   private buildRequest(
     record: S3EventRecord,
     context: Context,
@@ -552,7 +535,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     };
 
     // ObjectRestore events include glacier restoration data
-    if (eventName.startsWith('s3:ObjectRestore:')) {
+    if (eventName.startsWith('ObjectRestore:')) {
       const restoreRequest: S3ObjectRestoreRequest = {
         ...baseRequest,
         restoreEventData: record.glacierEventData?.restoreEventData,
@@ -561,7 +544,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     }
 
     // ObjectCreated events include size and eTag
-    if (eventName.startsWith('s3:ObjectCreated:')) {
+    if (eventName.startsWith('ObjectCreated:')) {
       const createdRequest: S3ObjectCreatedRequest = {
         ...baseRequest,
         objectSize: s3Object.size,

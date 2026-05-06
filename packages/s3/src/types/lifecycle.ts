@@ -6,9 +6,9 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './
 
 /* v8 ignore next 5 -- @preserve - Constant declaration, no logic to test */
 export const LIFECYCLE_EXPIRATION_EVENT_NAMES = [
-  's3:LifecycleExpiration:*',
-  's3:LifecycleExpiration:Delete',
-  's3:LifecycleExpiration:DeleteMarkerCreated',
+  'LifecycleExpiration:*',
+  'LifecycleExpiration:Delete',
+  'LifecycleExpiration:DeleteMarkerCreated',
 ] as const;
 
 export type S3LifecycleExpirationEventName = (typeof LIFECYCLE_EXPIRATION_EVENT_NAMES)[number];
@@ -18,7 +18,7 @@ export type S3LifecycleExpirationEventName = (typeof LIFECYCLE_EXPIRATION_EVENT_
 // =============================================================================
 
 /* v8 ignore next -- @preserve - Constant declaration, no logic to test */
-export const LIFECYCLE_TRANSITION_EVENT_NAMES = ['s3:LifecycleTransition'] as const;
+export const LIFECYCLE_TRANSITION_EVENT_NAMES = ['LifecycleTransition'] as const;
 
 export type S3LifecycleTransitionEventName = (typeof LIFECYCLE_TRANSITION_EVENT_NAMES)[number];
 

@@ -8,10 +8,10 @@ import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './
 
 /* v8 ignore next 6 -- @preserve - Constant declaration, no logic to test */
 export const OBJECT_RESTORE_EVENT_NAMES = [
-  's3:ObjectRestore:*',
-  's3:ObjectRestore:Post',
-  's3:ObjectRestore:Completed',
-  's3:ObjectRestore:Delete',
+  'ObjectRestore:*',
+  'ObjectRestore:Post',
+  'ObjectRestore:Completed',
+  'ObjectRestore:Delete',
 ] as const;
 
 export type S3ObjectRestoreEventName = (typeof OBJECT_RESTORE_EVENT_NAMES)[number];
