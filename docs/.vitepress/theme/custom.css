@@ -14,6 +14,10 @@
   --vp-c-brand-3: #4a8c49;
   --vp-c-brand-soft: #7bcf7829;
 
+  --vp-c-text-1: #f0f6fc;
+  --vp-c-text-2: #c9d1d9;
+  --vp-c-text-3: #8b949e;
+
   /* Ppasses contrast easily in dark mode */
   --vp-c-brand-text: #7bcf78;
 }
