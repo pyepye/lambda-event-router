@@ -36,7 +36,7 @@ const kafkaRouter = createKafkaRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const processMessage = defineRoute({
-  filters: { topics: ['order-events'] },
+  filters: { topic: 'order-events' },
   valueSchema: z.object({ orderId: z.string(), total: z.number() }),
 }).handle(async ({ value, key, topic, partition, offset }) => {
   console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
@@ -54,7 +54,7 @@ const kafkaRouter = createKafkaRouter()
 
 // Separate handler to define routes and handlers in different places
 kafkaRouter.route({
-  filters: { topics: ['order-events'] },
+  filters: { topic: 'order-events' },
   valueSchema: ValueSchema,
   handler: processMessage,
 })
@@ -76,7 +76,7 @@ import { createKafkaRouter, defineRoute } from '@lambda-event-router/kafka'
 const kafkaRouter = createKafkaRouter()
 
 const processMessage = defineRoute({
-  filters: { topics: ['order-events'] },
+  filters: { topic: 'order-events' },
   valueSchema: ValueSchema,
 }).handle(async ({ value, key, topic, partition, offset }) => {
   console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
@@ -93,7 +93,7 @@ import { createKafkaRouter } from '@lambda-event-router/kafka'
 const kafkaRouter = createKafkaRouter()
 
 kafkaRouter.route({
-  filters: { topics: ['order-events'] },
+  filters: { topic: 'order-events' },
   valueSchema: ValueSchema,
   handler: processMessage,
 })
@@ -108,9 +108,9 @@ async function processMessage({ value, key, topic, partition, offset }) {
 ```ts
 defineRoute({
   filters: {
-    topics: ['order-events'],
-    eventSourceArns: ['arn:aws:kafka:us-east-1:123456789:cluster/my-cluster'],
-    bootstrapServers: ['broker1:9092'],
+    topic: 'order-events',
+    eventSourceArn: 'arn:aws:kafka:us-east-1:123456789:cluster/my-cluster',
+    bootstrapServer: 'broker1:9092',
     customFilter: ({ value }) => value.priority === 'HIGH',
   },
 })

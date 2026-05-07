@@ -182,7 +182,7 @@ const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route(
   defineEventsRoute({
-    filters: { operations: ['SUBSCRIBE'] },
+    filters: { operations: 'SUBSCRIBE' },
   }).handle(async ({ event }) => {
     return event
   })
@@ -197,7 +197,7 @@ import { createAppSyncEventsRouter } from '@lambda-event-router/appsync'
 const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route({
-  filters: { operations: ['SUBSCRIBE'] },
+  filters: { operations: 'SUBSCRIBE' },
   handler: handleSubscribe,
 })
 

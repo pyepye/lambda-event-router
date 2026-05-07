@@ -35,7 +35,7 @@ const firehoseRouter = createFirehoseRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const processRecord = defineRoute({
-  filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream'] },
+  filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
 }).handle(async ({ data }) => {
   // Transform and return the record
 })
@@ -52,7 +52,7 @@ const firehoseRouter = createFirehoseRouter()
 
 // Separate handler to define routes and handlers in different places
 firehoseRouter.route({
-  filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream'] },
+  filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
   handler: processRecord,
 })
 
@@ -73,7 +73,7 @@ import { createFirehoseRouter, defineRoute } from '@lambda-event-router/firehose
 const firehoseRouter = createFirehoseRouter()
 
 const processRecord = defineRoute({
-  filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream'] },
+  filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
 }).handle(async ({ data }) => {
   // Transform and return the record
 })
@@ -89,7 +89,7 @@ import { createFirehoseRouter } from '@lambda-event-router/firehose'
 const firehoseRouter = createFirehoseRouter()
 
 firehoseRouter.route({
-  filters: { deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream'] },
+  filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
   handler: processRecord,
 })
 
@@ -103,7 +103,7 @@ async function processRecord({ data }) {
 ```ts
 defineRoute({
   filters: {
-    deliveryStreamArns: ['arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream'],
+    deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream',
     customFilter: ({ record }) => record.approximateArrivalTimestamp > someThreshold,
   },
 })

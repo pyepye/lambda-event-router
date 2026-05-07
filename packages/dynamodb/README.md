@@ -37,8 +37,8 @@ const dynamodbRouter = createDynamoDBRouter()
 // Inline functions allows Typescript to automatic infer types
 const processNewOrder = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01'],
+    eventName: 'INSERT',
+    eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
   },
   newImageSchema: z.object({ orderId: z.string(), customerId: z.string() }),
 }).handle(async ({ newImage }) => {
@@ -58,7 +58,7 @@ const dynamodbRouter = createDynamoDBRouter()
 // Separate handler to define routes and handlers in different places
 dynamodbRouter.insert({
   filters: {
-    eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01'],
+    eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
   },
   newImageSchema: NewOrderSchema,
   handler: processNewOrder,
@@ -82,8 +82,8 @@ const dynamodbRouter = createDynamoDBRouter()
 
 const processNewOrder = defineRoute({
   filters: {
-    eventNames: ['INSERT'],
-    eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01'],
+    eventName: 'INSERT',
+    eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
   },
   newImageSchema: NewOrderSchema,
 }).handle(async ({ newImage }) => {
@@ -102,7 +102,7 @@ const dynamodbRouter = createDynamoDBRouter()
 
 dynamodbRouter.insert({
   filters: {
-    eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01'],
+    eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
   },
   newImageSchema: NewOrderSchema,
   handler: processNewOrder,
@@ -126,20 +126,20 @@ dynamodbRouter.remove()
 ```ts
 // INSERT - newImage available
 defineRoute({
-  filters: { eventNames: ['INSERT'] },
+  filters: { eventName: 'INSERT' },
   newImageSchema: NewOrderSchema,
 }).handle(async ({ newImage }) => { ... })
 
 // MODIFY - both newImage and oldImage available
 defineRoute({
-  filters: { eventNames: ['MODIFY'] },
+  filters: { eventName: 'MODIFY' },
   newImageSchema: OrderSchema,
   oldImageSchema: OrderSchema,
 }).handle(async ({ newImage, oldImage }) => { ... })
 
 // REMOVE - oldImage available
 defineRoute({
-  filters: { eventNames: ['REMOVE'] },
+  filters: { eventName: 'REMOVE' },
   oldImageSchema: OrderSchema,
 }).handle(async ({ oldImage }) => { ... })
 ```
@@ -149,8 +149,8 @@ defineRoute({
 ```ts
 defineRoute({
   filters: {
-    eventNames: ['INSERT', 'MODIFY'],
-    eventSourceArns: ['arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01'],
+    eventName: ['INSERT', 'MODIFY'],
+    eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
     customFilter: ({ newImage }) => newImage?.status === 'PENDING',
   },
 })

@@ -18,9 +18,9 @@ const codecommitRouter = createCodeCommitRouter()
 codecommitRouter.route(
   defineRoute({
     filters: {
-      repositories: ['my-repo'],
-      branches: ['main'],
-      events: ['referenceCreated'],
+      repository: 'my-repo',
+      branch: 'main',
+      event: 'referenceCreated',
     },
   }).handle(async ({ repository, branch }) => {
     console.log(`New commit on ${repository}/${branch}`)
@@ -35,9 +35,9 @@ codecommitRouter.route(
 ```ts
 defineRoute({
   filters: {
-    repositories: ['my-repo', 'other-repo'],
-    branches: ['main', 'develop'],
-    events: ['referenceCreated', 'referenceUpdated'],
+    repository: ['my-repo', 'other-repo'],
+    branch: ['main', 'develop'],
+    event: ['referenceCreated', 'referenceUpdated'],
     customFilter: ({ record }) => record.codecommit.references.length > 0,
   },
 })

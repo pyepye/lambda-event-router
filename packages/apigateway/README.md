@@ -261,7 +261,7 @@ const wsRouter = createWebSocketRouter()
 
 wsRouter.route(
   defineWebSocketRoute({
-    filters: { eventType: 'MESSAGE', routeKeys: ['sendMessage'] },
+    filters: { eventType: 'MESSAGE', routeKey: 'sendMessage' },
   }).handle(async ({ body, connectionId }) => {
     return WebSocketOk()
   })

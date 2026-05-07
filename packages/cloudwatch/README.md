@@ -36,8 +36,8 @@ const cloudwatchRouter = createCloudWatchLogsRouter()
 // Inline functions allows Typescript to automatic infer types
 const processLogs = defineRoute({
   filters: {
-    logGroups: ['/aws/lambda/my-function'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroup: '/aws/lambda/my-function',
+    messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logStream, logEvents }) => {
   console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
@@ -55,7 +55,7 @@ const cloudwatchRouter = createCloudWatchLogsRouter()
 
 // Separate handler to define routes and handlers in different places
 cloudwatchRouter.dataMessage({
-  filters: { logGroups: ['/aws/lambda/my-function'] },
+  filters: { logGroup: '/aws/lambda/my-function' },
   handler: processLogs,
 })
 
@@ -77,8 +77,8 @@ const cloudwatchRouter = createCloudWatchLogsRouter()
 
 const processLogs = defineRoute({
   filters: {
-    logGroups: ['/aws/lambda/my-function'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroup: '/aws/lambda/my-function',
+    messageType: 'DATA_MESSAGE',
   },
 }).handle(async ({ logGroup, logStream, logEvents }) => {
   console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
@@ -95,7 +95,7 @@ import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'
 const cloudwatchRouter = createCloudWatchLogsRouter()
 
 cloudwatchRouter.dataMessage({
-  filters: { logGroups: ['/aws/lambda/my-function'] },
+  filters: { logGroup: '/aws/lambda/my-function' },
   handler: processLogs,
 })
 
@@ -116,9 +116,9 @@ cloudwatchRouter.controlMessage()
 ```ts
 defineRoute({
   filters: {
-    logGroups: ['/aws/lambda/my-function', '/aws/lambda/other-function'],
-    logStreams: ['2024/01/01/[$LATEST]abc123'],
-    messageTypes: ['DATA_MESSAGE'],
+    logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'],
+    logStream: '2024/01/01/[$LATEST]abc123',
+    messageTypes: 'DATA_MESSAGE',
     customFilter: ({ logEvents }) => logEvents.some(e => e.message.includes('ERROR')),
   },
 })

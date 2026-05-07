@@ -143,7 +143,7 @@ const sqsRouter = createSQSRouter()
 sqsRouter.route({
   filter: {
     messageAttributes: {
-      Type: ['ProcessOrder'],
+      Type: 'ProcessOrder',
     }
   },
   handler: processOrder
@@ -152,7 +152,7 @@ sqsRouter.route({
 sqsRouter.route({
   filter: {
     messageAttributes: {
-      Type: ['RefundOrder'],
+      Type: 'RefundOrder',
     }
   },
   handler: refundOrder

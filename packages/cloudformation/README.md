@@ -36,7 +36,7 @@ const cloudformationRouter = createCloudFormationRouter()
 // Inline functions allows Typescript to automatic infer types
 const handleCreate = defineRoute({
   filters: {
-    requestTypes: ['Create'],
+    requestType: 'Create',
   },
 }).handle(async ({ requestType, resourceProperties, stackId }) => {
   console.log(`Creating custom resource in stack ${stackId}`)
@@ -54,7 +54,7 @@ const cloudformationRouter = createCloudFormationRouter()
 
 // Separate handler to define routes and handlers in different places
 cloudformationRouter.route({
-  filters: { requestTypes: ['Create'] },
+  filters: { requestType: 'Create' },
   handler: handleCreate,
 })
 
@@ -75,7 +75,7 @@ import { createCloudFormationRouter, defineRoute } from '@lambda-event-router/cl
 const cloudformationRouter = createCloudFormationRouter()
 
 const handleCreate = defineRoute({
-  filters: { requestTypes: ['Create'] },
+  filters: { requestType: 'Create' },
 }).handle(async ({ requestType, resourceProperties, stackId }) => {
   console.log(`Creating custom resource in stack ${stackId}`)
 })
@@ -91,7 +91,7 @@ import { createCloudFormationRouter } from '@lambda-event-router/cloudformation'
 const cloudformationRouter = createCloudFormationRouter()
 
 cloudformationRouter.route({
-  filters: { requestTypes: ['Create'] },
+  filters: { requestType: 'Create' },
   handler: handleCreate,
 })
 
@@ -105,7 +105,7 @@ async function handleCreate({ requestType, resourceProperties, stackId }) {
 ```ts
 defineRoute({
   filters: {
-    requestTypes: ['Create', 'Update', 'Delete'],
+    requestType: ['Create', 'Update', 'Delete'],
     customFilter: ({ resourceType }) => resourceType === 'Custom::MyResource',
   },
 })

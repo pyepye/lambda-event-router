@@ -37,9 +37,9 @@ const documentdbRouter = createDocumentDBRouter()
 // Inline functions allows Typescript to automatic infer types
 const processNewOrder = defineRoute({
   filters: {
-    operationTypes: ['insert'],
-    databases: ['mydb'],
-    collections: ['orders'],
+    operationType: 'insert',
+    database: 'mydb',
+    collection: 'orders',
   },
   fullDocumentSchema: z.object({ orderId: z.string(), total: z.number() }),
 }).handle(async ({ fullDocument }) => {
@@ -58,7 +58,7 @@ const documentdbRouter = createDocumentDBRouter()
 
 // Separate handler to define routes and handlers in different places
 documentdbRouter.insert({
-  filters: { databases: ['mydb'], collections: ['orders'] },
+  filters: { database: 'mydb', collection: 'orders' },
   fullDocumentSchema: OrderSchema,
   handler: processNewOrder,
 })
@@ -81,9 +81,9 @@ const documentdbRouter = createDocumentDBRouter()
 
 const processNewOrder = defineRoute({
   filters: {
-    operationTypes: ['insert'],
-    databases: ['mydb'],
-    collections: ['orders'],
+    operationType: 'insert',
+    database: 'mydb',
+    collection: 'orders',
   },
   fullDocumentSchema: OrderSchema,
 }).handle(async ({ fullDocument }) => {
@@ -101,7 +101,7 @@ import { createDocumentDBRouter } from '@lambda-event-router/documentdb'
 const documentdbRouter = createDocumentDBRouter()
 
 documentdbRouter.insert({
-  filters: { databases: ['mydb'], collections: ['orders'] },
+  filters: { database: 'mydb', collection: 'orders' },
   fullDocumentSchema: OrderSchema,
   handler: processNewOrder,
 })
@@ -125,19 +125,19 @@ documentdbRouter.delete()
 ```ts
 // Insert - fullDocument available
 defineRoute({
-  filters: { operationTypes: ['insert'] },
+  filters: { operationType: 'insert' },
   fullDocumentSchema: OrderSchema,
 }).handle(async ({ fullDocument }) => { ... })
 
 // Update - fullDocument and updateDescription available
 defineRoute({
-  filters: { operationTypes: ['update'] },
+  filters: { operationType: 'update' },
   fullDocumentSchema: OrderSchema,
 }).handle(async ({ fullDocument, updateDescription }) => { ... })
 
 // Delete
 defineRoute({
-  filters: { operationTypes: ['delete'] },
+  filters: { operationType: 'delete' },
 }).handle(async ({ documentKey }) => { ... })
 ```
 
@@ -146,9 +146,9 @@ defineRoute({
 ```ts
 defineRoute({
   filters: {
-    operationTypes: ['insert', 'update'],
-    databases: ['mydb'],
-    collections: ['orders', 'items'],
+    operationType: ['insert', 'update'],
+    database: 'mydb',
+    collection: ['orders', 'items'],
     customFilter: ({ fullDocument }) => fullDocument?.status === 'ACTIVE',
   },
 })

@@ -36,8 +36,8 @@ const connectRouter = createConnectRouter()
 // Inline functions allows Typescript to automatic infer types
 const handleInboundCall = defineRoute({
   filters: {
-    channels: ['VOICE'],
-    initiationMethods: ['INBOUND'],
+    channel: 'VOICE',
+    initiationMethod: 'INBOUND',
   },
 }).handle(async ({ contactData }) => {
   console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
@@ -55,7 +55,7 @@ const connectRouter = createConnectRouter()
 
 // Separate handler to define routes and handlers in different places
 connectRouter.voice({
-  filters: { initiationMethods: ['INBOUND'] },
+  filters: { initiationMethod: 'INBOUND' },
   handler: handleInboundCall,
 })
 
@@ -77,8 +77,8 @@ const connectRouter = createConnectRouter()
 
 const handleInboundCall = defineRoute({
   filters: {
-    channels: ['VOICE'],
-    initiationMethods: ['INBOUND'],
+    channel: 'VOICE',
+    initiationMethod: 'INBOUND',
   },
 }).handle(async ({ contactData }) => {
   console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
@@ -95,7 +95,7 @@ import { createConnectRouter } from '@lambda-event-router/connect'
 const connectRouter = createConnectRouter()
 
 connectRouter.voice({
-  filters: { initiationMethods: ['INBOUND'] },
+  filters: { initiationMethod: 'INBOUND' },
   handler: handleInboundCall,
 })
 
@@ -125,8 +125,8 @@ connectRouter.api()
 ```ts
 defineRoute({
   filters: {
-    channels: ['VOICE', 'CHAT', 'TASK'],
-    initiationMethods: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
+    channel: ['VOICE', 'CHAT', 'TASK'],
+    initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
     customFilter: ({ contactData }) => contactData.queue?.name === 'support',
   },
 })

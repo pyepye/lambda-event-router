@@ -40,7 +40,7 @@ const configRouter = createConfigRouter()
 // Inline functions allows Typescript to automatic infer types
 const evaluateResource = defineRoute({
   filters: {
-    configRuleNames: ['my-custom-rule'],
+    configRuleName: 'my-custom-rule',
   },
 }).handle(async ({ configurationItem, ruleParameters }) => {
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
@@ -58,7 +58,7 @@ const configRouter = createConfigRouter()
 
 // Separate handler to define routes and handlers in different places
 configRouter.route({
-  filters: { configRuleNames: ['my-custom-rule'] },
+  filters: { configRuleName: 'my-custom-rule' },
   handler: evaluateResource,
 })
 
@@ -92,8 +92,8 @@ const configRouter = createConfigRouter()
 
 const evaluateResource = defineRoute({
   filters: {
-    configRuleNames: ['my-custom-rule'],
-    messageTypes: ['ConfigurationItemChangeNotification'],
+    configRuleName: 'my-custom-rule',
+    messageType: 'ConfigurationItemChangeNotification',
   },
 }).handle(async ({ configurationItem, ruleParameters }) => {
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
@@ -111,8 +111,8 @@ const configRouter = createConfigRouter()
 
 configRouter.route({
   filters: {
-    configRuleNames: ['my-custom-rule'],
-    messageTypes: ['ConfigurationItemChangeNotification'],
+    configRuleName: 'my-custom-rule',
+    messageType: 'ConfigurationItemChangeNotification',
   },
   handler: evaluateResource,
 })
@@ -127,8 +127,8 @@ async function evaluateResource({ configurationItem, ruleParameters }) {
 ```ts
 defineRoute({
   filters: {
-    configRuleNames: ['my-custom-rule'],
-    messageTypes: ['ConfigurationItemChangeNotification'],
+    configRuleName: 'my-custom-rule',
+    messageType: 'ConfigurationItemChangeNotification',
     customFilter: ({ configurationItem }) => configurationItem.resourceType === 'AWS::EC2::Instance',
   },
 })
@@ -145,7 +145,7 @@ const scheduledRouter = createConfigScheduledRouter()
 
 scheduledRouter.route(
   defineConfigScheduledRoute({
-    filters: { configRuleNames: ['compliance-check'] },
+    filters: { configRuleNames: 'compliance-check' },
   }).handle(async ({ accountId }) => {
     console.log(`Running scheduled compliance check for ${accountId}`)
   })
@@ -160,7 +160,7 @@ import { createConfigScheduledRouter } from '@lambda-event-router/config'
 const scheduledRouter = createConfigScheduledRouter()
 
 scheduledRouter.route({
-  filters: { configRuleNames: ['compliance-check'] },
+  filters: { configRuleName: 'compliance-check' },
   handler: runComplianceCheck,
 })
 

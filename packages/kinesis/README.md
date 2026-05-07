@@ -36,7 +36,7 @@ const kinesisRouter = createKinesisRouter()
 
 // Inline functions allows Typescript to automatic infer types
 const processRecord = defineRoute({
-  filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789:stream/my-stream'] },
+  filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: z.object({ orderId: z.string(), total: z.number() }),
 }).handle(async ({ data, partitionKey, sequenceNumber }) => {
   console.log(`Order ${data.orderId}: $${data.total} (partition: ${partitionKey})`)
@@ -54,7 +54,7 @@ const kinesisRouter = createKinesisRouter()
 
 // Separate handler to define routes and handlers in different places
 kinesisRouter.route({
-  filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789:stream/my-stream'] },
+  filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: DataSchema,
   handler: processRecord,
 })
@@ -76,7 +76,7 @@ import { createKinesisRouter, defineRoute } from '@lambda-event-router/kinesis'
 const kinesisRouter = createKinesisRouter()
 
 const processRecord = defineRoute({
-  filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789:stream/my-stream'] },
+  filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: DataSchema,
 }).handle(async ({ data, partitionKey, sequenceNumber }) => {
   console.log(`Order ${data.orderId}: $${data.total} (partition: ${partitionKey})`)
@@ -93,7 +93,7 @@ import { createKinesisRouter } from '@lambda-event-router/kinesis'
 const kinesisRouter = createKinesisRouter()
 
 kinesisRouter.route({
-  filters: { eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789:stream/my-stream'] },
+  filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: DataSchema,
   handler: processRecord,
 })
@@ -108,8 +108,8 @@ async function processRecord({ data, partitionKey, sequenceNumber }) {
 ```ts
 defineRoute({
   filters: {
-    eventSourceArns: ['arn:aws:kinesis:us-east-1:123456789:stream/my-stream'],
-    partitionKeys: ['orders', 'inventory'],
+    eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream',
+    partitionKey: ['orders', 'inventory'],
     customFilter: ({ data }) => data.priority === 'HIGH',
   },
 })

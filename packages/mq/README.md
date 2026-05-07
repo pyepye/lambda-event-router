@@ -40,7 +40,7 @@ const activeMQRouter = createActiveMQRouter()
 // Inline functions allows Typescript to automatic infer types
 const processMessage = defineActiveMQRoute({
   filters: {
-    queues: ['order-queue'],
+    queue: 'order-queue',
   },
 }).handle(async ({ data, queue }) => {
   console.log(`Message from ${queue}`)
@@ -58,7 +58,7 @@ const activeMQRouter = createActiveMQRouter()
 
 // Separate handler to define routes and handlers in different places
 activeMQRouter.route({
-  filters: { queues: ['order-queue'] },
+  filters: { queue: 'order-queue' },
   handler: processMessage,
 })
 
@@ -90,7 +90,7 @@ const activeMQRouter = createActiveMQRouter()
 
 const processMessage = defineActiveMQRoute({
   filters: {
-    queues: ['order-queue'],
+    queue: 'order-queue',
   },
 }).handle(async ({ data, queue }) => {
   console.log(`Message from ${queue}`)
@@ -107,7 +107,7 @@ import { createActiveMQRouter } from '@lambda-event-router/mq'
 const activeMQRouter = createActiveMQRouter()
 
 activeMQRouter.route({
-  filters: { queues: ['order-queue'] },
+  filters: { queue: 'order-queue' },
   handler: processMessage,
 })
 
@@ -121,9 +121,9 @@ async function processMessage({ data, queue }) {
 ```ts
 defineActiveMQRoute({
   filters: {
-    queues: ['order-queue'],
-    destinations: ['queue://orders'],
-    messageTypes: ['TextMessage'],
+    queue: 'order-queue',
+    destination: 'queue://orders',
+    messageType: 'TextMessage',
     customFilter: ({ message }) => message.destination.includes('priority'),
   },
 })
@@ -140,7 +140,7 @@ const rabbitMQRouter = createRabbitMQRouter()
 
 const processMessage = defineRabbitMQRoute({
   filters: {
-    queues: ['order-queue'],
+    queue: 'order-queue',
   },
 }).handle(async ({ data, queue }) => {
   console.log(`Message from ${queue}`)
@@ -157,7 +157,7 @@ import { createRabbitMQRouter } from '@lambda-event-router/mq'
 const rabbitMQRouter = createRabbitMQRouter()
 
 rabbitMQRouter.route({
-  filters: { queues: ['order-queue'] },
+  filters: { queue: 'order-queue' },
   handler: processMessage,
 })
 
@@ -171,7 +171,7 @@ async function processMessage({ data, queue }) {
 ```ts
 defineRabbitMQRoute({
   filters: {
-    queues: ['order-queue'],
+    queue: 'order-queue',
     customFilter: ({ message }) => message.basicProperties.contentType === 'application/json',
   },
 })

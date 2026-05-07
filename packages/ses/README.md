@@ -36,7 +36,7 @@ const sesRouter = createSESRouter()
 // Inline functions allows Typescript to automatic infer types
 const processEmail = defineRoute({
   filters: {
-    receiptStatuses: ['PASS'],
+    receiptStatus: 'PASS',
   },
 }).handle(async ({ mail, receipt }) => {
   console.log(`Email from ${mail.source}: ${mail.commonHeaders.subject}`)
@@ -54,7 +54,7 @@ const sesRouter = createSESRouter()
 
 // Separate handler to define routes and handlers in different places
 sesRouter.route({
-  filters: { receiptStatuses: ['PASS'] },
+  filters: { receiptStatus: 'PASS' },
   handler: processEmail,
 })
 
@@ -75,7 +75,7 @@ import { createSESRouter, defineRoute } from '@lambda-event-router/ses'
 const sesRouter = createSESRouter()
 
 const processEmail = defineRoute({
-  filters: { receiptStatuses: ['PASS'] },
+  filters: { receiptStatus: 'PASS' },
 }).handle(async ({ mail, receipt }) => {
   console.log(`Email from ${mail.source}: ${mail.commonHeaders.subject}`)
 })
@@ -91,7 +91,7 @@ import { createSESRouter } from '@lambda-event-router/ses'
 const sesRouter = createSESRouter()
 
 sesRouter.route({
-  filters: { receiptStatuses: ['PASS'] },
+  filters: { receiptStatus: 'PASS' },
   handler: processEmail,
 })
 
@@ -105,7 +105,7 @@ async function processEmail({ mail, receipt }) {
 ```ts
 defineRoute({
   filters: {
-    receiptStatuses: ['PASS'],
+    receiptStatus: 'PASS',
     customFilter: ({ mail }) => mail.destination.includes('support@example.com'),
   },
 })

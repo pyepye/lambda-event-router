@@ -58,8 +58,7 @@ const s3Router = createS3Router()
 s3Router.objectCreated({
   filters: {
     buckets: ['my-uploads-bucket'],
-    prefixes: ['uploads/'],
-    suffixes: ['.json'],
+    key: ['uploads/*', '*.json'],
   },
   handler: processUpload,
 })

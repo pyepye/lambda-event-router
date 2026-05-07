@@ -36,7 +36,7 @@ const lexRouter = createLexRouter()
 // Inline functions allows Typescript to automatic infer types
 const handleFulfillment = defineRoute({
   filters: {
-    invocationSources: ['FulfillmentCodeHook'],
+    invocationSource: 'FulfillmentCodeHook',
   },
 }).handle(async ({ sessionState, inputTranscript }) => {
   console.log(`Fulfilling: ${inputTranscript}`)
@@ -75,7 +75,7 @@ const lexRouter = createLexRouter()
 
 const handleFulfillment = defineRoute({
   filters: {
-    invocationSources: ['FulfillmentCodeHook'],
+    invocationSource: 'FulfillmentCodeHook',
   },
 }).handle(async ({ sessionState, inputTranscript }) => {
   console.log(`Fulfilling: ${inputTranscript}`)
@@ -112,8 +112,8 @@ lexRouter.fulfillmentCodeHook()
 ```ts
 defineRoute({
   filters: {
-    inputModes: ['Text', 'Speech'],
-    invocationSources: ['DialogCodeHook', 'FulfillmentCodeHook'],
+    inputMode: ['Text', 'Speech'],
+    invocationSource: ['DialogCodeHook', 'FulfillmentCodeHook'],
     customFilter: ({ sessionState }) => sessionState.intent.name === 'OrderPizza',
   },
 })
