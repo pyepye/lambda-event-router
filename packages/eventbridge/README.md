@@ -125,7 +125,7 @@ defineRoute({
     account: '123456789012',
     region: 'us-east-1',
     resource: 'arn:aws:ec2:us-east-1:123456789:instance/i-1234',
-    customFilter: ({ detail }) => detail.state === 'running',
+    customFilter: ({ detail }) => isObject(detail) && detail.state === 'running',
   },
 })
 ```

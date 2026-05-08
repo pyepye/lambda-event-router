@@ -29,6 +29,7 @@ export const handler = lambdaRouter.handler()
 
 ```ts
 // stepfunctions.ts
+import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter, defineRoute } from '@lambda-event-router/stepfunctions'
 import { z } from 'zod'
 
@@ -37,7 +38,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineRoute({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: z.object({ taskType: z.literal('process-order'), orderId: z.string() }),
 }).handle(async ({ event }) => {
@@ -50,6 +51,7 @@ OR use a the separate syntax to split router and handlers across files:
 
 ```ts
 // stepfunctions.ts
+import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
 
 const stepFunctionsRouter = createStepFunctionsRouter()
@@ -57,7 +59,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 // Separate handler to define routes and handlers in different places
 stepFunctionsRouter.route({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
   handler: processOrder,
@@ -75,13 +77,14 @@ export async function processOrder({ event }) {
 #### Inline handlers
 
 ```ts
+import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter, defineRoute } from '@lambda-event-router/stepfunctions'
 
 const stepFunctionsRouter = createStepFunctionsRouter()
 
 const processOrder = defineRoute({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
 }).handle(async ({ event }) => {
@@ -94,13 +97,14 @@ stepFunctionsRouter.route(processOrder)
 #### Separate handlers
 
 ```ts
+import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
 
 const stepFunctionsRouter = createStepFunctionsRouter()
 
 stepFunctionsRouter.route({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
   handler: processOrder,
@@ -116,7 +120,7 @@ async function processOrder({ event }) {
 ```ts
 defineRoute({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'validate-input',
+    customFilter: ({ event }) => isObject(event) && event.taskType === 'validate-input',
   },
 })
 ```

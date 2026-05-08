@@ -114,7 +114,7 @@ defineRoute({
   filters: {
     inputMode: ['Text', 'Speech'],
     invocationSource: ['DialogCodeHook', 'FulfillmentCodeHook'],
-    customFilter: ({ sessionState }) => sessionState.intent.name === 'OrderPizza',
+    customFilter: ({ event }) => event.sessionState.sessionAttributes?.tier === 'premium',
   },
 })
 ```

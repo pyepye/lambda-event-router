@@ -40,10 +40,10 @@ const activeMQRouter = createActiveMQRouter()
 // Inline functions allows Typescript to automatic infer types
 const processMessage = defineActiveMQRoute({
   filters: {
-    queue: 'order-queue',
+    destination: 'order-queue',
   },
-}).handle(async ({ data, queue }) => {
-  console.log(`Message from ${queue}`)
+}).handle(async ({ body, destination }) => {
+  console.log(`Message from ${destination}`, body)
 })
 activeMQRouter.route(processMessage)
 ```
@@ -52,19 +52,19 @@ OR use a the separate syntax to split router and handlers across files:
 
 ```ts
 // mq.ts
-import { createActiveMQRouter } from '@lambda-event-router/mq'
+import { createActiveMQRouter, type ActiveMQRequest } from '@lambda-event-router/mq'
 
 const activeMQRouter = createActiveMQRouter()
 
 // Separate handler to define routes and handlers in different places
 activeMQRouter.route({
-  filters: { queue: 'order-queue' },
+  filters: { destination: 'order-queue' },
   handler: processMessage,
 })
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processMessage({ data, queue }) {
-  console.log(`Message from ${queue}`)
+export async function processMessage({ body, destination }: ActiveMQRequest) {
+  console.log(`Message from ${destination}`, body)
 }
 ```
 
@@ -73,8 +73,8 @@ export async function processMessage({ data, queue }) {
 
 | AWS Service | Event Source | Router | Usage
 |---|---|---|---|
-| Amazon MQ | ActiveMQ | `ActiveMQRouter` | <Usage link here> |
-| Amazon MQ | RabbitMQ | `RabbitMQRouter` | <Usage link here> |
+| Amazon MQ | ActiveMQ | `ActiveMQRouter` | [ActiveMQRouter](#activemqrouter) |
+| Amazon MQ | RabbitMQ | `RabbitMQRouter` | [RabbitMQRouter](#rabbitmqrouter) |
 
 
 ## Usage
@@ -90,10 +90,10 @@ const activeMQRouter = createActiveMQRouter()
 
 const processMessage = defineActiveMQRoute({
   filters: {
-    queue: 'order-queue',
+    destination: 'order-queue',
   },
-}).handle(async ({ data, queue }) => {
-  console.log(`Message from ${queue}`)
+}).handle(async ({ body, destination }) => {
+  console.log(`Message from ${destination}`, body)
 })
 
 activeMQRouter.route(processMessage)
@@ -102,18 +102,30 @@ activeMQRouter.route(processMessage)
 #### Separate handlers
 
 ```ts
-import { createActiveMQRouter } from '@lambda-event-router/mq'
+import { createActiveMQRouter, type ActiveMQRequest } from '@lambda-event-router/mq'
 
 const activeMQRouter = createActiveMQRouter()
 
 activeMQRouter.route({
-  filters: { queue: 'order-queue' },
+  filters: { destination: 'order-queue' },
   handler: processMessage,
 })
 
-async function processMessage({ data, queue }) {
-  console.log(`Message from ${queue}`)
+async function processMessage({ body, destination }: ActiveMQRequest) {
+  console.log(`Message from ${destination}`, body)
 }
+```
+
+#### Message type routes
+
+`textMessage()` and `bytesMessage()` set the `messageType` filter for you, so the handler is given the
+matching request type.
+
+```ts
+activeMQRouter.textMessage({
+  filters: { destination: 'order-queue' },
+  handler: processMessage,
+})
 ```
 
 #### Filters
@@ -121,10 +133,10 @@ async function processMessage({ data, queue }) {
 ```ts
 defineActiveMQRoute({
   filters: {
-    queue: 'order-queue',
-    destination: 'queue://orders',
-    messageType: 'TextMessage',
-    customFilter: ({ message }) => message.destination.includes('priority'),
+    eventSourceArn: 'arn:aws:mq:eu-west-2:123456789012:broker:MyBroker:b-1234',
+    destination: ['order-queue', 'refund-queue'],
+    messageType: 'jms/text-message',
+    customFilter: ({ destination }) => destination.includes('priority'),
   },
 })
 ```
@@ -142,8 +154,8 @@ const processMessage = defineRabbitMQRoute({
   filters: {
     queue: 'order-queue',
   },
-}).handle(async ({ data, queue }) => {
-  console.log(`Message from ${queue}`)
+}).handle(async ({ body, queue }) => {
+  console.log(`Message from ${queue}`, body)
 })
 
 rabbitMQRouter.route(processMessage)
@@ -152,7 +164,7 @@ rabbitMQRouter.route(processMessage)
 #### Separate handlers
 
 ```ts
-import { createRabbitMQRouter } from '@lambda-event-router/mq'
+import { createRabbitMQRouter, type RabbitMQRequest } from '@lambda-event-router/mq'
 
 const rabbitMQRouter = createRabbitMQRouter()
 
@@ -161,18 +173,23 @@ rabbitMQRouter.route({
   handler: processMessage,
 })
 
-async function processMessage({ data, queue }) {
-  console.log(`Message from ${queue}`)
+async function processMessage({ body, queue }: RabbitMQRequest) {
+  console.log(`Message from ${queue}`, body)
 }
 ```
+
+The queue is keyed as `queueName::virtualHost` in the event. Both the `queue` filter and `request.queue`
+give you the name without the virtual host.
 
 #### Filters
 
 ```ts
 defineRabbitMQRoute({
   filters: {
-    queue: 'order-queue',
-    customFilter: ({ message }) => message.basicProperties.contentType === 'application/json',
+    eventSourceArn: 'arn:aws:mq:eu-west-2:123456789012:broker:MyBroker:b-1234',
+    queue: ['order-queue', 'refund-queue'],
+    contentType: 'application/json',
+    customFilter: ({ record }) => record.basicProperties.priority >= 5,
   },
 })
 ```

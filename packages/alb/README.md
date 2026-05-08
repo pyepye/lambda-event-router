@@ -36,7 +36,7 @@ const albRouter = createALBRouter()
 
 albRouter.route(
   defineRoute({
-    filter: {
+    filters: {
       method: 'POST',
       path: '/orgs/:orgId/items/:itemId',
     },
@@ -58,10 +58,10 @@ import { createALBRouter, defineRoute } from '@lambda-event-router/alb'
 const albRouter = createALBRouter()
 
 const updateItemRoute = defineRoute({
-  filter: {
+  filters: {
     method: 'POST',
     path: '/orgs/:orgId/items/:itemId',
-  }
+  },
   querySchema: QuerySchema,
   bodySchema: BodySchema,
   responseSchema: ResponseSchema,
@@ -71,31 +71,35 @@ const updateItemRoute = defineRoute({
   return { orgId, itemId, name: body.name, price: body.price, dryRun }
 })
 
-albRouter.route(updateItemRoute);
+albRouter.route(updateItemRoute)
 ```
 
 #### Separate handlers
 
 ```ts
-import { createALBRouter } from '@lambda-event-router/alb'
+import type { ApiRequest, ApiResponse } from '@lambda-event-router/alb'
+import { createALBRouter, NotFound, Ok } from '@lambda-event-router/alb'
 
 const albRouter = createALBRouter()
 
 albRouter.post({
-  filter: {
+  filters: {
     path: '/orgs/:orgId/items/:itemId',
   },
-  handler: updateItem
+  bodySchema: ItemSchema,
+  handler: updateItem,
 })
 
+// A separate handler needs its types spelling out, since there is no schema in scope to infer from
 export async function updateItem(
-  request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<UpdateItemResponse> {
-  const item = await getItem(path.itemId);
+  request: ApiRequest<{ orgId: string; itemId: string }, Record<string, string | undefined>, Item>,
+): Promise<ApiResponse<Item & { orgId: string }>> {
+  const { path, body } = request
+  const item = await getItem(path.itemId)
   if (!item) {
-    throw NotFound(`${path.itemId} not found`);
+    throw NotFound({ error: `${path.itemId} not found` })
   }
-  return { orgId: path.orgId, name: body.name, price: body.price }
+  return Ok({ orgId: path.orgId, name: body.name, price: body.price })
 }
 ```
 
@@ -107,29 +111,39 @@ albRouter.put()
 albRouter.post()
 albRouter.patch()
 albRouter.delete()
-albRouter.head()
-albRouter.options()
+```
+
+There is no `head()` or `options()`. Register those with `route()` and set the method yourself:
+
+```ts
+albRouter.route({
+  filters: { method: 'HEAD', path: '/orgs/:orgId/items/:itemId' },
+  handler: headItem,
+})
 ```
 
 #### Responses
+
+The helpers take the response body rather than a message string, so pass the object you want on the
+wire.
 
 ```ts
 return { data: ... } // By default this will resolve to a 200 with the body as JSON
 return // By default this will resolve to a 204
 
 return Ok(data)
-return Created(data);
-return NoContent();
-// Throw none positive response (they can also be returned as well)
-throw TemporaryRedirect(location);
-throw PermanentRedirect(location);
-throw BadRequest(errorMessage);
-throw Unauthorised(errorMessage);
-throw Forbidden(errorMessage);
-throw NotFound(errorMessage);
-throw Conflict(errorMessage);
-throw UnprocessableContent(errorMessage);
-throw InternalServerError(errorMessage);
+return Created(data)
+return NoContent()
+// Non-2xx responses are usually thrown, but they can be returned as well
+throw TemporaryRedirect(location)
+throw PermanentRedirect(location)
+throw BadRequest({ error: 'Missing orgId' })
+throw Unauthorised()
+throw Forbidden()
+throw NotFound({ error: `${itemId} not found` })
+throw Conflict({ error: 'Item already exists' })
+throw UnprocessableContent({ error: 'Price must be positive' })
+throw InternalServerError()
 ```
 
 ## Examples

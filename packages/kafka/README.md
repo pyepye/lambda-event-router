@@ -1,6 +1,6 @@
 # @lambda-event-router/kafka
 
-Apache Kafka routing for both Amazon MSK and self-managed Kafka clusters. Routes messages by topic, partition, and key with schema validation.
+Apache Kafka routing for both Amazon MSK and self-managed clusters, with schema validation, topic and broker filtering and batch failure support.
 
 **Supported AWS Services:** `Amazon MSK` | `Self-managed Apache Kafka`
 
@@ -105,13 +105,16 @@ async function processMessage({ value, key, topic, partition, offset }) {
 
 #### Filters
 
+`customFilter` is given the decoded headers, the topic and the raw record. The message value is not on
+it, since that is only parsed once a route has matched.
+
 ```ts
 defineRoute({
   filters: {
-    topic: 'order-events',
+    topic: ['order-events', 'order-retries'],
     eventSourceArn: 'arn:aws:kafka:us-east-1:123456789:cluster/my-cluster',
     bootstrapServer: 'broker1:9092',
-    customFilter: ({ value }) => value.priority === 'HIGH',
+    customFilter: ({ headers }) => headers.some((header) => header.priority === 'HIGH'),
   },
 })
 ```

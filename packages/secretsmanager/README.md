@@ -59,8 +59,8 @@ secretsManagerRouter.finishSecret({
 ```ts
 defineRoute({
   filters: {
-    steps: ['createSecret'],
-    secretNamePatterns: [/^prod\/database\/.*/],
+    step: 'createSecret',
+    secretId: /^prod\/database\//,
     customFilter: ({ secretId }) => secretId.startsWith('prod/'),
   },
 })

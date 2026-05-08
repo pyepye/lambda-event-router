@@ -21,7 +21,7 @@ This example is for the EventRouter. See [Usage](#usage) for examples of the oth
 
 ```ts
 // main handler
-import { createEventRouter, defineEventRoute, LambdaRouter } from '@lambda-event-router/base'
+import { createEventRouter, defineEventRoute, isObject, LambdaRouter } from '@lambda-event-router/base'
 import { z } from 'zod'
 
 const eventRouter = createEventRouter()
@@ -29,7 +29,7 @@ const eventRouter = createEventRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.action === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.action === 'process-order',
   },
   eventSchema: z.object({
     action: z.literal('process-order'),
@@ -48,14 +48,14 @@ export const handler = lambdaRouter.handler()
 OR use a the separate syntax to split router and handlers across files:
 
 ```ts
-import { createEventRouter } from '@lambda-event-router/base'
+import { createEventRouter, isObject } from '@lambda-event-router/base'
 
 const eventRouter = createEventRouter()
 
 // Separate handler to define routes and handlers in different places
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.action === 'process-order',
+    customFilter: ({ event }) => isObject(event) && event.action === 'process-order',
   },
   eventSchema: EventSchema,
   handler: processOrder,
@@ -112,7 +112,7 @@ The `EventRouter` handles events that don't have a dedicated service router, suc
 #### Inline handlers
 
 ```ts
-import { createEventRouter, defineEventRoute } from '@lambda-event-router/base'
+import { createEventRouter, defineEventRoute, isObject } from '@lambda-event-router/base'
 import { z } from 'zod'
 
 const eventRouter = createEventRouter()
@@ -125,7 +125,7 @@ const ReportSchema = z.object({
 
 const generateReport = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    customFilter: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
 }).handle(async ({ event }) => {
@@ -139,13 +139,13 @@ eventRouter.route(generateReport)
 #### Separate handlers
 
 ```ts
-import { createEventRouter } from '@lambda-event-router/base'
+import { createEventRouter, isObject } from '@lambda-event-router/base'
 
 const eventRouter = createEventRouter()
 
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    customFilter: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
   handler: generateReport,

@@ -40,7 +40,7 @@ const appSyncRouter = createAppSyncRouter()
 // Inline functions allows Typescript to automatic infer types
 const getItem = defineRoute({
   filters: {
-    typeName: 'Query',
+    parentTypeName: 'Query',
     fieldName: 'getItem',
   },
 }).handle(async ({ arguments: args, identity }) => {
@@ -60,7 +60,7 @@ const appSyncRouter = createAppSyncRouter()
 // Separate handler to define routes and handlers in different places
 appSyncRouter.route({
   filters: {
-    typeName: 'Query',
+    parentTypeName: 'Query',
     fieldName: 'getItem',
   },
   handler: getItem,
@@ -95,7 +95,7 @@ const appSyncRouter = createAppSyncRouter()
 
 const getItem = defineRoute({
   filters: {
-    typeName: 'Query',
+    parentTypeName: 'Query',
     fieldName: 'getItem',
   },
 }).handle(async ({ arguments: args, identity }) => {
@@ -114,7 +114,7 @@ const appSyncRouter = createAppSyncRouter()
 
 appSyncRouter.route({
   filters: {
-    typeName: 'Mutation',
+    parentTypeName: 'Mutation',
     fieldName: 'createItem',
   },
   handler: createItem,
@@ -130,9 +130,9 @@ async function createItem({ arguments: args, identity }) {
 ```ts
 defineRoute({
   filters: {
-    typeName: 'Mutation',
+    parentTypeName: 'Mutation',
     fieldName: 'createItem',
-    customFilter: ({ identity }) => identity?.groups?.includes('admin'),
+    customFilter: ({ event }) => event.request.headers['x-tenant'] === 'acme',
   },
 })
 ```
@@ -182,7 +182,7 @@ const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route(
   defineEventsRoute({
-    filters: { operations: 'SUBSCRIBE' },
+    filters: { operation: 'SUBSCRIBE' },
   }).handle(async ({ event }) => {
     return event
   })
@@ -197,7 +197,7 @@ import { createAppSyncEventsRouter } from '@lambda-event-router/appsync'
 const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route({
-  filters: { operations: 'SUBSCRIBE' },
+  filters: { operation: 'SUBSCRIBE' },
   handler: handleSubscribe,
 })
 

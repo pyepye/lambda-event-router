@@ -36,7 +36,7 @@ const codepipelineRouter = createCodePipelineRouter()
 // Inline functions allows Typescript to automatic infer types
 const processJob = defineRoute({
   filters: {
-    customFilter: ({ job }) => job.data.actionConfiguration.configuration.FunctionName === 'deploy',
+    functionName: 'deploy',
   },
 }).handle(async ({ job }) => {
   console.log(`Processing job ${job.id}`)
@@ -55,7 +55,7 @@ const codepipelineRouter = createCodePipelineRouter()
 // Separate handler to define routes and handlers in different places
 codepipelineRouter.route({
   filters: {
-    customFilter: ({ job }) => job.data.actionConfiguration.configuration.FunctionName === 'deploy',
+    functionName: 'deploy',
   },
   handler: processJob,
 })
@@ -78,7 +78,7 @@ const codepipelineRouter = createCodePipelineRouter()
 
 const processJob = defineRoute({
   filters: {
-    customFilter: ({ job }) => job.data.actionConfiguration.configuration.FunctionName === 'deploy',
+    functionName: 'deploy',
   },
 }).handle(async ({ job }) => {
   console.log(`Processing job ${job.id}`)
@@ -96,7 +96,7 @@ const codepipelineRouter = createCodePipelineRouter()
 
 codepipelineRouter.route({
   filters: {
-    customFilter: ({ job }) => job.data.actionConfiguration.configuration.FunctionName === 'deploy',
+    functionName: 'deploy',
   },
   handler: processJob,
 })
@@ -117,7 +117,10 @@ codepipelineRouter.continuation()
 ```ts
 defineRoute({
   filters: {
-    customFilter: ({ job }) => job.data.actionConfiguration.configuration.FunctionName === 'validate',
+    functionName: 'validate',
+    hasInputArtifacts: true,
+    hasContinuationToken: false,
+    customFilter: ({ userParameters }) => userParameters !== undefined,
   },
 })
 ```

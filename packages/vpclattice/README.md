@@ -36,7 +36,7 @@ const latticeRouter = createVPCLatticeRouter()
 
 latticeRouter.route(
   defineRoute({
-    filter: {
+    filters: {
       method: 'GET',
       path: '/items/:itemId',
     },
@@ -57,7 +57,7 @@ import { createVPCLatticeRouter, defineRoute } from '@lambda-event-router/vpclat
 const latticeRouter = createVPCLatticeRouter()
 
 const updateItemRoute = defineRoute({
-  filter: {
+  filters: {
     method: 'POST',
     path: '/orgs/:orgId/items/:itemId',
   },
@@ -70,31 +70,35 @@ const updateItemRoute = defineRoute({
   return { orgId, itemId, name: body.name, price: body.price, dryRun }
 })
 
-latticeRouter.route(updateItemRoute);
+latticeRouter.route(updateItemRoute)
 ```
 
 #### Separate handlers
 
 ```ts
-import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice'
+import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
+import { createVPCLatticeRouter, NotFound, Ok } from '@lambda-event-router/vpclattice'
 
 const latticeRouter = createVPCLatticeRouter()
 
 latticeRouter.post({
-  filter: {
+  filters: {
     path: '/orgs/:orgId/items/:itemId',
   },
-  handler: updateItem
+  bodySchema: ItemSchema,
+  handler: updateItem,
 })
 
+// A separate handler needs its types spelling out, since there is no schema in scope to infer from
 export async function updateItem(
-  request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<UpdateItemResponse> {
-  const item = await getItem(path.itemId);
+  request: ApiRequest<{ orgId: string; itemId: string }, Record<string, string | undefined>, Item>,
+): Promise<ApiResponse<Item & { orgId: string }>> {
+  const { path, body } = request
+  const item = await getItem(path.itemId)
   if (!item) {
-    throw NotFound(`${path.itemId} not found`);
+    throw NotFound({ error: `${path.itemId} not found` })
   }
-  return { orgId: path.orgId, name: body.name, price: body.price }
+  return Ok({ orgId: path.orgId, name: body.name, price: body.price })
 }
 ```
 
@@ -106,38 +110,52 @@ latticeRouter.put()
 latticeRouter.post()
 latticeRouter.patch()
 latticeRouter.delete()
-latticeRouter.head()
-latticeRouter.options()
+```
+
+There is no `head()` or `options()`. Register those with `route()` and set the method yourself:
+
+```ts
+latticeRouter.route({
+  filters: { method: 'HEAD', path: '/orgs/:orgId/items/:itemId' },
+  handler: headItem,
+})
 ```
 
 #### Responses
+
+The helpers take the response body rather than a message string, so pass the object you want on the
+wire.
 
 ```ts
 return { data: ... } // By default this will resolve to a 200 with the body as JSON
 return // By default this will resolve to a 204
 
 return Ok(data)
-return Created(data);
-return NoContent();
-// Throw none positive response (they can also be returned as well)
-throw TemporaryRedirect(location);
-throw PermanentRedirect(location);
-throw BadRequest(errorMessage);
-throw Unauthorised(errorMessage);
-throw Forbidden(errorMessage);
-throw NotFound(errorMessage);
-throw Conflict(errorMessage);
-throw UnprocessableContent(errorMessage);
-throw InternalServerError(errorMessage);
+return Created(data)
+return NoContent()
+// Non-2xx responses are usually thrown, but they can be returned as well
+throw TemporaryRedirect(location)
+throw PermanentRedirect(location)
+throw BadRequest({ error: 'Missing orgId' })
+throw Unauthorised()
+throw Forbidden()
+throw NotFound({ error: `${itemId} not found` })
+throw Conflict({ error: 'Item already exists' })
+throw UnprocessableContent({ error: 'Price must be positive' })
+throw InternalServerError()
 ```
 
 #### Version adapters
 
-```ts
-import { createVPCLatticeRouter, vpcLatticeV1Adapter, vpcLatticeV2Adapter } from '@lambda-event-router/vpclattice'
+`createVPCLatticeRouter()` handles both payload versions, so there is nothing to configure. The two
+per-version adapters are exported for building a router that accepts one version and rejects the other,
+which needs `HTTPRouter` directly because `createVPCLatticeRouter` takes no `adapter` option.
 
-const v1Router = createVPCLatticeRouter({ adapter: vpcLatticeV1Adapter })
-const v2Router = createVPCLatticeRouter({ adapter: vpcLatticeV2Adapter })
+```ts
+import { HTTPRouter } from '@lambda-event-router/http'
+import { vpcLatticeV2Adapter } from '@lambda-event-router/vpclattice'
+
+const v2Only = new HTTPRouter({ adapter: vpcLatticeV2Adapter })
 ```
 
 ## Examples

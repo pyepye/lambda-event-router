@@ -1,6 +1,6 @@
 # @lambda-event-router/s3
 
-S3 event routing by bucket, key prefix/suffix, and event name. Supports ObjectCreated, ObjectRemoved, Lifecycle, and S3 Batch Operations.
+S3 event routing by bucket, key pattern and event name. Convenience methods for the object, lifecycle, tagging and ACL events, plus S3 Batch Operations.
 
 **Supported AWS Services:** `Amazon S3`
 
@@ -50,21 +50,21 @@ OR use a the separate syntax to split router and handlers across files:
 
 ```ts
 // s3.ts
-import { createS3Router } from '@lambda-event-router/s3'
+import { createS3Router, type S3ObjectCreatedRequest } from '@lambda-event-router/s3'
 
 const s3Router = createS3Router()
 
 // Separate handler to define routes and handlers in different places
 s3Router.objectCreated({
   filters: {
-    buckets: ['my-uploads-bucket'],
+    bucket: 'my-uploads-bucket',
     key: ['uploads/*', '*.json'],
   },
   handler: processUpload,
 })
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processUpload({ bucket, key, objectSize, eventName }) {
+export async function processUpload({ bucket, key, objectSize, eventName }: S3ObjectCreatedRequest) {
   console.log(`${eventName}: ${key} in ${bucket} (${objectSize} bytes)`)
 }
 ```
@@ -95,7 +95,7 @@ s3Router.route(processUpload)
 #### Separate handlers
 
 ```ts
-import { createS3Router } from '@lambda-event-router/s3'
+import { createS3Router, type S3ObjectCreatedRequest } from '@lambda-event-router/s3'
 
 const s3Router = createS3Router()
 
@@ -107,7 +107,7 @@ s3Router.objectCreated({
   handler: processUpload,
 })
 
-async function processUpload({ bucket, key, objectSize, eventName }) {
+async function processUpload({ bucket, key, objectSize, eventName }: S3ObjectCreatedRequest) {
   console.log(`${eventName}: ${key} in ${bucket} (${objectSize} bytes)`)
 }
 ```
@@ -154,6 +154,9 @@ s3Router.batchOperation()
 
 #### Filters
 
+`key` is a single matcher rather than separate prefix and suffix options, so use `*` to build both. It
+is matched whole, so `uploads/` on its own matches nothing.
+
 ```ts
 defineRoute({
   filters: {
@@ -167,20 +170,21 @@ defineRoute({
 
 #### S3 Batch Operations
 
+A batch route is registered with `batchOperation()` and takes no filters, since a batch job invokes the
+function directly rather than arriving as a notification.
+
 ```ts
-import { createS3Router, defineRoute, Succeeded, TemporaryFailure, PermanentFailure } from '@lambda-event-router/s3'
+import { createS3Router, Succeeded, TemporaryFailure, PermanentFailure } from '@lambda-event-router/s3'
 
 const s3Router = createS3Router()
 
-// S3 Batch route returns Succeeded, TemporaryFailure, or PermanentFailure
-s3Router.route(
-  defineRoute({
-    filters: { buckets: ['my-batch-bucket'] },
-  }).handle(async ({ bucket, key }) => {
+// S3 Batch route returns Succeeded, TemporaryFailure or PermanentFailure
+s3Router.batchOperation({
+  handler: async ({ bucket, key }) => {
     // Process the object
     return Succeeded()
-  })
-)
+  },
+})
 ```
 
 ## Examples

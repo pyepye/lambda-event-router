@@ -125,9 +125,9 @@ connectRouter.api()
 ```ts
 defineRoute({
   filters: {
-    channel: ['VOICE', 'CHAT', 'TASK'],
+    channel: ['VOICE', 'CHAT', 'EMAIL'],
     initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
-    customFilter: ({ contactData }) => contactData.queue?.name === 'support',
+    customFilter: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
   },
 })
 ```

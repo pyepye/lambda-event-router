@@ -117,8 +117,7 @@ cloudwatchRouter.controlMessage()
 defineRoute({
   filters: {
     logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'],
-    logStream: '2024/01/01/[$LATEST]abc123',
-    messageTypes: 'DATA_MESSAGE',
+    messageType: 'DATA_MESSAGE',
     customFilter: ({ logEvents }) => logEvents.some(e => e.message.includes('ERROR')),
   },
 })

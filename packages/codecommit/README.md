@@ -1,6 +1,10 @@
 # @lambda-event-router/codecommit
 
-CodeCommit repository event routing by repository, branch, and event type.
+CodeCommit repository event routing by repository, branch, and the kind of change.
+
+**Supported AWS Services:** `AWS CodeCommit`
+
+**Available Routers:** `CodeCommitRouter`
 
 ## Install
 
@@ -15,15 +19,16 @@ import { createCodeCommitRouter, defineRoute } from '@lambda-event-router/codeco
 
 const codecommitRouter = createCodeCommitRouter()
 
-codecommitRouter.route(
+codecommitRouter.push(
   defineRoute({
     filters: {
-      repository: 'my-repo',
+      repositoryName: 'my-repo',
       branch: 'main',
-      event: 'referenceCreated',
     },
-  }).handle(async ({ repository, branch }) => {
-    console.log(`New commit on ${repository}/${branch}`)
+  }).handle(async ({ references, userIdentityARN }) => {
+    for (const reference of references) {
+      console.log(`New commit ${reference.commit} on ${reference.ref} by ${userIdentityARN}`)
+    }
   })
 )
 ```
@@ -32,16 +37,34 @@ codecommitRouter.route(
 
 ### Filters
 
+`branch` matches with `refs/heads/` already stripped, and `repositoryName` matches the last segment of
+the repository ARN.
+
 ```ts
 defineRoute({
   filters: {
-    repository: ['my-repo', 'other-repo'],
+    eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
+    repositoryName: ['my-repo', 'other-repo'],
     branch: ['main', 'develop'],
-    event: ['referenceCreated', 'referenceUpdated'],
-    customFilter: ({ record }) => record.codecommit.references.length > 0,
+    customFilter: ({ userIdentityARN }) => !userIdentityARN.includes('deploy-bot'),
   },
 })
 ```
+
+### Reference filters
+
+A record carries every ref that moved. `push()`, `branchCreated()` and `branchDeleted()` narrow which of
+them a route sees, and `route()` sees all of them.
+
+```ts
+codecommitRouter
+  .push({ filters: { repositoryName: 'my-repo' }, handler: onPush })
+  .branchCreated({ filters: { repositoryName: 'my-repo' }, handler: onBranchCreated })
+  .branchDeleted({ filters: { repositoryName: 'my-repo' }, handler: onBranchDeleted })
+```
+
+Every route that matches runs, so a record can reach more than one handler with a different subset of
+the references each time.
 
 ## Examples
 

@@ -93,7 +93,6 @@ const configRouter = createConfigRouter()
 const evaluateResource = defineRoute({
   filters: {
     configRuleName: 'my-custom-rule',
-    messageType: 'ConfigurationItemChangeNotification',
   },
 }).handle(async ({ configurationItem, ruleParameters }) => {
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
@@ -112,7 +111,6 @@ const configRouter = createConfigRouter()
 configRouter.route({
   filters: {
     configRuleName: 'my-custom-rule',
-    messageType: 'ConfigurationItemChangeNotification',
   },
   handler: evaluateResource,
 })
@@ -128,8 +126,7 @@ async function evaluateResource({ configurationItem, ruleParameters }) {
 defineRoute({
   filters: {
     configRuleName: 'my-custom-rule',
-    messageType: 'ConfigurationItemChangeNotification',
-    customFilter: ({ configurationItem }) => configurationItem.resourceType === 'AWS::EC2::Instance',
+    customFilter: ({ resourceType }) => resourceType === 'AWS::EC2::Instance',
   },
 })
 ```
@@ -145,7 +142,7 @@ const scheduledRouter = createConfigScheduledRouter()
 
 scheduledRouter.route(
   defineConfigScheduledRoute({
-    filters: { configRuleNames: 'compliance-check' },
+    filters: { configRuleName: 'compliance-check' },
   }).handle(async ({ accountId }) => {
     console.log(`Running scheduled compliance check for ${accountId}`)
   })
