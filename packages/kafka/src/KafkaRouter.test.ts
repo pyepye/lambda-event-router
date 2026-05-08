@@ -393,6 +393,107 @@ suite('KafkaRouter', () => {
       const result = router.decodeHeaders([]);
       expect(result).toEqual([]);
     });
+
+    test('returns an empty array when the record carries no headers', () => {
+      // @ts-expect-error testing private method
+      expect(router.decodeHeaders(null)).toEqual([]);
+      // @ts-expect-error testing private method
+      expect(router.decodeHeaders(undefined)).toEqual([]);
+    });
+  });
+
+  suite('records with absent fields', () => {
+    test('gives the handler an undefined key when the record has no key', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ key: null, value: { action: 'test' } });
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      await router.handleEvent(event, context());
+
+      expect(receivedRequest?.key).toBeUndefined();
+      expect(receivedRequest?.value).toEqual({ action: 'test' });
+    });
+
+    test('gives the handler an undefined value when the record has no value', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ key: 'my-key', value: null });
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      await router.handleEvent(event, context());
+
+      expect(receivedRequest?.key).toBe('my-key');
+      expect(receivedRequest?.value).toBeUndefined();
+    });
+
+    test('gives the handler an empty headers array when the record has no headers', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ headers: null });
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      await router.handleEvent(event, context());
+
+      expect(receivedRequest?.headers).toEqual([]);
+    });
+
+    test('matches a customFilter on a record with no key, value or headers', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.route(
+        defineRoute({
+          filters: { customFilter: ({ headers }: KafkaFilterInput): boolean => headers.length === 0 },
+        }).handle(handler),
+      );
+
+      const record = kafkaRecord({ key: null, value: null, headers: null });
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    test('fails a record with no value against a valueSchema', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      const valueSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      router.route(defineRoute({ filters: {}, valueSchema }).handle(async () => {}));
+
+      const record = kafkaRecord({ value: null });
+      const event = kafkaMSKEvent({ 'test-topic': [record] });
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Value validation failed');
+    });
   });
 
   suite('handleEvent', () => {
@@ -532,7 +633,7 @@ suite('KafkaRouter', () => {
       router = new KafkaRouter({ batchItemFailures: true });
     });
 
-    test('returns batchItemFailures with itemIdentifier format topic-partition-offset', async ({
+    test('returns batchItemFailures with itemIdentifier of topic-partition and offset', async ({
       kafkaRecord,
       kafkaMSKEvent,
       context,
@@ -552,7 +653,7 @@ suite('KafkaRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: 'orders-2-5' }],
+        batchItemFailures: [{ itemIdentifier: { partition: 'orders-2', offset: 5 } }],
       });
     });
 
@@ -589,9 +690,9 @@ suite('KafkaRouter', () => {
 
       expect(result).toEqual({
         batchItemFailures: [
-          { itemIdentifier: 'orders-0-1' },
-          { itemIdentifier: 'orders-0-2' },
-          { itemIdentifier: 'orders-0-3' },
+          { itemIdentifier: { partition: 'orders-0', offset: 1 } },
+          { itemIdentifier: { partition: 'orders-0', offset: 2 } },
+          { itemIdentifier: { partition: 'orders-0', offset: 3 } },
         ],
       });
     });
@@ -656,7 +757,7 @@ suite('KafkaRouter', () => {
       const result = await batchRouter.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: 'orders-0-5' }],
+        batchItemFailures: [{ itemIdentifier: { partition: 'orders-0', offset: 5 } }],
       });
     });
   });

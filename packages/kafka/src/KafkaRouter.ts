@@ -112,11 +112,12 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       try {
         await this.processRecord(record, event, context);
       } catch (error) {
-        const recordIdentifier = `${record.topic}-${record.partition}-${record.offset}`;
+        const recordIdentifier = `${record.topic}-${record.partition} offset ${record.offset}`;
         logger.error(`Error processing Kafka record ${recordIdentifier}`, { error });
         for (const remaining of records.slice(index)) {
-          const itemIdentifier = `${remaining.topic}-${remaining.partition}-${remaining.offset}`;
-          failures.push({ itemIdentifier });
+          failures.push({
+            itemIdentifier: { partition: `${remaining.topic}-${remaining.partition}`, offset: remaining.offset },
+          });
         }
         break;
       }
@@ -128,7 +129,9 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return event.eventSource === 'aws:kafka';
   }
 
-  private decodeHeaders(headers: KafkaRecordHeader[]): KafkaDecodedHeader[] {
+  private decodeHeaders(headers: KafkaRecordHeader[] | null | undefined): KafkaDecodedHeader[] {
+    if (!headers) return [];
+
     return headers.map((header) => {
       const decoded: KafkaDecodedHeader = {};
       for (const [headerKey, bytes] of Object.entries(header)) {
@@ -136,6 +139,11 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       }
       return decoded;
     });
+  }
+
+  private decodeBase64(value: string | null | undefined): string | undefined {
+    if (value === null || value === undefined) return undefined;
+    return Buffer.from(value, 'base64').toString('utf-8');
   }
 
   private async processRecord(record: KafkaRecord, event: KafkaEvent, context: Context): Promise<void> {
@@ -146,8 +154,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       throw new Error(`No route matched for record on topic ${record.topic} partition ${record.partition}`);
     }
 
-    const key = Buffer.from(record.key, 'base64').toString('utf-8');
-    const rawValue = Buffer.from(record.value, 'base64').toString('utf-8');
+    const key = this.decodeBase64(record.key);
+    const rawValue = this.decodeBase64(record.value);
     const parsedValue = safeJsonParse(rawValue);
 
     const validatedValue = await validateSchema(

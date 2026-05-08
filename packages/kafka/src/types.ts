@@ -32,7 +32,7 @@ export interface KafkaFilters {
 
 export interface KafkaRequest<TValue = unknown> {
   value: TValue;
-  key: string;
+  key: string | undefined;
   topic: string;
   partition: number;
   offset: number;
@@ -58,8 +58,13 @@ export interface KafkaRouterOptions {
   middleware?: KafkaMiddleware[];
 }
 
+export interface KafkaBatchItemIdentifier {
+  partition: string;
+  offset: number;
+}
+
 export interface KafkaBatchResponse {
-  batchItemFailures: Array<{ itemIdentifier: string }>;
+  batchItemFailures: Array<{ itemIdentifier: KafkaBatchItemIdentifier }>;
 }
 
 export type KafkaRecordHeader = MSKRecordHeader;

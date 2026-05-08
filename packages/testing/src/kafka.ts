@@ -1,4 +1,4 @@
-import type { Context, MSKEvent, MSKRecord, SelfManagedKafkaEvent } from 'aws-lambda';
+import type { Context, MSKEvent, MSKRecord, MSKRecordHeader, SelfManagedKafkaEvent } from 'aws-lambda';
 
 import { createMockContext } from './context.js';
 import { deepMerge } from './deepMerge.js';
@@ -6,9 +6,9 @@ import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 export type KafkaRecordOverrides = Omit<DeepPartial<MSKRecord>, 'key' | 'value' | 'headers'> & {
-  key?: string;
-  value?: string | object;
-  headers?: Record<string, string>[];
+  key?: string | null;
+  value?: string | object | null;
+  headers?: Record<string, string>[] | null;
 };
 
 export interface KafkaHandlerEvent {
@@ -27,24 +27,36 @@ function encodeHeaderValue(value: string): number[] {
 }
 
 const defaultBody: string = JSON.stringify({ action: 'process', id: '123' });
+const defaultHeaders: Record<string, string>[] = [{ 'content-type': 'application/json' }];
 
-export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKRecord {
-  const { key, value, headers, ...restOverrides } = overrides;
+function encodeBase64(value: string | null): string | null {
+  return value === null ? null : Buffer.from(value).toString('base64');
+}
 
-  const keyString = key ?? 'test-key';
-  const encodedKey = Buffer.from(keyString).toString('base64');
+function resolveRecordValue(value: string | object | null | undefined): string | null {
+  if (value === null) return null;
+  if (value === undefined) return defaultBody;
+  return typeof value === 'object' ? JSON.stringify(value) : value;
+}
 
-  const valueString = typeof value === 'object' ? JSON.stringify(value) : (value ?? defaultBody);
-  const encodedValue = Buffer.from(valueString).toString('base64');
+function encodeHeaders(headers: Record<string, string>[] | null | undefined): MSKRecordHeader[] | null {
+  if (headers === null) return null;
 
-  const rawHeaders = headers ?? [{ 'content-type': 'application/json' }];
-  const encodedHeaders = rawHeaders.map((header) => {
-    const encoded: Record<string, number[]> = {};
+  return (headers ?? defaultHeaders).map((header) => {
+    const encoded: MSKRecordHeader = {};
     for (const [headerKey, headerValue] of Object.entries(header)) {
       encoded[headerKey] = encodeHeaderValue(headerValue);
     }
     return encoded;
   });
+}
+
+export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKRecord {
+  const { key, value, headers, ...restOverrides } = overrides;
+
+  const encodedKey = encodeBase64(key === undefined ? 'test-key' : key);
+  const encodedValue = encodeBase64(resolveRecordValue(value));
+  const encodedHeaders = encodeHeaders(headers);
 
   const defaults: MSKRecord = {
     topic: 'test-topic',
@@ -52,9 +64,9 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKReco
     offset: 0,
     timestamp: Date.now(),
     timestampType: 'CREATE_TIME',
-    key: encodedKey,
-    value: encodedValue,
-    headers: encodedHeaders,
+    key: encodedKey as string,
+    value: encodedValue as string,
+    headers: encodedHeaders as MSKRecordHeader[],
   };
 
   return deepMerge(defaults, restOverrides);
