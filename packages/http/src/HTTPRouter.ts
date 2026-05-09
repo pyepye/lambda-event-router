@@ -141,6 +141,18 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return this;
   };
 
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
+  head: NoBodyRouteMethodFn<this> = (config) => {
+    this.router.head(config);
+    return this;
+  };
+
+  // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
+  options: NoBodyRouteMethodFn<this> = (config) => {
+    this.router.options(config);
+    return this;
+  };
+
   canHandleEvent(event: unknown): event is TEvent {
     return this.adapter.canHandleEvent(event);
   }

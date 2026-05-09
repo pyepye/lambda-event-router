@@ -111,15 +111,8 @@ albRouter.put()
 albRouter.post()
 albRouter.patch()
 albRouter.delete()
-```
-
-There is no `head()` or `options()`. Register those with `route()` and set the method yourself:
-
-```ts
-albRouter.route({
-  filters: { method: 'HEAD', path: '/orgs/:orgId/items/:itemId' },
-  handler: headItem,
-})
+albRouter.head()
+albRouter.options()
 ```
 
 #### Responses

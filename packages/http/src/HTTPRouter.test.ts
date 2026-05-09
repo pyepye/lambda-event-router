@@ -136,11 +136,81 @@ suite('HTTPRouter', () => {
       { method: 'put' as const, path: '/items/:id', handler: async () => Ok({ updated: true }) },
       { method: 'patch' as const, path: '/items/:id', handler: async () => Ok({ patched: true }) },
       { method: 'delete' as const, path: '/items/:id', handler: async () => NoContent() },
+      { method: 'head' as const, path: '/items/:id', handler: async () => NoContent() },
+      { method: 'options' as const, path: '/items', handler: async () => NoContent() },
     ])('$method returns the router instance for chaining', ({ method, path, handler }) => {
       // @ts-expect-error - calling union of method signatures
       const result = router[method]({ filters: { path }, handler });
 
       expect(result).toBe(router);
+    });
+  });
+
+  suite('head and options', () => {
+    test('head() registers a HEAD route', async () => {
+      const handler = vi.fn(async () => NoContent());
+      router.head({ filters: { path: '/items/:id' }, handler });
+
+      const result = await router.handleEvent(
+        createMockEvent({ method: 'HEAD', path: '/items/9' }),
+        createMockContext(),
+      );
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(result.statusCode).toBe(204);
+    });
+
+    test('head() passes path params to the handler', async () => {
+      const handler = vi.fn(async () => NoContent());
+      router.head({ filters: { path: '/items/:id' }, handler });
+
+      await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/items/9' }), createMockContext());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ path: { id: '9' } }));
+    });
+
+    test('a HEAD request does not match a GET route', async () => {
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const result = await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/items' }), createMockContext());
+
+      expect(result.statusCode).toBe(404);
+    });
+
+    test('options() registers an OPTIONS route', async () => {
+      const handler = vi.fn(async () => NoContent());
+      router.options({ filters: { path: '/items' }, handler });
+
+      const result = await router.handleEvent(
+        createMockEvent({ method: 'OPTIONS', path: '/items' }),
+        createMockContext(),
+      );
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(result.statusCode).toBe(204);
+    });
+
+    test('options() takes precedence over the automatic CORS preflight', async () => {
+      const handler = vi.fn(async () => Ok({ mine: true }));
+      const corsRouter = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      corsRouter.options({ filters: { path: '/items' }, handler });
+
+      const event = createMockEvent({ method: 'OPTIONS', path: '/items', headers: { origin: 'https://a.com' } });
+      const result = await corsRouter.handleEvent(event, createMockContext());
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(result.body).toBe(JSON.stringify({ mine: true }));
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('neither takes a bodySchema', () => {
+      const bodySchema = createMockSchema();
+
+      // @ts-expect-error - a HEAD route has no body to validate
+      router.head({ filters: { path: '/items' }, bodySchema, handler: async () => NoContent() });
+      // @ts-expect-error - an OPTIONS route has no body to validate
+      router.options({ filters: { path: '/items' }, bodySchema, handler: async () => NoContent() });
     });
   });
 

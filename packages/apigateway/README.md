@@ -176,16 +176,12 @@ apiRouter.put()
 apiRouter.post()
 apiRouter.patch()
 apiRouter.delete()
+apiRouter.head()
+apiRouter.options()
 ```
 
-There is no `head()` or `options()`. Register those with `route()` and set the method yourself:
-
-```ts
-apiRouter.route({
-  filters: { method: 'HEAD', path: '/orgs/:orgId/items/:itemId' },
-  handler: headItemHandler,
-})
-```
+An `options()` route takes precedence over the automatic CORS preflight, so it is how you answer a
+preflight yourself.
 
 #### Responses
 

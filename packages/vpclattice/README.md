@@ -110,15 +110,8 @@ latticeRouter.put()
 latticeRouter.post()
 latticeRouter.patch()
 latticeRouter.delete()
-```
-
-There is no `head()` or `options()`. Register those with `route()` and set the method yourself:
-
-```ts
-latticeRouter.route({
-  filters: { method: 'HEAD', path: '/orgs/:orgId/items/:itemId' },
-  handler: headItem,
-})
+latticeRouter.head()
+latticeRouter.options()
 ```
 
 #### Responses
