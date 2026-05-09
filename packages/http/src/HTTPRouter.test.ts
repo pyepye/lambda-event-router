@@ -918,6 +918,118 @@ suite('HTTPRouter', () => {
 
       expect(result.headers?.['Access-Control-Allow-Credentials']).toBe('true');
     });
+
+    test('lists OPTIONS once when the path has its own OPTIONS route', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      router.route({ filters: { method: 'OPTIONS', path: '/other' }, handler: async () => NoContent() });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result.headers?.['Access-Control-Allow-Methods']).toBe('GET, OPTIONS');
+    });
+  });
+
+  suite('handleEvent - CORS preflight versus a registered OPTIONS route', () => {
+    test('runs a registered OPTIONS route instead of the automatic preflight', async () => {
+      const handler = vi.fn(async () => Ok({ mine: true }));
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      router.route({ filters: { method: 'OPTIONS', path: '/items' }, handler });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toBe(JSON.stringify({ mine: true }));
+    });
+
+    test('adds CORS headers to a registered OPTIONS route response', async () => {
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.route({
+        filters: { method: 'OPTIONS', path: '/items' },
+        handler: async () => ({ statusCode: 204, body: undefined, headers: { 'X-Mine': 'yes' } }),
+      });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers).toEqual(expect.objectContaining({ 'Access-Control-Allow-Origin': '*', 'X-Mine': 'yes' }));
+    });
+
+    test('falls back to the automatic preflight when a registered OPTIONS route filters the request out', async () => {
+      const handler = vi.fn(async () => Ok({ mine: true }));
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      router.route({
+        filters: { method: 'OPTIONS', path: '/items', customFilter: () => false },
+        handler,
+      });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(result.statusCode).toBe(204);
+      expect(result.headers?.['Access-Control-Allow-Methods']).toBe('GET, OPTIONS');
+    });
+
+    test('runs a registered OPTIONS route when CORS is off', async () => {
+      const handler = vi.fn(async () => Ok({ mine: true }));
+      const router = new HTTPRouter({ adapter: mockAdapter });
+      router.route({ filters: { method: 'OPTIONS', path: '/items' }, handler });
+
+      const event = createMockEvent({ method: 'OPTIONS', path: '/items' });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(handler).toHaveBeenCalledOnce();
+      expect(result.statusCode).toBe(200);
+    });
+
+    test('runs route middleware for a registered OPTIONS route', async () => {
+      const order: string[] = [];
+      const middleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
+        order.push('middleware');
+        return next(request);
+      };
+      const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
+      router.route({
+        filters: { method: 'OPTIONS', path: '/items' },
+        middleware: [middleware],
+        handler: async () => {
+          order.push('handler');
+          return NoContent();
+        },
+      });
+
+      const event = createMockEvent({
+        method: 'OPTIONS',
+        path: '/items',
+        headers: { origin: 'https://example.com' },
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(order).toEqual(['middleware', 'handler']);
+    });
   });
 
   suite('handleEvent - CORS', () => {

@@ -66,7 +66,7 @@ export async function buildCorsHeaders(options: BuildCorsHeadersOptions): Promis
   }
 
   if (isPreflight) {
-    const allowMethods = config.methods ?? [...methods, 'OPTIONS'];
+    const allowMethods = config.methods ?? [...new Set<HttpMethod>([...methods, 'OPTIONS'])];
     headers['Access-Control-Allow-Methods'] = allowMethods.join(', ');
 
     const allowHeaders = config.allowedHeaders ?? requestHeaders['access-control-request-headers'];

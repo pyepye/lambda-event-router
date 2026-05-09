@@ -17,6 +17,7 @@ import type {
   HTTPAdapter,
   HTTPFilterInput,
   HttpMethod,
+  NormalizedHTTPEvent,
   PathParams,
   RouteDefinition,
 } from './types.js';
@@ -186,20 +187,26 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return { ...response, headers: { ...response.headers, ...corsHeaders } };
   }
 
+  private async buildPreflightResult(
+    normalizedEvent: NormalizedHTTPEvent,
+    event: TEvent,
+  ): Promise<TResult | undefined> {
+    const methods = this.router.getMethodsForPath(normalizedEvent.path);
+    if (methods.length === 0) {
+      return undefined;
+    }
+
+    const corsHeaders = await this.getCorsHeaders(normalizedEvent, true, methods);
+    if (!corsHeaders) {
+      return undefined;
+    }
+
+    return this.adapter.buildResult({ statusCode: 204, body: '', headers: corsHeaders }, event);
+  }
+
   async handleEvent(event: TEvent, context: Context): Promise<TResult> {
     const normalizedEvent = this.adapter.normalize(event);
     const { method, path } = normalizedEvent;
-
-    if (method === 'OPTIONS' && this.corsConfig) {
-      const methods = this.router.getMethodsForPath(path);
-      if (methods.length > 0) {
-        const corsHeaders = await this.getCorsHeaders(normalizedEvent, true, methods);
-        if (corsHeaders) {
-          const preflightResponse = { statusCode: 204, body: '', headers: corsHeaders };
-          return this.adapter.buildResult(preflightResponse, event);
-        }
-      }
-    }
 
     const filterInput: HTTPFilterInput<TEvent> = {
       method,
@@ -212,6 +219,14 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     };
     const routeData = await this.router.match(method, path, filterInput);
     if (!routeData) {
+      // Match registered OPTIONS route first, use  automatic fallback if one does not exist but CORS i
+      if (method === 'OPTIONS' && this.corsConfig) {
+        const preflightResult = await this.buildPreflightResult(normalizedEvent, event);
+        if (preflightResult !== undefined) {
+          return preflightResult;
+        }
+      }
+
       // TODO: Could / should these notFound responses deal with CORS so we don't have to repeat here? Does it make sense?
       const notFoundResponse = this.response.notFound();
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
