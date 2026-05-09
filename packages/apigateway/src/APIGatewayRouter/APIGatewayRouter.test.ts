@@ -21,6 +21,54 @@ suite('APIGatewayRouter', () => {
     });
   });
 
+  suite('cors', () => {
+    test('answers an OPTIONS preflight when cors is configured', async ({ apiGatewayV2HandlerEvent }) => {
+      const corsRouter = createAPIGatewayRouter({ cors: { origin: 'https://app.example.com' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      corsRouter.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const { event, context } = apiGatewayV2HandlerEvent({
+        event: {
+          rawPath: '/items',
+          requestContext: { http: { method: 'OPTIONS' } },
+          headers: { origin: 'https://app.example.com' },
+        },
+      });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 204,
+          headers: expect.objectContaining({
+            'Access-Control-Allow-Origin': 'https://app.example.com',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+          }),
+        }),
+      );
+    });
+
+    test('adds cors headers to a handler response', async ({ apiGatewayV2HandlerEvent }) => {
+      const corsRouter = createAPIGatewayRouter({ cors: { origin: '*' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/items' } });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 200,
+          headers: expect.objectContaining({ 'Access-Control-Allow-Origin': '*' }),
+        }),
+      );
+    });
+
+    test('throws when credentials is combined with a wildcard origin', () => {
+      expect(() => createAPIGatewayRouter({ cors: { origin: '*', credentials: true } })).toThrow(
+        'CORS configuration error: credentials cannot be used with wildcard (*) origin',
+      );
+    });
+  });
+
   suite('canHandleEvent', () => {
     test('returns true for a valid API Gateway V2 event', () => {
       const event = createApiGatewayV2Event();

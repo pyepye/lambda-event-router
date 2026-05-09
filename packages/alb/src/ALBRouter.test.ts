@@ -17,6 +17,48 @@ suite('ALBRouter', () => {
     });
   });
 
+  suite('cors', () => {
+    test('answers an OPTIONS preflight when cors is configured', async ({ albHandlerEvent }) => {
+      const corsRouter = createALBRouter({ cors: { origin: 'https://app.example.com' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      corsRouter.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const { event, context } = albHandlerEvent({
+        event: { path: '/items', httpMethod: 'OPTIONS', headers: { origin: 'https://app.example.com' } },
+      });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers).toEqual(
+        expect.objectContaining({
+          'Access-Control-Allow-Origin': 'https://app.example.com',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        }),
+      );
+    });
+
+    test('adds cors headers to a handler response', async ({ albHandlerEvent }) => {
+      const corsRouter = createALBRouter({ cors: { origin: '*' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const { event, context } = albHandlerEvent({ event: { path: '/items' } });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds no cors headers when cors is left off', async ({ albHandlerEvent }) => {
+      const plainRouter = createALBRouter();
+      plainRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const { event, context } = albHandlerEvent({ event: { path: '/items' } });
+      const result = await plainRouter.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBeUndefined();
+    });
+  });
+
   suite('canHandleEvent', () => {
     test('returns true for a valid ALB event', () => {
       const event = createALBEvent();

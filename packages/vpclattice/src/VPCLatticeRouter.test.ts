@@ -17,6 +17,48 @@ suite('VPCLatticeRouter', () => {
     });
   });
 
+  suite('cors', () => {
+    test('answers an OPTIONS preflight when cors is configured', async ({ vpcLatticeV2HandlerEvent }) => {
+      const corsRouter = createVPCLatticeRouter({ cors: { origin: 'https://app.example.com' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+      corsRouter.post({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const { event, context } = vpcLatticeV2HandlerEvent({
+        event: { path: '/items', method: 'OPTIONS', headers: { origin: ['https://app.example.com'] } },
+      });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(204);
+      expect(result.headers).toEqual(
+        expect.objectContaining({
+          'Access-Control-Allow-Origin': 'https://app.example.com',
+          'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        }),
+      );
+    });
+
+    test('adds cors headers to a handler response', async ({ vpcLatticeV2HandlerEvent }) => {
+      const corsRouter = createVPCLatticeRouter({ cors: { origin: '*' } });
+      corsRouter.get({ filters: { path: '/items' }, handler: async () => Ok({ data: 'test' }) });
+
+      const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/items' } });
+      const result = await corsRouter.handleEvent(event, context);
+
+      expect(result.statusCode).toBe(200);
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+    });
+
+    test('adds no cors headers when cors is left off', async ({ vpcLatticeV2HandlerEvent }) => {
+      const plainRouter = createVPCLatticeRouter();
+      plainRouter.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
+
+      const { event, context } = vpcLatticeV2HandlerEvent({ event: { path: '/items' } });
+      const result = await plainRouter.handleEvent(event, context);
+
+      expect(result.headers?.['Access-Control-Allow-Origin']).toBeUndefined();
+    });
+  });
+
   suite('canHandleEvent', () => {
     test('returns true for a valid VPC Lattice V2 event', () => {
       const event = createVPCLatticeV2Event();
