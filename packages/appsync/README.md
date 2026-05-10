@@ -147,7 +147,7 @@ import { createAppSyncAuthorizerRouter, defineAuthorizerRoute, Authorized, Denie
 const authRouter = createAppSyncAuthorizerRouter()
 
 authRouter.route(
-  defineAuthorizerRoute({}).handle(async ({ authorizationToken }) => {
+  defineAuthorizerRoute().handle(async ({ authorizationToken }) => {
     if (isValid(authorizationToken)) return Authorized()
     return Denied()
   })
@@ -157,6 +157,7 @@ authRouter.route(
 #### Separate handlers
 
 ```ts
+import type { AppSyncAuthorizerRequest } from '@lambda-event-router/appsync'
 import { createAppSyncAuthorizerRouter, Authorized, Denied } from '@lambda-event-router/appsync'
 
 const authRouter = createAppSyncAuthorizerRouter()
@@ -165,7 +166,7 @@ authRouter.route({
   handler: validateToken,
 })
 
-async function validateToken({ authorizationToken }) {
+async function validateToken({ authorizationToken }: AppSyncAuthorizerRequest) {
   if (isValid(authorizationToken)) return Authorized()
   return Denied()
 }

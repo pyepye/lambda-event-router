@@ -37,14 +37,24 @@ suite('appSyncAuthorizerResponse', () => {
       expect(result).toEqual({ isAuthorized: true, resolverContext: { userId: '123' } });
     });
 
+    test('includes deniedFields when provided', () => {
+      const result = Authorized({ deniedFields: ['User.email', 'User.phoneNumber'] });
+      expect(result).toEqual({ isAuthorized: true, deniedFields: ['User.email', 'User.phoneNumber'] });
+    });
+
     test('includes ttlOverride when provided', () => {
       const result = Authorized({ ttlOverride: 300 });
       expect(result).toEqual({ isAuthorized: true, ttlOverride: 300 });
     });
 
-    test('includes both resolverContext and ttlOverride when provided', () => {
-      const result = Authorized({ resolverContext: { role: 'admin' }, ttlOverride: 600 });
-      expect(result).toEqual({ isAuthorized: true, resolverContext: { role: 'admin' }, ttlOverride: 600 });
+    test('includes every option when provided', () => {
+      const result = Authorized({ resolverContext: { role: 'admin' }, deniedFields: ['User.email'], ttlOverride: 600 });
+      expect(result).toEqual({
+        isAuthorized: true,
+        resolverContext: { role: 'admin' },
+        deniedFields: ['User.email'],
+        ttlOverride: 600,
+      });
     });
   });
 
@@ -53,19 +63,9 @@ suite('appSyncAuthorizerResponse', () => {
       expect(Denied()).toEqual({ isAuthorized: false });
     });
 
-    test('includes deniedFields when provided', () => {
-      const result = Denied({ deniedFields: ['secret', 'password'] });
-      expect(result).toEqual({ isAuthorized: false, deniedFields: ['secret', 'password'] });
-    });
-
     test('includes ttlOverride when provided', () => {
       const result = Denied({ ttlOverride: 60 });
       expect(result).toEqual({ isAuthorized: false, ttlOverride: 60 });
-    });
-
-    test('includes both deniedFields and ttlOverride when provided', () => {
-      const result = Denied({ deniedFields: ['email'], ttlOverride: 120 });
-      expect(result).toEqual({ isAuthorized: false, deniedFields: ['email'], ttlOverride: 120 });
     });
   });
 });

@@ -34,7 +34,9 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
     if (typeof apiId !== 'string') return false;
     if (typeof accountId !== 'string') return false;
     if (typeof queryString !== 'string') return false;
-    if (typeof operationName !== 'string') return false;
+
+    // AppSync leaves operationName off when the client does not name the operation
+    if (operationName !== undefined && typeof operationName !== 'string') return false;
 
     return true;
   }

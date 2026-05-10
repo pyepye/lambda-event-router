@@ -10,6 +10,7 @@ export function isAppSyncAuthorizerResponse(value: unknown): value is Authorizer
 
 interface AuthorizedOptions {
   resolverContext?: Record<string, unknown>;
+  deniedFields?: string[];
   ttlOverride?: number;
 }
 
@@ -20,6 +21,10 @@ export function Authorized(options?: AuthorizedOptions): AuthorizerResult {
     result.resolverContext = options.resolverContext;
   }
 
+  if (options?.deniedFields) {
+    result.deniedFields = options.deniedFields;
+  }
+
   if (options?.ttlOverride !== undefined) {
     result.ttlOverride = options.ttlOverride;
   }
@@ -28,16 +33,11 @@ export function Authorized(options?: AuthorizedOptions): AuthorizerResult {
 }
 
 interface DeniedOptions {
-  deniedFields?: string[];
   ttlOverride?: number;
 }
 
 export function Denied(options?: DeniedOptions): AuthorizerResult {
   const result: AuthorizerResult = { isAuthorized: false };
-
-  if (options?.deniedFields) {
-    result.deniedFields = options.deniedFields;
-  }
 
   if (options?.ttlOverride !== undefined) {
     result.ttlOverride = options.ttlOverride;

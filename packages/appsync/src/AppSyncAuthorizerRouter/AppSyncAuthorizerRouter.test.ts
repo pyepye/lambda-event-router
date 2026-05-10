@@ -103,6 +103,15 @@ suite('AppSyncAuthorizerRouter', () => {
         }),
       ).toBe(false);
     });
+
+    test('returns true when operationName is missing, as it is on an unnamed operation', () => {
+      expect(
+        router.canHandleEvent({
+          authorizationToken: 'Bearer token',
+          requestContext: { apiId: 'id', accountId: 'acc', queryString: 'query { getUser { id } }' },
+        }),
+      ).toBe(true);
+    });
   });
 
   suite('defineAuthorizerRoute', () => {
