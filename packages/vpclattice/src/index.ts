@@ -24,6 +24,7 @@ export {
   defineRoute,
   Forbidden,
   HTTP_STATUS_CODES,
+  HTTPRouter,
   InternalServerError,
   NoContent,
   NotFound,

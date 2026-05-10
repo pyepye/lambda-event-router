@@ -141,12 +141,12 @@ throw InternalServerError()
 #### Version adapters
 
 `createVPCLatticeRouter()` handles both payload versions, so there is nothing to configure. The two
-per-version adapters are exported for building a router that accepts one version and rejects the other,
-which needs `HTTPRouter` directly because `createVPCLatticeRouter` takes no `adapter` option.
+per-version adapters are exported for building a router that accepts one version and rejects the other.
+`createVPCLatticeRouter` takes no `adapter` option, so that means `HTTPRouter`, which is exported from here
+alongside the adapters.
 
 ```ts
-import { HTTPRouter } from '@lambda-event-router/http'
-import { vpcLatticeV2Adapter } from '@lambda-event-router/vpclattice'
+import { HTTPRouter, vpcLatticeV2Adapter } from '@lambda-event-router/vpclattice'
 
 const v2Only = new HTTPRouter({ adapter: vpcLatticeV2Adapter })
 ```
