@@ -268,29 +268,46 @@ return true  // simple response mode (HTTP API v2 request authorizers only)
 return false // simple response mode (HTTP API v2 request authorizers only)
 ```
 
-### WebSocket
+### WebSocketRouter
+
+A WebSocket API invokes the Lambda three ways over a connection's life, so routes filter on `eventType`
+and on the `routeKey` API Gateway picked.
 
 #### Inline handlers
 
 ```ts
-import { createWebSocketRouter, defineWebSocketRoute, WebSocketOk } from '@lambda-event-router/apigateway'
+import { createWebSocketRouter, defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway'
+import { z } from 'zod'
 
 const wsRouter = createWebSocketRouter()
+
+const SendMessageSchema = z.object({ action: z.literal('sendMessage'), content: z.string() })
 
 wsRouter.route(
   defineWebSocketRoute({
     filters: { eventType: 'MESSAGE', routeKey: 'sendMessage' },
-  }).handle(async ({ body, connectionId }) => {
-    return WebSocketOk()
+    bodySchema: SendMessageSchema,
+  }).handle(async ({ connectionId, domainName, stage, body }) => {
+    await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({ echo: body.content }) })
   })
 )
 ```
 
 #### Separate handlers
 ```ts
-import { createWebSocketRouter } from '@lambda-event-router/apigateway'
+import type {
+  WebSocketConnectRequest,
+  WebSocketConnectResponse,
+  WebSocketDisconnectRequest,
+  WebSocketMessageRequest,
+} from '@lambda-event-router/apigateway'
+import { createWebSocketRouter, WebSocketOk, WebSocketUnauthorised } from '@lambda-event-router/apigateway'
+import { z } from 'zod'
 
 const wsRouter = createWebSocketRouter()
+
+const SendMessageSchema = z.object({ action: z.literal('sendMessage'), content: z.string() })
+type SendMessage = z.infer<typeof SendMessageSchema>
 
 wsRouter.connect({
   handler: onConnect,
@@ -306,15 +323,18 @@ wsRouter.message({
   handler: onSendMessage,
 })
 
-async function onConnect({ connectionId, queryStringParameters }) {
+// Only a CONNECT event carries the query string, and only a CONNECT handler answers with a status code
+async function onConnect({ connectionId, queryStringParameters }: WebSocketConnectRequest): Promise<WebSocketConnectResponse> {
+  if (!queryStringParameters?.token) return WebSocketUnauthorised()
   // Store connection
+  return WebSocketOk()
 }
 
-async function onDisconnect({ connectionId }) {
+async function onDisconnect({ connectionId }: WebSocketDisconnectRequest): Promise<void> {
   // Remove connection
 }
 
-async function onSendMessage({ connectionId, body }) {
+async function onSendMessage({ connectionId, body }: WebSocketMessageRequest<SendMessage>): Promise<void> {
   // Handle message
 }
 ```
@@ -327,6 +347,8 @@ wsRouter.disconnect()
 wsRouter.message()
 ```
 
+Only `defineWebSocketRoute` accepts a `customFilter`. `route()` and the three methods above do not.
+
 #### Responses
 
 ```ts
@@ -334,6 +356,18 @@ return WebSocketOk()          // 200
 throw WebSocketUnauthorised() // 401
 throw WebSocketForbidden()    // 403
 ```
+
+Only a `$connect` does anything with the status code, where a non-2xx refuses the handshake. Nothing a
+message handler returns reaches the client, so send data back with `postToConnection`.
+
+```ts
+import { postToConnection } from '@lambda-event-router/apigateway'
+
+// domainName, stage and connectionId all come off the request
+await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({ content }) })
+```
+
+`WebSocketRouter` takes no middleware, at either level.
 
 ## Examples
 
