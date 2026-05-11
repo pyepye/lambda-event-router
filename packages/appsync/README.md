@@ -1,6 +1,6 @@
 # @lambda-event-router/appsync
 
-AppSync routing for resolvers, authorizers, and event handlers.
+AppSync routing for resolvers, authorizers and Event API handlers.
 
 **Supported AWS Services:** `AWS AppSync`
 
@@ -35,9 +35,9 @@ export const handler = lambdaRouter.handler()
 // appsync.ts
 import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
 
-const appSyncRouter = createAppSyncRouter()
+export const appSyncRouter = createAppSyncRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inline handler lets TypeScript infer the request from the route
 const getItem = defineRoute({
   filters: {
     parentTypeName: 'Query',
@@ -53,9 +53,10 @@ OR use a the separate syntax to split router and handlers across files:
 
 ```ts
 // appsync.ts
+import type { AppSyncResolverRequest } from '@lambda-event-router/appsync'
 import { createAppSyncRouter } from '@lambda-event-router/appsync'
 
-const appSyncRouter = createAppSyncRouter()
+export const appSyncRouter = createAppSyncRouter()
 
 // Separate handler to define routes and handlers in different places
 appSyncRouter.route({
@@ -66,8 +67,8 @@ appSyncRouter.route({
   handler: getItem,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function getItem({ arguments: args, identity }) {
+// A separate handler has to name its request type, since there is no route to infer it from
+export async function getItem({ arguments: args }: AppSyncResolverRequest) {
   return { id: args.id, name: 'Example Item' }
 }
 ```
@@ -77,9 +78,9 @@ export async function getItem({ arguments: args, identity }) {
 
 | AWS Service | Event Source | Router | Usage
 |---|---|---|---|
-| AppSync | Resolver | `AppSyncRouter` | <Usage link here> |
-| AppSync | Authorizer | `AppSyncAuthorizerRouter` | <Usage link here> |
-| AppSync | Events | `AppSyncEventsRouter` | <Usage link here> |
+| AppSync | Resolver | `AppSyncRouter` | [AppSyncRouter](#appsyncrouter) |
+| AppSync | Authorizer | `AppSyncAuthorizerRouter` | [AppSyncAuthorizerRouter](#appsyncauthorizerrouter) |
+| AppSync | Events | `AppSyncEventsRouter` | [AppSyncEventsRouter](#appsynceventsrouter) |
 
 
 ## Usage
@@ -108,6 +109,7 @@ appSyncRouter.route(getItem)
 #### Separate handlers
 
 ```ts
+import type { AppSyncResolverRequest } from '@lambda-event-router/appsync'
 import { createAppSyncRouter } from '@lambda-event-router/appsync'
 
 const appSyncRouter = createAppSyncRouter()
@@ -120,9 +122,37 @@ appSyncRouter.route({
   handler: createItem,
 })
 
-async function createItem({ arguments: args, identity }) {
+async function createItem({ arguments: args }: AppSyncResolverRequest) {
   return { id: args.id, name: args.name }
 }
+```
+
+#### Convenience methods
+
+`query()`, `mutation()` and `subscription()` set `parentTypeName` and take the field name at the top
+level. `customFilter` is the only filter key they take.
+
+```ts
+appSyncRouter
+  .query({ fieldName: 'getItem', handler: getItem })
+  .mutation({ fieldName: 'createItem', handler: createItem })
+  .subscription({ fieldName: 'onItemCreated', handler: onItemCreated })
+```
+
+#### Schema validation and middleware
+
+`argumentsSchema` validates the field's arguments before the handler runs, and `middleware` runs per
+invocation at either level.
+
+```ts
+const appSyncRouter = createAppSyncRouter({ middleware: [withRequestContext] })
+
+appSyncRouter.mutation({
+  fieldName: 'createItem',
+  argumentsSchema: CreateItemSchema,
+  middleware: [withItemContext],
+  handler: createItem,
+})
 ```
 
 #### Filters
@@ -183,28 +213,43 @@ const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route(
   defineEventsRoute({
-    filters: { operation: 'SUBSCRIBE' },
-  }).handle(async ({ event }) => {
-    return event
+    filters: { operation: 'PUBLISH', channelNamespace: '/default/*' },
+  }).handle(async ({ events }) => {
+    return { events }
   })
 )
 ```
 
+`channelNamespace` matches the channel path rather than the name of the namespace, so it takes
+`/default/*` and not `default`.
+
 #### Separate handlers
 
 ```ts
+import type { AppSyncEventsRequest } from '@lambda-event-router/appsync'
 import { createAppSyncEventsRouter } from '@lambda-event-router/appsync'
 
 const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route({
-  filters: { operation: 'SUBSCRIBE' },
+  filters: { operation: 'SUBSCRIBE', channelNamespace: '/default/*' },
   handler: handleSubscribe,
 })
 
-async function handleSubscribe({ event }) {
-  return event
+// Returning allows the subscription, throwing refuses it
+async function handleSubscribe({ channel, identity }: AppSyncEventsRequest) {
+  if (!identity) throw new Error(`Nobody may subscribe to ${channel} anonymously`)
 }
+```
+
+#### Convenience methods
+
+`publish()` and `subscribe()` set the `operation` filter and take the channel pattern at the top level.
+
+```ts
+eventsRouter
+  .publish({ channelNamespace: '/default/*', handler: handlePublish })
+  .subscribe({ channelNamespace: '/default/*', handler: handleSubscribe })
 ```
 
 ## Examples

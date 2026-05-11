@@ -73,8 +73,8 @@ export async function evaluateResource({ configurationItem, ruleParameters }) {
 
 | AWS Service | Event Source | Router | Usage
 |---|---|---|---|
-| AWS Config | Configuration Change | `ConfigRouter` | <Usage link here> |
-| AWS Config | Scheduled Evaluation | `ConfigScheduledRouter` | <Usage link here> |
+| AWS Config | Configuration Change | `ConfigRouter` | [ConfigRouter](#configrouter) |
+| AWS Config | Scheduled Evaluation | `ConfigScheduledRouter` | [ConfigScheduledRouter](#configscheduledrouter) |
 
 See the [AWS Config Resource Type Reference](https://docs.aws.amazon.com/config/latest/developerguide/resource-config-reference.html) for the full schema of each supported resource type.
 

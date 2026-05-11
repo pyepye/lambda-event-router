@@ -88,10 +88,10 @@ export async function updateItem(
 
 | AWS Service | Event Source | Router | Usage
 |---|---|---|---|
-| API Gateway | REST API | `APIGatewayRouter` | <Usage link here> |
-| API Gateway | HTTP API | `APIGatewayRouter` | <Usage link here> |
-| API Gateway | Lambda Authorizer | `LambdaAuthorizerRouter` | <Usage link here> |
-| API Gateway | WebSocket | `WebSocketRouter` | <Usage link here> |
+| API Gateway | REST API | `APIGatewayRouter` | [APIGatewayRouter](#apigatewayrouter) |
+| API Gateway | HTTP API | `APIGatewayRouter` | [APIGatewayRouter](#apigatewayrouter) |
+| API Gateway | Lambda Authorizer | `LambdaAuthorizerRouter` | [LambdaAuthorizerRouter](#lambdaauthorizerrouter) |
+| API Gateway | WebSocket | `WebSocketRouter` | [WebSocketRouter](#websocketrouter) |
 
 See `@lambda-event-router/alb` and `@lambda-event-router/vpclattice` for how to deal with HTTP requests from those services.
 
@@ -209,6 +209,10 @@ throw InternalServerError()
 
 ### LambdaAuthorizerRouter
 
+Routes filter on the authorizer `type`, so a TOKEN authorizer gets `authorizationToken` and a REQUEST
+authorizer gets the headers, query, method and path. `Allow` and `Deny` both take the principal and the
+resource ARN to scope the policy to.
+
 ```ts
 import { createLambdaAuthorizerRouter, defineLambdaAuthorizerRoute, Allow, Deny } from '@lambda-event-router/apigateway'
 
@@ -217,16 +221,18 @@ const authRouter = createLambdaAuthorizerRouter()
 authRouter.route(
   defineLambdaAuthorizerRoute({
     filters: { type: 'TOKEN' },
-  }).handle(async ({ authorizationToken }) => {
-    if (authorizationToken === 'valid-token') return Allow('user-123')
-    return Deny()
+  }).handle(async ({ authorizationToken, resourceArn }) => {
+    if (authorizationToken === 'valid-token') return Allow('user-123', resourceArn)
+    return Deny('anonymous', resourceArn)
   })
 )
 ```
 
 #### Separate handlers
 ```ts
-import { createLambdaAuthorizerRouter } from '@lambda-event-router/apigateway'
+import type { APIGatewayAuthorizerResult } from 'aws-lambda'
+import type { LambdaAuthorizerRequestRequest, LambdaAuthorizerTokenRequest } from '@lambda-event-router/apigateway'
+import { Allow, createLambdaAuthorizerRouter, Deny } from '@lambda-event-router/apigateway'
 
 const authRouter = createLambdaAuthorizerRouter()
 
@@ -239,17 +245,27 @@ authRouter.request({
   handler: validateRequest,
 })
 
-async function validateToken({ authorizationToken, resourceArn }) {
+async function validateToken({
+  authorizationToken,
+  resourceArn,
+}: LambdaAuthorizerTokenRequest): Promise<APIGatewayAuthorizerResult> {
   if (authorizationToken === 'valid-token') return Allow('user-123', resourceArn)
   return Deny('anonymous', resourceArn)
 }
 
-async function validateRequest({ headers, resourceArn }) {
+async function validateRequest({
+  headers,
+  resourceArn,
+}: LambdaAuthorizerRequestRequest): Promise<APIGatewayAuthorizerResult> {
   const apiKey = headers['x-api-key']
   if (apiKey === 'valid-key') return Allow('user-123', resourceArn)
   return Deny('anonymous', resourceArn)
 }
 ```
+
+The narrow request types only reach a handler through `token()` and `request()`. `route()` types its
+handler against `LambdaAuthorizerRequest`, where every field but `type`, `resourceArn`, `event` and
+`context` is optional.
 
 #### Helper methods
 
@@ -264,9 +280,16 @@ authRouter.request()
 return Allow(principalId, resource)
 return Allow(principalId, resource, context) // with additional context
 return Deny(principalId, resource)
+return generatePolicy(principalId, 'Allow', resource) // effect as an argument
 return true  // simple response mode (HTTP API v2 request authorizers only)
 return false // simple response mode (HTTP API v2 request authorizers only)
+
+// A policy can be thrown as well, from any depth
+throw Deny(principalId, resource)
 ```
+
+Returning a boolean from anything other than an HTTP API v2 request authorizer throws, because there is
+no simple response shape for the other event types to send it as.
 
 ### WebSocketRouter
 
