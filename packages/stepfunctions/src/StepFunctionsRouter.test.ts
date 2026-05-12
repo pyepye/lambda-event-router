@@ -1,12 +1,18 @@
+import type { Context } from 'aws-lambda';
+
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
 import { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
-import type { StepFunctionsFilterInput } from './types.js';
+import type { StepFunctionsFilterInput, StepFunctionsMiddleware, StepFunctionsRequest } from './types.js';
+
+type StepFunctionsNext = (request: StepFunctionsRequest) => Promise<unknown>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+
+const context: Context = createMockContext();
 
 suite('StepFunctionsRouter', () => {
   let router: StepFunctionsRouter;
@@ -382,20 +388,20 @@ suite('StepFunctionsRouter', () => {
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = { action: 'process', orderId: '123' };
-      const result = await router.handleEvent(event);
+      const result = await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith(event);
+      expect(handler).toHaveBeenCalledWith({ event, context });
       expect(result).toEqual({ status: 'done' });
     });
 
     test('throws when no route matches', async () => {
-      await expect(router.handleEvent({ action: 'unknown' })).rejects.toThrow(
+      await expect(router.handleEvent({ action: 'unknown' }, context)).rejects.toThrow(
         'No route matched for Step Functions event',
       );
     });
 
     test('throws a NoRouteMatchedError when no route matches', async () => {
-      const error = await router.handleEvent({ action: 'unknown' }).catch((thrown: unknown) => thrown);
+      const error = await router.handleEvent({ action: 'unknown' }, context).catch((thrown: unknown) => thrown);
 
       expect(base.NoRouteMatchedError.isNoRouteMatchedError(error)).toBe(true);
     });
@@ -409,12 +415,13 @@ suite('StepFunctionsRouter', () => {
       );
 
       const event = { TaskToken: 'token-xyz', orderId: '456', status: 'approved' };
-      const result = await router.handleEvent(event);
+      const result = await router.handleEvent(event, context);
 
       expect(handler).toHaveBeenCalledWith({
         taskToken: 'token-xyz',
         input: { orderId: '456', status: 'approved' },
         event,
+        context,
       });
       expect(result).toEqual({ sent: true });
     });
@@ -426,7 +433,7 @@ suite('StepFunctionsRouter', () => {
         }),
       );
 
-      await expect(router.handleEvent({ data: 'test' })).rejects.toThrow('handler exploded');
+      await expect(router.handleEvent({ data: 'test' }, context)).rejects.toThrow('handler exploded');
     });
   });
 
@@ -442,10 +449,10 @@ suite('StepFunctionsRouter', () => {
       );
 
       const rawEvent = { action: 'process' };
-      await router.handleEvent(rawEvent);
+      await router.handleEvent(rawEvent, context);
 
       expect(validateSchemaSpy).toHaveBeenCalledWith(rawEvent, eventSchema, expect.any(String));
-      expect(handler).toHaveBeenCalledWith(rawEvent);
+      expect(handler).toHaveBeenCalledWith({ event: rawEvent, context });
     });
 
     test('throws when eventSchema validation fails for a regular route', async () => {
@@ -458,7 +465,7 @@ suite('StepFunctionsRouter', () => {
       );
 
       const rawEvent = { bad: 'data' };
-      await expect(router.handleEvent(rawEvent)).rejects.toThrow('Event validation failed');
+      await expect(router.handleEvent(rawEvent, context)).rejects.toThrow('Event validation failed');
     });
 
     test('passes raw event to handler when no eventSchema is provided', async () => {
@@ -466,9 +473,9 @@ suite('StepFunctionsRouter', () => {
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const event = { action: 'process', raw: true };
-      await router.handleEvent(event);
+      await router.handleEvent(event, context);
 
-      expect(handler).toHaveBeenCalledWith(event);
+      expect(handler).toHaveBeenCalledWith({ event, context });
     });
 
     test('validates input (not TaskToken) with eventSchema for a task token route', async () => {
@@ -482,13 +489,14 @@ suite('StepFunctionsRouter', () => {
       );
 
       const rawEvent = { TaskToken: 'token-abc', orderId: '123' };
-      await router.handleEvent(rawEvent);
+      await router.handleEvent(rawEvent, context);
 
       expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '123' }, eventSchema, expect.any(String));
       expect(handler).toHaveBeenCalledWith({
         taskToken: 'token-abc',
         input: { orderId: '123' },
         event: rawEvent,
+        context,
       });
     });
 
@@ -501,7 +509,7 @@ suite('StepFunctionsRouter', () => {
         }).handle(async () => {}),
       );
 
-      await expect(router.handleEvent({ TaskToken: 'token-abc', bad: 'data' })).rejects.toThrow(
+      await expect(router.handleEvent({ TaskToken: 'token-abc', bad: 'data' }, context)).rejects.toThrow(
         'Event validation failed',
       );
     });
@@ -532,13 +540,13 @@ suite('StepFunctionsRouter', () => {
         }).handle(deleteHandler),
       );
 
-      await router.handleEvent({ action: 'create', id: '1' });
-      await router.handleEvent({ action: 'delete', id: '2' });
+      await router.handleEvent({ action: 'create', id: '1' }, context);
+      await router.handleEvent({ action: 'delete', id: '2' }, context);
 
       expect(createHandler).toHaveBeenCalledTimes(1);
-      expect(createHandler).toHaveBeenCalledWith({ action: 'create', id: '1' });
+      expect(createHandler).toHaveBeenCalledWith({ event: { action: 'create', id: '1' }, context });
       expect(deleteHandler).toHaveBeenCalledTimes(1);
-      expect(deleteHandler).toHaveBeenCalledWith({ action: 'delete', id: '2' });
+      expect(deleteHandler).toHaveBeenCalledWith({ event: { action: 'delete', id: '2' }, context });
     });
 
     test('same router handles both task token and regular events', async () => {
@@ -555,17 +563,18 @@ suite('StepFunctionsRouter', () => {
         }).handle(regularHandler),
       );
 
-      const taskTokenResult = await router.handleEvent({ TaskToken: 'token-1', orderId: '100' });
-      const regularResult = await router.handleEvent({ action: 'process', orderId: '200' });
+      const taskTokenResult = await router.handleEvent({ TaskToken: 'token-1', orderId: '100' }, context);
+      const regularResult = await router.handleEvent({ action: 'process', orderId: '200' }, context);
 
       expect(taskTokenHandler).toHaveBeenCalledWith({
         taskToken: 'token-1',
         input: { orderId: '100' },
         event: { TaskToken: 'token-1', orderId: '100' },
+        context,
       });
       expect(taskTokenResult).toEqual({ sent: true });
 
-      expect(regularHandler).toHaveBeenCalledWith({ action: 'process', orderId: '200' });
+      expect(regularHandler).toHaveBeenCalledWith({ event: { action: 'process', orderId: '200' }, context });
       expect(regularResult).toEqual({ processed: true });
     });
 
@@ -588,11 +597,109 @@ suite('StepFunctionsRouter', () => {
         }).handle(catchAllHandler),
       );
 
-      const result = await router.handleEvent({ action: 'unknown' });
+      const result = await router.handleEvent({ action: 'unknown' }, context);
 
       expect(specificHandler).not.toHaveBeenCalled();
-      expect(catchAllHandler).toHaveBeenCalledWith({ action: 'unknown' });
+      expect(catchAllHandler).toHaveBeenCalledWith({ event: { action: 'unknown' }, context });
       expect(result).toEqual({ fallback: true });
+    });
+  });
+
+  suite('context', () => {
+    test('passes the Lambda context to a regular handler', async () => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      await router.handleEvent({ action: 'process' }, context);
+
+      expect(handler.mock.calls[0]?.[0].context).toBe(context);
+    });
+
+    test('passes the Lambda context to a task token handler', async () => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      router.route(defineRoute({ filters: { taskToken: true } }).handle(handler));
+
+      await router.handleEvent({ TaskToken: 'token-abc', orderId: '1' }, context);
+
+      expect(handler.mock.calls[0]?.[0].context).toBe(context);
+    });
+  });
+
+  suite('middleware', () => {
+    function trace(name: string, calls: string[]): StepFunctionsMiddleware {
+      return async function tracer(request: StepFunctionsRequest, next: StepFunctionsNext): Promise<unknown> {
+        calls.push(`${name}-pre`);
+        const result = await next(request);
+        calls.push(`${name}-post`);
+        return result;
+      };
+    }
+
+    test('runs router middleware then route middleware around the handler', async () => {
+      const calls: string[] = [];
+      const routerLevel = createStepFunctionsRouter({ middleware: [trace('router', calls)] });
+      routerLevel.route(
+        defineRoute({ filters: {}, middleware: [trace('route', calls)] }).handle(async () => {
+          calls.push('handler');
+          return { done: true };
+        }),
+      );
+
+      const result = await routerLevel.handleEvent({ action: 'process' }, context);
+
+      expect(calls).toEqual(['router-pre', 'route-pre', 'handler', 'route-post', 'router-post']);
+      expect(result).toEqual({ done: true });
+    });
+
+    test('runs middleware for a task token route as well', async () => {
+      const calls: string[] = [];
+      const routerLevel = createStepFunctionsRouter({ middleware: [trace('router', calls)] });
+      routerLevel.route(
+        defineRoute({ filters: { taskToken: true } }).handle(async () => {
+          calls.push('handler');
+        }),
+      );
+
+      await routerLevel.handleEvent({ TaskToken: 'token-abc', orderId: '1' }, context);
+
+      expect(calls).toEqual(['router-pre', 'handler', 'router-post']);
+    });
+
+    test('gives middleware the event and context, and lets it read the request', async () => {
+      const seen: unknown[] = [];
+      async function record(request: StepFunctionsRequest, next: StepFunctionsNext): Promise<unknown> {
+        seen.push({ event: request.event, context: request.context });
+        return next(request);
+      }
+
+      const routerLevel = createStepFunctionsRouter({ middleware: [record] });
+      routerLevel.route(defineRoute({ filters: {} }).handle(async () => undefined));
+
+      await routerLevel.handleEvent({ action: 'process' }, context);
+
+      expect(seen).toEqual([{ event: { action: 'process' }, context }]);
+    });
+
+    test('lets middleware short-circuit without calling the handler', async () => {
+      const handler = vi.fn();
+      async function block(): Promise<unknown> {
+        return { blocked: true };
+      }
+
+      const routerLevel = createStepFunctionsRouter({ middleware: [block] });
+      routerLevel.route(defineRoute({ filters: {} }).handle(handler));
+
+      const result = await routerLevel.handleEvent({ action: 'process' }, context);
+
+      expect(result).toEqual({ blocked: true });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('runs no middleware when none is registered', async () => {
+      const handler = vi.fn().mockResolvedValue({ done: true });
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      await expect(router.handleEvent({ action: 'process' }, context)).resolves.toEqual({ done: true });
     });
   });
 });

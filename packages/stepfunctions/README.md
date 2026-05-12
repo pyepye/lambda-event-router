@@ -125,6 +125,33 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Handlers receive `{ event, context }`, where `context` is the Lambda `Context`. TaskToken handlers
+receive `{ taskToken, input, event, context }`. Middleware runs over that request. Register it on the
+router to cover every route, or on a single route. Router middleware runs before route middleware.
+
+```ts
+import type { StepFunctionsMiddleware } from '@lambda-event-router/stepfunctions'
+
+const withLogging: StepFunctionsMiddleware = async (request, next) => {
+  console.log(`Handling task ${request.context.awsRequestId}`)
+  return next(request)
+}
+
+// Router-level: runs for every route
+const stepFunctionsRouter = createStepFunctionsRouter({ middleware: [withLogging] })
+
+// Route-level: runs for this route only
+const processOrder = defineRoute({
+  filters: { customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order' },
+  eventSchema: EventSchema,
+  middleware: [withLogging],
+}).handle(async ({ event, context }) => {
+  console.log(`Processing order ${event.orderId} (${context.awsRequestId})`)
+})
+```
+
 ## Examples
 
 See the [examples/stepfunctions](../../examples/stepfunctions) directory for complete working examples.

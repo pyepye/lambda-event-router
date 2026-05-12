@@ -39,18 +39,19 @@ type HumanApprovalInput = z.infer<typeof HumanApprovalSchema>;
 // =============================================================================
 
 // Handler with typed schema input
-export async function handleProcessOrder(
-  event: StepFunctionsRequest<ProcessOrderInput>,
-): Promise<{ orderId: string; totalAmount: number; status: string }> {
+export async function handleProcessOrder({
+  event,
+  context,
+}: StepFunctionsRequest<ProcessOrderInput>): Promise<{ orderId: string; totalAmount: number; status: string }> {
   const totalAmount = event.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  console.log(`Processing order ${event.orderId} for customer ${event.customerId}`);
+  console.log(`Processing order ${event.orderId} for customer ${event.customerId} (${context.awsRequestId})`);
   console.log(`Total: ${totalAmount} across ${event.items.length} items`);
 
   return { orderId: event.orderId, totalAmount, status: 'processed' };
 }
 
 // Handler without schema - works with raw payload
-export async function handleEnrichData(event: StepFunctionsRequest<unknown>): Promise<void> {
+export async function handleEnrichData({ event }: StepFunctionsRequest<unknown>): Promise<void> {
   console.log('Enriching data:', event);
 }
 
@@ -58,7 +59,7 @@ export async function handleEnrichData(event: StepFunctionsRequest<unknown>): Pr
 // Callback Task Handlers (waitForTaskToken pattern)
 // =============================================================================
 
-// taskToken handler - receives { taskToken, input } with parsed input
+// taskToken handler - receives { taskToken, input, event, context } with parsed input
 export async function handleHumanApproval(request: StepFunctionsTaskTokenRequest<HumanApprovalInput>): Promise<void> {
   const { taskToken, input } = request;
   console.log(`Approval request ${input.requestId} from ${input.requester}`);

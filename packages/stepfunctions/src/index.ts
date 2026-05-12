@@ -3,6 +3,7 @@ export type {
   StepFunctionsFilterInput,
   StepFunctionsFilters,
   StepFunctionsHandler,
+  StepFunctionsMiddleware,
   StepFunctionsRequest,
   StepFunctionsRouteDefinition,
   StepFunctionsTaskTokenHandler,

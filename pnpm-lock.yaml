@@ -964,6 +964,9 @@ importers:
       '@lambda-event-router/testing':
         specifier: workspace:*
         version: link:../testing
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13

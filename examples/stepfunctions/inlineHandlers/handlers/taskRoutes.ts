@@ -30,9 +30,10 @@ export const processOrderRoute = defineRoute({
     customFilter: isProcessOrder,
   },
   eventSchema: ProcessOrderSchema,
-}).handle(async ({ orderId, customerId, items }) => {
+}).handle(async ({ event, context }) => {
+  const { orderId, customerId, items } = event;
   const totalAmount = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  console.log(`Processing order ${orderId} for customer ${customerId}`);
+  console.log(`Processing order ${orderId} for customer ${customerId} (${context.awsRequestId})`);
   console.log(`Total: ${totalAmount} across ${items.length} items`);
 
   return { orderId, totalAmount, status: 'processed' };
@@ -48,7 +49,7 @@ export const enrichDataRoute = defineRoute({
   filters: {
     customFilter: isEnrichData,
   },
-}).handle(async (event) => {
+}).handle(async ({ event }) => {
   console.log('Enriching data:', event);
 });
 
@@ -70,7 +71,7 @@ function isHumanApproval({ event }: { event: unknown }): boolean {
 }
 
 // taskToken filter - matches events with a TaskToken field
-// Handler receives { taskToken, input } with parsed input
+// Handler receives { taskToken, input, event, context } with parsed input
 // Step Functions pauses execution until SendTaskSuccess/SendTaskFailure is called
 export const humanApprovalRoute = defineRoute({
   filters: {
