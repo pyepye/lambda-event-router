@@ -222,6 +222,26 @@ suite('Response', () => {
       expect(result).toEqual({ statusCode: 307, body: '', headers: { Location: '/new-location' } });
     });
 
+    test('does not mutate the given response object or its headers', () => {
+      const sharedHeaders = { 'cache-control': 'no-store' };
+      const shared = Response.Ok({ ok: true }, sharedHeaders);
+
+      const result = response.create(shared);
+      expect(result.headers).toEqual({ 'cache-control': 'no-store', 'content-type': 'application/json' });
+
+      // A module-level headers constant reused across warm invocations must not gain content-type
+      expect(sharedHeaders).toEqual({ 'cache-control': 'no-store' });
+      expect(shared.headers).toBe(sharedHeaders);
+    });
+
+    test('does not add a headers key to a response that had none', () => {
+      const shared = { statusCode: 200, body: { ok: true } };
+
+      response.create(shared);
+
+      expect(Object.hasOwn(shared, 'headers')).toBe(false);
+    });
+
     test('returns empty string for a function body', () => {
       const result = response.create(Response.Ok(() => {}));
 

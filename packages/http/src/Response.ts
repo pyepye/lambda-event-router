@@ -82,8 +82,8 @@ export class Response {
       const { body } = response;
       const bodyIsObject = typeof body === 'object' && body !== null && body.constructor === Object;
       if (bodyIsObject) {
-        response.headers ??= {};
-        response.headers['content-type'] ??= 'application/json';
+        // Create a new object and headers spread last so response.headers override
+        return { ...response, headers: { 'content-type': 'application/json', ...response.headers } };
       }
       return response;
     }
