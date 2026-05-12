@@ -551,6 +551,19 @@ suite('S3Router', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'my-special-bucket' }));
     });
 
+    test('parses bucket name from an ARN carrying a region and account', async ({ s3BatchEvent, context }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
+      router.batchOperation({ handler });
+
+      const event = s3BatchEvent({
+        tasks: [createS3BatchTask({ s3BucketArn: 'arn:aws:s3:us-east-1:0123456788:amzn-s3-demo-bucket1' })],
+      });
+      // @ts-expect-error - testing private method directly
+      await router.handleBatchEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'amzn-s3-demo-bucket1' }));
+    });
+
     test('URL-decodes key with + as space and percent encoding', async ({ s3BatchEvent, context }) => {
       const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
       router.batchOperation({ handler });

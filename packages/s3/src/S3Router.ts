@@ -409,10 +409,11 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     /* v8 ignore next -- @preserve - Guard is for TS. AWS always provides at least one task but array access could be undefined */
     if (!task) throw new Error('No tasks in S3 Batch event');
 
-    // Extract bucket name from ARN: arn:aws:s3:::bucket-name
+    // The bucket name is the last ARN segment. S3 Batch may send either arn:aws:s3:region:account:bucket
+    // or arn:aws:s3:::bucket, and a bucket name holds no colon.
     const bucketArn = task.s3BucketArn;
-    /* v8 ignore next -- @preserve - S3 Batch ARN always contains :::, fallback is unreachable */
-    const bucket = bucketArn.split(':::')[1] ?? '';
+    /* v8 ignore next -- @preserve - split always yields at least one segment, so the fallback is unreachable */
+    const bucket = bucketArn.split(':').at(-1) ?? '';
 
     // S3 Batch keys are URL-encoded
     const key = decodeURIComponent(task.s3Key.replace(/\+/g, ' '));
