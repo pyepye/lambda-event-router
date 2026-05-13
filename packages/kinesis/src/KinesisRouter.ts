@@ -109,7 +109,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       } catch (error) {
         logger.error(`Error processing Kinesis record ${record.eventID}`, { error });
         for (const remaining of records.slice(idx)) {
-          failures.push({ itemIdentifier: remaining.eventID });
+          failures.push({ itemIdentifier: remaining.kinesis.sequenceNumber });
         }
         break;
       }

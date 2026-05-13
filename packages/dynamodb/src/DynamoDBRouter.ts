@@ -246,9 +246,9 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       } catch (error) {
         logger.error(`Error processing DynamoDB record ${record.eventID}`, { error });
         for (const remaining of records.slice(idx)) {
-          /* v8 ignore next -- @preserve - Guard is for TS. eventID is always present in AWS events but typed as optional */
-          if (remaining.eventID) {
-            failures.push({ itemIdentifier: remaining.eventID });
+          /* v8 ignore next -- @preserve - Guard is for TS. SequenceNumber is always present in AWS events but typed as optional */
+          if (remaining.dynamodb?.SequenceNumber) {
+            failures.push({ itemIdentifier: remaining.dynamodb.SequenceNumber });
           }
         }
         break;

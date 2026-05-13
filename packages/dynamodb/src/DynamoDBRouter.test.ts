@@ -915,7 +915,7 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('returns failed record eventID as itemIdentifier', async ({
+    test('returns failed record sequence number as itemIdentifier', async ({
       dynamoDBInsertRecord,
       dynamoDBStreamEvent,
       context,
@@ -935,7 +935,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: failingRecord.eventID }],
+        batchItemFailures: [{ itemIdentifier: failingRecord.dynamodb?.SequenceNumber }],
       });
     });
 
@@ -962,9 +962,9 @@ suite('DynamoDBRouter', () => {
 
       expect(result).toEqual({
         batchItemFailures: [
-          { itemIdentifier: failingRecord.eventID },
-          { itemIdentifier: recordC.eventID },
-          { itemIdentifier: recordD.eventID },
+          { itemIdentifier: failingRecord.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordC.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordD.dynamodb?.SequenceNumber },
         ],
       });
     });
@@ -974,7 +974,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: event.Records[0]?.eventID }],
+        batchItemFailures: [{ itemIdentifier: event.Records[0]?.dynamodb?.SequenceNumber }],
       });
     });
 
@@ -1022,9 +1022,9 @@ suite('DynamoDBRouter', () => {
 
       expect(result).toEqual({
         batchItemFailures: [
-          { itemIdentifier: recordA.eventID },
-          { itemIdentifier: recordB.eventID },
-          { itemIdentifier: recordC.eventID },
+          { itemIdentifier: recordA.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordB.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordC.dynamodb?.SequenceNumber },
         ],
       });
     });
@@ -1051,7 +1051,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: lastRecord.eventID }],
+        batchItemFailures: [{ itemIdentifier: lastRecord.dynamodb?.SequenceNumber }],
       });
     });
   });
@@ -1101,7 +1101,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: record.eventID }],
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
       });
     });
 
@@ -1155,7 +1155,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: record.eventID }],
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
       });
     });
 
@@ -1209,7 +1209,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: record.eventID }],
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
       });
     });
 
@@ -1568,7 +1568,7 @@ suite('DynamoDBRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: record.eventID }],
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
       });
       expect(handler).not.toHaveBeenCalled();
     });

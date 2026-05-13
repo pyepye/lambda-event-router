@@ -451,7 +451,7 @@ suite('KinesisRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: event.Records[0]?.eventID }],
+        batchItemFailures: [{ itemIdentifier: event.Records[0]?.kinesis.sequenceNumber }],
       });
     });
 
@@ -508,9 +508,9 @@ suite('KinesisRouter', () => {
       expect(handler).not.toHaveBeenCalledWith(record4.eventID);
       expect(result).toEqual({
         batchItemFailures: [
-          { itemIdentifier: record2.eventID },
-          { itemIdentifier: record3.eventID },
-          { itemIdentifier: record4.eventID },
+          { itemIdentifier: record2.kinesis.sequenceNumber },
+          { itemIdentifier: record3.kinesis.sequenceNumber },
+          { itemIdentifier: record4.kinesis.sequenceNumber },
         ],
       });
     });
@@ -582,7 +582,7 @@ suite('KinesisRouter', () => {
       const result = await router.handleEvent(event, context());
 
       expect(result).toEqual({
-        batchItemFailures: [{ itemIdentifier: record.eventID }],
+        batchItemFailures: [{ itemIdentifier: record.kinesis.sequenceNumber }],
       });
     });
   });
@@ -920,11 +920,11 @@ suite('KinesisRouter', () => {
       const router = createKinesisRouter({ batchItemFailures: true, middleware: [failingMiddleware] });
       router.route({ filters: {}, handler });
 
-      const record = kinesisRecord({ eventID: 'evt-1' });
+      const record = kinesisRecord({ kinesis: { sequenceNumber: 'seq-1' } });
       const event = kinesisEvent([record]);
       const result = await router.handleEvent(event, context());
 
-      expect(result).toEqual({ batchItemFailures: [{ itemIdentifier: 'evt-1' }] });
+      expect(result).toEqual({ batchItemFailures: [{ itemIdentifier: 'seq-1' }] });
       expect(handler).not.toHaveBeenCalled();
     });
   });
