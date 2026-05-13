@@ -74,6 +74,30 @@ suite('PathRouter', () => {
       expect(result.pattern.test('/items/extra')).toBe(false);
       expect(result.pattern.test('/prefix/items')).toBe(false);
     });
+
+    test('treats a dot in a literal segment as a literal, not "any character"', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/v1.0/orders');
+
+      expect(result.pattern.test('/v1.0/orders')).toBe(true);
+      expect(result.pattern.test('/v1X0/orders')).toBe(false);
+    });
+
+    test('treats regex quantifiers in a literal segment as literals', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/orders+');
+
+      expect(result.pattern.test('/orders+')).toBe(true);
+      expect(result.pattern.test('/orderssss')).toBe(false);
+    });
+
+    test('does not let a literal segment match across path separators', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/orders/.*');
+
+      expect(result.pattern.test('/orders/.*')).toBe(true);
+      expect(result.pattern.test('/orders/anything/deep')).toBe(false);
+    });
   });
 
   suite('addRoute', () => {

@@ -154,9 +154,14 @@ export class PathRouter {
 
   private compilePath(path: string): { pattern: RegExp; paramNames: string[] } {
     const paramNames: string[] = [];
-    const patternStr = path.replace(/:([^/]+)/g, (_, paramName) => {
-      paramNames.push(paramName);
-      return '([^/]+)';
+    // Match either a :param or a run of literal characters, and escape the literals so a regex
+    // metacharacter in a path (a dot in a version, a file extension, a '+') matches itself.
+    const patternStr = path.replace(/:([^/]+)|[^:]+/g, (segment, paramName?: string) => {
+      if (paramName !== undefined) {
+        paramNames.push(paramName);
+        return '([^/]+)';
+      }
+      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     });
     return {
       pattern: new RegExp(`^${patternStr}$`),
