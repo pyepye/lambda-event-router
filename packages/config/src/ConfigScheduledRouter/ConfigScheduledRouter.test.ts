@@ -217,6 +217,24 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('does not match route when async customFilter resolves false', async () => {
+      router.route(
+        defineConfigScheduledRoute({
+          filters: {
+            customFilter: async (): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return false;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'any-rule', accountId: '123456789012' });
+
+      expect(result).toBeUndefined();
+    });
+
     test('passes correct filterInput to customFilter', async () => {
       const customFilter = vi.fn().mockReturnValue(true);
       router.route(

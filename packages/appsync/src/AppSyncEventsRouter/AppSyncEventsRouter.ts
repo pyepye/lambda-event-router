@@ -119,7 +119,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       }
 
       if (filters.customFilter) {
-        const match = filters.customFilter({
+        const match = await filters.customFilter({
           operation: operationTyped,
           channelNamespace,
           channel: channelPath,

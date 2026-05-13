@@ -281,6 +281,24 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
+    test('does not match when async customFilter resolves false', async () => {
+      router.route({
+        filters: {
+          customFilter: async (): Promise<boolean> => {
+            await new Promise((r) => setTimeout(r, 1));
+            return false;
+          },
+        },
+        handler: vi.fn(),
+      });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
     test('does not match when customFilter returns false', async () => {
       router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
 
