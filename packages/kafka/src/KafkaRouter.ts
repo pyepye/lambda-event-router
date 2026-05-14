@@ -72,14 +72,13 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
   }
 
   async handleEvent(event: KafkaEvent, context: Context): Promise<undefined | KafkaBatchResponse> {
-    const records = this.flattenRecords(event);
-
     if (!this.batchItemFailures) {
+      const records = this.flattenRecords(event);
       await this.processRecordsSequentially(records, event, context);
       return;
     }
 
-    const batchItemFailures = await this.processRecordsWithFailures(records, event, context);
+    const batchItemFailures = await this.processRecordsWithFailures(event, context);
     if (batchItemFailures.length > 0) {
       return { batchItemFailures };
     }
@@ -102,24 +101,28 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
   }
 
   private async processRecordsWithFailures(
-    records: KafkaRecord[],
     event: KafkaEvent,
     context: Context,
   ): Promise<KafkaBatchResponse['batchItemFailures']> {
     const failures: KafkaBatchResponse['batchItemFailures'] = [];
 
-    for (const [index, record] of records.entries()) {
-      try {
-        await this.processRecord(record, event, context);
-      } catch (error) {
-        const recordIdentifier = `${record.topic}-${record.partition} offset ${record.offset}`;
-        logger.error(`Error processing Kafka record ${recordIdentifier}`, { error });
-        for (const remaining of records.slice(index)) {
-          failures.push({
-            itemIdentifier: { partition: `${remaining.topic}-${remaining.partition}`, offset: remaining.offset },
-          });
+    // Kafka guarantees order within a partition and Lambda checkpoints each partition. A failure in one partition
+    // must not skip or fail records in another. Process each partition on its own; on the first failure, report that
+    // record and every later record in the same partition before moving onto the next.
+    for (const partitionRecords of Object.values(event.records)) {
+      for (const [index, record] of partitionRecords.entries()) {
+        try {
+          await this.processRecord(record, event, context);
+        } catch (error) {
+          const recordIdentifier = `${record.topic}-${record.partition} offset ${record.offset}`;
+          logger.error(`Error processing Kafka record ${recordIdentifier}`, { error });
+          for (const remaining of partitionRecords.slice(index)) {
+            failures.push({
+              itemIdentifier: { partition: `${remaining.topic}-${remaining.partition}`, offset: remaining.offset },
+            });
+          }
+          break;
         }
-        break;
       }
     }
     return failures;

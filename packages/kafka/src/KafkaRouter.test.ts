@@ -697,6 +697,36 @@ suite('KafkaRouter', () => {
       });
     });
 
+    test('scopes failures to the failing partition and still processes others', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      const processedPartitions: number[] = [];
+      const failingRecord = kafkaRecord({ topic: 'orders', partition: 0, offset: 0 });
+      const otherPartitionRecord = kafkaRecord({ topic: 'orders', partition: 1, offset: 0 });
+
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          processedPartitions.push(request.partition);
+          if (request.partition === 0) {
+            throw new Error('processing failed');
+          }
+        }),
+      );
+
+      const event = kafkaMSKEvent({ 'orders-0': [failingRecord], 'orders-1': [otherPartitionRecord] });
+
+      const result = await router.handleEvent(event, context());
+
+      // Kafka checkpoints each partition independently, so a failure in partition 0
+      // neither skips nor fails the record in partition 1.
+      expect(processedPartitions).toContain(1);
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: { partition: 'orders-0', offset: 0 } }],
+      });
+    });
+
     test('stops processing after first failure', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
       const processedOffsets: number[] = [];
 
