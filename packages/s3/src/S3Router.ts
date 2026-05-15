@@ -404,11 +404,23 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       throw new Error('No batch operation handler registered');
     }
 
-    // S3 Batch sends one task at a time per invocation
-    const task = event.tasks[0];
-    /* v8 ignore next -- @preserve - Guard is for TS. AWS always provides at least one task but array access could be undefined */
-    if (!task) throw new Error('No tasks in S3 Batch event');
+    // S3 Batch expects a per-task result. Missing tasks missing in the response gets marked treatMissingKeysAs which
+    // results as a PermanentFailure
+    const results: S3BatchResult['results'] = [];
+    for (const task of event.tasks) {
+      const request = this.buildBatchRequest(task, event, context);
+      const response = await this.processBatchTask(this.batchRoute, request);
+      results.push({
+        taskId: task.taskId,
+        resultCode: response.resultCode,
+        resultString: response.resultString ?? '',
+      });
+    }
 
+    return this.buildBatchResult(event, results);
+  }
+
+  private buildBatchRequest(task: S3BatchEvent['tasks'][number], event: S3BatchEvent, context: Context): S3BatchRequest {
     // The bucket name is the last ARN segment. S3 Batch may send either arn:aws:s3:region:account:bucket
     // or arn:aws:s3:::bucket, and a bucket name holds no colon.
     const bucketArn = task.s3BucketArn;
@@ -418,7 +430,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     // S3 Batch keys are URL-encoded
     const key = decodeURIComponent(task.s3Key.replace(/\+/g, ' '));
 
-    const request: S3BatchRequest = {
+    return {
       taskId: task.taskId,
       bucket,
       key,
@@ -427,10 +439,6 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
       event,
       context,
     };
-
-    const response = await this.processBatchTask(this.batchRoute, request);
-
-    return this.buildBatchResult(event, task.taskId, response);
   }
 
   private async processBatchTask(route: S3BatchRouteDefinition, request: S3BatchRequest): Promise<S3BatchResponse> {
@@ -448,18 +456,12 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     }
   }
 
-  private buildBatchResult(event: S3BatchEvent, taskId: string, response: S3BatchResponse): S3BatchResult {
+  private buildBatchResult(event: S3BatchEvent, results: S3BatchResult['results']): S3BatchResult {
     return {
       invocationSchemaVersion: event.invocationSchemaVersion,
       treatMissingKeysAs: 'PermanentFailure',
       invocationId: event.invocationId,
-      results: [
-        {
-          taskId,
-          resultCode: response.resultCode,
-          resultString: response.resultString ?? '',
-        },
-      ],
+      results,
     };
   }
 

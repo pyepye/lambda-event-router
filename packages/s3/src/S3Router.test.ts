@@ -627,6 +627,57 @@ suite('S3Router', () => {
       });
     });
 
+    test('processes every task and returns one result per task', async ({ s3BatchEvent, context }) => {
+      const processedKeys: string[] = [];
+      router.batchOperation({
+        handler: async (request) => {
+          processedKeys.push(request.key);
+          return { resultCode: 'Succeeded' as const, resultString: `done ${request.key}` };
+        },
+      });
+
+      const taskA = createS3BatchTask({ taskId: 'task-a', s3Key: 'a.txt' });
+      const taskB = createS3BatchTask({ taskId: 'task-b', s3Key: 'b.txt' });
+      const event = s3BatchEvent({ tasks: [taskA, taskB] });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.handleBatchEvent(event, context());
+
+      expect(processedKeys).toEqual(['a.txt', 'b.txt']);
+      expect(result).toEqual({
+        invocationSchemaVersion: event.invocationSchemaVersion,
+        treatMissingKeysAs: 'PermanentFailure',
+        invocationId: event.invocationId,
+        results: [
+          { taskId: 'task-a', resultCode: 'Succeeded', resultString: 'done a.txt' },
+          { taskId: 'task-b', resultCode: 'Succeeded', resultString: 'done b.txt' },
+        ],
+      });
+    });
+
+    test('a per-task failure does not stop the other tasks', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({
+        handler: async (request) => {
+          if (request.key === 'bad.txt') {
+            throw { resultCode: 'PermanentFailure' as const, resultString: 'bad object' };
+          }
+          return { resultCode: 'Succeeded' as const, resultString: 'ok' };
+        },
+      });
+
+      const taskA = createS3BatchTask({ taskId: 'task-a', s3Key: 'bad.txt' });
+      const taskB = createS3BatchTask({ taskId: 'task-b', s3Key: 'good.txt' });
+      const event = s3BatchEvent({ tasks: [taskA, taskB] });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.handleBatchEvent(event, context());
+
+      expect(result.results).toEqual([
+        { taskId: 'task-a', resultCode: 'PermanentFailure', resultString: 'bad object' },
+        { taskId: 'task-b', resultCode: 'Succeeded', resultString: 'ok' },
+      ]);
+    });
+
     test('rethrows non-S3BatchResponse errors', async ({ s3BatchEvent, context }) => {
       router.batchOperation({
         handler: async () => {
