@@ -138,11 +138,22 @@ suite('Request', () => {
     });
   });
 
-  suite('validate', () => {
-    test('does not throw when no schemas are defined', async () => {
-      const request = new Request(createNormalizedEvent(), {}, createMockContext(), createRoute(), {});
+  suite('validateQuery', () => {
+    test('returns the raw query when no querySchema is defined', async () => {
+      const normalizedEvent = createNormalizedEvent({ query: { page: '2' } });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
-      await expect(request.validate()).resolves.toBeUndefined();
+      await expect(request.validateQuery()).resolves.toEqual({ page: '2' });
+    });
+
+    test('returns the schema output so coercion and defaults reach the caller', async () => {
+      const querySchema = createMockSchema({ value: { page: 2, dryRun: false } });
+      const route = createRoute({ querySchema });
+      const normalizedEvent = createNormalizedEvent({ query: { page: '2' } });
+      const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
+
+      await expect(request.validateQuery()).resolves.toEqual({ page: 2, dryRun: false });
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '2' }, querySchema);
     });
 
     test('throws a BadRequest response when query validation fails', async () => {
@@ -152,7 +163,7 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        await request.validate();
+        await request.validateQuery();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
@@ -160,6 +171,25 @@ suite('Request', () => {
         expect(thrown.statusCode).toBe(400);
       }
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ bad: 'param' }, querySchema);
+    });
+  });
+
+  suite('validateBody', () => {
+    test('returns the parsed body when no bodySchema is defined', async () => {
+      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ total: '42' }) });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      await expect(request.validateBody()).resolves.toEqual({ total: '42' });
+    });
+
+    test('returns the schema output so coercion and defaults reach the caller', async () => {
+      const bodySchema = createMockSchema({ value: { total: 42, currency: 'GBP' } });
+      const route = createRoute({ bodySchema });
+      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ total: '42' }) });
+      const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
+
+      await expect(request.validateBody()).resolves.toEqual({ total: 42, currency: 'GBP' });
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ total: '42' }, bodySchema);
     });
 
     test('throws an UnprocessableContent response when body validation fails', async () => {
@@ -169,7 +199,7 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        await request.validate();
+        await request.validateBody();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
@@ -179,21 +209,6 @@ suite('Request', () => {
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ invalid: true }, bodySchema);
     });
 
-    test('does not throw when all schemas pass', async () => {
-      const querySchema = createMockSchema();
-      const bodySchema = createMockSchema();
-      const route = createRoute({ querySchema, bodySchema });
-      const normalizedEvent = createNormalizedEvent({
-        body: JSON.stringify({ name: 'test' }),
-        query: { page: '1' },
-      });
-      const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: '1' });
-
-      await expect(request.validate()).resolves.toBeUndefined();
-      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '1' }, querySchema);
-      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ name: 'test' }, bodySchema);
-    });
-
     test('throws UnprocessableContent when body is a string and bodySchema rejects it', async () => {
       const bodySchema = createMockSchema({ issues: [{ message: 'expected object, received string' }] });
       const route = createRoute({ bodySchema });
@@ -201,7 +216,7 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), route, {});
 
       try {
-        await request.validate();
+        await request.validateBody();
         expect.unreachable('should have thrown');
       } catch (thrown) {
         expect(Response.isHTTPResponse(thrown)).toBe(true);
@@ -209,26 +224,6 @@ suite('Request', () => {
         expect(thrown.statusCode).toBe(422);
       }
       expect(bodySchema['~standard'].validate).toHaveBeenCalled();
-    });
-
-    test('short-circuits on query failure without calling body schema', async () => {
-      const querySchema = createMockSchema({ issues: [{ message: 'invalid query' }] });
-      const bodySchema = createMockSchema();
-      const route = createRoute({ querySchema, bodySchema });
-      const normalizedEvent = createNormalizedEvent({
-        body: JSON.stringify({ name: 'test' }),
-        query: { bad: 'param' },
-      });
-      const request = new Request(normalizedEvent, {}, createMockContext(), route, { id: '1' });
-
-      try {
-        await request.validate();
-        expect.unreachable('should have thrown');
-      } catch {
-        // expected
-      }
-
-      expect(bodySchema['~standard'].validate).not.toHaveBeenCalled();
     });
   });
 
@@ -239,13 +234,12 @@ suite('Request', () => {
         path: '/items/42',
         method: 'GET',
         headers: { authorization: 'Bearer token' },
-        query: { expand: 'true' },
       });
       const mockContext = createMockContext();
       const pathParams = { id: '42' };
       const request = new Request(normalizedEvent, rawEvent, mockContext, createRoute(), pathParams);
 
-      const apiRequest = request.buildApiRequest();
+      const apiRequest = request.buildApiRequest({ expand: 'true' }, undefined);
 
       expect(apiRequest.path).toEqual({ id: '42' });
       expect(apiRequest.query).toEqual({ expand: 'true' });
@@ -254,13 +248,17 @@ suite('Request', () => {
       expect(apiRequest.context).toBe(mockContext);
     });
 
-    test('includes the parsed body in the request', () => {
-      const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ name: 'test' }) });
+    test('carries the query and body it is handed rather than the raw request values', () => {
+      const normalizedEvent = createNormalizedEvent({
+        query: { page: '2' },
+        body: JSON.stringify({ total: '42' }),
+      });
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
-      const apiRequest = request.buildApiRequest();
+      const apiRequest = request.buildApiRequest({ page: 2 } as never, { total: 42 });
 
-      expect(apiRequest.body).toEqual({ name: 'test' });
+      expect(apiRequest.query).toEqual({ page: 2 });
+      expect(apiRequest.body).toEqual({ total: 42 });
     });
   });
 });

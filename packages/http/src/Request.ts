@@ -1,6 +1,5 @@
 import type { Context } from 'aws-lambda';
 
-import type { ValidationResult } from '@lambda-event-router/base';
 import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
 
 import type { InternalRoute } from './PathRouter.js';
@@ -53,36 +52,32 @@ export class Request {
     return this.normalizedEvent.query;
   }
 
-  async validate(): Promise<void> {
-    const queryValidation = await this.validateQuery();
-    if (!queryValidation.success) {
-      throw Response.BadRequest(queryValidation.issues);
+  async validateQuery(): Promise<Record<string, string | undefined>> {
+    const result = await validateSchemaResult(this.queryParams, this.route.querySchema);
+    if (!result.success) {
+      throw Response.BadRequest(result.issues);
     }
-
-    const bodyValidation = await this.validateBody();
-    if (!bodyValidation.success) {
-      throw Response.UnprocessableContent(bodyValidation.issues);
-    }
+    return result.data;
   }
 
-  buildApiRequest(): ApiRequest {
+  async validateBody(): Promise<unknown> {
+    const result = await validateSchemaResult(this.body, this.route.bodySchema);
+    if (!result.success) {
+      throw Response.UnprocessableContent(result.issues);
+    }
+    return result.data;
+  }
+
+  buildApiRequest(query: Record<string, string | undefined>, body: unknown): ApiRequest {
     return {
       method: this.method,
       path: this.pathParams,
-      query: this.queryParams,
+      query,
       auth: this.auth,
-      body: this.body,
+      body,
       headers: this.headers,
       event: this.rawEvent,
       context: this.context,
     };
-  }
-
-  private validateQuery(): Promise<ValidationResult<Record<string, string | undefined>>> {
-    return validateSchemaResult(this.queryParams, this.route.querySchema);
-  }
-
-  private validateBody(): Promise<ValidationResult<unknown>> {
-    return validateSchemaResult(this.body, this.route.bodySchema);
   }
 }

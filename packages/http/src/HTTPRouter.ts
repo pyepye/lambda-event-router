@@ -3,10 +3,16 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, logger } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, logger, validateSchemaResult } from '@lambda-event-router/base';
 
 import { buildCorsHeaders, type CorsConfig } from './cors.js';
-import { type BodyRouteMethodFn, type NoBodyRouteMethodFn, PathRouter, type RouteMethodFn } from './PathRouter.js';
+import {
+  type BodyRouteMethodFn,
+  type InternalRoute,
+  type NoBodyRouteMethodFn,
+  PathRouter,
+  type RouteMethodFn,
+} from './PathRouter.js';
 import { Request } from './Request.js';
 import { Response } from './Response.js';
 import type {
@@ -199,6 +205,19 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return { ...response, headers: { ...response.headers, ...corsHeaders } };
   }
 
+  private async validateResponse(route: InternalRoute, handlerResponse: unknown): Promise<unknown> {
+    if (!route.responseSchema || Response.isHTTPResponse(handlerResponse)) {
+      return handlerResponse;
+    }
+
+    const result = await validateSchemaResult(handlerResponse, route.responseSchema);
+    if (!result.success) {
+      logger.error('Handler response failed its responseSchema', { issues: result.issues });
+      throw Response.InternalServerError();
+    }
+    return result.data;
+  }
+
   private async buildPreflightResult(
     normalizedEvent: NormalizedHTTPEvent,
     event: TEvent,
@@ -250,13 +269,15 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     const request = new Request(normalizedEvent, event, context, route, params);
 
     try {
-      await request.validate();
-      const requestData = request.buildApiRequest();
+      const query = await request.validateQuery();
+      const body = await request.validateBody();
+      const requestData = request.buildApiRequest(query, body);
 
       const allMiddleware = [...this.middleware, ...route.middleware];
       const handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
 
-      const response = this.response.create(handlerResponse);
+      const validatedResponse = await this.validateResponse(route, handlerResponse);
+      const response = this.response.create(validatedResponse);
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       const responseWithHeaders = this.applyHeaders(response, corsHeaders);
       return this.adapter.buildResult(responseWithHeaders, event);

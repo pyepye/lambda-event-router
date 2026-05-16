@@ -430,6 +430,76 @@ suite('HTTPRouter', () => {
     });
   });
 
+  suite('handleEvent - validated schema output', () => {
+    test('hands the handler the coerced query and body, not the raw request values', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      const querySchema = createMockSchema({ value: { page: 2, dryRun: false } });
+      const bodySchema = createMockSchema({ value: { total: 42, currency: 'GBP' } });
+      router.post({ filters: { path: '/orders' }, handler, querySchema, bodySchema });
+
+      const event = createMockEvent({
+        method: 'POST',
+        path: '/orders',
+        query: { page: '2' },
+        body: JSON.stringify({ total: '42' }),
+      });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          query: { page: 2, dryRun: false },
+          body: { total: 42, currency: 'GBP' },
+        }),
+      );
+    });
+  });
+
+  suite('handleEvent - responseSchema validation', () => {
+    test('answers 500 when a bare returned value fails the responseSchema', async () => {
+      const handler = vi.fn().mockResolvedValue({ nothingLikeTheSchema: true });
+      const responseSchema = createMockSchema({ issues: [{ message: 'missing orderId' }] });
+      router.get({ filters: { path: '/orders' }, handler, responseSchema });
+
+      const event = createMockEvent({ path: '/orders' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Internal server error' }),
+        }),
+      );
+    });
+
+    test('sends the coerced schema output for a bare returned value', async () => {
+      const handler = vi.fn().mockResolvedValue({ orderId: 1, extra: 'stripped' });
+      const responseSchema = createMockSchema({ value: { orderId: '1' } });
+      router.get({ filters: { path: '/orders' }, handler, responseSchema });
+
+      const event = createMockEvent({ path: '/orders' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 200, body: JSON.stringify({ orderId: '1' }) }));
+    });
+
+    test('skips the responseSchema for an explicit HTTP response', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({ handlerChose: true }));
+      const responseSchema = createMockSchema({ issues: [{ message: 'missing orderId' }] });
+      router.get({ filters: { path: '/orders' }, handler, responseSchema });
+
+      const event = createMockEvent({ path: '/orders' });
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({ statusCode: 200, body: JSON.stringify({ handlerChose: true }) }),
+      );
+    });
+  });
+
   suite('handleEvent - customFilter', () => {
     test('matches route when customFilter returns true', async () => {
       const handler = vi.fn(async () => Ok({ message: 'hello' }));
