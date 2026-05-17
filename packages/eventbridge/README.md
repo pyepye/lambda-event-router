@@ -47,11 +47,15 @@ const processOrder = defineRoute({
 eventBridgeRouter.route(processOrder)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+OR use the separate syntax to split router and handlers across files:
 
 ```ts
 // eventbridge.ts
 import { createEventBridgeRouter } from '@lambda-event-router/eventbridge'
+import type { EventBridgeRequest } from '@lambda-event-router/eventbridge'
+import { z } from 'zod'
+
+const OrderDetailSchema = z.object({ orderId: z.string(), customerId: z.string() })
 
 const eventBridgeRouter = createEventBridgeRouter()
 
@@ -65,8 +69,10 @@ eventBridgeRouter.route({
   handler: processOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processOrder({ source, detailType, detail }) {
+// route() can not infer the detail type, so annotate the request yourself
+type OrderDetail = z.infer<typeof OrderDetailSchema>
+
+export async function processOrder({ source, detailType, detail }: EventBridgeRequest<OrderDetail>) {
   console.log(`Order ${detail.orderId} created for ${detail.customerId}`)
 }
 ```

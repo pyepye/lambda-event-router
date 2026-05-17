@@ -38,8 +38,8 @@ const processJob = defineRoute({
   filters: {
     functionName: 'deploy',
   },
-}).handle(async ({ job }) => {
-  console.log(`Processing job ${job.id}`)
+}).handle(async ({ jobId }) => {
+  console.log(`Processing job ${jobId}`)
 })
 codepipelineRouter.route(processJob)
 ```
@@ -49,6 +49,7 @@ OR use a the separate syntax to split router and handlers across files:
 ```ts
 // codepipeline.ts
 import { createCodePipelineRouter } from '@lambda-event-router/codepipeline'
+import type { CodePipelineRequest } from '@lambda-event-router/codepipeline'
 
 const codepipelineRouter = createCodePipelineRouter()
 
@@ -61,8 +62,8 @@ codepipelineRouter.route({
 })
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processJob({ job }) {
-  console.log(`Processing job ${job.id}`)
+export async function processJob({ jobId }: CodePipelineRequest) {
+  console.log(`Processing job ${jobId}`)
 }
 ```
 
@@ -80,8 +81,8 @@ const processJob = defineRoute({
   filters: {
     functionName: 'deploy',
   },
-}).handle(async ({ job }) => {
-  console.log(`Processing job ${job.id}`)
+}).handle(async ({ jobId }) => {
+  console.log(`Processing job ${jobId}`)
 })
 
 codepipelineRouter.route(processJob)
@@ -91,6 +92,7 @@ codepipelineRouter.route(processJob)
 
 ```ts
 import { createCodePipelineRouter } from '@lambda-event-router/codepipeline'
+import type { CodePipelineRequest } from '@lambda-event-router/codepipeline'
 
 const codepipelineRouter = createCodePipelineRouter()
 
@@ -101,8 +103,8 @@ codepipelineRouter.route({
   handler: processJob,
 })
 
-async function processJob({ job }) {
-  console.log(`Processing job ${job.id}`)
+async function processJob({ jobId }: CodePipelineRequest) {
+  console.log(`Processing job ${jobId}`)
 }
 ```
 

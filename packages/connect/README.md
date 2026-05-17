@@ -33,14 +33,14 @@ import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
 
 const connectRouter = createConnectRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inline handler lets TypeScript infer the request type
 const handleInboundCall = defineRoute({
   filters: {
     channel: 'VOICE',
     initiationMethod: 'INBOUND',
   },
 }).handle(async ({ contactData }) => {
-  console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
+  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
 })
 connectRouter.route(handleInboundCall)
 ```
@@ -50,6 +50,7 @@ OR use a the separate syntax to split router and handlers across files:
 ```ts
 // connect.ts
 import { createConnectRouter } from '@lambda-event-router/connect'
+import type { ConnectRequest } from '@lambda-event-router/connect'
 
 const connectRouter = createConnectRouter()
 
@@ -59,9 +60,9 @@ connectRouter.voice({
   handler: handleInboundCall,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function handleInboundCall({ contactData }) {
-  console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
+// A separate handler has to be typed with ConnectRequest
+export async function handleInboundCall({ contactData }: ConnectRequest) {
+  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
 }
 ```
 
@@ -81,7 +82,7 @@ const handleInboundCall = defineRoute({
     initiationMethod: 'INBOUND',
   },
 }).handle(async ({ contactData }) => {
-  console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
+  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
 })
 
 connectRouter.route(handleInboundCall)
@@ -91,6 +92,7 @@ connectRouter.route(handleInboundCall)
 
 ```ts
 import { createConnectRouter } from '@lambda-event-router/connect'
+import type { ConnectRequest } from '@lambda-event-router/connect'
 
 const connectRouter = createConnectRouter()
 
@@ -99,8 +101,8 @@ connectRouter.voice({
   handler: handleInboundCall,
 })
 
-async function handleInboundCall({ contactData }) {
-  console.log(`Inbound voice call from ${contactData.customerEndpoint.address}`)
+async function handleInboundCall({ contactData }: ConnectRequest) {
+  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
 }
 ```
 

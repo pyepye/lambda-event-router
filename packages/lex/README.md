@@ -33,33 +33,46 @@ import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
 
 const lexRouter = createLexRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// Inline handlers let TypeScript infer the request type
 const handleFulfillment = defineRoute({
   filters: {
     invocationSource: 'FulfillmentCodeHook',
   },
-}).handle(async ({ sessionState, inputTranscript }) => {
-  console.log(`Fulfilling: ${inputTranscript}`)
+}).handle(async ({ intentName, inputTranscript }) => {
+  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
+  return {
+    sessionState: {
+      dialogAction: { type: 'Close' },
+      intent: { name: intentName, state: 'Fulfilled' },
+    },
+  }
 })
 lexRouter.route(handleFulfillment)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use the separate syntax to split router and handlers across files:
 
 ```ts
 // lex.ts
 import { createLexRouter } from '@lambda-event-router/lex'
+import type { LexFulfillmentCodeHookRequest, LexResponse } from '@lambda-event-router/lex'
 
 const lexRouter = createLexRouter()
 
-// Separate handler to define routes and handlers in different places
 lexRouter.fulfillmentCodeHook({
+  filters: {},
   handler: handleFulfillment,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function handleFulfillment({ sessionState, inputTranscript }) {
-  console.log(`Fulfilling: ${inputTranscript}`)
+// A separate handler needs its request type annotated - it cannot be inferred
+async function handleFulfillment({ intentName, inputTranscript }: LexFulfillmentCodeHookRequest): Promise<LexResponse> {
+  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
+  return {
+    sessionState: {
+      dialogAction: { type: 'Close' },
+      intent: { name: intentName, state: 'Fulfilled' },
+    },
+  }
 }
 ```
 
@@ -77,8 +90,14 @@ const handleFulfillment = defineRoute({
   filters: {
     invocationSource: 'FulfillmentCodeHook',
   },
-}).handle(async ({ sessionState, inputTranscript }) => {
-  console.log(`Fulfilling: ${inputTranscript}`)
+}).handle(async ({ intentName, inputTranscript }) => {
+  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
+  return {
+    sessionState: {
+      dialogAction: { type: 'Close' },
+      intent: { name: intentName, state: 'Fulfilled' },
+    },
+  }
 })
 
 lexRouter.route(handleFulfillment)
@@ -88,23 +107,41 @@ lexRouter.route(handleFulfillment)
 
 ```ts
 import { createLexRouter } from '@lambda-event-router/lex'
+import type { LexFulfillmentCodeHookRequest, LexResponse } from '@lambda-event-router/lex'
 
 const lexRouter = createLexRouter()
 
 lexRouter.fulfillmentCodeHook({
+  filters: {},
   handler: handleFulfillment,
 })
 
-async function handleFulfillment({ sessionState, inputTranscript }) {
-  console.log(`Fulfilling: ${inputTranscript}`)
+async function handleFulfillment({ intentName, inputTranscript }: LexFulfillmentCodeHookRequest): Promise<LexResponse> {
+  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
+  return {
+    sessionState: {
+      dialogAction: { type: 'Close' },
+      intent: { name: intentName, state: 'Fulfilled' },
+    },
+  }
 }
 ```
 
 #### Helper methods
 
+`dialogCodeHook` and `fulfillmentCodeHook` preset the `invocationSource` filter for you, so you only pass
+the rest of the filters and a handler.
+
 ```ts
-lexRouter.dialogCodeHook()
-lexRouter.fulfillmentCodeHook()
+lexRouter.dialogCodeHook({
+  filters: { intentName: 'OrderPizza' },
+  handler: validateSlots,
+})
+
+lexRouter.fulfillmentCodeHook({
+  filters: { intentName: 'OrderPizza' },
+  handler: placeOrder,
+})
 ```
 
 #### Filters

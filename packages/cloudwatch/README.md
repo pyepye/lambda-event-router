@@ -1,6 +1,6 @@
 # @lambda-event-router/cloudwatch
 
-CloudWatch Logs subscription routing by log group, log stream, and message type.
+CloudWatch Logs subscription routing by log group, subscription filter and message type.
 
 **Supported AWS Services:** `Amazon CloudWatch Logs`
 
@@ -50,6 +50,7 @@ OR use a the separate syntax to split router and handlers across files:
 ```ts
 // cloudwatch.ts
 import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'
+import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch'
 
 const cloudwatchRouter = createCloudWatchLogsRouter()
 
@@ -60,7 +61,7 @@ cloudwatchRouter.dataMessage({
 })
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processLogs({ logGroup, logStream, logEvents }) {
+export async function processLogs({ logGroup, logStream, logEvents }: CloudWatchLogsRequest) {
   console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
 }
 ```
@@ -91,6 +92,7 @@ cloudwatchRouter.route(processLogs)
 
 ```ts
 import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'
+import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch'
 
 const cloudwatchRouter = createCloudWatchLogsRouter()
 
@@ -99,7 +101,7 @@ cloudwatchRouter.dataMessage({
   handler: processLogs,
 })
 
-async function processLogs({ logGroup, logStream, logEvents }) {
+async function processLogs({ logGroup, logStream, logEvents }: CloudWatchLogsRequest) {
   console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
 }
 ```
