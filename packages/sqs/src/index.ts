@@ -5,6 +5,7 @@ export type {
   SQSMessageAttributes,
   SQSMessageAttributeValue,
   SQSMiddleware,
+  SQSRecordHandler,
   SQSRequest,
   SQSResponse,
   SQSRouteDefinition,

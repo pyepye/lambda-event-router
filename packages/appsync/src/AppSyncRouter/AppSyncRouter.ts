@@ -2,7 +2,7 @@ import type { AppSyncResolverEvent, Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import type { EventTypeRouter } from '@lambda-event-router/base';
 import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type {
@@ -40,13 +40,13 @@ export function defineRoute<TArgumentsSchema extends StandardSchemaV1 | undefine
   };
 }
 
-interface AppSyncRouterOptions {
-  middleware?: Middleware<AppSyncResolverRequest, unknown>[];
+export interface AppSyncRouterOptions {
+  middleware?: AppSyncResolverMiddleware[];
 }
 
 export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Record<string, unknown>>, unknown> {
   private routes: InternalResolverRoute[] = [];
-  private middleware: Middleware<AppSyncResolverRequest, unknown>[];
+  private middleware: AppSyncResolverMiddleware[];
 
   constructor(options?: AppSyncRouterOptions) {
     this.middleware = options?.middleware ?? [];

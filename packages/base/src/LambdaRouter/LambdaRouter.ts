@@ -4,12 +4,12 @@ import { NoRouteMatchedError } from '../errors';
 import { logger as log } from '../logger';
 import type { EventTypeRouter } from './types.js';
 
-interface LambdaRouterOptions {
+export interface LambdaRouterOptions {
   routers: EventTypeRouter[];
   middleware?: LambdaMiddleware[];
 }
 
-type LambdaMiddleware = (
+export type LambdaMiddleware = (
   event: unknown,
   context: Context,
   next: (event: unknown, context: Context) => Promise<unknown>,

@@ -1,3 +1,4 @@
+export type { EventRouterOptions } from './EventRouter.js';
 export {
   createEventRouter,
   defineEventRoute,

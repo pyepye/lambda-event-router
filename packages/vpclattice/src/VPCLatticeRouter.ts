@@ -4,7 +4,7 @@ import { HTTPRouter } from '@lambda-event-router/http';
 import { type VPCLatticeEvent, vpcLatticeAdapter } from './vpcLatticeAdapter.js';
 import type { VPCLatticeResult } from './vpcLatticeV1Adapter.js';
 
-interface VPCLatticeRouterOptions {
+export interface VPCLatticeRouterOptions {
   middleware?: HTTPMiddleware[];
   cors?: CorsConfig;
 }

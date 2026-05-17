@@ -105,7 +105,7 @@ export type DocumentDBMiddleware<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > = Middleware<DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>, void>;
 
-type DocumentDBRecordHandler<
+export type DocumentDBRecordHandler<
   TDocumentKey = Record<string, unknown>,
   TFullDocument = Record<string, unknown>,
   TFullDocumentBeforeChange = Record<string, unknown>,

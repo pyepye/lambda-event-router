@@ -1,5 +1,7 @@
 import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
 
+export type AppSyncAuthorizerResponse = AppSyncAuthorizerResult<Record<string, unknown>>;
+
 export interface AppSyncAuthorizerRequest {
   authorizationToken: string;
   requestHeaders: Record<string, string | undefined>;
@@ -14,11 +16,11 @@ export interface AppSyncAuthorizerRequest {
 }
 
 export interface AppSyncAuthorizerRouteDefinition {
-  handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResult<Record<string, unknown>>>;
+  handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>;
 }
 
 export interface AppSyncAuthorizerRouteBuilder {
   handle(
-    handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResult<Record<string, unknown>>>,
+    handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>,
   ): AppSyncAuthorizerRouteDefinition;
 }

@@ -17,6 +17,7 @@ export {
   UnprocessableContent,
 } from './Response.js';
 export type {
+  AnyHttpMethod,
   ApiHandler,
   ApiRequest,
   ApiResponse,

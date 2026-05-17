@@ -36,10 +36,11 @@ export {
   UnprocessableContent,
 } from '@lambda-event-router/http';
 
+export type { VPCLatticeRouterOptions } from './VPCLatticeRouter.js';
 export { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
 export type { VPCLatticeEvent } from './vpcLatticeAdapter.js';
 export { vpcLatticeAdapter } from './vpcLatticeAdapter.js';
 export type { VPCLatticeEventV1, VPCLatticeResult } from './vpcLatticeV1Adapter.js';
 export { vpcLatticeV1Adapter } from './vpcLatticeV1Adapter.js';
-export type { VPCLatticeEventV2 } from './vpcLatticeV2Adapter.js';
+export type { VPCLatticeEventV2, VPCLatticeIdentity, VPCLatticeRequestContextV2 } from './vpcLatticeV2Adapter.js';
 export { vpcLatticeV2Adapter } from './vpcLatticeV2Adapter.js';

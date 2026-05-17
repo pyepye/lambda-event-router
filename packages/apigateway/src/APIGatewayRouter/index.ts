@@ -36,6 +36,7 @@ export {
   UnprocessableContent,
 } from '@lambda-event-router/http';
 
+export type { APIGatewayRouterOptions } from './APIGatewayRouter.js';
 export { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
 export type { APIGatewayEvent, APIGatewayResult } from './apiGatewayAdapter.js';
 export { apiGatewayAdapter } from './apiGatewayAdapter.js';

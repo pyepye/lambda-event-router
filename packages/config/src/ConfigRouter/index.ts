@@ -2,6 +2,7 @@ export { ConfigRouter, createConfigRouter, defineRoute } from './ConfigRouter.js
 export type {
   ConfigChangeFilterInput,
   ConfigChangeFilters,
+  ConfigChangeHandler,
   ConfigMessageType,
   ConfigMiddleware,
   ConfigOversizedRequest,

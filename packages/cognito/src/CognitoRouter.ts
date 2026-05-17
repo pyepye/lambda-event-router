@@ -1,17 +1,4 @@
-import type {
-  Context,
-  CreateAuthChallengeTriggerEvent,
-  CustomEmailSenderTriggerEvent,
-  CustomMessageTriggerEvent,
-  DefineAuthChallengeTriggerEvent,
-  PostAuthenticationTriggerEvent,
-  PostConfirmationTriggerEvent,
-  PreAuthenticationTriggerEvent,
-  PreSignUpTriggerEvent,
-  PreTokenGenerationTriggerEvent,
-  UserMigrationTriggerEvent,
-  VerifyAuthChallengeResponseTriggerEvent,
-} from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
@@ -19,6 +6,7 @@ import type { EventTypeRouter } from '@lambda-event-router/base';
 import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type {
+  CognitoEvent,
   CognitoFilters,
   CognitoMiddleware,
   CognitoRequest,
@@ -185,20 +173,6 @@ interface InternalRouteInput {
   middleware?: CognitoMiddleware[];
   handler: unknown;
 }
-
-// Cognito event type (union of all supported trigger events)
-type CognitoEvent =
-  | PreSignUpTriggerEvent
-  | PreAuthenticationTriggerEvent
-  | PostAuthenticationTriggerEvent
-  | PostConfirmationTriggerEvent
-  | DefineAuthChallengeTriggerEvent
-  | CreateAuthChallengeTriggerEvent
-  | VerifyAuthChallengeResponseTriggerEvent
-  | CustomMessageTriggerEvent
-  | CustomEmailSenderTriggerEvent
-  | PreTokenGenerationTriggerEvent
-  | UserMigrationTriggerEvent;
 
 // Response type (returns the modified event)
 type CognitoResponse = CognitoEvent;

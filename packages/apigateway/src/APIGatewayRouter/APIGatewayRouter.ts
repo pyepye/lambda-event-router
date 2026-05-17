@@ -3,7 +3,7 @@ import { HTTPRouter } from '@lambda-event-router/http';
 
 import { type APIGatewayEvent, type APIGatewayResult, apiGatewayAdapter } from './apiGatewayAdapter.js';
 
-interface APIGatewayRouterOptions {
+export interface APIGatewayRouterOptions {
   middleware?: HTTPMiddleware[];
   cors?: CorsConfig;
 }

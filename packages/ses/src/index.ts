@@ -5,6 +5,7 @@ export type {
   SESFilters,
   SESMiddleware,
   SESReceiptStatusValue,
+  SESRecordHandler,
   SESRequest,
   SESResponse,
   SESResult,

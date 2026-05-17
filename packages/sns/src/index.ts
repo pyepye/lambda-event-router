@@ -6,6 +6,7 @@ export type {
   SNSMessageAttributeValue,
   SNSMiddleware,
   SNSRawMessageAttributes,
+  SNSRecordHandler,
   SNSRequest,
   SNSResponse,
   SNSRouteDefinition,

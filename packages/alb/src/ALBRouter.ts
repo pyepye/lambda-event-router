@@ -5,7 +5,7 @@ import { HTTPRouter } from '@lambda-event-router/http';
 
 import { albAdapter } from './albAdapter.js';
 
-interface ALBRouterOptions {
+export interface ALBRouterOptions {
   middleware?: HTTPMiddleware[];
   cors?: CorsConfig;
 }

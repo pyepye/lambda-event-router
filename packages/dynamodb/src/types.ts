@@ -57,7 +57,7 @@ export type DynamoDBMiddleware<
   TOldItem = Record<string, unknown>,
 > = Middleware<DynamoDBRequest<TKeys, TNewItem, TOldItem>, void>;
 
-type DynamoDBRecordHandler<
+export type DynamoDBRecordHandler<
   TKeys = Record<string, unknown>,
   TNewItem = Record<string, unknown>,
   TOldItem = Record<string, unknown>,

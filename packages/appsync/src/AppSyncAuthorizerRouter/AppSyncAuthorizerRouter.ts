@@ -1,4 +1,4 @@
-import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
+import type { AppSyncAuthorizerEvent, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { isObject } from '@lambda-event-router/base';
@@ -6,23 +6,22 @@ import { isObject } from '@lambda-event-router/base';
 import { isAppSyncAuthorizerResponse } from './response.js';
 import type {
   AppSyncAuthorizerRequest,
+  AppSyncAuthorizerResponse,
   AppSyncAuthorizerRouteBuilder,
   AppSyncAuthorizerRouteDefinition,
 } from './types.js';
 
-type AuthorizerResult = AppSyncAuthorizerResult<Record<string, unknown>>;
-
 export function defineAuthorizerRoute(): AppSyncAuthorizerRouteBuilder {
   return {
     handle(
-      handler: (request: AppSyncAuthorizerRequest) => Promise<AuthorizerResult>,
+      handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>,
     ): AppSyncAuthorizerRouteDefinition {
       return { handler };
     },
   };
 }
 
-export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorizerEvent, AuthorizerResult> {
+export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorizerEvent, AppSyncAuthorizerResponse> {
   private routeDefinition: AppSyncAuthorizerRouteDefinition | undefined;
 
   canHandleEvent(event: unknown): event is AppSyncAuthorizerEvent {
@@ -46,7 +45,7 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
     return this;
   }
 
-  async handleEvent(event: AppSyncAuthorizerEvent, context: Context): Promise<AuthorizerResult> {
+  async handleEvent(event: AppSyncAuthorizerEvent, context: Context): Promise<AppSyncAuthorizerResponse> {
     if (!this.routeDefinition) {
       throw new Error('No authorizer route registered');
     }

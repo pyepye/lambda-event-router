@@ -4,13 +4,10 @@ export type {
   RabbitMQEvent,
   RabbitMQFilterInput,
   RabbitMQFilters,
-  RabbitMQInternalRoute,
   RabbitMQMessage,
   RabbitMQMiddleware,
   RabbitMQRequest,
   RabbitMQResponse,
-  RabbitMQRouteBuilder,
   RabbitMQRouteDefinition,
-  RabbitMQRouteInput,
   RabbitMQRouterOptions,
 } from './types.js';

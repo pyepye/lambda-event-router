@@ -75,7 +75,7 @@ export interface ActiveMQFilters {
 
 export type ActiveMQMiddleware = Middleware<ActiveMQRequest, void>;
 
-type ActiveMQRecordHandler<TBody = unknown> =
+export type ActiveMQRecordHandler<TBody = unknown> =
   | ((request: ActiveMQRequest<TBody>) => Promise<void>)
   | ((request: ActiveMQTextMessageRequest<TBody>) => Promise<void>)
   | ((request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>);

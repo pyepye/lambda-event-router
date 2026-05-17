@@ -1,6 +1,6 @@
 import { ApiGatewayManagementApiClient, PostToConnectionCommand } from '@aws-sdk/client-apigatewaymanagementapi';
 
-interface PostToConnectionInput {
+export interface PostToConnectionInput {
   domainName: string;
   stage: string;
   connectionId: string;

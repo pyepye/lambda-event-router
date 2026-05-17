@@ -1,3 +1,4 @@
+export type { LambdaAuthorizerRequestInput, LambdaAuthorizerTokenInput } from './LambdaAuthorizerRouter.js';
 export {
   createLambdaAuthorizerRouter,
   defineLambdaAuthorizerRoute,

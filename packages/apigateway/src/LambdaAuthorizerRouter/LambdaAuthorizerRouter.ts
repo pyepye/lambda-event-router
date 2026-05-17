@@ -80,11 +80,11 @@ export function generatePolicy(
   };
 }
 
-interface TokenInput {
+export interface LambdaAuthorizerTokenInput {
   handler: (request: LambdaAuthorizerTokenRequest) => Promise<LambdaAuthorizerResult | boolean>;
 }
 
-interface RequestInput {
+export interface LambdaAuthorizerRequestInput {
   method?: string;
   handler: (request: LambdaAuthorizerRequestRequest) => Promise<LambdaAuthorizerResult | boolean>;
 }
@@ -147,7 +147,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     return this;
   }
 
-  token({ handler }: TokenInput): this {
+  token({ handler }: LambdaAuthorizerTokenInput): this {
     this.routes.push({
       filters: { type: 'TOKEN' },
       handler: handler as LambdaAuthorizerHandler,
@@ -155,7 +155,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     return this;
   }
 
-  request({ method, handler }: RequestInput): this {
+  request({ method, handler }: LambdaAuthorizerRequestInput): this {
     this.routes.push({
       filters: { type: 'REQUEST', method },
       handler: handler as LambdaAuthorizerHandler,

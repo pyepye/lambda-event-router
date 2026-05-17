@@ -36,5 +36,6 @@ export {
   UnprocessableContent,
 } from '@lambda-event-router/http';
 
+export type { ALBRouterOptions } from './ALBRouter.js';
 export { ALBRouter, createALBRouter } from './ALBRouter.js';
 export { albAdapter } from './albAdapter.js';

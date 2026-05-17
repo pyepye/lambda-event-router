@@ -158,7 +158,7 @@ function isKnownEventSource(event: Record<string, unknown>): boolean {
   return false;
 }
 
-interface EventRouterOptions<TResponse = unknown> {
+export interface EventRouterOptions<TResponse = unknown> {
   middleware?: EventRouterMiddleware<unknown, TResponse>[];
 }
 

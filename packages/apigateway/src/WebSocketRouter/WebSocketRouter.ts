@@ -59,15 +59,15 @@ export function defineWebSocketRoute<
   };
 }
 
-interface ConnectInput {
+export interface WebSocketConnectInput {
   handler: (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
 }
 
-interface DisconnectInput {
+export interface WebSocketDisconnectInput {
   handler: (request: WebSocketRequest) => Promise<void>;
 }
 
-interface MessageInput<TBody = unknown> {
+export interface WebSocketMessageInput<TBody = unknown> {
   routeKey?: string;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   handler: (request: WebSocketRequest<TBody>) => Promise<void>;
@@ -127,7 +127,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     return this;
   }
 
-  connect({ handler }: ConnectInput): this {
+  connect({ handler }: WebSocketConnectInput): this {
     this.routes.push({
       filters: { eventType: 'CONNECT' },
       handler: handler as WebSocketHandler,
@@ -135,7 +135,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     return this;
   }
 
-  disconnect({ handler }: DisconnectInput): this {
+  disconnect({ handler }: WebSocketDisconnectInput): this {
     this.routes.push({
       filters: { eventType: 'DISCONNECT' },
       handler: handler as WebSocketHandler,
@@ -143,7 +143,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     return this;
   }
 
-  message<TBody>({ routeKey, bodySchema, handler }: MessageInput<TBody>): this {
+  message<TBody>({ routeKey, bodySchema, handler }: WebSocketMessageInput<TBody>): this {
     this.routes.push({
       filters: { eventType: 'MESSAGE', routeKey },
       bodySchema,

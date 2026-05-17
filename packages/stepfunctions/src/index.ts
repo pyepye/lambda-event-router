@@ -1,3 +1,4 @@
+export type { StepFunctionsRouterOptions } from './StepFunctionsRouter.js';
 export { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
 export type {
   StepFunctionsFilterInput,

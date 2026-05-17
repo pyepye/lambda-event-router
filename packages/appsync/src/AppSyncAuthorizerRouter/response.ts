@@ -1,21 +1,19 @@
-import type { AppSyncAuthorizerResult } from 'aws-lambda';
+import type { AppSyncAuthorizerResponse } from './types.js';
 
-type AuthorizerResult = AppSyncAuthorizerResult<Record<string, unknown>>;
-
-export function isAppSyncAuthorizerResponse(value: unknown): value is AuthorizerResult {
+export function isAppSyncAuthorizerResponse(value: unknown): value is AppSyncAuthorizerResponse {
   if (typeof value !== 'object' || value === null) return false;
   if (!('isAuthorized' in value)) return false;
   return typeof value.isAuthorized === 'boolean';
 }
 
-interface AuthorizedOptions {
+export interface AuthorizedOptions {
   resolverContext?: Record<string, unknown>;
   deniedFields?: string[];
   ttlOverride?: number;
 }
 
-export function Authorized(options?: AuthorizedOptions): AuthorizerResult {
-  const result: AuthorizerResult = { isAuthorized: true };
+export function Authorized(options?: AuthorizedOptions): AppSyncAuthorizerResponse {
+  const result: AppSyncAuthorizerResponse = { isAuthorized: true };
 
   if (options?.resolverContext) {
     result.resolverContext = options.resolverContext;
@@ -32,12 +30,12 @@ export function Authorized(options?: AuthorizedOptions): AuthorizerResult {
   return result;
 }
 
-interface DeniedOptions {
+export interface DeniedOptions {
   ttlOverride?: number;
 }
 
-export function Denied(options?: DeniedOptions): AuthorizerResult {
-  const result: AuthorizerResult = { isAuthorized: false };
+export function Denied(options?: DeniedOptions): AppSyncAuthorizerResponse {
+  const result: AppSyncAuthorizerResponse = { isAuthorized: false };
 
   if (options?.ttlOverride !== undefined) {
     result.ttlOverride = options.ttlOverride;

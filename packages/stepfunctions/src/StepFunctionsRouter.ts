@@ -16,7 +16,7 @@ import type {
   StepFunctionsTaskTokenRouteDefinition,
 } from './types.js';
 
-interface StepFunctionsRouterOptions {
+export interface StepFunctionsRouterOptions {
   middleware?: StepFunctionsMiddleware[];
 }
 
