@@ -41,6 +41,7 @@ export interface RabbitMQEvent {
 export interface RabbitMQRequest<TBody = unknown> {
   message: RabbitMQMessage;
   queue: string;
+  virtualHost: string | undefined;
   body: TBody;
   record: RabbitMQMessage;
   context: Context;
@@ -50,6 +51,7 @@ export interface RabbitMQRequest<TBody = unknown> {
 
 export interface RabbitMQFilterInput {
   queue: string;
+  virtualHost: string | undefined;
   contentType: string;
   record: RabbitMQMessage;
 }
@@ -57,6 +59,7 @@ export interface RabbitMQFilterInput {
 export interface RabbitMQFilters {
   eventSourceArn?: FilterStringMatcher;
   queue?: FilterStringMatcher;
+  virtualHost?: FilterStringMatcher;
   contentType?: FilterStringMatcher;
   customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
 }

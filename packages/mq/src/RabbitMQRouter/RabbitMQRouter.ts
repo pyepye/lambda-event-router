@@ -64,15 +64,16 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     const queueEntries = Object.entries(event.rmqMessagesByQueue);
 
     for (const [queueKey, messages] of queueEntries) {
-      // Queue key format is "queueName::virtualHost" - split and take name before separator
+      // Queue key format is "queueName::virtualHost" - split into the name and the virtual host
       const separatorIndex = queueKey.indexOf('::');
       const queueName = separatorIndex >= 0 ? queueKey.substring(0, separatorIndex) : queueKey;
+      const virtualHost = separatorIndex >= 0 ? queueKey.substring(separatorIndex + 2) : undefined;
 
       for (const message of messages) {
         const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
         const decodedMessage = { ...message, data: decodedData };
 
-        const route = await this.matchRoute(event, queueName, decodedMessage);
+        const route = await this.matchRoute(event, queueName, virtualHost, decodedMessage);
         if (!route) {
           throw new Error(`No route matched for message on queue ${queueName} from ${event.eventSourceArn}`);
         }
@@ -83,6 +84,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         const request: RabbitMQRequest = {
           message: decodedMessage,
           queue: queueName,
+          virtualHost,
           body,
           record: message,
           context,
@@ -97,6 +99,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
   private async matchRoute(
     event: RabbitMQEvent,
     queueName: string,
+    virtualHost: string | undefined,
     message: RabbitMQMessage,
   ): Promise<RabbitMQInternalRoute | undefined> {
     for (const route of this.routes) {
@@ -112,6 +115,13 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         if (!queueMatch) continue;
       }
 
+      if (filters.virtualHost) {
+        // A key with no "::" carries no virtual host, so a virtualHost filter cannot match it
+        if (virtualHost === undefined) continue;
+        const virtualHostMatch = filterStringMatcher(virtualHost, filters.virtualHost);
+        if (!virtualHostMatch) continue;
+      }
+
       if (filters.contentType) {
         const contentTypeMatch = filterStringMatcher(message.basicProperties.contentType, filters.contentType);
         if (!contentTypeMatch) continue;
@@ -120,6 +130,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
       if (filters.customFilter) {
         const filterInput: RabbitMQFilterInput = {
           queue: queueName,
+          virtualHost,
           contentType: message.basicProperties.contentType,
           record: message,
         };

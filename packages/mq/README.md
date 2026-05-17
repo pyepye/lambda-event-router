@@ -178,8 +178,9 @@ async function processMessage({ body, queue }: RabbitMQRequest) {
 }
 ```
 
-The queue is keyed as `queueName::virtualHost` in the event. Both the `queue` filter and `request.queue`
-give you the name without the virtual host.
+The queue is keyed as `queueName::virtualHost` in the event. The router splits the two apart, so the
+`queue` filter and `request.queue` give you the name and the `virtualHost` filter and
+`request.virtualHost` give you the host. A key with no `::` leaves `request.virtualHost` `undefined`.
 
 #### Filters
 
@@ -188,6 +189,7 @@ defineRabbitMQRoute({
   filters: {
     eventSourceArn: 'arn:aws:mq:eu-west-2:123456789012:broker:MyBroker:b-1234',
     queue: ['order-queue', 'refund-queue'],
+    virtualHost: '/production',
     contentType: 'application/json',
     customFilter: ({ record }) => record.basicProperties.priority >= 5,
   },

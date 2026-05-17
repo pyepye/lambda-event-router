@@ -105,7 +105,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -124,7 +124,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -140,7 +140,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeUndefined();
     });
@@ -156,7 +156,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'orders', message);
+      const result = await router.matchRoute(event, 'orders', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -172,7 +172,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'orders', message);
+      const result = await router.matchRoute(event, 'orders', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -188,7 +188,73 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'users', message);
+      const result = await router.matchRoute(event, 'users', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by virtualHost', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'orders', '/production', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by virtualHost array', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: ['/production', '/staging'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'orders', '/staging', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when virtualHost does not match', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'orders', '/staging', message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a virtualHost filter when the queue key carries no virtual host', async ({
+      rabbitMQMessage,
+    }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'orders', undefined, message);
 
       expect(result).toBeUndefined();
     });
@@ -204,7 +270,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -220,7 +286,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -236,7 +302,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeUndefined();
     });
@@ -256,7 +322,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'orders', message);
+      const result = await router.matchRoute(event, 'orders', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -272,7 +338,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeUndefined();
     });
@@ -289,10 +355,11 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'text/plain' } });
 
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(event, 'orders', message);
+      await router.matchRoute(event, 'orders', '/production', message);
 
       expect(filterSpy).toHaveBeenCalledWith({
         queue: 'orders',
+        virtualHost: '/production',
         contentType: 'text/plain',
         record: message,
       });
@@ -310,7 +377,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(event, 'test-queue', message);
+      await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
@@ -331,7 +398,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'orders', message);
+      const result = await router.matchRoute(event, 'orders', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -347,7 +414,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
     });
@@ -363,7 +430,7 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage();
 
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(event, 'test-queue', message);
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -462,6 +529,32 @@ suite('RabbitMQRouter', () => {
 
       expect(handler).toHaveBeenCalledTimes(1);
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'simple-queue' }));
+    });
+
+    test('puts the virtual host on the request', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'orders::/production': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'orders', virtualHost: '/production' }));
+    });
+
+    test('leaves virtualHost undefined when the key has no :: separator', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'simple-queue': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'simple-queue', virtualHost: undefined }));
     });
 
     test('throws when no route matches', async ({ rabbitMQHandlerEvent }) => {
@@ -577,6 +670,26 @@ suite('RabbitMQRouter', () => {
 
       expect(ordersHandler).toHaveBeenCalledTimes(1);
       expect(usersHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('routes the same queue name in two virtual hosts to different handlers', async ({
+      rabbitMQMessage,
+      context,
+    }) => {
+      const productionHandler = vi.fn();
+      const stagingHandler = vi.fn();
+
+      router.route(defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/production' } }).handle(productionHandler));
+      router.route(defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/staging' } }).handle(stagingHandler));
+
+      const event = createRabbitMQEvent({
+        'orders::/production': [rabbitMQMessage()],
+        'orders::/staging': [rabbitMQMessage()],
+      });
+      await router.handleEvent(event, context());
+
+      expect(productionHandler).toHaveBeenCalledTimes(1);
+      expect(stagingHandler).toHaveBeenCalledTimes(1);
     });
 
     test('routes by contentType to different handlers', async ({ rabbitMQMessage, context }) => {
