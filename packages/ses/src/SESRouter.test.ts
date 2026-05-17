@@ -1,9 +1,9 @@
 import { createSESEvent, test } from '@lambda-event-router/testing';
 
 import { createSESRouter, defineRoute, SESRouter } from './SESRouter.js';
-import type { SESRequest } from './types.js';
+import type { SESRequest, SESResponse } from './types.js';
 
-type SESNext = (request: SESRequest) => Promise<void>;
+type SESNext = (request: SESRequest) => Promise<SESResponse>;
 
 suite('SESRouter', () => {
   let router: SESRouter;
@@ -666,7 +666,7 @@ suite('SESRouter', () => {
       );
     });
 
-    test('returns undefined', async ({ sesHandlerEvent }) => {
+    test('returns a CONTINUE disposition when the handler returns nothing', async ({ sesHandlerEvent }) => {
       router.route(
         defineRoute({
           filters: {},
@@ -676,7 +676,102 @@ suite('SESRouter', () => {
       const { event, context } = sesHandlerEvent();
       const result = await router.handleEvent(event, context);
 
-      expect(result).toBeUndefined();
+      expect(result).toEqual({ disposition: 'CONTINUE' });
+    });
+
+    test('returns the disposition the handler asks for', async ({ sesHandlerEvent }) => {
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => 'STOP_RULE_SET'),
+      );
+
+      const { event, context } = sesHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ disposition: 'STOP_RULE_SET' });
+    });
+
+    test('accepts a handler that returns the full result object', async ({ sesHandlerEvent }) => {
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => ({ disposition: 'STOP_RULE' })),
+      );
+
+      const { event, context } = sesHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ disposition: 'STOP_RULE' });
+    });
+
+    test('returns the strongest disposition across records', async ({ sesRecord, sesEvent, context }) => {
+      router
+        .route(
+          defineRoute({
+            filters: { sender: 'stop@example.com' },
+          }).handle(async () => 'STOP_RULE'),
+        )
+        .route(
+          defineRoute({
+            filters: { sender: 'stopset@example.com' },
+          }).handle(async () => 'STOP_RULE_SET'),
+        )
+        .route(
+          defineRoute({
+            filters: {},
+          }).handle(async () => {}),
+        );
+
+      const records = [
+        sesRecord({ ses: { mail: { source: 'plain@example.com' } } }),
+        sesRecord({ ses: { mail: { source: 'stop@example.com' } } }),
+        sesRecord({ ses: { mail: { source: 'stopset@example.com' } } }),
+      ];
+      const result = await router.handleEvent(sesEvent(records), context());
+
+      expect(result).toEqual({ disposition: 'STOP_RULE_SET' });
+    });
+
+    test('prefers STOP_RULE over CONTINUE across records', async ({ sesRecord, sesEvent, context }) => {
+      router
+        .route(
+          defineRoute({
+            filters: { sender: 'stop@example.com' },
+          }).handle(async () => 'STOP_RULE'),
+        )
+        .route(
+          defineRoute({
+            filters: {},
+          }).handle(async () => {}),
+        );
+
+      const records = [
+        sesRecord({ ses: { mail: { source: 'plain@example.com' } } }),
+        sesRecord({ ses: { mail: { source: 'stop@example.com' } } }),
+      ];
+      const result = await router.handleEvent(sesEvent(records), context());
+
+      expect(result).toEqual({ disposition: 'STOP_RULE' });
+    });
+
+    test('lets middleware read and override the handler disposition', async ({ sesHandlerEvent }) => {
+      async function forceStop(request: SESRequest, next: SESNext): Promise<SESResponse> {
+        await next(request);
+        return 'STOP_RULE_SET';
+      }
+
+      const router = createSESRouter({ middleware: [forceStop] });
+      router.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => 'CONTINUE'),
+      );
+
+      const { event, context } = sesHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ disposition: 'STOP_RULE_SET' });
     });
 
     test('throws when no route matches', async ({ sesHandlerEvent }) => {
@@ -757,7 +852,7 @@ suite('SESRouter', () => {
       const event = sesEvent(records);
       const result = await router.handleEvent(event, context());
 
-      expect(result).toBeUndefined();
+      expect(result).toEqual({ disposition: 'CONTINUE' });
       expect(internalHandler).toHaveBeenCalledTimes(2);
       expect(externalHandler).toHaveBeenCalledTimes(1);
     });

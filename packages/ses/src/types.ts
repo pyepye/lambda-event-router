@@ -14,11 +14,21 @@ export interface SESRequest {
   context: Context;
 }
 
-export type SESResponse = undefined;
+export type SESDisposition = 'STOP_RULE' | 'STOP_RULE_SET' | 'CONTINUE';
 
-export type SESMiddleware = Middleware<SESRequest, void>;
+// aws-lambda types SESHandler as Handler<SESEvent, void>, but the SES docs states it supports
+// a disposition returned
+// https://docs.aws.amazon.com/ses/latest/dg/receiving-email-action-lambda.html
+export interface SESResult {
+  disposition: SESDisposition;
+}
 
-export type SESRecordHandler = (request: SESRequest) => Promise<void>;
+// biome-ignore lint/suspicious/noConfusingVoidType: a handler may return nothing, meaning CONTINUE
+export type SESResponse = SESDisposition | SESResult | void;
+
+export type SESMiddleware = Middleware<SESRequest, SESResponse>;
+
+export type SESRecordHandler = (request: SESRequest) => Promise<SESResponse>;
 
 export interface SESFilterInput {
   receipt: SESReceipt;

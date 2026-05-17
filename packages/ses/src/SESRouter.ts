@@ -4,13 +4,25 @@ import type { EventTypeRouter } from '@lambda-event-router/base';
 import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
+  SESDisposition,
   SESFilters,
   SESMiddleware,
   SESRecordHandler,
   SESRequest,
+  SESResponse,
+  SESResult,
   SESRouteDefinition,
   SESRouterOptions,
 } from './types.js';
+
+// SES reads a single disposition per invocation, so when several records resolve their own, the
+// strongest wins: STOP_RULE_SET halts the rule set, STOP_RULE halts the current rule, CONTINUE lets
+// mail flow on. See https://docs.aws.amazon.com/ses/latest/dg/receiving-email-action-lambda.html
+const dispositionRank: Record<SESDisposition, number> = {
+  CONTINUE: 0,
+  STOP_RULE: 1,
+  STOP_RULE_SET: 2,
+};
 
 interface RouteInput {
   filters: SESFilters;
@@ -29,7 +41,7 @@ export function defineRoute(config: RouteInput): RouteBuilder {
   };
 }
 
-export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
+export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
   private routes: SESRouteDefinition[] = [];
   private middleware: SESMiddleware[];
 
@@ -52,9 +64,23 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
     return this;
   }
 
-  async handleEvent(event: SESEvent, context: Context): Promise<undefined> {
+  async handleEvent(event: SESEvent, context: Context): Promise<SESResult> {
     const recordPromises = event.Records.map((record) => this.processRecord(record, context));
-    await Promise.all(recordPromises);
+    const responses = await Promise.all(recordPromises);
+
+    return { disposition: this.strongestDisposition(responses) };
+  }
+
+  private strongestDisposition(responses: SESResponse[]): SESDisposition {
+    return responses.reduce<SESDisposition>((strongest, response) => {
+      const candidate = this.toDisposition(response);
+      return dispositionRank[candidate] > dispositionRank[strongest] ? candidate : strongest;
+    }, 'CONTINUE');
+  }
+
+  private toDisposition(response: SESResponse): SESDisposition {
+    if (!response) return 'CONTINUE';
+    return typeof response === 'string' ? response : response.disposition;
   }
 
   private async matchRoute(record: SESEventRecord): Promise<SESRouteDefinition | undefined> {
@@ -132,7 +158,7 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
     };
   }
 
-  private async processRecord(record: SESEventRecord, context: Context): Promise<void> {
+  private async processRecord(record: SESEventRecord, context: Context): Promise<SESResponse> {
     const route = await this.matchRoute(record);
     if (!route) {
       throw new Error(`No route matched for SES record ${record.ses.mail.messageId}`);
@@ -142,7 +168,7 @@ export class SESRouter implements EventTypeRouter<SESEvent, undefined> {
     const request = this.buildRequest(record, mail, receipt, context);
 
     const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
-    await handleEventWithMiddleware(allMiddleware, request, route.handler);
+    return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 }
 

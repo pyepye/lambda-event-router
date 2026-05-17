@@ -32,4 +32,7 @@ export async function processInternalEmail(request: SESRequest): Promise<SESResp
 export async function processQuarantinedEmail(request: SESRequest): Promise<SESResponse> {
   const { source, subject, recipients } = request;
   console.log(`Quarantined email from ${source} to ${recipients.join(', ')}: ${subject}`);
+
+  // Stop the whole receipt rule set so no later action delivers a message that failed its checks.
+  return 'STOP_RULE_SET';
 }

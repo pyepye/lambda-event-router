@@ -111,6 +111,23 @@ defineRoute({
 })
 ```
 
+#### Dispositions
+
+Return a disposition to control what SES does after your Lambda. Return nothing and mail flow carries
+on, the same as `CONTINUE`.
+
+```ts
+defineRoute({
+  filters: { spamVerdict: 'FAIL' },
+}).handle(async ({ mail }) => {
+  console.log(`Blocking ${mail.source}`)
+  return 'STOP_RULE_SET' // Stop the rest of the receipt rule set
+})
+```
+
+`STOP_RULE` skips the rest of the current rule, `STOP_RULE_SET` skips every remaining rule. This only
+takes effect when the receipt rule invokes your Lambda synchronously (`RequestResponse`).
+
 ## Examples
 
 See the [examples/ses](../../examples/ses) directory for complete working examples.
