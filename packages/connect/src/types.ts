@@ -32,9 +32,9 @@ export interface ConnectFilters {
   customFilter?: (input: ConnectFilterInput) => boolean | Promise<boolean>;
 }
 
-export type ConnectChannelFilters = Omit<ConnectFilters, 'channels'>;
+export type ConnectChannelFilters = Omit<ConnectFilters, 'channel'>;
 
-export type ConnectInitiationMethodFilters = Omit<ConnectFilters, 'initiationMethods'>;
+export type ConnectInitiationMethodFilters = Omit<ConnectFilters, 'initiationMethod'>;
 
 export interface ConnectRouteDefinition {
   filters: ConnectFilters;

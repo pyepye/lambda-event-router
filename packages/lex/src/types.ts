@@ -50,9 +50,9 @@ export interface LexFilters {
   customFilter?: (input: LexFilterInput) => boolean | Promise<boolean>;
 }
 
-export type LexDialogCodeHookFilters = Omit<LexFilters, 'invocationSources'>;
+export type LexDialogCodeHookFilters = Omit<LexFilters, 'invocationSource'>;
 
-export type LexFulfillmentCodeHookFilters = Omit<LexFilters, 'invocationSources'>;
+export type LexFulfillmentCodeHookFilters = Omit<LexFilters, 'invocationSource'>;
 
 export type LexMiddleware = Middleware<LexRequest, LexResponse>;
 

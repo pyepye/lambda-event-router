@@ -29,7 +29,7 @@ export interface SecretsManagerFilters {
   customFilter?: (input: SecretsManagerFilterInput) => boolean | Promise<boolean>;
 }
 
-export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'steps'>;
+export type SecretsManagerStepFilters = Omit<SecretsManagerFilters, 'step'>;
 
 export interface SecretsManagerRouteDefinition {
   filters: SecretsManagerFilters;

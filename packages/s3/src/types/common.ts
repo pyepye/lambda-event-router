@@ -22,8 +22,8 @@ export interface S3Filters {
   customFilter?: (input: S3FilterInput) => boolean | Promise<boolean>;
 }
 
-// Filters without eventNames - used by convenience methods that set eventNames automatically
-export type S3FiltersWithoutEventNames = Omit<S3Filters, 'eventNames'>;
+// Filters without eventName - used by convenience methods that set eventName automatically
+export type S3FiltersWithoutEventNames = Omit<S3Filters, 'eventName'>;
 
 // =============================================================================
 // Base Request Type
