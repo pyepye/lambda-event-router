@@ -42,11 +42,11 @@ suite('PathRouter', () => {
   });
 
   suite('compilePath', () => {
-    test('returns empty paramNames and an exact-match pattern for a static path', () => {
+    test('returns empty pathParamNames and an exact-match pattern for a static path', () => {
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items');
 
-      expect(result.paramNames).toEqual([]);
+      expect(result.pathParamNames).toEqual([]);
       expect(result.pattern.test('/items')).toBe(true);
       expect(result.pattern.test('/other')).toBe(false);
     });
@@ -55,7 +55,7 @@ suite('PathRouter', () => {
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items/:id');
 
-      expect(result.paramNames).toEqual(['id']);
+      expect(result.pathParamNames).toEqual(['id']);
       expect(result.pattern.test('/items/abc-123')).toBe(true);
     });
 
@@ -63,7 +63,7 @@ suite('PathRouter', () => {
       // @ts-expect-error - testing private method directly
       const result = router.compilePath('/items/:itemId/sub/:subId');
 
-      expect(result.paramNames).toEqual(['itemId', 'subId']);
+      expect(result.pathParamNames).toEqual(['itemId', 'subId']);
       expect(result.pattern.test('/items/1/sub/2')).toBe(true);
     });
 
@@ -101,7 +101,7 @@ suite('PathRouter', () => {
   });
 
   suite('addRoute', () => {
-    test('stores route with all schemas, handler, compiled pattern, and paramNames', async () => {
+    test('stores route with all schemas, handler, compiled pattern, and pathParamNames', async () => {
       const handler = vi.fn();
       const querySchema = createMockSchema();
       const bodySchema = createMockSchema();
@@ -122,7 +122,7 @@ suite('PathRouter', () => {
       expect(match?.route.querySchema).toBe(querySchema);
       expect(match?.route.bodySchema).toBe(bodySchema);
       expect(match?.route.responseSchema).toBe(responseSchema);
-      expect(match?.route.paramNames).toEqual(['id']);
+      expect(match?.route.pathParamNames).toEqual(['id']);
       expect(match?.params).toEqual({ id: '123' });
     });
   });
@@ -241,15 +241,14 @@ suite('PathRouter', () => {
       expect(postResult?.route.handler).toBe(postHandler);
     });
 
-    test('returns the first match when multiple routes could match the same path', async () => {
-      const firstHandler = vi.fn();
-      const secondHandler = vi.fn();
-      router.get({ filters: { path: '/items/:id' }, handler: firstHandler });
-      router.get({ filters: { path: '/items/:slug' }, handler: secondHandler });
+    test('the more specific route wins over a param route regardless of registration order', async () => {
+      const paramHandler = vi.fn();
+      const literalHandler = vi.fn();
+      router.get({ filters: { path: '/orders/:orderId' }, handler: paramHandler });
+      router.get({ filters: { path: '/orders/latest' }, handler: literalHandler });
 
-      const result = await router.match('GET', '/items/abc');
-
-      expect(result?.route.handler).toBe(firstHandler);
+      expect((await router.match('GET', '/orders/latest'))?.route.handler).toBe(literalHandler);
+      expect((await router.match('GET', '/orders/99'))?.route.handler).toBe(paramHandler);
     });
 
     test('returns the handler reference from the matched route', async () => {
@@ -369,6 +368,95 @@ suite('PathRouter', () => {
     });
   });
 
+  suite('specificity', () => {
+    test('a literal segment beats a param at the same position, registered param first', async () => {
+      const paramHandler = vi.fn();
+      const literalHandler = vi.fn();
+      router.get({ filters: { path: '/orders/:orderId' }, handler: paramHandler });
+      router.get({ filters: { path: '/orders/latest' }, handler: literalHandler });
+
+      expect((await router.match('GET', '/orders/latest'))?.route.handler).toBe(literalHandler);
+    });
+
+    test('a literal segment beats a param at the same position, registered literal first', async () => {
+      const paramHandler = vi.fn();
+      const literalHandler = vi.fn();
+      router.get({ filters: { path: '/orders/latest' }, handler: literalHandler });
+      router.get({ filters: { path: '/orders/:orderId' }, handler: paramHandler });
+
+      expect((await router.match('GET', '/orders/latest'))?.route.handler).toBe(literalHandler);
+      expect((await router.match('GET', '/orders/99'))?.route.handler).toBe(paramHandler);
+    });
+
+    test('an earlier literal wins over an earlier param when both routes match, param route first', async () => {
+      const earlyParam = vi.fn(); // /a/:x/c
+      const earlyLiteral = vi.fn(); // /a/b/:y
+      router.get({ filters: { path: '/a/:x/c' }, handler: earlyParam });
+      router.get({ filters: { path: '/a/b/:y' }, handler: earlyLiteral });
+
+      expect((await router.match('GET', '/a/b/c'))?.route.handler).toBe(earlyLiteral);
+    });
+
+    test('an earlier literal wins over an earlier param when both routes match, literal route first', async () => {
+      const earlyParam = vi.fn(); // /a/:x/c
+      const earlyLiteral = vi.fn(); // /a/b/:y
+      router.get({ filters: { path: '/a/b/:y' }, handler: earlyLiteral });
+      router.get({ filters: { path: '/a/:x/c' }, handler: earlyParam });
+
+      expect((await router.match('GET', '/a/b/c'))?.route.handler).toBe(earlyLiteral);
+    });
+
+    test('a fully literal route wins over every partially-param route matching the same path', async () => {
+      const fullLiteral = vi.fn();
+      router.get({ filters: { path: '/a/:x/:y' }, handler: vi.fn() });
+      router.get({ filters: { path: '/a/b/:y' }, handler: vi.fn() });
+      router.get({ filters: { path: '/a/:x/c' }, handler: vi.fn() });
+      router.get({ filters: { path: '/a/b/c' }, handler: fullLiteral });
+
+      expect((await router.match('GET', '/a/b/c'))?.route.handler).toBe(fullLiteral);
+    });
+
+    test('keeps both routes matchable when equally specific but non-overlapping', async () => {
+      const xHandler = vi.fn();
+      const yHandler = vi.fn();
+      router.get({ filters: { path: '/a/x' }, handler: xHandler });
+      router.get({ filters: { path: '/a/y' }, handler: yHandler });
+
+      expect((await router.match('GET', '/a/x'))?.route.handler).toBe(xHandler);
+      expect((await router.match('GET', '/a/y'))?.route.handler).toBe(yHandler);
+    });
+
+    test('throws when two routes of the same method share a shape and differ only in param name', () => {
+      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
+
+      expect(() => router.get({ filters: { path: '/items/:slug' }, handler: vi.fn() })).toThrow(
+        /ambiguous/i,
+      );
+    });
+
+    test('does not treat the same shape under a different method as ambiguous', () => {
+      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
+
+      expect(() => router.post({ filters: { path: '/items/:slug' }, handler: vi.fn() })).not.toThrow();
+    });
+
+    test('exempts an ambiguous pair from the throw when one route carries a customFilter', async () => {
+      const guarded = vi.fn();
+      const fallback = vi.fn();
+
+      expect(() => {
+        router.get({
+          filters: { path: '/items/:id', customFilter: (input) => input === 'guarded' },
+          handler: guarded,
+        });
+        router.get({ filters: { path: '/items/:slug' }, handler: fallback });
+      }).not.toThrow();
+
+      expect((await router.match('GET', '/items/1', 'guarded'))?.route.handler).toBe(guarded);
+      expect((await router.match('GET', '/items/1', 'other'))?.route.handler).toBe(fallback);
+    });
+  });
+
   suite('getMethodsForPath', () => {
     test('ignores customFilter and returns methods based on path only', () => {
       router.get({
@@ -395,6 +483,14 @@ suite('PathRouter', () => {
       const methods = router.getMethodsForPath('/items/');
 
       expect(methods).toEqual(['GET', 'POST']);
+    });
+
+    test('returns every method matching a path once routes are specificity sorted', () => {
+      router.get({ filters: { path: '/orders/:orderId' }, handler: vi.fn() });
+      router.delete({ filters: { path: '/orders/:orderId' }, handler: vi.fn() });
+      router.get({ filters: { path: '/orders/latest' }, handler: vi.fn() });
+
+      expect(router.getMethodsForPath('/orders/latest').sort()).toEqual(['DELETE', 'GET']);
     });
   });
 });
