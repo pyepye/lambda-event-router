@@ -163,7 +163,7 @@ defineRoute({
     eventName: 'ObjectCreated:Put',
     bucket: 'my-images-bucket',
     key: ['images/*', 'photos/*', '*thumbnail*', '*.jpg', '*.png', '*.webp'],
-    customFilter: ({ record }) => record.s3.object.size >= 100 * 1024 * 1024,
+    custom: ({ record }) => record.s3.object.size >= 100 * 1024 * 1024,
   },
 })
 ```

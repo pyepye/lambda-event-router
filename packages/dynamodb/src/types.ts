@@ -84,7 +84,7 @@ export interface DynamoDBFilters {
   streamViewType?: DynamoDBViewType | DynamoDBViewType[];
   partitionKey?: FilterStringMatcher | DynamoDBKeyValue | DynamoDBKeyValue[];
   sortKey?: FilterStringMatcher | DynamoDBKeyValue | DynamoDBKeyValue[];
-  customFilter?: (input: DynamoDBFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: DynamoDBFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface DynamoDBInsertRouteDefinition<TKeys = Record<string, unknown>, TNewItem = Record<string, unknown>> {

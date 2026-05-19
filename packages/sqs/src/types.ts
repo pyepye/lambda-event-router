@@ -35,7 +35,7 @@ export interface SQSFilterInput {
 export interface SQSFilters {
   eventSourceArn?: FilterStringMatcher;
   messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
-  customFilter?: (input: SQSFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: SQSFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface SQSRouteDefinition<

@@ -46,7 +46,7 @@ defineRoute({
     eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
     repositoryName: ['my-repo', 'other-repo'],
     branch: ['main', 'develop'],
-    customFilter: ({ userIdentityARN }) => !userIdentityARN.includes('deploy-bot'),
+    custom: ({ userIdentityARN }) => !userIdentityARN.includes('deploy-bot'),
   },
 })
 ```

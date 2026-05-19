@@ -111,7 +111,7 @@ cognitoRouter.userMigration({
 cognitoRouter.route({
   filters: {
     userPoolId: 'us-east-1_abc123',
-    customFilter: isTestUser,
+    custom: isTestUser,
   },
   handler: genericHandler,
 });

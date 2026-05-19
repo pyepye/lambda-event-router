@@ -106,7 +106,7 @@ async function handleCreate({ requestType, resourceProperties, stackId }) {
 defineRoute({
   filters: {
     requestType: ['Create', 'Update', 'Delete'],
-    customFilter: ({ resourceType }) => resourceType === 'Custom::MyResource',
+    custom: ({ resourceType }) => resourceType === 'Custom::MyResource',
   },
 })
 ```

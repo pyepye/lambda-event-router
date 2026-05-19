@@ -67,12 +67,12 @@ eventBridgeRouter.route({
   handler: handleOrderStatusChange,
 });
 
-// High-severity GuardDuty findings using customFilter to filter by severity
+// High-severity GuardDuty findings using custom filter to filter by severity
 eventBridgeRouter.route({
   filters: {
     source: 'aws.guardduty',
     detailType: 'GuardDuty Finding',
-    customFilter: ({ detail }) => {
+    custom: ({ detail }) => {
       const highSeverityThreshold = 7;
       const finding = detail as Record<string, unknown>;
       return (finding.severity as number) >= highSeverityThreshold;

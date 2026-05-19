@@ -27,7 +27,7 @@ export interface KafkaFilters {
   topic?: FilterStringMatcher;
   eventSourceArn?: FilterStringMatcher;
   bootstrapServer?: FilterStringMatcher;
-  customFilter?: (input: KafkaFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: KafkaFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface KafkaRequest<TValue = unknown> {

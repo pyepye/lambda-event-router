@@ -76,7 +76,7 @@ s3Router.objectCreatedPut({
 s3Router.objectCreated({
   filters: {
     bucket: 'my-uploads-bucket',
-    customFilter: isLargeFile,
+    custom: isLargeFile,
   },
   handler: objectCreated,
 });

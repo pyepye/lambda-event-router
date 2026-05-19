@@ -29,7 +29,7 @@ export interface ConnectFilters {
   channel?: ConnectChannel | ConnectChannel[];
   initiationMethod?: ConnectInitiationMethod | ConnectInitiationMethod[];
   instanceArn?: FilterStringMatcher;
-  customFilter?: (input: ConnectFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: ConnectFilterInput) => boolean | Promise<boolean>;
 }
 
 export type ConnectChannelFilters = Omit<ConnectFilters, 'channel'>;

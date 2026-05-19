@@ -437,11 +437,11 @@ suite('WebSocketRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineWebSocketRoute({
           filters: {
-            customFilter: ({ routeKey }: WebSocketFilterInput): boolean => routeKey === 'sendMessage',
+            custom: ({ routeKey }: WebSocketFilterInput): boolean => routeKey === 'sendMessage',
           },
         }).handle(async () => ({ statusCode: 200 })),
       );
@@ -452,11 +452,11 @@ suite('WebSocketRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineWebSocketRoute({
           filters: {
-            customFilter: async ({ routeKey }: WebSocketFilterInput): Promise<boolean> => {
+            custom: async ({ routeKey }: WebSocketFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return routeKey === 'sendMessage';
             },
@@ -470,11 +470,11 @@ suite('WebSocketRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async () => {
+    test('does not match route when custom returns false', async () => {
       router.route(
         defineWebSocketRoute({
           filters: {
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => ({ statusCode: 200 })),
       );
@@ -485,29 +485,29 @@ suite('WebSocketRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes correct filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineWebSocketRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => ({ statusCode: 200 })),
       );
 
       // @ts-expect-error - testing private method
       router.matchRoute({ eventType: 'CONNECT', routeKey: '$connect' });
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         eventType: 'CONNECT',
         routeKey: '$connect',
       });
     });
 
-    test('matches when standard filters and customFilter both pass', async () => {
+    test('matches when standard filters and custom both pass', async () => {
       router.route(
         defineWebSocketRoute({
           filters: {
             eventType: 'MESSAGE',
-            customFilter: ({ routeKey }: WebSocketFilterInput): boolean => routeKey === 'sendMessage',
+            custom: ({ routeKey }: WebSocketFilterInput): boolean => routeKey === 'sendMessage',
           },
         }).handle(async () => ({ statusCode: 200 })),
       );
@@ -518,12 +518,12 @@ suite('WebSocketRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', async () => {
+    test('does not match when standard filters pass but custom returns false', async () => {
       router.route(
         defineWebSocketRoute({
           filters: {
             eventType: 'MESSAGE',
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => ({ statusCode: 200 })),
       );
@@ -534,13 +534,13 @@ suite('WebSocketRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not called when an earlier filter fails', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom is not called when an earlier filter fails', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineWebSocketRoute({
           filters: {
             eventType: 'CONNECT',
-            customFilter,
+            custom,
           },
         }).handle(async () => ({ statusCode: 200 })),
       );
@@ -548,7 +548,7 @@ suite('WebSocketRouter', () => {
       // @ts-expect-error - testing private method
       router.matchRoute({ eventType: 'MESSAGE', routeKey: '$default' });
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
   });
 

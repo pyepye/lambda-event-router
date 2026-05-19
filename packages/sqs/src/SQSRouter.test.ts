@@ -287,11 +287,11 @@ suite('SQSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ sqsRecord }) => {
+    test('matches route by custom', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ body }: SQSFilterInput): boolean => {
+            custom: ({ body }: SQSFilterInput): boolean => {
               // @ts-expect-error - body is unknown, testing filter with known shape
               return body.action === 'processOrder';
             },
@@ -307,11 +307,11 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by async customFilter', async ({ sqsRecord }) => {
+    test('matches route by async custom', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ body }: SQSFilterInput): Promise<boolean> => {
+            custom: async ({ body }: SQSFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - body is unknown, testing filter with known shape
               return body.action === 'processOrder';
@@ -328,10 +328,10 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ sqsRecord }) => {
+    test('does not match route when custom returns false', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 

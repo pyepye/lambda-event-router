@@ -241,8 +241,8 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
         if (!matched) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ body, messageAttributes, record });
+      if (filters.custom) {
+        const match = await filters.custom({ body, messageAttributes, record });
         if (!match) continue;
       }
 

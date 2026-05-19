@@ -170,13 +170,13 @@ suite('LambdaRouter', () => {
       };
 
       const validating = createEventRouter().route({
-        filters: { customFilter: () => true },
+        filters: { custom: () => true },
         eventSchema,
         handler: vi.fn(),
       });
 
       const secondHandler = vi.fn().mockResolvedValue('second');
-      const second = createEventRouter().route({ filters: { customFilter: () => true }, handler: secondHandler });
+      const second = createEventRouter().route({ filters: { custom: () => true }, handler: secondHandler });
 
       const handler = createLambdaRouter({ routers: [validating, second] }).handler();
 

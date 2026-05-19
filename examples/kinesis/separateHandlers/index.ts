@@ -39,7 +39,7 @@ function isLargeOrder({ data }: KinesisFilterInput): boolean {
 kinesisRouter.route({
   filters: {
     eventSourceArn: ORDER_STREAM_ARN,
-    customFilter: isLargeOrder,
+    custom: isLargeOrder,
   },
   handler: processOrder,
   dataSchema: OrderDataSchema,

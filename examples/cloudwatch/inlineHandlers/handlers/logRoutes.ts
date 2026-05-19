@@ -66,7 +66,7 @@ function isHighVolumeLogGroup({ logGroup, logEvents }: CloudWatchLogsDecodedData
 
 export const highVolumeRoute = defineRoute({
   filters: {
-    customFilter: isHighVolumeLogGroup,
+    custom: isHighVolumeLogGroup,
   },
 }).handle(async ({ logGroup, logEvents }) => {
   console.log(`High volume alert: ${logEvents.length} events from ${logGroup}`);

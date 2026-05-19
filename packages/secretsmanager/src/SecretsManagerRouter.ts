@@ -128,8 +128,8 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
         if (!steps.includes(step)) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(request);
+      if (filters.custom) {
+        const match = await filters.custom(request);
         if (!match) continue;
       }
 

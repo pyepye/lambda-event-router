@@ -339,11 +339,11 @@ suite('ActiveMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ activeMQMessage }) => {
+    test('matches route by custom', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: {
-            customFilter: ({ destination }: ActiveMQFilterInput): boolean => {
+            custom: ({ destination }: ActiveMQFilterInput): boolean => {
               return destination === 'test-queue';
             },
           },
@@ -359,10 +359,10 @@ suite('ActiveMQRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async ({ activeMQMessage }) => {
+    test('does not match when custom returns false', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -375,11 +375,11 @@ suite('ActiveMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct ActiveMQFilterInput', async ({ activeMQMessage }) => {
+    test('custom receives correct ActiveMQFilterInput', async ({ activeMQMessage }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineActiveMQRoute({
-          filters: { customFilter: filterSpy },
+          filters: { custom: filterSpy },
         }).handle(async () => {}),
       );
 
@@ -399,11 +399,11 @@ suite('ActiveMQRouter', () => {
       });
     });
 
-    test('customFilter is not called when a preceding filter rejects', async ({ activeMQMessage }) => {
+    test('custom is not called when a preceding filter rejects', async ({ activeMQMessage }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineActiveMQRoute({
-          filters: { messageType: 'jms/bytes-message', customFilter: customFilterSpy },
+          filters: { messageType: 'jms/bytes-message', custom: customFilterSpy },
         }).handle(async () => {}),
       );
 
@@ -416,11 +416,11 @@ suite('ActiveMQRouter', () => {
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route by async customFilter', async ({ activeMQMessage }) => {
+    test('matches route by async custom', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({
           filters: {
-            customFilter: async ({ destination }: ActiveMQFilterInput): Promise<boolean> => {
+            custom: async ({ destination }: ActiveMQFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return destination === 'test-queue';
             },

@@ -16,12 +16,12 @@ export const orderRoute = defineRabbitMQRoute({
   console.log(`Order ${body.orderId} for customer ${body.customerId} - total: ${body.total}`);
 });
 
-// Match orders from retry queues using customFilter on queue name pattern
+// Match orders from retry queues using custom filter on queue name pattern
 export const retryOrderRoute = defineRabbitMQRoute({
   filters: {
     eventSourceArn: BROKER_ARN,
     contentType: 'application/json',
-    customFilter: ({ queue }: RabbitMQFilterInput) => {
+    custom: ({ queue }: RabbitMQFilterInput) => {
       // Match messages from any retry/dead-letter queue
       const retrySuffix = '-retry';
       return queue.endsWith(retrySuffix);

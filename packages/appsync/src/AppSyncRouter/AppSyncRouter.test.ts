@@ -205,9 +205,9 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeUndefined();
     });
 
-    test('matches when customFilter returns true', async () => {
+    test('matches when custom returns true', async () => {
       const handler = vi.fn();
-      router.route({ filters: { customFilter: () => true }, handler });
+      router.route({ filters: { custom: () => true }, handler });
 
       const event = createAppSyncResolverEvent();
 
@@ -216,11 +216,11 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches when async customFilter returns true', async () => {
+    test('matches when async custom returns true', async () => {
       const handler = vi.fn();
       router.route({
         filters: {
-          customFilter: async () => {
+          custom: async () => {
             await new Promise((r) => setTimeout(r, 1));
             return true;
           },
@@ -235,8 +235,8 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async () => {
-      router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
+    test('does not match when custom returns false', async () => {
+      router.route({ filters: { custom: () => false }, handler: vi.fn() });
 
       const event = createAppSyncResolverEvent();
 
@@ -258,13 +258,13 @@ suite('AppSyncRouter', () => {
       expect(matched?.handler).toBe(firstHandler);
     });
 
-    test('matches when combined filters and customFilter all pass', async () => {
+    test('matches when combined filters and custom all pass', async () => {
       const handler = vi.fn();
       router.route({
         filters: {
           parentTypeName: 'Query',
           fieldName: 'getUser',
-          customFilter: () => true,
+          custom: () => true,
         },
         handler,
       });
@@ -276,12 +276,12 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('does not match when combined filters pass but customFilter fails', async () => {
+    test('does not match when combined filters pass but custom fails', async () => {
       router.route({
         filters: {
           parentTypeName: 'Query',
           fieldName: 'getUser',
-          customFilter: () => false,
+          custom: () => false,
         },
         handler: vi.fn(),
       });
@@ -402,13 +402,13 @@ suite('AppSyncRouter', () => {
     });
   });
 
-  suite('customFilter via shorthand methods', () => {
-    test('query passes customFilter to route filters', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+  suite('custom via shorthand methods', () => {
+    test('query passes custom to route filters', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
       router.query({
         fieldName: 'getUser',
-        filters: { customFilter },
+        filters: { custom },
         handler,
       });
 
@@ -419,14 +419,14 @@ suite('AppSyncRouter', () => {
 
       await router.handleEvent(event, context);
 
-      expect(customFilter).toHaveBeenCalledOnce();
+      expect(custom).toHaveBeenCalledOnce();
       expect(handler).toHaveBeenCalledOnce();
     });
 
-    test('query rejects when customFilter returns false', async () => {
+    test('query rejects when custom returns false', async () => {
       router.query({
         fieldName: 'getUser',
-        filters: { customFilter: () => false },
+        filters: { custom: () => false },
         handler: vi.fn(),
       });
 
@@ -438,12 +438,12 @@ suite('AppSyncRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
-    test('mutation passes customFilter to route filters', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('mutation passes custom to route filters', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
       router.mutation({
         fieldName: 'createUser',
-        filters: { customFilter },
+        filters: { custom },
         handler,
       });
 
@@ -454,14 +454,14 @@ suite('AppSyncRouter', () => {
 
       await router.handleEvent(event, context);
 
-      expect(customFilter).toHaveBeenCalledOnce();
+      expect(custom).toHaveBeenCalledOnce();
       expect(handler).toHaveBeenCalledOnce();
     });
 
-    test('mutation rejects when customFilter returns false', async () => {
+    test('mutation rejects when custom returns false', async () => {
       router.mutation({
         fieldName: 'createUser',
-        filters: { customFilter: () => false },
+        filters: { custom: () => false },
         handler: vi.fn(),
       });
 
@@ -473,12 +473,12 @@ suite('AppSyncRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
-    test('subscription passes customFilter to route filters', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('subscription passes custom to route filters', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       const handler = vi.fn().mockResolvedValue('ok');
       router.subscription({
         fieldName: 'onUserCreated',
-        filters: { customFilter },
+        filters: { custom },
         handler,
       });
 
@@ -489,14 +489,14 @@ suite('AppSyncRouter', () => {
 
       await router.handleEvent(event, context);
 
-      expect(customFilter).toHaveBeenCalledOnce();
+      expect(custom).toHaveBeenCalledOnce();
       expect(handler).toHaveBeenCalledOnce();
     });
 
-    test('subscription rejects when customFilter returns false', async () => {
+    test('subscription rejects when custom returns false', async () => {
       router.subscription({
         fieldName: 'onUserCreated',
-        filters: { customFilter: () => false },
+        filters: { custom: () => false },
         handler: vi.fn(),
       });
 

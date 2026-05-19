@@ -95,7 +95,7 @@ export interface HTTPFilterInput<TEvent = unknown> {
 export interface HTTPFilters<TPathString extends string = string> {
   method: AnyHttpMethod;
   path: TPathString;
-  customFilter?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
 }
 
 export type HTTPMiddleware<

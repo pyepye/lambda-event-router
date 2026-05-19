@@ -75,13 +75,13 @@ suite('defineRoute', () => {
 
   test('preserves filter configuration', () => {
     const handler = vi.fn();
-    const customFilter = vi.fn();
+    const custom = vi.fn();
     const definition = defineRoute({
       filters: {
         channel: 'CHAT',
         initiationMethod: 'INBOUND',
         instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/abc',
-        customFilter,
+        custom,
       },
     }).handle(handler);
 
@@ -89,7 +89,7 @@ suite('defineRoute', () => {
       channel: 'CHAT',
       initiationMethod: 'INBOUND',
       instanceArn: 'arn:aws:connect:us-east-1:123456789012:instance/abc',
-      customFilter,
+      custom,
     });
   });
 });
@@ -260,9 +260,9 @@ suite('matchRoute', () => {
     expect(result).toBeUndefined();
   });
 
-  test('matches when customFilter returns true', async ({ connectEvent }) => {
+  test('matches when custom returns true', async ({ connectEvent }) => {
     const handler = vi.fn();
-    router.route({ filters: { customFilter: () => true }, handler });
+    router.route({ filters: { custom: () => true }, handler });
 
     const event = connectEvent();
     // @ts-expect-error - testing private method
@@ -272,11 +272,11 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
-  test('matches when async customFilter returns true', async ({ connectEvent }) => {
+  test('matches when async custom returns true', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({
       filters: {
-        customFilter: async (): Promise<boolean> => {
+        custom: async (): Promise<boolean> => {
           await new Promise((r) => setTimeout(r, 1));
           return true;
         },
@@ -292,8 +292,8 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
-  test('does not match when customFilter returns false', async ({ connectEvent }) => {
-    router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
+  test('does not match when custom returns false', async ({ connectEvent }) => {
+    router.route({ filters: { custom: () => false }, handler: vi.fn() });
 
     const event = connectEvent();
     // @ts-expect-error - testing private method
@@ -302,9 +302,9 @@ suite('matchRoute', () => {
     expect(result).toBeUndefined();
   });
 
-  test('customFilter receives correct input', async ({ connectEvent }) => {
-    const customFilter = vi.fn().mockReturnValue(true);
-    router.route({ filters: { customFilter }, handler: vi.fn() });
+  test('custom receives correct input', async ({ connectEvent }) => {
+    const custom = vi.fn().mockReturnValue(true);
+    router.route({ filters: { custom }, handler: vi.fn() });
 
     const event = connectEvent({
       Details: { ContactData: { Channel: 'CHAT', InitiationMethod: 'TRANSFER' } },
@@ -312,7 +312,7 @@ suite('matchRoute', () => {
     // @ts-expect-error - testing private method
     router.matchRoute(event);
 
-    expect(customFilter).toHaveBeenCalledWith({
+    expect(custom).toHaveBeenCalledWith({
       channel: 'CHAT',
       initiationMethod: 'TRANSFER',
       event,

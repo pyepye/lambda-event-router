@@ -179,8 +179,8 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
       //   if (!functionNameMatch) continue;
       // }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(input);
+      if (filters.custom) {
+        const match = await filters.custom(input);
         if (!match) continue;
       }
 

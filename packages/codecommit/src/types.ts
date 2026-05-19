@@ -60,7 +60,7 @@ export interface CodeCommitFilters {
   eventSourceArn?: FilterStringMatcher;
   repositoryName?: FilterStringMatcher;
   branch?: FilterStringMatcher;
-  customFilter?: (input: CodeCommitFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: CodeCommitFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface CodeCommitRouteDefinition {

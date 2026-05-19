@@ -340,11 +340,11 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ eventBridgeEvent }) => {
+    test('matches route by custom', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ detail }: EventBridgeFilterInput): boolean => {
+            custom: ({ detail }: EventBridgeFilterInput): boolean => {
               // @ts-expect-error - detail is unknown, testing filter with known shape
               return detail.orderId === '12345';
             },
@@ -359,11 +359,11 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by async customFilter', async ({ eventBridgeEvent }) => {
+    test('matches route by async custom', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ detail }: EventBridgeFilterInput): Promise<boolean> => {
+            custom: async ({ detail }: EventBridgeFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - detail is unknown, testing filter with known shape
               return detail.orderId === '12345';
@@ -379,11 +379,11 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ eventBridgeEvent }) => {
+    test('does not match route when custom returns false', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -418,12 +418,12 @@ suite('EventBridgeRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches when standard filters and customFilter both pass', async ({ eventBridgeEvent }) => {
+    test('matches when standard filters and custom both pass', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
             source: 'my.app',
-            customFilter: ({ detail }: EventBridgeFilterInput): boolean => {
+            custom: ({ detail }: EventBridgeFilterInput): boolean => {
               // @ts-expect-error - detail is unknown, testing filter with known shape
               return detail.orderId === '12345';
             },
@@ -438,12 +438,12 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', async ({ eventBridgeEvent }) => {
+    test('does not match when standard filters pass but custom returns false', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({
           filters: {
             source: 'my.app',
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -486,11 +486,11 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('passes correct filterInput to customFilter', async ({ eventBridgeEvent }) => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes correct filterInput to custom', async ({ eventBridgeEvent }) => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -498,7 +498,7 @@ suite('EventBridgeRouter', () => {
       // @ts-expect-error - testing private method directly
       router.matchRoute(event);
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         event,
         source: event.source,
         detailType: event['detail-type'],

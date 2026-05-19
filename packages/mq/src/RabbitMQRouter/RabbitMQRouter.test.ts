@@ -307,11 +307,11 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ rabbitMQMessage }) => {
+    test('matches route by custom', async ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
           filters: {
-            customFilter: ({ queue }: RabbitMQFilterInput): boolean => {
+            custom: ({ queue }: RabbitMQFilterInput): boolean => {
               return queue === 'orders';
             },
           },
@@ -327,10 +327,10 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async ({ rabbitMQMessage }) => {
+    test('does not match when custom returns false', async ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -343,11 +343,11 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct RabbitMQFilterInput', async ({ rabbitMQMessage }) => {
+    test('custom receives correct RabbitMQFilterInput', async ({ rabbitMQMessage }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRabbitMQRoute({
-          filters: { customFilter: filterSpy },
+          filters: { custom: filterSpy },
         }).handle(async () => {}),
       );
 
@@ -365,11 +365,11 @@ suite('RabbitMQRouter', () => {
       });
     });
 
-    test('customFilter is not called when a preceding filter rejects', async ({ rabbitMQMessage }) => {
+    test('custom is not called when a preceding filter rejects', async ({ rabbitMQMessage }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRabbitMQRoute({
-          filters: { queue: 'other-queue', customFilter: customFilterSpy },
+          filters: { queue: 'other-queue', custom: customFilterSpy },
         }).handle(async () => {}),
       );
 
@@ -382,11 +382,11 @@ suite('RabbitMQRouter', () => {
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route by async customFilter', async ({ rabbitMQMessage }) => {
+    test('matches route by async custom', async ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
           filters: {
-            customFilter: async ({ queue }: RabbitMQFilterInput): Promise<boolean> => {
+            custom: async ({ queue }: RabbitMQFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return Promise.resolve(queue === 'orders');
             },

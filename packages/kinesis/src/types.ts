@@ -13,7 +13,7 @@ export interface KinesisFilterInput {
 export interface KinesisFilters {
   eventSourceArn?: FilterStringMatcher;
   partitionKey?: FilterStringMatcher;
-  customFilter?: (input: KinesisFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: KinesisFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface KinesisRequest<TData = unknown> {

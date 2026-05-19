@@ -189,8 +189,8 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
         if (!sourceKinesisStreamArnMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({
+      if (filters.custom) {
+        const match = await filters.custom({
           data,
           recordId: record.recordId,
           approximateArrivalTimestamp: record.approximateArrivalTimestamp,

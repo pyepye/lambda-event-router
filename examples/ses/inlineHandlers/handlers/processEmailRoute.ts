@@ -36,13 +36,13 @@ export const internalEmailRoute = defineRoute({
   console.log(`Internal email from ${source} to ${recipients.join(', ')}: ${subject}`);
 });
 
-// Route matching emails with attachments using customFilter
+// Route matching emails with attachments using custom filter
 export const attachmentEmailRoute = defineRoute({
   filters: {
     recipient: 'uploads@example.com',
     spamVerdict: 'PASS',
     virusVerdict: 'PASS',
-    customFilter: ({ mail }: SESFilterInput) => {
+    custom: ({ mail }: SESFilterInput) => {
       const hasAttachments = mail.commonHeaders.to !== undefined;
       const headerCount = mail.headers.length;
       return hasAttachments && headerCount > 5;

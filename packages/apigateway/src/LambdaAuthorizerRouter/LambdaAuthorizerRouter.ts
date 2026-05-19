@@ -38,7 +38,7 @@ interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType |
   filters: {
     type?: TType;
     method?: string;
-    customFilter?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
+    custom?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
   };
 }
 
@@ -271,8 +271,8 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
         continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(filterInput);
+      if (filters.custom) {
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
       return route;

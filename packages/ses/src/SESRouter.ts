@@ -135,8 +135,8 @@ export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
         }
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ receipt, mail });
+      if (filters.custom) {
+        const match = await filters.custom({ receipt, mail });
         if (!match) continue;
       }
 

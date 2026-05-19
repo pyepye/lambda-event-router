@@ -156,8 +156,8 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
         if (!partitionKeyMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ data, partitionKey: record.kinesis.partitionKey, record });
+      if (filters.custom) {
+        const match = await filters.custom({ data, partitionKey: record.kinesis.partitionKey, record });
         if (!match) continue;
       }
 

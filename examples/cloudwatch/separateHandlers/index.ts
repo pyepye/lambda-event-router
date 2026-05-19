@@ -96,7 +96,7 @@ function isHighVolumeLogGroup({ logGroup, logEvents }: CloudWatchLogsDecodedData
 
 cloudWatchLogsRouter.route({
   filters: {
-    customFilter: isHighVolumeLogGroup,
+    custom: isHighVolumeLogGroup,
   },
   handler: handleHighVolumeLogs,
 });

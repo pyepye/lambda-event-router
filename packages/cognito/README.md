@@ -104,7 +104,7 @@ const cognitoRouter = createCognitoRouter()
 cognitoRouter.preSignUp({
   filters: {
     triggerSource: 'PreSignUp_SignUp',
-    customFilter: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
+    custom: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
   },
   handler: handlePreSignUp,
 })
@@ -150,7 +150,7 @@ cognitoRouter.userMigration()
 cognitoRouter.preSignUp({
   filters: {
     triggerSource: 'PreSignUp_SignUp',
-    customFilter: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
+    custom: ({ callerContext }) => callerContext.clientId === 'enterprise-client-id',
   },
   handler: async ({ event }) => {
     event.response.autoConfirmUser = true

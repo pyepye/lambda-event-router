@@ -296,11 +296,11 @@ suite('SecretsManagerRouter', () => {
       });
     });
 
-    suite('customFilter', () => {
-      test('matches when customFilter returns true', async () => {
+    suite('custom', () => {
+      test('matches when custom returns true', async () => {
         router.route(
           defineRoute({
-            filters: { customFilter: () => true },
+            filters: { custom: () => true },
           }).handle(async () => {}),
         );
 
@@ -314,10 +314,10 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeDefined();
       });
 
-      test('does not match when customFilter returns false', async () => {
+      test('does not match when custom returns false', async () => {
         router.route(
           defineRoute({
-            filters: { customFilter: () => false },
+            filters: { custom: () => false },
           }).handle(async () => {}),
         );
 
@@ -332,8 +332,8 @@ suite('SecretsManagerRouter', () => {
       });
 
       test('receives correct input shape', async () => {
-        const customFilter = vi.fn().mockReturnValue(true);
-        router.route(defineRoute({ filters: { customFilter } }).handle(async () => {}));
+        const custom = vi.fn().mockReturnValue(true);
+        router.route(defineRoute({ filters: { custom } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
@@ -343,18 +343,18 @@ suite('SecretsManagerRouter', () => {
         // @ts-expect-error - testing private method directly
         await router.matchRoute(request);
 
-        expect(customFilter).toHaveBeenCalledWith({
+        expect(custom).toHaveBeenCalledWith({
           secretId: 'my-secret',
           clientRequestToken: 'my-token',
           step: 'testSecret',
         });
       });
 
-      test('matches route by async customFilter', async () => {
+      test('matches route by async custom', async () => {
         const asyncFilter = vi.fn().mockResolvedValue(true);
         router.route(
           defineRoute({
-            filters: { customFilter: asyncFilter },
+            filters: { custom: asyncFilter },
           }).handle(async () => {}),
         );
 
@@ -411,12 +411,12 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('matches when secredId and customFilter both pass', async () => {
+      test('matches when secredId and custom both pass', async () => {
         router.route(
           defineRoute({
             filters: {
               secretId: 'arn:aws:secretsmanager:us-east-1*',
-              customFilter: () => true,
+              custom: () => true,
             },
           }).handle(async () => {}),
         );
@@ -431,12 +431,12 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeDefined();
       });
 
-      test('does not match when secretId matches but customFilter fails', async () => {
+      test('does not match when secretId matches but custom fails', async () => {
         router.route(
           defineRoute({
             filters: {
               secretId: 'arn:aws:secretsmanager:us-east-1*',
-              customFilter: () => false,
+              custom: () => false,
             },
           }).handle(async () => {}),
         );
@@ -496,13 +496,13 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeUndefined();
       });
 
-      test('customFilter is not called when an earlier filter fails', async () => {
-        const customFilter = vi.fn().mockReturnValue(true);
+      test('custom is not called when an earlier filter fails', async () => {
+        const custom = vi.fn().mockReturnValue(true);
         router.route(
           defineRoute({
             filters: {
               secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other',
-              customFilter,
+              custom,
             },
           }).handle(async () => {}),
         );
@@ -514,7 +514,7 @@ suite('SecretsManagerRouter', () => {
         };
         // @ts-expect-error - testing private method directly
         await router.matchRoute(request);
-        expect(customFilter).not.toHaveBeenCalled();
+        expect(custom).not.toHaveBeenCalled();
       });
     });
   });

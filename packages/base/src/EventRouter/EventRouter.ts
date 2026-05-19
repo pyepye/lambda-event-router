@@ -15,7 +15,7 @@ import type {
 } from './types.js';
 
 interface InternalEventRoute {
-  filters: { customFilter?: (input: EventFilterInput) => boolean | Promise<boolean> };
+  filters: { custom?: (input: EventFilterInput) => boolean | Promise<boolean> };
   eventSchema?: StandardSchemaV1;
   middleware: EventRouterMiddleware<unknown, unknown>[];
   handler: EventHandler<unknown, unknown>;
@@ -210,8 +210,8 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     const filterInput: EventFilterInput = { event };
     for (const route of this.routes) {
       const { filters } = route;
-      if (filters.customFilter) {
-        const match = await filters.customFilter(filterInput);
+      if (filters.custom) {
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
       return route;

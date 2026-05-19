@@ -343,10 +343,10 @@ suite('CognitoRouter', () => {
       });
     });
 
-    suite('customFilter', () => {
-      test('matches when customFilter returns true', async ({ cognitoPreSignUpEvent }) => {
+    suite('custom', () => {
+      test('matches when custom returns true', async ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { customFilter: () => true },
+          filters: { custom: () => true },
           handler: vi.fn(),
         });
 
@@ -357,9 +357,9 @@ suite('CognitoRouter', () => {
         expect(result).toBeDefined();
       });
 
-      test('does not match when customFilter returns false', async ({ cognitoPreSignUpEvent }) => {
+      test('does not match when custom returns false', async ({ cognitoPreSignUpEvent }) => {
         router.route({
-          filters: { customFilter: () => false },
+          filters: { custom: () => false },
           handler: vi.fn(),
         });
 
@@ -371,9 +371,9 @@ suite('CognitoRouter', () => {
       });
 
       test('receives correct filterInput args', async ({ cognitoPreSignUpEvent }) => {
-        const customFilter = vi.fn().mockReturnValue(true);
+        const custom = vi.fn().mockReturnValue(true);
         router.route({
-          filters: { customFilter },
+          filters: { custom },
           handler: vi.fn(),
         });
 
@@ -381,7 +381,7 @@ suite('CognitoRouter', () => {
         // @ts-expect-error - testing private method directly
         await router.matchRoute(event, event.triggerSource);
 
-        expect(customFilter).toHaveBeenCalledWith({
+        expect(custom).toHaveBeenCalledWith({
           triggerSource: 'PreSignUp_SignUp',
           userPoolId: 'us-east-1_TestPool',
           userName: 'test-user',
@@ -394,9 +394,9 @@ suite('CognitoRouter', () => {
       test('passes undefined userAttributes in filterInput for UserMigration', async ({
         cognitoUserMigrationEvent,
       }) => {
-        const customFilter = vi.fn().mockReturnValue(true);
+        const custom = vi.fn().mockReturnValue(true);
         router.route({
-          filters: { customFilter },
+          filters: { custom },
           handler: vi.fn(),
         });
 
@@ -404,17 +404,17 @@ suite('CognitoRouter', () => {
         // @ts-expect-error - testing private method directly
         await router.matchRoute(event, event.triggerSource);
 
-        expect(customFilter).toHaveBeenCalledWith(
+        expect(custom).toHaveBeenCalledWith(
           expect.objectContaining({
             request: { userAttributes: undefined },
           }),
         );
       });
 
-      test('matches route by async customFilter', async ({ cognitoPreSignUpEvent }) => {
+      test('matches route by async custom', async ({ cognitoPreSignUpEvent }) => {
         const asyncFilter = vi.fn().mockResolvedValue(true);
         router.route({
-          filters: { customFilter: asyncFilter },
+          filters: { custom: asyncFilter },
           handler: vi.fn(),
         });
 
@@ -451,7 +451,7 @@ suite('CognitoRouter', () => {
             userPoolId: 'us-east-1_TestPool',
             clientId: 'test-client-id',
             userAttributes: { email: 'test@example.com' },
-            customFilter: () => true,
+            custom: () => true,
           },
           handler: vi.fn(),
         });

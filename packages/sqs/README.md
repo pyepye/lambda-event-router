@@ -114,7 +114,7 @@ defineRoute({
   filters: {
     eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue',
     messageAttributes: { environment: 'production' },
-    customFilter: ({ body }) => {
+    custom: ({ body }) => {
       if (typeof body !== 'object' || body === null) return false
       return 'orderId' in body
     },

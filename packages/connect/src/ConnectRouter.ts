@@ -157,8 +157,8 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
         if (!instanceArnMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({
+      if (filters.custom) {
+        const match = await filters.custom({
           channel: contactData.Channel,
           initiationMethod: contactData.InitiationMethod,
           event,

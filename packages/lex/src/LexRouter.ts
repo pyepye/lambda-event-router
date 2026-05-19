@@ -126,8 +126,8 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
         }
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({
+      if (filters.custom) {
+        const match = await filters.custom({
           intentName: event.sessionState.intent.name,
           invocationSource: event.invocationSource,
           inputMode: event.inputMode,

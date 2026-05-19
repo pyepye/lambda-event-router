@@ -70,7 +70,7 @@ export interface ActiveMQFilters {
   eventSourceArn?: FilterStringMatcher;
   destination?: FilterStringMatcher;
   messageType?: ActiveMQMessageType | ActiveMQMessageType[];
-  customFilter?: (input: ActiveMQFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: ActiveMQFilterInput) => boolean | Promise<boolean>;
 }
 
 // --- Handler Types ---

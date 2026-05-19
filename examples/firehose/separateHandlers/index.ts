@@ -26,7 +26,7 @@ firehoseRouter.route({
 firehoseRouter.route({
   filters: {
     deliveryStreamArn: DELIVERY_STREAM_ARN,
-    customFilter: isErrorLog,
+    custom: isErrorLog,
   },
   handler: handleErrorLog,
   dataSchema: LogDataSchema,

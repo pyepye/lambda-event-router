@@ -433,13 +433,13 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not evaluated when topicArn does not match', async ({ snsRecord }) => {
-      const customFilter = vi.fn(() => true);
+    test('custom is not evaluated when topicArn does not match', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
       router.route(
         defineRoute({
           filters: {
             topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
-            customFilter,
+            custom,
           },
         }).handle(async () => {}),
       );
@@ -449,17 +449,17 @@ suite('SNSRouter', () => {
       const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeUndefined();
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
-    test('customFilter is evaluated when other filters match', async ({ snsRecord }) => {
-      const customFilter = vi.fn(() => true);
+    test('custom is evaluated when other filters match', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
           filters: {
             topicArn,
-            customFilter,
+            custom,
           },
         }).handle(async () => {}),
       );
@@ -469,14 +469,14 @@ suite('SNSRouter', () => {
       const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
 
       expect(result).toBeDefined();
-      expect(customFilter).toHaveBeenCalledOnce();
+      expect(custom).toHaveBeenCalledOnce();
     });
 
-    test('customFilter receives body, messageAttributes, and record', async ({ snsRecord }) => {
-      const customFilter = vi.fn(() => true);
+    test('custom receives body, messageAttributes, and record', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -486,18 +486,18 @@ suite('SNSRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(record, body, messageAttributes);
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         body,
         messageAttributes,
         record,
       });
     });
 
-    test('matches route by customFilter', async ({ snsRecord }) => {
+    test('matches route by custom', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ body }: SNSFilterInput): boolean => {
+            custom: ({ body }: SNSFilterInput): boolean => {
               // @ts-expect-error - body is unknown, testing filter with known shape
               return body.action === 'processOrder';
             },
@@ -513,11 +513,11 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by async customFilter', async ({ snsRecord }) => {
+    test('matches route by async custom', async ({ snsRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ body }: SNSFilterInput): Promise<boolean> => {
+            custom: async ({ body }: SNSFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - body is unknown, testing filter with known shape
               return body.action === 'processOrder';
@@ -534,10 +534,10 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ snsRecord }) => {
+    test('does not match route when custom returns false', async ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 

@@ -151,7 +151,7 @@ defineRoute({
   filters: {
     eventName: ['INSERT', 'MODIFY'],
     eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
-    customFilter: ({ newImage }) => newImage?.status === 'PENDING',
+    custom: ({ newImage }) => newImage?.status === 'PENDING',
   },
 })
 ```

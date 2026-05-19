@@ -139,7 +139,7 @@ defineActiveMQRoute({
     eventSourceArn: 'arn:aws:mq:eu-west-2:123456789012:broker:MyBroker:b-1234',
     destination: ['order-queue', 'refund-queue'],
     messageType: 'jms/text-message',
-    customFilter: ({ destination }) => destination.includes('priority'),
+    custom: ({ destination }) => destination.includes('priority'),
   },
 })
 ```
@@ -194,7 +194,7 @@ defineRabbitMQRoute({
     queue: ['order-queue', 'refund-queue'],
     virtualHost: '/production',
     contentType: 'application/json',
-    customFilter: ({ record }) => record.basicProperties.priority >= 5,
+    custom: ({ record }) => record.basicProperties.priority >= 5,
   },
 })
 ```

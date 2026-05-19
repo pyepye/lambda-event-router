@@ -16,13 +16,13 @@ export const voiceInboundRoute = defineRoute({
   return { greeting: 'Welcome to our support line' };
 });
 
-// Match VIP callers based on contact attributes using customFilter
+// Match VIP callers based on contact attributes using custom filter
 export const vipCallerRoute = defineRoute({
   filters: {
     channel: 'VOICE',
     initiationMethod: 'INBOUND',
     instanceArn: INSTANCE_ARN,
-    customFilter: ({ event }: ConnectFilterInput) => {
+    custom: ({ event }: ConnectFilterInput) => {
       const contactAttributes = event.Details.ContactData.Attributes;
       const vipTier = 'platinum';
       return contactAttributes.customerTier === vipTier;

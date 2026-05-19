@@ -27,7 +27,7 @@ function isProcessOrder({ event }: { event: unknown }): boolean {
 // Route with schema - validates and parses the payload
 export const processOrderRoute = defineRoute({
   filters: {
-    customFilter: isProcessOrder,
+    custom: isProcessOrder,
   },
   eventSchema: ProcessOrderSchema,
 }).handle(async ({ event, context }) => {
@@ -47,7 +47,7 @@ function isEnrichData({ event }: { event: unknown }): boolean {
 // Route without schema - works with raw payload
 export const enrichDataRoute = defineRoute({
   filters: {
-    customFilter: isEnrichData,
+    custom: isEnrichData,
   },
 }).handle(async ({ event }) => {
   console.log('Enriching data:', event);
@@ -75,7 +75,7 @@ function isHumanApproval({ event }: { event: unknown }): boolean {
 // Step Functions pauses execution until SendTaskSuccess/SendTaskFailure is called
 export const humanApprovalRoute = defineRoute({
   filters: {
-    customFilter: isHumanApproval,
+    custom: isHumanApproval,
     taskToken: true,
   },
   eventSchema: HumanApprovalSchema,

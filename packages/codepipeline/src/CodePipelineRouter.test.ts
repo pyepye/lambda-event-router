@@ -330,31 +330,31 @@ suite('CodePipelineRouter', () => {
     //   expect(result).toBeUndefined();
     // });
 
-    test('matches by customFilter', async () => {
-      const customFilter = (input: CodePipelineFilterInput): boolean => {
+    test('matches by custom', async () => {
+      const custom = (input: CodePipelineFilterInput): boolean => {
         return input.functionName.startsWith('my-');
       };
-      router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
+      router.route(defineRoute({ filters: { custom } }).handle(async () => undefined));
 
       // @ts-expect-error - testing private method directly
       const result = await router.matchRoute(filterInput);
       expect(result).toBeDefined();
     });
 
-    test('rejects when customFilter returns false', async () => {
-      const customFilter = (): boolean => false;
-      router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
+    test('rejects when custom returns false', async () => {
+      const custom = (): boolean => false;
+      router.route(defineRoute({ filters: { custom } }).handle(async () => undefined));
 
       // @ts-expect-error - testing private method directly
       const result = await router.matchRoute(filterInput);
       expect(result).toBeUndefined();
     });
 
-    test('matches route by async customFilter', async () => {
-      const customFilter = async (input: CodePipelineFilterInput): Promise<boolean> => {
+    test('matches route by async custom', async () => {
+      const custom = async (input: CodePipelineFilterInput): Promise<boolean> => {
         return input.functionName === 'my-function';
       };
-      router.route(defineRoute({ filters: { customFilter } }).handle(async () => undefined));
+      router.route(defineRoute({ filters: { custom } }).handle(async () => undefined));
 
       // @ts-expect-error - testing private method directly
       const result = await router.matchRoute(filterInput);

@@ -17,7 +17,7 @@ export interface FirehoseFilterInput {
 export interface FirehoseFilters {
   deliveryStreamArn?: FilterStringMatcher;
   sourceKinesisStreamArn?: FilterStringMatcher;
-  customFilter?: (input: FirehoseFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: FirehoseFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface FirehoseRequest<TData = unknown> {

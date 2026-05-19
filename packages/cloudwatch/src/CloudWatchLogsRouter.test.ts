@@ -356,11 +356,11 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: (input: CloudWatchLogsDecodedData): boolean => {
+            custom: (input: CloudWatchLogsDecodedData): boolean => {
               return input.owner === '123456789012';
             },
           },
@@ -373,10 +373,10 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async () => {
+    test('does not match when custom returns false', async () => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -386,11 +386,11 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by async customFilter', async () => {
+    test('matches route by async custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async (input: CloudWatchLogsDecodedData): Promise<boolean> => {
+            custom: async (input: CloudWatchLogsDecodedData): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return input.owner === '123456789012';
             },

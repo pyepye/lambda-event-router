@@ -16,12 +16,12 @@ export const orderRoute = defineActiveMQRoute({
   console.log(`Order ${body.orderId} for customer ${body.customerId} - total: ${body.total}`);
 });
 
-// Match priority orders from specific destination pattern using customFilter
+// Match priority orders from specific destination pattern using custom filter
 export const priorityOrderRoute = defineActiveMQRoute({
   filters: {
     eventSourceArn: BROKER_ARN,
     messageType: 'jms/text-message',
-    customFilter: ({ destination }: ActiveMQFilterInput) => {
+    custom: ({ destination }: ActiveMQFilterInput) => {
       // Match messages from any priority queue destination
       const priorityPrefix = 'priority-';
       return destination.startsWith(priorityPrefix);

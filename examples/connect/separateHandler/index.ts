@@ -102,7 +102,7 @@ function isVipCaller({ event }: ConnectFilterInput): boolean {
 connectRouter.voice({
   filters: {
     instanceArn: INSTANCE_ARN,
-    customFilter: isVipCaller,
+    custom: isVipCaller,
   },
   handler: handleVoiceCall,
 });

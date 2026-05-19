@@ -106,7 +106,7 @@ async function processEmail({ mail, receipt }) {
 defineRoute({
   filters: {
     spamVerdict: 'PASS',
-    customFilter: ({ mail }) => mail.destination.includes('support@example.com'),
+    custom: ({ mail }) => mail.destination.includes('support@example.com'),
   },
 })
 ```

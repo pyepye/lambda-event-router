@@ -34,7 +34,7 @@ export const deployActionRoute = defineRoute({
 export const continuationDeployRoute = defineRoute({
   filters: {
     functionName: FUNCTION_NAME,
-    customFilter: ({ hasInputArtifacts, hasContinuationToken }: CodePipelineFilterInput) => {
+    custom: ({ hasInputArtifacts, hasContinuationToken }: CodePipelineFilterInput) => {
       // Only match jobs that are resuming with artifacts - built-in filters can't express this combination
       return hasInputArtifacts && hasContinuationToken;
     },

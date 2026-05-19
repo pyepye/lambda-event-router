@@ -29,7 +29,7 @@ const eventRouter = createEventRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.action === 'process-order',
+    custom: ({ event }) => event.action === 'process-order',
   },
   eventSchema: z.object({
     action: z.literal('process-order'),
@@ -63,7 +63,7 @@ type Order = z.infer<typeof OrderSchema>
 // Separate handler to define routes and handlers in different places
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.action === 'process-order',
+    custom: ({ event }) => event.action === 'process-order',
   },
   eventSchema: OrderSchema,
   handler: processOrder,
@@ -76,7 +76,7 @@ export async function processOrder({ event }: EventRequest<Order>) {
 }
 ```
 
-`customFilter` is given the **raw** event even though `eventSchema` types it as the schema output, so a coerced or defaulted field arrives in the form the caller sent it. Where a route has no `eventSchema` the event is `unknown`, so narrow it with `isObject` before reading anything.
+`custom` is given the **raw** event even though `eventSchema` types it as the schema output, so a coerced or defaulted field arrives in the form the caller sent it. Where a route has no `eventSchema` the event is `unknown`, so narrow it with `isObject` before reading anything.
 
 Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
 
@@ -184,7 +184,7 @@ const ReportSchema = z.object({
 
 const generateReport = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
 }).handle(async ({ event }) => {
@@ -213,7 +213,7 @@ type Report = z.infer<typeof ReportSchema>
 
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
   handler: generateReport,

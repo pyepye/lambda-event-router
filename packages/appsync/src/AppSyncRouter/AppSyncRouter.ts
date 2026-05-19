@@ -161,8 +161,8 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
         if (!fieldNameMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ parentTypeName, fieldName, event });
+      if (filters.custom) {
+        const match = await filters.custom({ parentTypeName, fieldName, event });
         if (!match) continue;
       }
       return route;

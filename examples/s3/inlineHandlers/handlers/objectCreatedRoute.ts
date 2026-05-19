@@ -36,12 +36,12 @@ export const objectCreatedThumbnailRoute = defineRoute({
 
 const LARGE_FILE_THRESHOLD_BYTES = 100 * 1024 * 1024;
 
-// Match large file uploads using customFilter on object size
+// Match large file uploads using custom filter on object size
 export const largeFileUploadRoute = defineRoute({
   filters: {
     eventName: 'ObjectCreated:*',
     bucket: 'my-uploads-bucket',
-    customFilter: ({ record }: S3FilterInput) => {
+    custom: ({ record }: S3FilterInput) => {
       const objectSize = record.s3.object.size;
       return objectSize >= LARGE_FILE_THRESHOLD_BYTES;
     },

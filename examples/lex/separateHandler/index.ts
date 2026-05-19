@@ -41,7 +41,7 @@ function isSpeechInput({ inputMode, botId }: LexFilterInput): boolean {
 lexRouter.fulfillmentCodeHook({
   filters: {
     intentName: 'OrderPizza',
-    customFilter: isSpeechInput,
+    custom: isSpeechInput,
   },
   handler: fulfillPizzaOrder,
 });

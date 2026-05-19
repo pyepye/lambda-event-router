@@ -34,12 +34,12 @@ export const createUserRoute = defineRoute({
   };
 });
 
-// Match admin mutations using customFilter on identity claims
+// Match admin mutations using custom filter on identity claims
 export const adminCreateUserRoute = defineRoute({
   filters: {
     parentTypeName: 'Mutation',
     fieldName: 'createUser',
-    customFilter: ({ event }: AppSyncResolverFilterInput) => {
+    custom: ({ event }: AppSyncResolverFilterInput) => {
       const identity = event.identity;
       if (!(identity && 'claims' in identity)) return false;
       const claims = identity.claims as Record<string, unknown>;

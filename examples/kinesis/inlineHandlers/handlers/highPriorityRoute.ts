@@ -15,7 +15,7 @@ function isHighPriority({ partitionKey }: KinesisFilterInput): boolean {
 
 export const highPriorityRoute = defineRoute({
   filters: {
-    customFilter: isHighPriority,
+    custom: isHighPriority,
   },
   dataSchema: HighPriorityDataSchema,
 }).handle(async ({ data, approximateArrivalTimestamp }) => {

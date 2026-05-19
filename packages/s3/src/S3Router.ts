@@ -420,7 +420,11 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
     return this.buildBatchResult(event, results);
   }
 
-  private buildBatchRequest(task: S3BatchEvent['tasks'][number], event: S3BatchEvent, context: Context): S3BatchRequest {
+  private buildBatchRequest(
+    task: S3BatchEvent['tasks'][number],
+    event: S3BatchEvent,
+    context: Context,
+  ): S3BatchRequest {
     // The bucket name is the last ARN segment. S3 Batch may send either arn:aws:s3:region:account:bucket
     // or arn:aws:s3:::bucket, and a bucket name holds no colon.
     const bucketArn = task.s3BucketArn;
@@ -506,9 +510,9 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
         if (!keyMatch) continue;
       }
 
-      if (filters.customFilter) {
+      if (filters.custom) {
         const input: S3FilterInput = { bucket, key, eventName, record };
-        const match = await filters.customFilter(input);
+        const match = await filters.custom(input);
         if (!match) continue;
       }
 

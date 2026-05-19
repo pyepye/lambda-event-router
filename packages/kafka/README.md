@@ -105,7 +105,7 @@ async function processMessage({ value, key, topic, partition, offset }) {
 
 #### Filters
 
-`customFilter` is given the decoded headers, the topic and the raw record. The message value is not on
+`custom` is given the decoded headers, the topic and the raw record. The message value is not on
 it, since that is only parsed once a route has matched.
 
 ```ts
@@ -114,7 +114,7 @@ defineRoute({
     topic: ['order-events', 'order-retries'],
     eventSourceArn: 'arn:aws:kafka:us-east-1:123456789:cluster/my-cluster',
     bootstrapServer: 'broker1:9092',
-    customFilter: ({ headers }) => headers.some((header) => header.priority === 'HIGH'),
+    custom: ({ headers }) => headers.some((header) => header.priority === 'HIGH'),
   },
 })
 ```

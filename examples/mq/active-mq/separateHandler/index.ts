@@ -65,7 +65,7 @@ function isPriorityDestination({ destination }: ActiveMQFilterInput): boolean {
 activeMQRouter.textMessage({
   filters: {
     eventSourceArn: BROKER_ARN,
-    customFilter: isPriorityDestination,
+    custom: isPriorityDestination,
   },
   handler: handleOrderMessage,
 });

@@ -62,7 +62,7 @@ export interface AppSyncEventsFilterInput {
 export interface AppSyncEventsFilters {
   operation?: AppSyncEventsOperation | AppSyncEventsOperation[];
   channelNamespace?: FilterStringMatcher;
-  customFilter?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface AppSyncEventsRouteDefinition {
@@ -70,7 +70,7 @@ export interface AppSyncEventsRouteDefinition {
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
-export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'customFilter'>;
+export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'custom'>;
 
 export interface AppSyncEventsChannelInput {
   channelNamespace: string;

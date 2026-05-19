@@ -18,7 +18,7 @@ const eventRouter = createEventRouter();
 // EventBridge Scheduler: templated input for scheduled cleanup
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.action === 'scheduled-cleanup',
+    custom: ({ event }) => event.action === 'scheduled-cleanup',
   },
   eventSchema: ScheduledCleanupSchema,
   handler: handleScheduledCleanup,
@@ -27,7 +27,7 @@ eventRouter.route({
 // Step Functions Task: order processing
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    custom: ({ event }) => event.taskType === 'process-order',
   },
   eventSchema: ProcessOrderSchema,
   handler: handleProcessOrder,
@@ -36,7 +36,7 @@ eventRouter.route({
 // IoT Core Rules Engine: temperature sensor reading
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.sensorType === 'temperature',
+    custom: ({ event }) => event.sensorType === 'temperature',
   },
   eventSchema: TemperatureReadingSchema,
   handler: handleTemperatureReading,
@@ -45,7 +45,7 @@ eventRouter.route({
 // Direct Lambda Invocation: report generation command
 eventRouter.route({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => event.command === 'generate-report',
   },
   eventSchema: GenerateReportSchema,
   handler: handleGenerateReport,

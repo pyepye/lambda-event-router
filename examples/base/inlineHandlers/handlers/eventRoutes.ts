@@ -14,7 +14,7 @@ const ScheduledCleanupSchema = z.object({
 
 export const scheduledCleanupRoute = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.action === 'scheduled-cleanup',
+    custom: ({ event }) => event.action === 'scheduled-cleanup',
   },
   eventSchema: ScheduledCleanupSchema,
 }).handle(async ({ event }) => {
@@ -39,7 +39,7 @@ const ProcessOrderSchema = z.object({
 
 export const processOrderRoute = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.taskType === 'process-order',
+    custom: ({ event }) => event.taskType === 'process-order',
   },
   eventSchema: ProcessOrderSchema,
 }).handle(async ({ event }) => {
@@ -62,7 +62,7 @@ const TemperatureReadingSchema = z.object({
 
 export const temperatureReadingRoute = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.sensorType === 'temperature',
+    custom: ({ event }) => event.sensorType === 'temperature',
   },
   eventSchema: TemperatureReadingSchema,
 }).handle(async ({ event }) => {
@@ -83,7 +83,7 @@ const GenerateReportSchema = z.object({
 
 export const generateReportRoute = defineEventRoute({
   filters: {
-    customFilter: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => event.command === 'generate-report',
   },
   eventSchema: GenerateReportSchema,
 }).handle(async ({ event }) => {

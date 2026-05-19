@@ -508,7 +508,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
         userPoolId: definition.filters?.userPoolId,
         clientId: definition.filters?.clientId,
         userAttributes: definition.filters?.userAttributes,
-        customFilter: definition.filters?.customFilter,
+        custom: definition.filters?.custom,
         triggerSource: triggerSources,
       },
       userAttributesSchema: definition.userAttributesSchema,
@@ -589,7 +589,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
         if (!matched) continue;
       }
 
-      if (filters.customFilter) {
+      if (filters.custom) {
         const filterInput = {
           triggerSource,
           userPoolId: event.userPoolId,
@@ -598,7 +598,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
           request: { userAttributes },
           event,
         };
-        const match = await filters.customFilter(filterInput);
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
 

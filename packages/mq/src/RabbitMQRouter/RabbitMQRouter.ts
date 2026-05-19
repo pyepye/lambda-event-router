@@ -127,14 +127,14 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         if (!contentTypeMatch) continue;
       }
 
-      if (filters.customFilter) {
+      if (filters.custom) {
         const filterInput: RabbitMQFilterInput = {
           queue: queueName,
           virtualHost,
           contentType: message.basicProperties.contentType,
           record: message,
         };
-        const matches = await filters.customFilter(filterInput);
+        const matches = await filters.custom(filterInput);
         if (!matches) continue;
       }
 

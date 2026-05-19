@@ -210,8 +210,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
         if (!bootstrapServerMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ headers: decodedHeaders, topic: record.topic, record });
+      if (filters.custom) {
+        const match = await filters.custom({ headers: decodedHeaders, topic: record.topic, record });
         if (!match) continue;
       }
 

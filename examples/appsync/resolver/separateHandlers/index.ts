@@ -58,7 +58,7 @@ appSyncRouter.route({
   filters: {
     parentTypeName: 'Mutation',
     fieldName: 'createUser',
-    customFilter: isAdminMutation,
+    custom: isAdminMutation,
   },
   argumentsSchema: CreateUserInputSchema,
   handler: createUser,

@@ -27,7 +27,7 @@ export interface CognitoFilters<TTriggerSource extends string = string> {
   userPoolId?: FilterStringMatcher;
   clientId?: FilterStringMatcher;
   userAttributes?: Record<string, FilterStringMatcher>;
-  customFilter?: (input: CognitoFilterInput<TTriggerSource>) => boolean | Promise<boolean>;
+  custom?: (input: CognitoFilterInput<TTriggerSource>) => boolean | Promise<boolean>;
 }
 
 // Generic route definition (used internally by the router)

@@ -25,7 +25,7 @@ function isComplianceAudit({ headers }: KafkaFilterInput): boolean {
 export const auditRoute = defineRoute({
   filters: {
     topic: AUDIT_TOPIC,
-    customFilter: isComplianceAudit,
+    custom: isComplianceAudit,
   },
   valueSchema: AuditValueSchema,
 }).handle(async (request) => {

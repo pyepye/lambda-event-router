@@ -232,11 +232,11 @@ suite('ALBRouter', () => {
     });
   });
 
-  suite('handleEvent - customFilter', () => {
-    test('matches route when customFilter returns true', async ({ albHandlerEvent }) => {
+  suite('handleEvent - custom', () => {
+    test('matches route when custom returns true', async ({ albHandlerEvent }) => {
       const handler = vi.fn(async () => Ok({ message: 'hello' }));
       router.get({
-        filters: { path: '/items', customFilter: () => true },
+        filters: { path: '/items', custom: () => true },
         handler,
       });
 
@@ -252,10 +252,10 @@ suite('ALBRouter', () => {
       expect(handler).toHaveBeenCalledOnce();
     });
 
-    test('returns 404 when customFilter returns false', async ({ albHandlerEvent }) => {
+    test('returns 404 when custom returns false', async ({ albHandlerEvent }) => {
       const handler = vi.fn(async () => Ok({}));
       router.get({
-        filters: { path: '/items', customFilter: () => false },
+        filters: { path: '/items', custom: () => false },
         handler,
       });
 
@@ -271,11 +271,11 @@ suite('ALBRouter', () => {
       expect(handler).not.toHaveBeenCalled();
     });
 
-    test('matches route when customFilter is async and resolves true', async ({ albHandlerEvent }) => {
+    test('matches route when custom is async and resolves true', async ({ albHandlerEvent }) => {
       router.get({
         filters: {
           path: '/items',
-          customFilter: async () => {
+          custom: async () => {
             await new Promise((r) => setTimeout(r, 1));
             return true;
           },

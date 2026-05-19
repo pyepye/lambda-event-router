@@ -152,8 +152,8 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
         if (!resourceMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(filterInput);
+      if (filters.custom) {
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
       return route;

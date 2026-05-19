@@ -48,11 +48,11 @@ function isQuarantined({ receipt }: SESFilterInput): boolean {
   return spamFailed || virusFailed;
 }
 
-// Route with customFilter for complex logic
+// Route with custom filter for complex logic
 sesRouter.route({
   filters: {
     recipient: '*@example.com',
-    customFilter: isQuarantined,
+    custom: isQuarantined,
   },
   handler: processQuarantinedEmail,
 });

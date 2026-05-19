@@ -129,7 +129,7 @@ defineRoute({
   filters: {
     channel: ['VOICE', 'CHAT', 'EMAIL'],
     initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
-    customFilter: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
+    custom: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
   },
 })
 ```

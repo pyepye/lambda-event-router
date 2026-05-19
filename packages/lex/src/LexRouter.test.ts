@@ -110,14 +110,14 @@ suite('defineRoute', () => {
 
   test('preserves all filter configuration', () => {
     const handler = vi.fn();
-    const customFilter = vi.fn();
+    const custom = vi.fn();
     const definition = defineRoute({
       filters: {
         intentName: 'OrderPizza',
         invocationSource: 'DialogCodeHook',
         botId: 'TESTBOTID',
         inputMode: 'Text',
-        customFilter,
+        custom,
       },
     }).handle(handler);
 
@@ -126,7 +126,7 @@ suite('defineRoute', () => {
       invocationSource: 'DialogCodeHook',
       botId: 'TESTBOTID',
       inputMode: 'Text',
-      customFilter,
+      custom,
     });
   });
 });
@@ -337,7 +337,7 @@ suite('matchRoute', () => {
 
   test('matches when custom filter returns true', async ({ lexEvent }) => {
     const handler = vi.fn();
-    router.route({ filters: { customFilter: () => true }, handler });
+    router.route({ filters: { custom: () => true }, handler });
 
     const event = lexEvent();
     // @ts-expect-error - testing private method
@@ -348,7 +348,7 @@ suite('matchRoute', () => {
   });
 
   test('does not match when custom filter returns false', async ({ lexEvent }) => {
-    router.route({ filters: { customFilter: () => false }, handler: vi.fn() });
+    router.route({ filters: { custom: () => false }, handler: vi.fn() });
 
     const event = lexEvent();
     // @ts-expect-error - testing private method
@@ -361,7 +361,7 @@ suite('matchRoute', () => {
     const handler = vi.fn();
     router.route({
       filters: {
-        customFilter: async () => {
+        custom: async () => {
           await new Promise((r) => setTimeout(r, 1));
           return true;
         },
@@ -380,7 +380,7 @@ suite('matchRoute', () => {
   test('does not match when async custom filter resolves to false', async ({ lexEvent }) => {
     router.route({
       filters: {
-        customFilter: async () => {
+        custom: async () => {
           await new Promise((r) => setTimeout(r, 1));
           return false;
         },
@@ -396,8 +396,8 @@ suite('matchRoute', () => {
   });
 
   test('custom filter receives correct input', async ({ lexEvent }) => {
-    const customFilter = vi.fn().mockReturnValue(true);
-    router.route({ filters: { customFilter }, handler: vi.fn() });
+    const custom = vi.fn().mockReturnValue(true);
+    router.route({ filters: { custom }, handler: vi.fn() });
 
     const event = lexEvent({
       sessionState: { intent: { name: 'OrderPizza' } },
@@ -408,7 +408,7 @@ suite('matchRoute', () => {
     // @ts-expect-error - testing private method
     await router.matchRoute(event);
 
-    expect(customFilter).toHaveBeenCalledWith({
+    expect(custom).toHaveBeenCalledWith({
       intentName: 'OrderPizza',
       invocationSource: 'FulfillmentCodeHook',
       inputMode: 'Speech',
@@ -418,9 +418,9 @@ suite('matchRoute', () => {
   });
 
   test('custom filter is checked after other filters', async ({ lexEvent }) => {
-    const customFilter = vi.fn().mockReturnValue(true);
+    const custom = vi.fn().mockReturnValue(true);
     router.route({
-      filters: { intentName: 'OrderDrink', customFilter },
+      filters: { intentName: 'OrderDrink', custom },
       handler: vi.fn(),
     });
 
@@ -428,7 +428,7 @@ suite('matchRoute', () => {
     // @ts-expect-error - testing private method
     await router.matchRoute(event);
 
-    expect(customFilter).not.toHaveBeenCalled();
+    expect(custom).not.toHaveBeenCalled();
   });
 
   test('matches any event when filters are empty (catch-all)', async ({ lexEvent }) => {

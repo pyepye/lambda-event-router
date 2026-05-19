@@ -34,7 +34,7 @@ export const premiumFulfillmentRoute = defineRoute({
   filters: {
     invocationSource: 'FulfillmentCodeHook',
     intentName: 'OrderPizza',
-    customFilter: ({ event }: LexFilterInput) => {
+    custom: ({ event }: LexFilterInput) => {
       const tier = event.sessionState?.sessionAttributes?.tier;
       return tier === 'premium';
     },

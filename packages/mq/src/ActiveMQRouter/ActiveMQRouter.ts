@@ -130,13 +130,13 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
         if (!destinationMatch) continue;
       }
 
-      if (filters.customFilter) {
+      if (filters.custom) {
         const filterInput: ActiveMQFilterInput = {
           messageType: message.messageType,
           destination: message.destination.physicalName,
           record: message,
         };
-        const match = await filters.customFilter(filterInput);
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
 

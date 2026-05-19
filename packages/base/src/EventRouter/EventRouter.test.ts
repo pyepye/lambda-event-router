@@ -246,20 +246,20 @@ suite('EventRouter', () => {
       expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
     });
 
-    test('returns false when no routes match via customFilter', async () => {
+    test('returns false when no routes match via custom', async () => {
       router.route(
         defineEventRoute({
-          filters: { customFilter: () => false },
+          filters: { custom: () => false },
         }).handle(async () => {}),
       );
       expect(await router.canHandleEvent({ taskId: 'task-123' })).toBe(false);
     });
 
-    test('returns true when a customFilter matches', async () => {
+    test('returns true when a custom matches', async () => {
       router.route(
         defineEventRoute({
           filters: {
-            customFilter: ({ event }: EventFilterInput): boolean => {
+            custom: ({ event }: EventFilterInput): boolean => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.taskId === 'task-123';
             },
@@ -304,7 +304,7 @@ suite('EventRouter', () => {
     test('preserves filters, eventSchema, and handler', () => {
       const eventSchema = createMockSchema();
       const handler = vi.fn();
-      const filters = { customFilter: () => true };
+      const filters = { custom: () => true };
 
       const definition = defineEventRoute({
         filters,
@@ -318,7 +318,7 @@ suite('EventRouter', () => {
       });
     });
 
-    test('customFilter receives typed event when eventSchema is provided', () => {
+    test('custom receives typed event when eventSchema is provided', () => {
       const eventSchema = createMockSchema<{ taskId: string }>();
       const isTaskEvent = (event: unknown): event is { taskId: string } =>
         typeof event === 'object' &&
@@ -328,22 +328,22 @@ suite('EventRouter', () => {
 
       const definition = defineEventRoute({
         filters: {
-          customFilter: ({ event }: EventFilterInput<{ taskId: string }>) =>
+          custom: ({ event }: EventFilterInput<{ taskId: string }>) =>
             isTaskEvent(event) && event.taskId === 'task-123',
         },
         eventSchema,
       }).handle(async () => {});
 
-      expect(definition.filters.customFilter).toBeDefined();
+      expect(definition.filters.custom).toBeDefined();
     });
 
-    test('customFilter event defaults to unknown when no eventSchema is provided', () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom event defaults to unknown when no eventSchema is provided', () => {
+      const custom = vi.fn().mockReturnValue(true);
       const definition = defineEventRoute({
-        filters: { customFilter },
+        filters: { custom },
       }).handle(async () => {});
 
-      expect(definition.filters.customFilter).toBe(customFilter);
+      expect(definition.filters.custom).toBe(custom);
     });
   });
 
@@ -360,11 +360,11 @@ suite('EventRouter', () => {
   });
 
   suite('matchRoute', () => {
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineEventRoute({
           filters: {
-            customFilter: ({ event }: EventFilterInput): boolean => {
+            custom: ({ event }: EventFilterInput): boolean => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.taskId === 'task-123';
             },
@@ -379,11 +379,11 @@ suite('EventRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineEventRoute({
           filters: {
-            customFilter: async ({ event }: EventFilterInput): Promise<boolean> => {
+            custom: async ({ event }: EventFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.taskId === 'task-123';
@@ -413,10 +413,10 @@ suite('EventRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async () => {
+    test('does not match when custom returns false', async () => {
       router.route(
         defineEventRoute({
-          filters: { customFilter: () => false },
+          filters: { custom: () => false },
         }).handle(async () => {}),
       );
 
@@ -427,11 +427,11 @@ suite('EventRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes correct filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineEventRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -439,7 +439,7 @@ suite('EventRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(event);
 
-      expect(customFilter).toHaveBeenCalledWith({ event });
+      expect(custom).toHaveBeenCalledWith({ event });
     });
 
     test('selects the first matching route when multiple routes match', async () => {

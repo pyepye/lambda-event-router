@@ -18,7 +18,7 @@ export const pendingStatusInsertRoute = defineRoute({
   filters: {
     eventName: 'INSERT',
     eventSourceArn: STREAM_ARN,
-    customFilter: ({ record }: DynamoDBFilterInput) => {
+    custom: ({ record }: DynamoDBFilterInput) => {
       const statusAttribute = record.dynamodb?.NewImage?.status;
       return statusAttribute?.S === 'PENDING';
     },

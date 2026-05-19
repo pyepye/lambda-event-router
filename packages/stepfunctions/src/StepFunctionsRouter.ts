@@ -197,8 +197,8 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
         }
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ event });
+      if (filters.custom) {
+        const match = await filters.custom({ event });
         if (!match) continue;
       }
       return route;

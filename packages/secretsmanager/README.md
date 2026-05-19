@@ -61,7 +61,7 @@ defineRoute({
   filters: {
     step: 'createSecret',
     secretId: /^prod\/database\//,
-    customFilter: ({ secretId }) => secretId.startsWith('prod/'),
+    custom: ({ secretId }) => secretId.startsWith('prod/'),
   },
 })
 ```

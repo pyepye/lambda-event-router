@@ -26,7 +26,7 @@ export const messageEventPublishRoute = defineEventsRoute({
   filters: {
     operation: 'PUBLISH',
     channelNamespace: '/default/chat/*',
-    customFilter: ({ event }: AppSyncEventsFilterInput) => {
+    custom: ({ event }: AppSyncEventsFilterInput) => {
       return Object.keys(event.stash ?? {}).length > 1;
     },
   },

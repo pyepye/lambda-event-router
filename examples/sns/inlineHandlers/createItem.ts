@@ -26,11 +26,11 @@ export const createItemRoute = defineRoute({
   console.log(`Creating item: ${name} with price ${price} - dryRun: ${dryRun}`);
 });
 
-// Route that only matches urgent notifications using customFilter
+// Route that only matches urgent notifications using custom filter
 export const urgentNotificationRoute = defineRoute({
   filters: {
     topicArn: [SOME_TOPIC_ARN],
-    customFilter: ({ body }: SNSFilterInput) => {
+    custom: ({ body }: SNSFilterInput) => {
       if (typeof body !== 'object' || body === null) return false;
       if (!('urgency' in body) || typeof body.urgency !== 'string') return false;
       return body.urgency === 'CRITICAL';

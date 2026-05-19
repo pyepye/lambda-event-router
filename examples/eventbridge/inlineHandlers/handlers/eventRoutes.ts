@@ -61,7 +61,7 @@ export const scheduledRuleRoute = defineRoute({
 });
 
 // Handle IAM policy changes via CloudTrail → EventBridge
-// Uses customFilter to match specific CloudTrail eventNames within the detail payload
+// Uses custom filter to match specific CloudTrail eventNames within the detail payload
 const CloudTrailIamPolicyChangeSchema = z.object({
   eventSource: z.literal('iam.amazonaws.com'),
   eventName: z.string(),
@@ -82,7 +82,7 @@ export const iamPolicyChangeRoute = defineRoute({
   filters: {
     source: 'aws.iam',
     detailType: 'AWS API Call via CloudTrail',
-    customFilter: ({ detail }) => {
+    custom: ({ detail }) => {
       const cloudTrailDetail = detail as Record<string, unknown>;
       return iamPolicyChangeEvents.includes(cloudTrailDetail.eventName as string);
     },

@@ -125,7 +125,7 @@ defineRoute({
     topicArn: ['arn:aws:sns:us-east-1:123456789:topic-a', 'arn:aws:sns:us-east-1:123456789:topic-b'],
     subject: ['Order Created', 'Order Updated'],
     messageAttributes: { environment: ['production', 'staging'] },
-    customFilter: ({ body }) => {
+    custom: ({ body }) => {
       if (typeof body !== 'object' || body === null) return false
       return 'urgency' in body && body.urgency === 'CRITICAL'
     },

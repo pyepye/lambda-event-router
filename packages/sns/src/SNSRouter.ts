@@ -166,8 +166,8 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
         if (!matched) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ body, messageAttributes, record });
+      if (filters.custom) {
+        const match = await filters.custom({ body, messageAttributes, record });
         if (!match) continue;
       }
 

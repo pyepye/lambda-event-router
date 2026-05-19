@@ -104,7 +104,7 @@ async function processRecord({ data }) {
 defineRoute({
   filters: {
     deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream',
-    customFilter: ({ record }) => record.approximateArrivalTimestamp > someThreshold,
+    custom: ({ record }) => record.approximateArrivalTimestamp > someThreshold,
   },
 })
 ```

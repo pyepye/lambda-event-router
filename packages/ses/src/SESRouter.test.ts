@@ -347,11 +347,11 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by customFilter returning true', async ({ sesRecord }) => {
+    test('matches route by custom returning true', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: (): boolean => true,
+            custom: (): boolean => true,
           },
         }).handle(async () => {}),
       );
@@ -363,11 +363,11 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ sesRecord }) => {
+    test('does not match route when custom returns false', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -379,11 +379,11 @@ suite('SESRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives receipt and mail', async ({ sesRecord }) => {
+    test('custom receives receipt and mail', async ({ sesRecord }) => {
       const filterSpy = vi.fn((): boolean => true);
       router.route(
         defineRoute({
-          filters: { customFilter: filterSpy },
+          filters: { custom: filterSpy },
         }).handle(async () => {}),
       );
 
@@ -397,13 +397,13 @@ suite('SESRouter', () => {
       });
     });
 
-    test('customFilter is not evaluated when an earlier filter fails', async ({ sesRecord }) => {
+    test('custom is not evaluated when an earlier filter fails', async ({ sesRecord }) => {
       const filterSpy = vi.fn((): boolean => true);
       router.route(
         defineRoute({
           filters: {
             recipient: 'nonexistent@example.com',
-            customFilter: filterSpy,
+            custom: filterSpy,
           },
         }).handle(async () => {}),
       );
@@ -415,11 +415,11 @@ suite('SESRouter', () => {
       expect(filterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route by async customFilter returning true', async ({ sesRecord }) => {
+    test('matches route by async custom returning true', async ({ sesRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async (): Promise<boolean> => {
+            custom: async (): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return true;
             },

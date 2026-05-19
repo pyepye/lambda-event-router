@@ -38,7 +38,7 @@ export interface SNSFilters {
   topicArn?: FilterStringMatcher;
   subject?: FilterStringMatcher;
   messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
-  customFilter?: (input: SNSFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: SNSFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface SNSRouteDefinition<

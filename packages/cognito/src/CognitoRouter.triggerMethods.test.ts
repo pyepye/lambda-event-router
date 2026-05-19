@@ -23,16 +23,14 @@ suite('CognitoRouter - trigger methods', () => {
       expect(result).toBeUndefined();
     });
 
-    test('copies userPoolIds, clientIds, userAttributes, customFilter from filters', async ({
-      cognitoPreSignUpEvent,
-    }) => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('copies userPoolIds, clientIds, userAttributes, custom from filters', async ({ cognitoPreSignUpEvent }) => {
+      const custom = vi.fn().mockReturnValue(true);
       router.preSignUp({
         filters: {
           userPoolId: ['us-east-1_TestPool'],
           clientId: ['test-client-id'],
           userAttributes: { email: 'test@example.com' },
-          customFilter,
+          custom,
         },
         handler: vi.fn(),
       });
@@ -42,7 +40,7 @@ suite('CognitoRouter - trigger methods', () => {
       const result = await router.matchRoute(event, event.triggerSource);
 
       expect(result).toBeDefined();
-      expect(customFilter).toHaveBeenCalled();
+      expect(custom).toHaveBeenCalled();
     });
   });
 

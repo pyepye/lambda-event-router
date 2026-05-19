@@ -103,8 +103,8 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
         if (!accountIdMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(input);
+      if (filters.custom) {
+        const match = await filters.custom(input);
         if (!match) continue;
       }
       return route;

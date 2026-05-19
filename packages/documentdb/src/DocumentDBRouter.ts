@@ -212,8 +212,8 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
         if (!collectionMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({
+      if (filters.custom) {
+        const match = await filters.custom({
           operationType: changeEvent.operationType,
           ns: changeEvent.ns,
           event: changeEvent,

@@ -145,16 +145,16 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
       if (!hasMatchingBranch) return undefined;
     }
 
-    // customFilter
-    const { customFilter } = filters;
-    if (customFilter) {
+    // custom
+    const { custom } = filters;
+    if (custom) {
       const filterInput = {
         references: effectiveReferences,
         userIdentityARN: record.userIdentityARN,
         eventSourceARN: record.eventSourceARN,
         eventTriggerName: record.eventTriggerName,
       };
-      const result = await customFilter(filterInput);
+      const result = await custom(filterInput);
       if (!result) return undefined;
     }
 

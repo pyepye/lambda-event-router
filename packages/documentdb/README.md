@@ -149,7 +149,7 @@ defineRoute({
     operationType: ['insert', 'update'],
     database: 'mydb',
     collection: ['orders', 'items'],
-    customFilter: ({ event }) => event.updateDescription?.updatedFields?.status !== undefined,
+    custom: ({ event }) => event.updateDescription?.updatedFields?.status !== undefined,
   },
 })
 ```

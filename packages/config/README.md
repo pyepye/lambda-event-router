@@ -126,7 +126,7 @@ async function evaluateResource({ configurationItem, ruleParameters }) {
 defineRoute({
   filters: {
     configRuleName: 'my-custom-rule',
-    customFilter: ({ resourceType }) => resourceType === 'AWS::EC2::Instance',
+    custom: ({ resourceType }) => resourceType === 'AWS::EC2::Instance',
   },
 })
 ```

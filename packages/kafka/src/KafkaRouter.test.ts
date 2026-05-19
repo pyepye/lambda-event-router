@@ -212,10 +212,10 @@ suite('KafkaRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by customFilter', async ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches by custom', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: ({ topic }: KafkaFilterInput): boolean => topic === 'test-topic' },
+          filters: { custom: ({ topic }: KafkaFilterInput): boolean => topic === 'test-topic' },
         }).handle(async () => {}),
       );
 
@@ -227,10 +227,10 @@ suite('KafkaRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('does not match when custom returns false', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -242,12 +242,12 @@ suite('KafkaRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct KafkaFilterInput', async ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('custom receives correct KafkaFilterInput', async ({ kafkaRecord, kafkaMSKEvent }) => {
       let receivedInput: KafkaFilterInput | undefined;
       router.route(
         defineRoute({
           filters: {
-            customFilter: (input: KafkaFilterInput): boolean => {
+            custom: (input: KafkaFilterInput): boolean => {
               receivedInput = input;
               return true;
             },
@@ -269,11 +269,11 @@ suite('KafkaRouter', () => {
       expect(receivedInput?.record).toBe(record);
     });
 
-    test('customFilter is not called when preceding filter rejects', async ({ kafkaRecord, kafkaMSKEvent }) => {
-      const customFilter = vi.fn(() => true);
+    test('custom is not called when preceding filter rejects', async ({ kafkaRecord, kafkaMSKEvent }) => {
+      const custom = vi.fn(() => true);
       router.route(
         defineRoute({
-          filters: { topic: 'orders', customFilter },
+          filters: { topic: 'orders', custom },
         }).handle(async () => {}),
       );
 
@@ -283,7 +283,7 @@ suite('KafkaRouter', () => {
       // @ts-expect-error testing private method
       await router.matchRoute(record, event, []);
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
     test('empty filters as catch-all', async ({ kafkaRecord, kafkaMSKEvent }) => {
@@ -311,11 +311,11 @@ suite('KafkaRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches route by async customFilter', async ({ kafkaRecord, kafkaMSKEvent }) => {
+    test('matches route by async custom', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ topic }: KafkaFilterInput): Promise<boolean> => {
+            custom: async ({ topic }: KafkaFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return topic === 'test-topic';
             },
@@ -465,7 +465,7 @@ suite('KafkaRouter', () => {
       expect(receivedRequest?.headers).toEqual([]);
     });
 
-    test('matches a customFilter on a record with no key, value or headers', async ({
+    test('matches a custom on a record with no key, value or headers', async ({
       kafkaRecord,
       kafkaMSKEvent,
       context,
@@ -473,7 +473,7 @@ suite('KafkaRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { customFilter: ({ headers }: KafkaFilterInput): boolean => headers.length === 0 },
+          filters: { custom: ({ headers }: KafkaFilterInput): boolean => headers.length === 0 },
         }).handle(handler),
       );
 

@@ -169,11 +169,11 @@ suite('ConfigScheduledRouter', () => {
       expect(mismatchAccount).toBeUndefined();
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
-            customFilter: ({ configRuleName }: ConfigScheduledFilterInput): boolean => configRuleName === 'my-rule',
+            custom: ({ configRuleName }: ConfigScheduledFilterInput): boolean => configRuleName === 'my-rule',
           },
         }).handle(async () => {}),
       );
@@ -184,11 +184,11 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by asyn customFilter', async () => {
+    test('matches route by asyn custom', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
-            customFilter: async ({ configRuleName }: ConfigScheduledFilterInput): Promise<boolean> => {
+            custom: async ({ configRuleName }: ConfigScheduledFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return configRuleName === 'my-rule';
             },
@@ -202,11 +202,11 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async () => {
+    test('does not match route when custom returns false', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -217,11 +217,11 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match route when async customFilter resolves false', async () => {
+    test('does not match route when async custom resolves false', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
-            customFilter: async (): Promise<boolean> => {
+            custom: async (): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return false;
             },
@@ -235,29 +235,29 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes correct filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineConfigScheduledRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
       // @ts-expect-error - testing private method directly
       router.matchRoute({ configRuleName: 'my-rule', accountId: '123456789012' });
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         configRuleName: 'my-rule',
         accountId: '123456789012',
       });
     });
 
-    test('matches when standard filters and customFilter both pass', async () => {
+    test('matches when standard filters and custom both pass', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter: ({ accountId }: ConfigScheduledFilterInput): boolean => accountId === '123456789012',
+            custom: ({ accountId }: ConfigScheduledFilterInput): boolean => accountId === '123456789012',
           },
         }).handle(async () => {}),
       );
@@ -268,12 +268,12 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', async () => {
+    test('does not match when standard filters pass but custom returns false', async () => {
       router.route(
         defineConfigScheduledRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -284,13 +284,13 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not called when an earlier filter fails', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom is not called when an earlier filter fails', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineConfigScheduledRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter,
+            custom,
           },
         }).handle(async () => {}),
       );
@@ -298,7 +298,7 @@ suite('ConfigScheduledRouter', () => {
       // @ts-expect-error - testing private method directly
       router.matchRoute({ configRuleName: 'other-rule', accountId: '123456789012' });
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
   });
 

@@ -370,7 +370,7 @@ wsRouter.disconnect()
 wsRouter.message()
 ```
 
-Only `defineWebSocketRoute` accepts a `customFilter`. `route()` and the three methods above do not.
+Only `defineWebSocketRoute` accepts a `custom`. `route()` and the three methods above do not.
 
 #### Responses
 

@@ -188,7 +188,10 @@ suite('HTTPRouter', () => {
     });
 
     test('a HEAD request to a missing route has no body', async () => {
-      const result = await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/missing' }), createMockContext());
+      const result = await router.handleEvent(
+        createMockEvent({ method: 'HEAD', path: '/missing' }),
+        createMockContext(),
+      );
 
       expect(result.statusCode).toBe(404);
       expect(result.body).toBe('');
@@ -531,11 +534,11 @@ suite('HTTPRouter', () => {
     });
   });
 
-  suite('handleEvent - customFilter', () => {
-    test('matches route when customFilter returns true', async () => {
+  suite('handleEvent - custom', () => {
+    test('matches route when custom returns true', async () => {
       const handler = vi.fn(async () => Ok({ message: 'hello' }));
       router.get({
-        filters: { path: '/items', customFilter: () => true },
+        filters: { path: '/items', custom: () => true },
         handler,
       });
 
@@ -552,10 +555,10 @@ suite('HTTPRouter', () => {
       expect(handler).toHaveBeenCalledOnce();
     });
 
-    test('returns 404 when customFilter returns false', async () => {
+    test('returns 404 when custom returns false', async () => {
       const handler = vi.fn(async () => Ok({}));
       router.get({
-        filters: { path: '/items', customFilter: () => false },
+        filters: { path: '/items', custom: () => false },
         handler,
       });
 
@@ -573,9 +576,9 @@ suite('HTTPRouter', () => {
     });
 
     test('passes HTTPFilterInput populated from the normalized event', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+      const custom = vi.fn().mockReturnValue(true);
       router.post({
-        filters: { path: '/items', customFilter },
+        filters: { path: '/items', custom },
         handler: async () => Ok({}),
       });
 
@@ -589,8 +592,8 @@ suite('HTTPRouter', () => {
       const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
       await router.handleEvent(event, context);
 
-      expect(customFilter).toHaveBeenCalledOnce();
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledOnce();
+      expect(custom).toHaveBeenCalledWith({
         method: 'POST',
         path: '/items',
         headers: { 'x-trace-id': 'abc' },
@@ -601,11 +604,11 @@ suite('HTTPRouter', () => {
       });
     });
 
-    test('matches route when customFilter is async and resolves true', async () => {
+    test('matches route when custom is async and resolves true', async () => {
       router.get({
         filters: {
           path: '/items',
-          customFilter: async () => {
+          custom: async () => {
             await new Promise((r) => setTimeout(r, 1));
             return true;
           },
@@ -618,11 +621,11 @@ suite('HTTPRouter', () => {
       expect(result.statusCode).toBe(200);
     });
 
-    test('returns 404 when async customFilter resolves false', async () => {
+    test('returns 404 when async custom resolves false', async () => {
       router.get({
         filters: {
           path: '/items',
-          customFilter: async () => {
+          custom: async () => {
             await new Promise((r) => setTimeout(r, 1));
             return false;
           },
@@ -1148,7 +1151,7 @@ suite('HTTPRouter', () => {
       const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
       router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
       router.route({
-        filters: { method: 'OPTIONS', path: '/items', customFilter: () => false },
+        filters: { method: 'OPTIONS', path: '/items', custom: () => false },
         handler,
       });
 

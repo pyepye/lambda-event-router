@@ -23,7 +23,7 @@ function isUserEvent({ data }: FirehoseFilterInput): boolean {
 export const filterRoute = defineRoute({
   filters: {
     sourceKinesisStreamArn: SOURCE_KINESIS_STREAM_ARN,
-    customFilter: isUserEvent,
+    custom: isUserEvent,
   },
   dataSchema: EventDataSchema,
 }).handle(async ({ data, approximateArrivalTimestamp }) => {

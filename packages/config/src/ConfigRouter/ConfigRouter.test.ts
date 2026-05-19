@@ -277,11 +277,11 @@ suite('ConfigRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ configRuleName }: ConfigChangeFilterInput): boolean => configRuleName === 'my-rule',
+            custom: ({ configRuleName }: ConfigChangeFilterInput): boolean => configRuleName === 'my-rule',
           },
         }).handle(async () => {}),
       );
@@ -292,11 +292,11 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async () => {
+    test('does not match route when custom returns false', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -307,11 +307,11 @@ suite('ConfigRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to customFilter', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes correct filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -323,7 +323,7 @@ suite('ConfigRouter', () => {
         configurationItemStatus: 'ResourceDiscovered',
       });
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         configRuleName: 'my-rule',
         resourceType: 'AWS::EC2::Instance',
         resourceId: 'i-abc123',
@@ -331,12 +331,12 @@ suite('ConfigRouter', () => {
       });
     });
 
-    test('matches when standard filters and customFilter both pass', async () => {
+    test('matches when standard filters and custom both pass', async () => {
       router.route(
         defineRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter: ({ resourceType }: ConfigChangeFilterInput): boolean => resourceType === 'AWS::EC2::Instance',
+            custom: ({ resourceType }: ConfigChangeFilterInput): boolean => resourceType === 'AWS::EC2::Instance',
           },
         }).handle(async () => {}),
       );
@@ -347,12 +347,12 @@ suite('ConfigRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when standard filters pass but customFilter returns false', async () => {
+    test('does not match when standard filters pass but custom returns false', async () => {
       router.route(
         defineRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -363,13 +363,13 @@ suite('ConfigRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter is not called when an earlier filter fails', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom is not called when an earlier filter fails', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
           filters: {
             configRuleName: 'my-rule',
-            customFilter,
+            custom,
           },
         }).handle(async () => {}),
       );
@@ -377,14 +377,14 @@ suite('ConfigRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute({ configRuleName: 'other-rule' });
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
-    test('matches route by async customFilter', async () => {
+    test('matches route by async custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ configRuleName }: ConfigChangeFilterInput): Promise<boolean> => {
+            custom: async ({ configRuleName }: ConfigChangeFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return configRuleName === 'my-rule';
             },

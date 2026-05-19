@@ -28,11 +28,11 @@ export const createItemRoute = defineRoute({
 
 const HIGH_VALUE_THRESHOLD = 1000;
 
-// Route that only matches high-value orders using customFilter
+// Route that only matches high-value orders using custom filter
 export const highValueOrderRoute = defineRoute({
   filters: {
     eventSourceArn: [SOME_QUEUE_ARN],
-    customFilter: ({ body }: SQSFilterInput) => {
+    custom: ({ body }: SQSFilterInput) => {
       if (typeof body !== 'object' || body === null) return false;
       if (!('total' in body) || typeof body.total !== 'number') return false;
       return body.total > HIGH_VALUE_THRESHOLD;

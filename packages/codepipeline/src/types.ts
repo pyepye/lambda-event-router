@@ -42,7 +42,7 @@ export interface CodePipelineFilters {
   hasInputArtifacts?: boolean;
   hasContinuationToken?: boolean;
   // userParameters?: FilterStringMatcher;
-  customFilter?: (input: CodePipelineFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: CodePipelineFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface CodePipelineRouteDefinition<TUserParameters = unknown> {

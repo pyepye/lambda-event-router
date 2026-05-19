@@ -34,7 +34,7 @@ export interface AppSyncResolverFilterInput {
 export interface AppSyncResolverFilters {
   parentTypeName?: FilterStringMatcher;
   fieldName?: FilterStringMatcher;
-  customFilter?: (input: AppSyncResolverFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: AppSyncResolverFilterInput) => boolean | Promise<boolean>;
 }
 
 export type AppSyncResolverMiddleware<TArgs = Record<string, unknown>> = Middleware<
@@ -49,7 +49,7 @@ export interface AppSyncResolverRouteDefinition<TArgs = Record<string, unknown>>
   handler: (request: AppSyncResolverRequest<TArgs>) => Promise<unknown>;
 }
 
-export type AppSyncResolverFieldFilters = Pick<AppSyncResolverFilters, 'customFilter'>;
+export type AppSyncResolverFieldFilters = Pick<AppSyncResolverFilters, 'custom'>;
 
 export interface AppSyncResolverFieldInput<TArgs = Record<string, unknown>> {
   fieldName: string;

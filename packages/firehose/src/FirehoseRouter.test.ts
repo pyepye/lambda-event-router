@@ -224,11 +224,11 @@ suite('FirehoseRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches by customFilter', async ({ firehoseRecord }) => {
+    test('matches by custom', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ data }: FirehoseFilterInput): boolean => {
+            custom: ({ data }: FirehoseFilterInput): boolean => {
               // @ts-expect-error - data is unknown, testing filter with known shape
               return data.action === 'processOrder';
             },
@@ -245,11 +245,11 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches by async customFilter', async ({ firehoseRecord }) => {
+    test('matches by async custom', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ data }: FirehoseFilterInput): Promise<boolean> => {
+            custom: async ({ data }: FirehoseFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - data is unknown, testing filter with known shape
               return data.action === 'processOrder';
@@ -267,10 +267,10 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async ({ firehoseRecord }) => {
+    test('does not match when custom returns false', async ({ firehoseRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => Ok()),
       );
 
@@ -390,11 +390,11 @@ suite('FirehoseRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct FirehoseFilterInput', async ({ firehoseRecord }) => {
+    test('custom receives correct FirehoseFilterInput', async ({ firehoseRecord }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter: filterSpy },
+          filters: { custom: filterSpy },
         }).handle(async () => Ok()),
       );
 

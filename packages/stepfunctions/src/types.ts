@@ -10,7 +10,7 @@ export interface StepFunctionsFilterInput {
 
 export interface StepFunctionsFilters {
   taskToken?: boolean;
-  customFilter?: (input: StepFunctionsFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: StepFunctionsFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface StepFunctionsRequest<TInput = unknown> {

@@ -4,10 +4,10 @@ import { LambdaRouter } from '@lambda-event-router/base';
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions';
 
 import {
-  HumanApprovalSchema,
   handleEnrichData,
   handleHumanApproval,
   handleProcessOrder,
+  HumanApprovalSchema,
   ProcessOrderSchema,
 } from './handlers/taskHandlers.js';
 
@@ -17,7 +17,7 @@ const stepFunctionsRouter = createStepFunctionsRouter();
 // Regular Task Routes (RequestResponse / Event invocations)
 // =============================================================================
 // Step Functions invokes Lambda with free-form JSON payloads.
-// Use customFilter to match your payload structure.
+// Use custom filter to match your payload structure.
 //
 // Example Step Functions state definition:
 //   {
@@ -45,7 +45,7 @@ function isEnrichData({ event }: { event: unknown }): boolean {
 // .route() with schema - validates and parses the payload
 stepFunctionsRouter.route({
   filters: {
-    customFilter: isProcessOrder,
+    custom: isProcessOrder,
   },
   eventSchema: ProcessOrderSchema,
   handler: handleProcessOrder,
@@ -54,7 +54,7 @@ stepFunctionsRouter.route({
 // .route() without schema - works with raw payload
 stepFunctionsRouter.route({
   filters: {
-    customFilter: isEnrichData,
+    custom: isEnrichData,
   },
   handler: handleEnrichData,
 });
@@ -92,7 +92,7 @@ function isHumanApproval({ event }: { event: unknown }): boolean {
 // taskToken filter - matches events with TaskToken and provides { taskToken, input }
 stepFunctionsRouter.route({
   filters: {
-    customFilter: isHumanApproval,
+    custom: isHumanApproval,
     taskToken: true,
   },
   eventSchema: HumanApprovalSchema,

@@ -186,11 +186,11 @@ suite('KinesisRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ kinesisRecord }) => {
+    test('matches route by custom', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ data }: KinesisFilterInput): boolean => {
+            custom: ({ data }: KinesisFilterInput): boolean => {
               // @ts-expect-error - data is unknown, testing filter with known shape
               return data.action === 'processOrder';
             },
@@ -206,10 +206,10 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async ({ kinesisRecord }) => {
+    test('does not match when custom returns false', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -220,11 +220,11 @@ suite('KinesisRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by async customFilter', async ({ kinesisRecord }) => {
+    test('matches route by async custom', async ({ kinesisRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ data }: KinesisFilterInput): Promise<boolean> => {
+            custom: async ({ data }: KinesisFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - data is unknown, testing filter with known shape
               return data.action === 'processOrder';

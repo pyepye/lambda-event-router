@@ -3,7 +3,7 @@ import type { Handler } from 'aws-lambda';
 import { LambdaRouter } from '@lambda-event-router/base';
 import { createSNSRouter, type SNSFilterInput } from '@lambda-event-router/sns';
 
-import { CreateItemBodySchema, createItem, createItemOther, MessageAttributesSchema } from './createItem.js';
+import { createItem, CreateItemBodySchema, createItemOther, MessageAttributesSchema } from './createItem.js';
 
 const snsRouter = createSNSRouter({
   batchItemFailures: true,
@@ -48,11 +48,11 @@ function isHighPriority({ messageAttributes }: SNSFilterInput): boolean {
   return messageAttributes.Priority === 'HIGH';
 }
 
-// Route with customFilter for complex logic
+// Route with custom filter for complex logic
 snsRouter.route({
   filters: {
     topicArn: [SOME_TOPIC_ARN, SOME_DL_TOPIC_ARN],
-    customFilter: isHighPriority,
+    custom: isHighPriority,
   },
   handler: createItem,
   bodySchema: CreateItemBodySchema,

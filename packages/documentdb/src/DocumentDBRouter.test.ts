@@ -341,11 +341,11 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async () => {
+    test('matches route by custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ ns }: DocumentDBFilterInput): boolean => ns.db === 'special-db',
+            custom: ({ ns }: DocumentDBFilterInput): boolean => ns.db === 'special-db',
           },
         }).handle(async () => {}),
       );
@@ -357,10 +357,10 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async () => {
+    test('does not match route when custom returns false', async () => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -371,11 +371,11 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct FilterInput', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom receives correct FilterInput', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -383,18 +383,18 @@ suite('DocumentDBRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(changeEvent, 'arn:test');
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         operationType: 'insert',
         ns: { db: 'my-db', coll: 'my-coll' },
         event: changeEvent,
       });
     });
 
-    test('customFilter is not called when a prior filter rejects', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom is not called when a prior filter rejects', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { database: 'other-db', customFilter },
+          filters: { database: 'other-db', custom },
         }).handle(async () => {}),
       );
 
@@ -402,7 +402,7 @@ suite('DocumentDBRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(changeEvent, 'arn:test');
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
     test('matches route with empty filters as a catch-all', async () => {
@@ -473,11 +473,11 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by async customFilter', async () => {
+    test('matches route by async custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ ns }: DocumentDBFilterInput): Promise<boolean> => {
+            custom: async ({ ns }: DocumentDBFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return ns.db === 'async-db';
             },

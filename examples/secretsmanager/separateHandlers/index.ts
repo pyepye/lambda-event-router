@@ -121,7 +121,7 @@ function isHighPrioritySecret({ secretId }: SecretsManagerFilterInput): boolean 
 secretsManagerRouter.route({
   filters: {
     step: 'createSecret',
-    customFilter: isHighPrioritySecret,
+    custom: isHighPrioritySecret,
   },
   handler: handleHighPriorityRotation,
 });

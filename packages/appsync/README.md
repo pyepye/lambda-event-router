@@ -130,7 +130,7 @@ async function createItem({ arguments: args }: AppSyncResolverRequest) {
 #### Convenience methods
 
 `query()`, `mutation()` and `subscription()` set `parentTypeName` and take the field name at the top
-level. `customFilter` is the only filter key they take.
+level. `custom` is the only filter key they take.
 
 ```ts
 appSyncRouter
@@ -162,7 +162,7 @@ defineRoute({
   filters: {
     parentTypeName: 'Mutation',
     fieldName: 'createItem',
-    customFilter: ({ event }) => event.request.headers['x-tenant'] === 'acme',
+    custom: ({ event }) => event.request.headers['x-tenant'] === 'acme',
   },
 })
 ```

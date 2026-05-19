@@ -19,7 +19,7 @@ export interface S3Filters {
   eventName?: FilterStringMatcher;
   bucket?: FilterStringMatcher;
   key?: FilterStringMatcher;
-  customFilter?: (input: S3FilterInput) => boolean | Promise<boolean>;
+  custom?: (input: S3FilterInput) => boolean | Promise<boolean>;
 }
 
 // Filters without eventName - used by convenience methods that set eventName automatically

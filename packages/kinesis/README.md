@@ -110,7 +110,7 @@ defineRoute({
   filters: {
     eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream',
     partitionKey: ['orders', 'inventory'],
-    customFilter: ({ data }) => data.priority === 'HIGH',
+    custom: ({ data }) => data.priority === 'HIGH',
   },
 })
 ```

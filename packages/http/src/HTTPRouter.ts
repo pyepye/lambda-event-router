@@ -47,7 +47,7 @@ interface RouteInput<
   filters: {
     method: AnyHttpMethod;
     path: TPathString;
-    customFilter?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
+    custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   };
   middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
   querySchema?: TQuerySchema;

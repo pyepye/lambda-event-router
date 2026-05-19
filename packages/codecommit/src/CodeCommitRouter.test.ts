@@ -456,11 +456,11 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ codeCommitRecord }) => {
+    test('matches route by custom', async ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ userIdentityARN }: CodeCommitFilterInput): boolean => {
+            custom: ({ userIdentityARN }: CodeCommitFilterInput): boolean => {
               return userIdentityARN.includes('test-user');
             },
           },
@@ -476,10 +476,10 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ codeCommitRecord }) => {
+    test('does not match route when custom returns false', async ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -492,11 +492,11 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct arguments', async ({ codeCommitRecord, codeCommitReference }) => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom receives correct arguments', async ({ codeCommitRecord, codeCommitReference }) => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -513,7 +513,7 @@ suite('CodeCommitRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(route, record);
 
-      expect(customFilter).toHaveBeenCalledWith({
+      expect(custom).toHaveBeenCalledWith({
         references: [reference],
         userIdentityARN: 'arn:aws:iam::123456789012:user/deploy-bot',
         eventSourceARN: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
@@ -521,11 +521,11 @@ suite('CodeCommitRouter', () => {
       });
     });
 
-    test('matches route by async customFilter', async ({ codeCommitRecord }) => {
+    test('matches route by async custom', async ({ codeCommitRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ userIdentityARN }: CodeCommitFilterInput): Promise<boolean> => {
+            custom: async ({ userIdentityARN }: CodeCommitFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return userIdentityARN.includes('async-user');
             },
@@ -604,14 +604,14 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives filtered references when referenceFilter is set', async ({
+    test('custom receives filtered references when referenceFilter is set', async ({
       codeCommitRecord,
       codeCommitReference,
     }) => {
-      const customFilter = vi.fn().mockReturnValue(true);
+      const custom = vi.fn().mockReturnValue(true);
       router.push(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -625,20 +625,20 @@ suite('CodeCommitRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(route, record);
 
-      expect(customFilter).toHaveBeenCalledWith(
+      expect(custom).toHaveBeenCalledWith(
         expect.objectContaining({
           references: [pushRef],
         }),
       );
     });
 
-    test('customFilter is not called when an earlier filter fails', async ({ codeCommitRecord }) => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('custom is not called when an earlier filter fails', async ({ codeCommitRecord }) => {
+      const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
           filters: {
             eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:other-repo',
-            customFilter,
+            custom,
           },
         }).handle(async () => {}),
       );
@@ -649,7 +649,7 @@ suite('CodeCommitRouter', () => {
       // @ts-expect-error - testing private method directly
       await router.matchRoute(route, record);
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
     test('matches when both eventSourceArns and branches match', async ({ codeCommitRecord, codeCommitReference }) => {

@@ -23,7 +23,7 @@ export interface ConfigScheduledFilterInput {
 export interface ConfigScheduledFilters {
   configRuleName?: FilterStringMatcher;
   accountId?: FilterStringMatcher;
-  customFilter?: (input: ConfigScheduledFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: ConfigScheduledFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface ConfigScheduledRouteDefinition<TParams = Record<string, string>> {

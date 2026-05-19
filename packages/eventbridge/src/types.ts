@@ -102,7 +102,7 @@ export interface EventBridgeFilters {
   account?: FilterStringMatcher;
   region?: FilterStringMatcher;
   resource?: FilterStringMatcher;
-  customFilter?: (input: EventBridgeFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: EventBridgeFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface EventBridgeRouteDefinition<TDetail = unknown> {

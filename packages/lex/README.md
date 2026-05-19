@@ -151,7 +151,7 @@ defineRoute({
   filters: {
     inputMode: ['Text', 'Speech'],
     invocationSource: ['DialogCodeHook', 'FulfillmentCodeHook'],
-    customFilter: ({ event }) => event.sessionState.sessionAttributes?.tier === 'premium',
+    custom: ({ event }) => event.sessionState.sessionAttributes?.tier === 'premium',
   },
 })
 ```

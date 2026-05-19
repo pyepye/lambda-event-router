@@ -118,8 +118,8 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
         if (!hasMatchingFilter) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(input);
+      if (filters.custom) {
+        const match = await filters.custom(input);
         if (!match) continue;
       }
 

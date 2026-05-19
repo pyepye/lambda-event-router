@@ -79,7 +79,7 @@ documentDBRouter.route({
   filters: {
     eventSourceArn: CLUSTER_ARN,
     operationType: 'update',
-    customFilter: isEcommerceOrderChange,
+    custom: isEcommerceOrderChange,
   },
   handler: updateOrder,
 });

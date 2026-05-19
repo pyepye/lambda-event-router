@@ -14,7 +14,7 @@ export interface InternalRoute {
   pathParamNames: string[]; // path param names in order, mapped to the pattern's capture groups
   pathParamMask: boolean[]; // true where a segment is a path param, walked left to right to rank specificity
   matchShape: string; // method + path with params flattened to ':'; equal shapes match the same requests
-  customFilter?: (input: unknown) => boolean | Promise<boolean>;
+  custom?: (input: unknown) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
   middleware: Middleware<ApiRequest, HandlerResponse>[];
   querySchema?: StandardSchemaV1;
@@ -24,7 +24,7 @@ export interface InternalRoute {
 
 interface PathRouterFilters<TPathString extends string> {
   path: TPathString;
-  customFilter?: (input: unknown) => boolean | Promise<boolean>;
+  custom?: (input: unknown) => boolean | Promise<boolean>;
 }
 
 // Base config shared by all route types
@@ -92,7 +92,6 @@ function normalizePath(path: string): string {
   return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
-
 function describePathSegments(method: HttpMethod, path: string): { pathParamMask: boolean[]; matchShape: string } {
   // Split a normalized path into its segments and mark each a path param or a literal.
   const segments = path === '/' ? [] : path.replace(/^\//, '').split('/');
@@ -121,7 +120,7 @@ export class PathRouter {
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
     const method = definition.filters.method.toUpperCase() as HttpMethod;
-    // @ts-expect-error - RouteDefinition uses HTTPFilterInput for customFilter, but addRoute stores as unknown to decouple from HTTP types
+    // @ts-expect-error - RouteDefinition uses HTTPFilterInput for custom, but addRoute stores as unknown to decouple from HTTP types
     return this.addRoute(method, definition);
   };
 
@@ -157,17 +156,17 @@ export class PathRouter {
       responseSchema?: StandardSchemaV1;
     },
   ): this {
-    const { customFilter } = config.filters;
+    const { custom } = config.filters;
     const path = normalizePath(config.filters.path);
     const { pattern, pathParamNames } = this.compilePath(path);
     const { pathParamMask, matchShape } = describePathSegments(method, path);
 
-    // Error if we can't work out the order of 2 routes and there is no customFilter to tell them apart
-    if (customFilter === undefined) {
-      const clash = this.routes.find((route) => route.matchShape === matchShape && route.customFilter === undefined);
+    // Error if we can't work out the order of 2 routes and there is no custom to tell them apart
+    if (custom === undefined) {
+      const clash = this.routes.find((route) => route.matchShape === matchShape && route.custom === undefined);
       if (clash) {
         throw new Error(
-          `Route ${method} ${path} is ambiguous with ${method} ${clash.path}: both match the same paths and cannot be ranked by specificity. Give them different paths, or add a customFilter to one.`,
+          `Route ${method} ${path} is ambiguous with ${method} ${clash.path}: both match the same paths and cannot be ranked by specificity. Give them different paths, or add a custom to one.`,
         );
       }
     }
@@ -179,7 +178,7 @@ export class PathRouter {
       pathParamNames,
       pathParamMask,
       matchShape,
-      customFilter,
+      custom,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
       middleware: config.middleware ?? [],
       querySchema: config.querySchema,
@@ -237,7 +236,7 @@ export class PathRouter {
       const match = normalizedPath.match(route.pattern);
       if (!match) continue;
 
-      if (route.customFilter && !(await route.customFilter(filterInput))) {
+      if (route.custom && !(await route.custom(filterInput))) {
         continue;
       }
 

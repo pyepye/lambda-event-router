@@ -135,7 +135,7 @@ suite('StepFunctionsRouter', () => {
       const eventSchema = createMockSchema();
       const handler = vi.fn();
       const filters = {
-        customFilter: () => true,
+        custom: () => true,
       };
 
       const definition = defineRoute({
@@ -232,11 +232,11 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches a route by customFilter', async () => {
+    test('matches a route by custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ event }: StepFunctionsFilterInput): boolean => {
+            custom: ({ event }: StepFunctionsFilterInput): boolean => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'process';
             },
@@ -250,11 +250,11 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches a route by async customFilter', async () => {
+    test('matches a route by async custom', async () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ event }: StepFunctionsFilterInput): Promise<boolean> => {
+            custom: async ({ event }: StepFunctionsFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'process';
@@ -269,10 +269,10 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when customFilter returns false', async () => {
+    test('does not match when custom returns false', async () => {
       router.route(
         defineRoute({
-          filters: { customFilter: () => false },
+          filters: { custom: () => false },
         }).handle(async () => {}),
       );
 
@@ -282,11 +282,11 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes { event } to the customFilter', async () => {
-      const customFilter = vi.fn(() => true);
+    test('passes { event } to the custom', async () => {
+      const custom = vi.fn(() => true);
       router.route(
         defineRoute({
-          filters: { customFilter },
+          filters: { custom },
         }).handle(async () => {}),
       );
 
@@ -294,7 +294,7 @@ suite('StepFunctionsRouter', () => {
       // @ts-expect-error - testing private method directly
       router.matchRoute(event);
 
-      expect(customFilter).toHaveBeenCalledWith({ event });
+      expect(custom).toHaveBeenCalledWith({ event });
     });
 
     test('matches a catch-all route with empty filters', async () => {
@@ -310,12 +310,12 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches a taskToken route with customFilter when both conditions are met', async () => {
+    test('matches a taskToken route with custom when both conditions are met', async () => {
       router.route(
         defineRoute({
           filters: {
             taskToken: true,
-            customFilter: ({ event }: StepFunctionsFilterInput) => {
+            custom: ({ event }: StepFunctionsFilterInput) => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'approve';
             },
@@ -329,12 +329,12 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match a taskToken route with customFilter when customFilter returns false', async () => {
+    test('does not match a taskToken route with custom when custom returns false', async () => {
       router.route(
         defineRoute({
           filters: {
             taskToken: true,
-            customFilter: () => false,
+            custom: () => false,
           },
         }).handle(async () => {}),
       );
@@ -345,12 +345,12 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('does not match a taskToken route with customFilter when TaskToken is missing', async () => {
+    test('does not match a taskToken route with custom when TaskToken is missing', async () => {
       router.route(
         defineRoute({
           filters: {
             taskToken: true,
-            customFilter: () => true,
+            custom: () => true,
           },
         }).handle(async () => {}),
       );
@@ -516,13 +516,13 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('full event processing', () => {
-    test('routes to different handlers via customFilter', async () => {
+    test('routes to different handlers via custom', async () => {
       const createHandler = vi.fn();
       const deleteHandler = vi.fn();
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ event }: StepFunctionsFilterInput) => {
+            custom: ({ event }: StepFunctionsFilterInput) => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'create';
             },
@@ -532,7 +532,7 @@ suite('StepFunctionsRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ event }: StepFunctionsFilterInput) => {
+            custom: ({ event }: StepFunctionsFilterInput) => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'delete';
             },
@@ -584,7 +584,7 @@ suite('StepFunctionsRouter', () => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ event }: StepFunctionsFilterInput) => {
+            custom: ({ event }: StepFunctionsFilterInput) => {
               // @ts-expect-error - event is unknown, testing filter with known shape
               return event.action === 'specific';
             },

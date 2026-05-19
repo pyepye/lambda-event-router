@@ -278,11 +278,11 @@ suite('PathRouter', () => {
       expect(await router.match('PATCH', '/g')).not.toBeNull();
     });
 
-    test('skips route when customFilter returns false', async () => {
+    test('skips route when custom returns false', async () => {
       router.get({
         filters: {
           path: '/items',
-          customFilter: () => false,
+          custom: () => false,
         },
         handler: vi.fn(),
       });
@@ -292,12 +292,12 @@ suite('PathRouter', () => {
       expect(result).toBeNull();
     });
 
-    test('matches route when customFilter returns true', async () => {
+    test('matches route when custom returns true', async () => {
       const handler = vi.fn();
       router.get({
         filters: {
           path: '/items',
-          customFilter: () => true,
+          custom: () => true,
         },
         handler,
       });
@@ -308,27 +308,27 @@ suite('PathRouter', () => {
       expect(result?.route.handler).toBe(handler);
     });
 
-    test('passes filterInput to customFilter', async () => {
-      const customFilter = vi.fn().mockReturnValue(true);
+    test('passes filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
       router.get({
-        filters: { path: '/items', customFilter },
+        filters: { path: '/items', custom },
         handler: vi.fn(),
       });
 
       const filterInput = { method: 'GET', path: '/items', headers: { authorization: 'Bearer token' } };
       await router.match('GET', '/items', filterInput);
 
-      expect(customFilter).toHaveBeenCalledWith(filterInput);
+      expect(custom).toHaveBeenCalledWith(filterInput);
     });
 
-    test('falls through to next route when customFilter rejects first match', async () => {
+    test('falls through to next route when custom rejects first match', async () => {
       const firstHandler = vi.fn();
       const secondHandler = vi.fn();
 
       router.get({
         filters: {
           path: '/items',
-          customFilter: () => false,
+          custom: () => false,
         },
         handler: firstHandler,
       });
@@ -343,28 +343,28 @@ suite('PathRouter', () => {
       expect(result?.route.handler).toBe(secondHandler);
     });
 
-    test('does not call customFilter when method does not match', async () => {
-      const customFilter = vi.fn();
+    test('does not call custom when method does not match', async () => {
+      const custom = vi.fn();
       router.get({
-        filters: { path: '/items', customFilter },
+        filters: { path: '/items', custom },
         handler: vi.fn(),
       });
 
       await router.match('POST', '/items', {});
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
 
-    test('does not call customFilter when path does not match', async () => {
-      const customFilter = vi.fn();
+    test('does not call custom when path does not match', async () => {
+      const custom = vi.fn();
       router.get({
-        filters: { path: '/items', customFilter },
+        filters: { path: '/items', custom },
         handler: vi.fn(),
       });
 
       await router.match('GET', '/other', {});
 
-      expect(customFilter).not.toHaveBeenCalled();
+      expect(custom).not.toHaveBeenCalled();
     });
   });
 
@@ -429,9 +429,7 @@ suite('PathRouter', () => {
     test('throws when two routes of the same method share a shape and differ only in param name', () => {
       router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
 
-      expect(() => router.get({ filters: { path: '/items/:slug' }, handler: vi.fn() })).toThrow(
-        /ambiguous/i,
-      );
+      expect(() => router.get({ filters: { path: '/items/:slug' }, handler: vi.fn() })).toThrow(/ambiguous/i);
     });
 
     test('does not treat the same shape under a different method as ambiguous', () => {
@@ -440,13 +438,13 @@ suite('PathRouter', () => {
       expect(() => router.post({ filters: { path: '/items/:slug' }, handler: vi.fn() })).not.toThrow();
     });
 
-    test('exempts an ambiguous pair from the throw when one route carries a customFilter', async () => {
+    test('exempts an ambiguous pair from the throw when one route carries a custom', async () => {
       const guarded = vi.fn();
       const fallback = vi.fn();
 
       expect(() => {
         router.get({
-          filters: { path: '/items/:id', customFilter: (input) => input === 'guarded' },
+          filters: { path: '/items/:id', custom: (input: unknown) => input === 'guarded' },
           handler: guarded,
         });
         router.get({ filters: { path: '/items/:slug' }, handler: fallback });
@@ -458,11 +456,11 @@ suite('PathRouter', () => {
   });
 
   suite('getMethodsForPath', () => {
-    test('ignores customFilter and returns methods based on path only', () => {
+    test('ignores custom and returns methods based on path only', () => {
       router.get({
         filters: {
           path: '/items',
-          customFilter: () => false,
+          custom: () => false,
         },
         handler: vi.fn(),
       });

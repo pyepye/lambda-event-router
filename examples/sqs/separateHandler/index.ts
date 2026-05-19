@@ -43,7 +43,7 @@ function isHighValueOrder({ body }: SQSFilterInput): boolean {
 sqsRouter.route({
   filters: {
     eventSourceArn: [SOME_QUEUE_ARN, SOME_DL_QUEUE_ARN],
-    customFilter: isHighValueOrder,
+    custom: isHighValueOrder,
   },
   handler: createItem,
   bodySchema: CreateItemBodySchema,

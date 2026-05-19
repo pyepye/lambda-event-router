@@ -41,7 +41,7 @@ function hasCorrelationId({ headers }: KafkaFilterInput): boolean {
 kafkaRouter.route({
   filters: {
     topic: ORDERS_TOPIC,
-    customFilter: hasCorrelationId,
+    custom: hasCorrelationId,
   },
   handler: processOrder,
   valueSchema: OrderValueSchema,

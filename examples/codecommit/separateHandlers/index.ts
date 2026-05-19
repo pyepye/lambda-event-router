@@ -121,7 +121,7 @@ function isMainBranchBySpecificUser({ userIdentityARN, references }: CodeCommitF
 codeCommitRouter.route({
   filters: {
     repositoryName: REPO_NAME,
-    customFilter: isMainBranchBySpecificUser,
+    custom: isMainBranchBySpecificUser,
   },
   handler: processMainPush,
 });

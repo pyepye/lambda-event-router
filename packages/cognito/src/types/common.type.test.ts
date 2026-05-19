@@ -114,8 +114,8 @@ suite('CognitoFilters', () => {
     expectTypeOf<CognitoFilters>().toHaveProperty('userAttributes');
   });
 
-  test('has optional customFilter field', () => {
-    expectTypeOf<CognitoFilters>().toHaveProperty('customFilter');
+  test('has optional custom field', () => {
+    expectTypeOf<CognitoFilters>().toHaveProperty('custom');
   });
 
   test('narrows triggerSource with generic', () => {

@@ -338,11 +338,11 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ dynamoDBInsertRecord }) => {
+    test('matches route by custom', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ eventName }: DynamoDBFilterInput): boolean => {
+            custom: ({ eventName }: DynamoDBFilterInput): boolean => {
               return eventName === 'INSERT';
             },
           },
@@ -356,10 +356,10 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ dynamoDBInsertRecord }) => {
+    test('does not match route when custom returns false', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -370,11 +370,11 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('customFilter receives correct DynamoDBFilterInput', async ({ dynamoDBInsertRecord }) => {
+    test('custom receives correct DynamoDBFilterInput', async ({ dynamoDBInsertRecord }) => {
       const filterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter: filterSpy },
+          filters: { custom: filterSpy },
         }).handle(async () => {}),
       );
 
@@ -390,11 +390,11 @@ suite('DynamoDBRouter', () => {
       });
     });
 
-    test('customFilter is not called when a preceding filter rejects', async ({ dynamoDBInsertRecord }) => {
+    test('custom is not called when a preceding filter rejects', async ({ dynamoDBInsertRecord }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { eventName: 'REMOVE', customFilter: customFilterSpy },
+          filters: { eventName: 'REMOVE', custom: customFilterSpy },
         }).handle(async () => {}),
       );
 
@@ -405,11 +405,11 @@ suite('DynamoDBRouter', () => {
       expect(customFilterSpy).not.toHaveBeenCalled();
     });
 
-    test('matches route by async customFilter', async ({ dynamoDBInsertRecord }) => {
+    test('matches route by async custom', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ eventName }: DynamoDBFilterInput): Promise<boolean> => {
+            custom: async ({ eventName }: DynamoDBFilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return eventName === 'INSERT';
             },
@@ -665,11 +665,11 @@ suite('DynamoDBRouter', () => {
       expect(result?.filters.partitionKey).toBe('items');
     });
 
-    test('partitionKey miss short-circuits before customFilter is called', async ({ dynamoDBInsertRecord }) => {
+    test('partitionKey miss short-circuits before custom is called', async ({ dynamoDBInsertRecord }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { partitionKey: 'items', customFilter: customFilterSpy },
+          filters: { partitionKey: 'items', custom: customFilterSpy },
         }).handle(async () => {}),
       );
 

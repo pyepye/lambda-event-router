@@ -61,7 +61,7 @@ export interface RabbitMQFilters {
   queue?: FilterStringMatcher;
   virtualHost?: FilterStringMatcher;
   contentType?: FilterStringMatcher;
-  customFilter?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: RabbitMQFilterInput) => boolean | Promise<boolean>;
 }
 
 // --- Route Definition Types ---

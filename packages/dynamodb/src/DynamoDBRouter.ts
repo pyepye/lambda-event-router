@@ -366,8 +366,8 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         if (!resourceIdMatch) continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter({ eventName, streamViewType, record, keys, newImage, oldImage });
+      if (filters.custom) {
+        const match = await filters.custom({ eventName, streamViewType, record, keys, newImage, oldImage });
         if (!match) continue;
       }
 

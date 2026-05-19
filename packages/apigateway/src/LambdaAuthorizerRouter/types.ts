@@ -17,7 +17,7 @@ export type AuthorizerType = 'TOKEN' | 'REQUEST';
 export interface LambdaAuthorizerFilters {
   type?: AuthorizerType;
   method?: string;
-  customFilter?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
 }
 
 export interface LambdaAuthorizerFilterInput {

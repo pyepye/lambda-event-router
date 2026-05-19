@@ -38,7 +38,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineRoute({
   filters: {
-    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: z.object({ taskType: z.literal('process-order'), orderId: z.string() }),
 }).handle(async ({ event }) => {
@@ -59,7 +59,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 // Separate handler to define routes and handlers in different places
 stepFunctionsRouter.route({
   filters: {
-    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
   handler: processOrder,
@@ -84,7 +84,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 
 const processOrder = defineRoute({
   filters: {
-    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
 }).handle(async ({ event }) => {
@@ -104,7 +104,7 @@ const stepFunctionsRouter = createStepFunctionsRouter()
 
 stepFunctionsRouter.route({
   filters: {
-    customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: EventSchema,
   handler: processOrder,
@@ -120,7 +120,7 @@ async function processOrder({ event }) {
 ```ts
 defineRoute({
   filters: {
-    customFilter: ({ event }) => isObject(event) && event.taskType === 'validate-input',
+    custom: ({ event }) => isObject(event) && event.taskType === 'validate-input',
   },
 })
 ```
@@ -144,7 +144,7 @@ const stepFunctionsRouter = createStepFunctionsRouter({ middleware: [withLogging
 
 // Route-level: runs for this route only
 const processOrder = defineRoute({
-  filters: { customFilter: ({ event }) => isObject(event) && event.taskType === 'process-order' },
+  filters: { custom: ({ event }) => isObject(event) && event.taskType === 'process-order' },
   eventSchema: EventSchema,
   middleware: [withLogging],
 }).handle(async ({ event, context }) => {

@@ -49,7 +49,7 @@ rabbitMQRouter.route({
   filters: {
     eventSourceArn: BROKER_ARN,
     contentType: 'application/json',
-    customFilter: isRetryQueue,
+    custom: isRetryQueue,
   },
   handler: handleOrderMessage,
 });

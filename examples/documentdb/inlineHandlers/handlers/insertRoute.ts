@@ -40,7 +40,7 @@ export const highValueOrderInsertRoute = defineRoute({
     eventSourceArn: CLUSTER_ARN,
     database: 'ecommerce',
     collection: 'orders',
-    customFilter: ({ event }: DocumentDBFilterInput) => {
+    custom: ({ event }: DocumentDBFilterInput) => {
       const { fullDocument } = event;
       if (typeof fullDocument !== 'object' || fullDocument === null || !('total' in fullDocument)) return false;
       const { total } = fullDocument;

@@ -321,11 +321,11 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by customFilter', async ({ s3Record }) => {
+    test('matches route by custom', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: ({ bucket, key }: S3FilterInput): boolean => {
+            custom: ({ bucket, key }: S3FilterInput): boolean => {
               return bucket === 'my-bucket' && key.startsWith('uploads/');
             },
           },
@@ -339,10 +339,10 @@ suite('S3Router', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match route when customFilter returns false', async ({ s3Record }) => {
+    test('does not match route when custom returns false', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { customFilter: (): boolean => false },
+          filters: { custom: (): boolean => false },
         }).handle(async () => {}),
       );
 
@@ -353,11 +353,11 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches route by async customFilter', async ({ s3Record }) => {
+    test('matches route by async custom', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
-            customFilter: async ({ bucket, key }: S3FilterInput): Promise<boolean> => {
+            custom: async ({ bucket, key }: S3FilterInput): Promise<boolean> => {
               await new Promise((r) => setTimeout(r, 1));
               return bucket === 'my-bucket' && key.startsWith('uploads/');
             },
@@ -372,11 +372,11 @@ suite('S3Router', () => {
       expect(result).toBeDefined();
     });
 
-    test('customFilter receives bucket, key, eventName, and record', async ({ s3Record }) => {
+    test('custom receives bucket, key, eventName, and record', async ({ s3Record }) => {
       const filterFn = vi.fn().mockReturnValue(true);
       router.route(
         defineRoute({
-          filters: { customFilter: filterFn },
+          filters: { custom: filterFn },
         }).handle(async () => {}),
       );
 
@@ -420,12 +420,12 @@ suite('S3Router', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when bucket and customFilter both pass', async ({ s3Record }) => {
+    test('matches when bucket and custom both pass', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
             bucket: 'my-bucket',
-            customFilter: ({ key }: S3FilterInput): boolean => key.endsWith('.txt'),
+            custom: ({ key }: S3FilterInput): boolean => key.endsWith('.txt'),
           },
         }).handle(async () => {}),
       );
@@ -437,12 +437,12 @@ suite('S3Router', () => {
       expect(result).toBeDefined();
     });
 
-    test('does not match when bucket passes but customFilter rejects', async ({ s3Record }) => {
+    test('does not match when bucket passes but custom rejects', async ({ s3Record }) => {
       router.route(
         defineRoute({
           filters: {
             bucket: 'my-bucket',
-            customFilter: (): boolean => false,
+            custom: (): boolean => false,
           },
         }).handle(async () => {}),
       );
@@ -630,7 +630,7 @@ suite('S3Router', () => {
     test('processes every task and returns one result per task', async ({ s3BatchEvent, context }) => {
       const processedKeys: string[] = [];
       router.batchOperation({
-        handler: async (request) => {
+        handler: async (request: S3BatchRequest) => {
           processedKeys.push(request.key);
           return { resultCode: 'Succeeded' as const, resultString: `done ${request.key}` };
         },
@@ -657,7 +657,7 @@ suite('S3Router', () => {
 
     test('a per-task failure does not stop the other tasks', async ({ s3BatchEvent, context }) => {
       router.batchOperation({
-        handler: async (request) => {
+        handler: async (request: S3BatchRequest) => {
           if (request.key === 'bad.txt') {
             throw { resultCode: 'PermanentFailure' as const, resultString: 'bad object' };
           }

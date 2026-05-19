@@ -120,7 +120,7 @@ defineRoute({
   filters: {
     logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'],
     messageType: 'DATA_MESSAGE',
-    customFilter: ({ logEvents }) => logEvents.some(e => e.message.includes('ERROR')),
+    custom: ({ logEvents }) => logEvents.some(e => e.message.includes('ERROR')),
   },
 })
 ```

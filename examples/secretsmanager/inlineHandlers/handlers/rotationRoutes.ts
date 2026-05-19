@@ -91,7 +91,7 @@ export const maintenanceWindowRotationRoute = defineRoute({
   filters: {
     secretId: 'prod/*',
     step: 'createSecret',
-    customFilter: () => {
+    custom: () => {
       // Only allow rotation during the maintenance window - time-based logic that built-in filters can't express
       const currentHour = new Date().getUTCHours();
       return currentHour >= MAINTENANCE_WINDOW_START && currentHour < MAINTENANCE_WINDOW_END;

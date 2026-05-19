@@ -32,7 +32,7 @@ interface RouteInput<
   filters: {
     eventType?: TEventType;
     routeKey?: TRouteKey;
-    customFilter?: (input: WebSocketFilterInput) => boolean | Promise<boolean>;
+    custom?: (input: WebSocketFilterInput) => boolean | Promise<boolean>;
   };
   bodySchema?: TBodySchema;
 }
@@ -207,8 +207,8 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
         continue;
       }
 
-      if (filters.customFilter) {
-        const match = await filters.customFilter(filterInput);
+      if (filters.custom) {
+        const match = await filters.custom(filterInput);
         if (!match) continue;
       }
       return route;

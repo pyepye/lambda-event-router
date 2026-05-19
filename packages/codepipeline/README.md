@@ -122,7 +122,7 @@ defineRoute({
     functionName: 'validate',
     hasInputArtifacts: true,
     hasContinuationToken: false,
-    customFilter: ({ userParameters }) => userParameters !== undefined,
+    custom: ({ userParameters }) => userParameters !== undefined,
   },
 })
 ```

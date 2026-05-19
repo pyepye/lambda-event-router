@@ -23,7 +23,7 @@ appSyncEventsRouter.route({
   filters: {
     operation: 'PUBLISH',
     channelNamespace: '/default/*',
-    customFilter: isChatChannel,
+    custom: isChatChannel,
   },
   handler: onPublish,
 });

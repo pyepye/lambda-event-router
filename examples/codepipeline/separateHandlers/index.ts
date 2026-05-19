@@ -27,7 +27,7 @@ codePipelineRouter.route({
 codePipelineRouter.route({
   filters: {
     functionName: FUNCTION_NAME,
-    // userParametersContains: 'deploy', // Need customFilter for this
+    // userParametersContains: 'deploy', // Need custom filter for this
   },
   userParametersSchema: ArtifactParametersSchema,
   handler: processArtifacts,
@@ -51,7 +51,7 @@ codePipelineRouter.route({
   filters: {
     functionName: FUNCTION_NAME,
     hasInputArtifacts: true,
-    customFilter: hasProductionConfig,
+    custom: hasProductionConfig,
   },
   userParametersSchema: ArtifactParametersSchema,
   handler: processArtifacts,

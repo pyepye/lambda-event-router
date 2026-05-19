@@ -15,11 +15,11 @@ export const pushRoute = defineRoute({
   }
 });
 
-// Match pushes by deploy bot to any branch using customFilter
+// Match pushes by deploy bot to any branch using custom filter
 export const deployBotPushRoute = defineRoute({
   filters: {
     repositoryName: REPO_NAME,
-    customFilter: ({ userIdentityARN }: CodeCommitFilterInput) => {
+    custom: ({ userIdentityARN }: CodeCommitFilterInput) => {
       // Match automated pushes from the deploy bot IAM role
       const deployBotIdentifier = 'deploy-bot';
       return userIdentityARN.includes(deployBotIdentifier);

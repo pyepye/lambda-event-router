@@ -73,7 +73,7 @@ function isFromUsersTable({ record }: DynamoDBFilterInput): boolean {
 dynamodbStreamRouter.insert({
   filters: {
     eventSourceArn: SOME_QUEUE_ARN,
-    customFilter: isFromUsersTable,
+    custom: isFromUsersTable,
   },
   handler: createItem,
 });
