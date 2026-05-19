@@ -205,6 +205,14 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return { ...response, headers: { ...response.headers, ...corsHeaders } };
   }
 
+  // RFC 9110: a HEAD response carries no content but keeps the status and headers a GET would return
+  private stripBodyForHead(response: FinalizedHTTPResponse, method: string): FinalizedHTTPResponse {
+    if (method !== 'HEAD') {
+      return response;
+    }
+    return { ...response, body: '' };
+  }
+
   private async validateResponse(route: InternalRoute, handlerResponse: unknown): Promise<unknown> {
     if (!route.responseSchema || Response.isHTTPResponse(handlerResponse)) {
       return handlerResponse;
@@ -262,7 +270,8 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       const notFoundResponse = this.response.notFound();
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       const responseWithHeaders = this.applyHeaders(notFoundResponse, corsHeaders);
-      return this.adapter.buildResult(responseWithHeaders, event);
+      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
+      return this.adapter.buildResult(finalResponse, event);
     }
 
     const { route, params } = routeData;
@@ -280,19 +289,22 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       const response = this.response.create(validatedResponse);
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       const responseWithHeaders = this.applyHeaders(response, corsHeaders);
-      return this.adapter.buildResult(responseWithHeaders, event);
+      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
+      return this.adapter.buildResult(finalResponse, event);
     } catch (error) {
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
       if (Response.isHTTPResponse(error)) {
         const response = this.response.create(error);
         const responseWithHeaders = this.applyHeaders(response, corsHeaders);
-        return this.adapter.buildResult(responseWithHeaders, event);
+        const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
+        return this.adapter.buildResult(finalResponse, event);
       }
       logger.error(`Unhandled error processing HTTP request`, { error });
       const errorMessage = error instanceof Error ? error.message : undefined;
       const errorResponse = this.response.internalServerError(errorMessage);
       const responseWithHeaders = this.applyHeaders(errorResponse, corsHeaders);
-      return this.adapter.buildResult(responseWithHeaders, event);
+      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
+      return this.adapter.buildResult(finalResponse, event);
     }
   }
 }

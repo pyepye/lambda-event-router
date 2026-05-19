@@ -77,24 +77,30 @@ export class Response {
     return Response.httpRedirect(HTTP_STATUS_CODES.PERMANENT_REDIRECT, location);
   }
 
+  private static isPlainObject(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && value.constructor === Object;
+  }
+
+  private static isJsonBody(value: unknown): boolean {
+    return Response.isPlainObject(value) || Array.isArray(value);
+  }
+
   private static buildHTTPResponse(response: unknown): HTTPResponse {
     if (Response.isHTTPResponse(response)) {
-      const { body } = response;
-      const bodyIsObject = typeof body === 'object' && body !== null && body.constructor === Object;
-      if (bodyIsObject) {
+      if (Response.isJsonBody(response.body)) {
         // Create a new object and headers spread last so response.headers override
         return { ...response, headers: { 'content-type': 'application/json', ...response.headers } };
       }
       return response;
     }
 
-    const isObject = typeof response === 'object' && response !== null && response.constructor === Object;
-    const isEmptyObject = isObject && Object.keys(response).length === 0;
+    // Only an empty plain object returns a 204. An empty array is valid JSON body so is a 200
+    const isEmptyObject = Response.isPlainObject(response) && Object.keys(response).length === 0;
     if (response == null || response === '' || response === true || isEmptyObject) {
       return Response.NoContent();
     }
 
-    const headers = isObject ? { 'content-type': 'application/json' } : undefined;
+    const headers = Response.isJsonBody(response) ? { 'content-type': 'application/json' } : undefined;
     return Response.Ok(response, headers);
   }
 

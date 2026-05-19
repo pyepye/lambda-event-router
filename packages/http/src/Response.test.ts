@@ -204,6 +204,36 @@ suite('Response', () => {
       });
     });
 
+    test('gives an array HTTPResponse body a JSON content type', () => {
+      const result = response.create(Response.Ok([1, 2, 3]));
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: JSON.stringify([1, 2, 3]),
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    test('wraps a bare array in a 200 with a JSON content type', () => {
+      const result = response.create([1, 2]);
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: JSON.stringify([1, 2]),
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
+    test('treats an empty array as a JSON body, not no content', () => {
+      const result = response.create([]);
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: '[]',
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+
     test('converts a string body to a 200 response', () => {
       const result = response.create('hello');
 

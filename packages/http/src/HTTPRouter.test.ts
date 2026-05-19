@@ -177,6 +177,37 @@ suite('HTTPRouter', () => {
       expect(result.statusCode).toBe(404);
     });
 
+    test('a HEAD response drops the body but keeps its status and headers', async () => {
+      router.head({ filters: { path: '/items' }, handler: async () => Ok({ total: 3 }) });
+
+      const result = await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/items' }), createMockContext());
+
+      expect(result.statusCode).toBe(200);
+      expect(result.body).toBe('');
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
+    });
+
+    test('a HEAD request to a missing route has no body', async () => {
+      const result = await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/missing' }), createMockContext());
+
+      expect(result.statusCode).toBe(404);
+      expect(result.body).toBe('');
+    });
+
+    test('a HEAD request whose handler throws has no body', async () => {
+      router.head({
+        filters: { path: '/items' },
+        handler: async () => {
+          throw new Error('boom');
+        },
+      });
+
+      const result = await router.handleEvent(createMockEvent({ method: 'HEAD', path: '/items' }), createMockContext());
+
+      expect(result.statusCode).toBe(500);
+      expect(result.body).toBe('');
+    });
+
     test('options() registers an OPTIONS route', async () => {
       const handler = vi.fn(async () => NoContent());
       router.options({ filters: { path: '/items' }, handler });
