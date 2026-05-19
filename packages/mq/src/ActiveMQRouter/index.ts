@@ -9,7 +9,6 @@ export type {
   ActiveMQMessage,
   ActiveMQMessageType,
   ActiveMQMiddleware,
-  ActiveMQRecordHandler,
   ActiveMQRequest,
   ActiveMQResponse,
   ActiveMQRouteDefinition,

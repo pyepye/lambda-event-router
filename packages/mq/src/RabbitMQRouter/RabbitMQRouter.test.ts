@@ -679,8 +679,12 @@ suite('RabbitMQRouter', () => {
       const productionHandler = vi.fn();
       const stagingHandler = vi.fn();
 
-      router.route(defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/production' } }).handle(productionHandler));
-      router.route(defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/staging' } }).handle(stagingHandler));
+      router.route(
+        defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/production' } }).handle(productionHandler),
+      );
+      router.route(
+        defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/staging' } }).handle(stagingHandler),
+      );
 
       const event = createRabbitMQEvent({
         'orders::/production': [rabbitMQMessage()],

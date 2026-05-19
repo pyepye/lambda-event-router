@@ -4,7 +4,13 @@ import * as base from '@lambda-event-router/base';
 import { createActiveMQEvent, createActiveMQHandlerEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './ActiveMQRouter.js';
-import type { ActiveMQFilterInput, ActiveMQRequest } from './types.js';
+import type {
+  ActiveMQBytesMessageRequest,
+  ActiveMQFilterInput,
+  ActiveMQFilters,
+  ActiveMQRequest,
+  ActiveMQTextMessageRequest,
+} from './types.js';
 
 type ActiveMQNext = (request: ActiveMQRequest) => Promise<void>;
 
@@ -35,10 +41,31 @@ suite('ActiveMQRouter', () => {
       expect(typeof builder.handle).toBe('function');
     });
 
+    test('rejects an unknown messageType at compile time', () => {
+      defineActiveMQRoute({
+        filters: {
+          // @ts-expect-error - 'jms/text' is a typo, not an ActiveMQMessageType
+          messageType: 'jms/text',
+        },
+      }).handle(async () => {});
+    });
+
+    test('rejects a bodySchema on a bytes route at compile time', () => {
+      defineActiveMQRoute({
+        filters: { messageType: 'jms/bytes-message' },
+        // @ts-expect-error - a bytes body is a Buffer, so a bytes route takes no bodySchema
+        bodySchema: createMockSchema(),
+      }).handle(async ({ body }) => {
+        // body is a Buffer, whatever schema was wrongly supplied
+        const bytes: Buffer = body;
+        void bytes;
+      });
+    });
+
     test('preserves filters, bodySchema, and handler in the definition', () => {
       const bodySchema = createMockSchema();
       const handler = vi.fn();
-      const filters = {
+      const filters: ActiveMQFilters = {
         eventSourceArn: 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234',
         messageType: 'jms/text-message',
         destination: 'test-queue',
@@ -88,6 +115,23 @@ suite('ActiveMQRouter', () => {
       const result = router.route(definition);
 
       expect(result).toBe(router);
+    });
+
+    test('rejects a narrowed handler when the route does not filter messageType', () => {
+      const textHandler = async (_request: ActiveMQTextMessageRequest): Promise<void> => {};
+      router.route({
+        filters: {},
+        // @ts-expect-error - with no messageType filter the handler must accept the union
+        handler: textHandler,
+      });
+    });
+
+    test('accepts a narrowed handler when the route pins the messageType', () => {
+      const textHandler = async (_request: ActiveMQTextMessageRequest): Promise<void> => {};
+      router.route({
+        filters: { messageType: 'jms/text-message' },
+        handler: textHandler,
+      });
     });
   });
 
@@ -469,6 +513,31 @@ suite('ActiveMQRouter', () => {
           body,
         }),
       );
+    });
+
+    test('hands a bytes message its data as a Buffer of the original bytes', async ({ activeMQMessage, context }) => {
+      let received: ActiveMQBytesMessageRequest | undefined;
+      router.bytesMessage({
+        filters: {},
+        handler: async (request: ActiveMQBytesMessageRequest) => {
+          received = request;
+        },
+      });
+
+      // Bytes that are not valid UTF-8, so a UTF-8 decode would corrupt them
+      const binary = Buffer.from([0xff, 0xfe, 0x00, 0x01, 0x80]);
+      const base64 = binary.toString('base64');
+      const message = activeMQMessage({ messageType: 'jms/bytes-message' });
+      message.data = base64;
+      const event = createActiveMQEvent([message]);
+
+      await router.handleEvent(event, context());
+
+      expect(received).toBeDefined();
+      expect(Buffer.isBuffer(received?.body)).toBe(true);
+      expect(received?.body.equals(binary)).toBe(true);
+      // The raw base64 is still reachable on record.data
+      expect(received?.record.data).toBe(base64);
     });
 
     test('validates body with schema and returns transformed data', async ({ activeMQMessage, context }) => {

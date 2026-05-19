@@ -128,6 +128,9 @@ activeMQRouter.textMessage({
 })
 ```
 
+A bytes message body is a `Buffer` of the raw bytes, decoded from base64. Text messages are parsed as
+JSON, so `bytesMessage()` takes no `bodySchema`.
+
 #### Filters
 
 ```ts

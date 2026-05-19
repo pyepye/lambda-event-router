@@ -38,23 +38,25 @@ export interface ActiveMQEvent {
 
 // --- Request Types ---
 
-interface ActiveMQRequestBase<TBody = unknown> {
+interface ActiveMQRequestBase {
   message: ActiveMQMessage;
   destination: string;
-  body: TBody;
   record: ActiveMQMessage;
   context: Context;
 }
 
-export interface ActiveMQTextMessageRequest<TBody = unknown> extends ActiveMQRequestBase<TBody> {
+export interface ActiveMQTextMessageRequest<TBody = unknown> extends ActiveMQRequestBase {
   messageType: 'jms/text-message';
+  body: TBody;
 }
 
-export interface ActiveMQBytesMessageRequest<TBody = unknown> extends ActiveMQRequestBase<TBody> {
+// A bytes message carries binary, so its body is the raw bytes decoded from base64.
+export interface ActiveMQBytesMessageRequest extends ActiveMQRequestBase {
   messageType: 'jms/bytes-message';
+  body: Buffer;
 }
 
-export type ActiveMQRequest<TBody = unknown> = ActiveMQTextMessageRequest<TBody> | ActiveMQBytesMessageRequest<TBody>;
+export type ActiveMQRequest<TBody = unknown> = ActiveMQTextMessageRequest<TBody> | ActiveMQBytesMessageRequest;
 
 // --- Filter Types ---
 
@@ -67,7 +69,7 @@ export interface ActiveMQFilterInput {
 export interface ActiveMQFilters {
   eventSourceArn?: FilterStringMatcher;
   destination?: FilterStringMatcher;
-  messageType?: ActiveMQMessageType | (string & {}) | (ActiveMQMessageType | (string & {}))[];
+  messageType?: ActiveMQMessageType | ActiveMQMessageType[];
   customFilter?: (input: ActiveMQFilterInput) => boolean | Promise<boolean>;
 }
 
@@ -75,18 +77,21 @@ export interface ActiveMQFilters {
 
 export type ActiveMQMiddleware = Middleware<ActiveMQRequest, void>;
 
-export type ActiveMQRecordHandler<TBody = unknown> =
-  | ((request: ActiveMQRequest<TBody>) => Promise<void>)
-  | ((request: ActiveMQTextMessageRequest<TBody>) => Promise<void>)
-  | ((request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>);
-
 // --- Route Definition Types ---
 
-export interface ActiveMQRouteDefinition<TBody = unknown> {
-  filters: ActiveMQFilters;
+// The handler request narrows from the `messageType` filter: a route with no `messageType` takes the
+// union, and a route pinned to one type takes that one, so a handler cannot claim a type the route did
+// not filter for. A bytes route's body is a Buffer; `defineActiveMQRoute` rejects a bodySchema on one.
+export interface ActiveMQRouteDefinition<
+  TBody = unknown,
+  TMessageType extends ActiveMQMessageType | undefined = undefined,
+> {
+  filters: Omit<ActiveMQFilters, 'messageType'> & {
+    messageType?: TMessageType | TMessageType[];
+  };
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   middleware?: ActiveMQMiddleware[];
-  handler: ActiveMQRecordHandler<TBody>;
+  handler: (request: MessageTypeToRequest<TMessageType, TBody>) => Promise<void>;
 }
 
 export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
@@ -96,11 +101,11 @@ export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
   handler: (request: ActiveMQTextMessageRequest<TBody>) => Promise<void>;
 }
 
-export interface ActiveMQBytesMessageRouteDefinition<TBody = unknown> {
+// A bytes message body is a Buffer, so there is no JSON to validate and no bodySchema.
+export interface ActiveMQBytesMessageRouteDefinition {
   filters: Omit<ActiveMQFilters, 'messageType'>;
-  bodySchema?: StandardSchemaV1<unknown, TBody>;
   middleware?: ActiveMQMiddleware[];
-  handler: (request: ActiveMQBytesMessageRequest<TBody>) => Promise<void>;
+  handler: (request: ActiveMQBytesMessageRequest) => Promise<void>;
 }
 
 // --- Internal Route Type ---
@@ -120,24 +125,22 @@ type MessageTypeToRequest<
 > = TMessageType extends 'jms/text-message'
   ? ActiveMQTextMessageRequest<TBody>
   : TMessageType extends 'jms/bytes-message'
-    ? ActiveMQBytesMessageRequest<TBody>
+    ? ActiveMQBytesMessageRequest
     : ActiveMQRequest<TBody>;
 
-export interface ActiveMQRouteInput<
-  TBodySchema extends StandardSchemaV1 | undefined = undefined,
-  TMessageType extends ActiveMQMessageType | undefined = undefined,
-> {
+export type ActiveMQRouteInput<TBody = unknown, TMessageType extends ActiveMQMessageType | undefined = undefined> = {
   filters: Omit<ActiveMQFilters, 'messageType'> & {
-    messageType?: TMessageType | (string & {}) | (TMessageType | (string & {}))[];
+    messageType?: TMessageType | TMessageType[];
   };
   middleware?: ActiveMQMiddleware[];
-  bodySchema?: TBodySchema;
-}
+} & ([TMessageType] extends ['jms/bytes-message']
+  ? { bodySchema?: never }
+  : { bodySchema?: StandardSchemaV1<unknown, TBody> });
 
 export interface ActiveMQRouteBuilder<TBody, TMessageType extends ActiveMQMessageType | undefined> {
   handle(
     handler: (request: MessageTypeToRequest<TMessageType, TBody>) => Promise<void>,
-  ): ActiveMQRouteDefinition<TBody>;
+  ): ActiveMQRouteDefinition<TBody, TMessageType>;
 }
 
 export interface ActiveMQRouterOptions {

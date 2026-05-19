@@ -1,7 +1,5 @@
 import type { Context } from 'aws-lambda';
 
-import type { StandardSchemaV1 } from '@standard-schema/spec';
-
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import {
   filterStringMatcher,
@@ -15,7 +13,6 @@ import type {
   ActiveMQBytesMessageRouteDefinition,
   ActiveMQEvent,
   ActiveMQFilterInput,
-  ActiveMQFilters,
   ActiveMQInternalRoute,
   ActiveMQMessage,
   ActiveMQMessageType,
@@ -29,18 +26,17 @@ import type {
 } from './types.js';
 
 export function defineActiveMQRoute<
-  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = unknown,
   const TMessageType extends ActiveMQMessageType | undefined = undefined,
-  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
->(config: ActiveMQRouteInput<TBodySchema, TMessageType>): ActiveMQRouteBuilder<TBody, TMessageType> {
+>(config: ActiveMQRouteInput<TBody, TMessageType>): ActiveMQRouteBuilder<TBody, TMessageType> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
-    handle(handler): ActiveMQRouteDefinition<TBody> {
+    handle(handler): ActiveMQRouteDefinition<TBody, TMessageType> {
       return {
-        filters: config.filters as ActiveMQFilters,
-        bodySchema: config.bodySchema as StandardSchemaV1<unknown, TBody> | undefined,
-        middleware: config.middleware as ActiveMQRouteDefinition<TBody>['middleware'],
-        handler: handler as (request: ActiveMQRequest<TBody>) => Promise<void>,
+        filters: config.filters,
+        bodySchema: config.bodySchema,
+        middleware: config.middleware,
+        handler,
       };
     },
   };
@@ -59,7 +55,9 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     return event.eventSource === 'aws:mq' && Array.isArray(event.messages);
   }
 
-  route<TBody>(definition: ActiveMQRouteDefinition<TBody>): this {
+  route<TBody = unknown, TMessageType extends ActiveMQMessageType | undefined = undefined>(
+    definition: ActiveMQRouteDefinition<TBody, TMessageType>,
+  ): this {
     this.routes.push(definition as ActiveMQInternalRoute);
     return this;
   }
@@ -72,7 +70,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     return this;
   }
 
-  bytesMessage<TBody>(definition: ActiveMQBytesMessageRouteDefinition<TBody>): this {
+  bytesMessage(definition: ActiveMQBytesMessageRouteDefinition): this {
     this.routes.push({
       ...definition,
       filters: { ...definition.filters, messageType: 'jms/bytes-message' },
@@ -82,30 +80,30 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
 
   async handleEvent(event: ActiveMQEvent, context: Context): Promise<undefined> {
     for (const message of event.messages) {
-      const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
-      const decodedMessage = { ...message, data: decodedData };
       const destination = message.destination.physicalName;
+
+      // Decode text by leave bytes-message as it's an unknown binary buffer we can't guess at decoding
+      const isBytesMessage = message.messageType === 'jms/bytes-message';
+      const decodedData = isBytesMessage ? message.data : Buffer.from(message.data, 'base64').toString('utf-8');
+      const decodedMessage = isBytesMessage ? message : { ...message, data: decodedData };
 
       const route = await this.matchRoute(event, decodedMessage);
       if (!route) {
         throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
       }
 
-      const parsedBody = safeJsonParse(decodedData);
-      const body = await validateSchema(
-        parsedBody,
-        route.bodySchema,
-        `Body validation failed for message ${message.messageID}`,
-      );
-
-      const request: ActiveMQRequest = {
-        message: decodedMessage,
-        destination,
-        body,
-        messageType: message.messageType,
-        record: message,
-        context,
-      };
+      const base = { message: decodedMessage, destination, record: message, context };
+      let request: ActiveMQRequest;
+      if (isBytesMessage) {
+        request = { ...base, body: Buffer.from(message.data, 'base64'), messageType: 'jms/bytes-message' };
+      } else {
+        const body = await validateSchema(
+          safeJsonParse(decodedData),
+          route.bodySchema,
+          `Body validation failed for message ${message.messageID}`,
+        );
+        request = { ...base, body, messageType: 'jms/text-message' };
+      }
 
       const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
       await handleEventWithMiddleware(allMiddleware, request, route.handler);
