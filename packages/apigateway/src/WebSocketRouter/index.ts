@@ -17,9 +17,15 @@ export type {
   WebSocketFilters,
   WebSocketHandler,
   WebSocketMessageRequest,
+  WebSocketMiddleware,
   WebSocketRequest,
   WebSocketResult,
   WebSocketRouteDefinition,
 } from './types.js';
-export type { WebSocketConnectInput, WebSocketDisconnectInput, WebSocketMessageInput } from './WebSocketRouter.js';
+export type {
+  WebSocketConnectInput,
+  WebSocketDisconnectInput,
+  WebSocketMessageInput,
+  WebSocketRouterOptions,
+} from './WebSocketRouter.js';
 export { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';

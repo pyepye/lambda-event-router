@@ -7,7 +7,7 @@ import type {
 } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import { isAuthorizerResponse } from './response.js';
 import type {
@@ -16,15 +16,18 @@ import type {
   LambdaAuthorizerFilterInput,
   LambdaAuthorizerFilters,
   LambdaAuthorizerHandler,
+  LambdaAuthorizerMiddleware,
   LambdaAuthorizerRequest,
   LambdaAuthorizerRequestRequest,
   LambdaAuthorizerResult,
   LambdaAuthorizerRouteDefinition,
+  LambdaAuthorizerRouterOptions,
   LambdaAuthorizerTokenRequest,
 } from './types.js';
 
 interface InternalRoute {
   filters: LambdaAuthorizerFilters;
+  middleware?: LambdaAuthorizerMiddleware[];
   handler: LambdaAuthorizerHandler;
 }
 
@@ -40,6 +43,7 @@ interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType |
     method?: string;
     custom?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
   };
+  middleware?: LambdaAuthorizerMiddleware[];
 }
 
 interface RouteBuilder<TRequest> {
@@ -81,11 +85,13 @@ export function generatePolicy(
 }
 
 export interface LambdaAuthorizerTokenInput {
+  middleware?: LambdaAuthorizerMiddleware[];
   handler: (request: LambdaAuthorizerTokenRequest) => Promise<LambdaAuthorizerResult | boolean>;
 }
 
 export interface LambdaAuthorizerRequestInput {
   method?: string;
+  middleware?: LambdaAuthorizerMiddleware[];
   handler: (request: LambdaAuthorizerRequestRequest) => Promise<LambdaAuthorizerResult | boolean>;
 }
 
@@ -116,6 +122,11 @@ function lowercaseHeaders(
 
 export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerEvent, LambdaAuthorizerResult> {
   private routes: InternalRoute[] = [];
+  private middleware: LambdaAuthorizerMiddleware[];
+
+  constructor(options?: LambdaAuthorizerRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is LambdaAuthorizerEvent {
     if (!isObject(event)) return false;
@@ -142,22 +153,25 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
   route(definition: LambdaAuthorizerRouteDefinition): this {
     this.routes.push({
       filters: definition.filters,
+      middleware: definition.middleware,
       handler: definition.handler,
     });
     return this;
   }
 
-  token({ handler }: LambdaAuthorizerTokenInput): this {
+  token({ middleware, handler }: LambdaAuthorizerTokenInput): this {
     this.routes.push({
       filters: { type: 'TOKEN' },
+      middleware,
       handler: handler as LambdaAuthorizerHandler,
     });
     return this;
   }
 
-  request({ method, handler }: LambdaAuthorizerRequestInput): this {
+  request({ method, middleware, handler }: LambdaAuthorizerRequestInput): this {
     this.routes.push({
       filters: { type: 'REQUEST', method },
+      middleware,
       handler: handler as LambdaAuthorizerHandler,
     });
     return this;
@@ -175,8 +189,10 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
 
     const request = this.buildRequest(event, context, filterInput);
 
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+
     try {
-      const result = await route.handler(request);
+      const result = await handleEventWithMiddleware(allMiddleware, request, route.handler);
 
       if (isRequestV2Event(event) && typeof result === 'boolean') {
         return { isAuthorized: result };
@@ -281,6 +297,6 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
   }
 }
 
-export function createLambdaAuthorizerRouter(): LambdaAuthorizerRouter {
-  return new LambdaAuthorizerRouter();
+export function createLambdaAuthorizerRouter(options?: LambdaAuthorizerRouterOptions): LambdaAuthorizerRouter {
+  return new LambdaAuthorizerRouter(options);
 }

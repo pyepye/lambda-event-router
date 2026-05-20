@@ -6,6 +6,8 @@ export {
 export type {
   ConfigScheduledFilterInput,
   ConfigScheduledFilters,
+  ConfigScheduledMiddleware,
   ConfigScheduledRequest,
   ConfigScheduledRouteDefinition,
+  ConfigScheduledRouterOptions,
 } from './types.js';

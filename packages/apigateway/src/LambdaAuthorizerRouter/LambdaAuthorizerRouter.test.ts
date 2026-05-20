@@ -11,7 +11,9 @@ import {
   generatePolicy,
   LambdaAuthorizerRouter,
 } from './LambdaAuthorizerRouter.js';
-import type { LambdaAuthorizerFilterInput } from './types.js';
+import type { LambdaAuthorizerFilterInput, LambdaAuthorizerRequest, LambdaAuthorizerResult } from './types.js';
+
+type AuthorizerNext = (request: LambdaAuthorizerRequest) => Promise<LambdaAuthorizerResult | boolean>;
 
 suite('LambdaAuthorizerRouter', () => {
   let router: LambdaAuthorizerRouter;
@@ -750,6 +752,179 @@ suite('LambdaAuthorizerRouter', () => {
       router.matchRoute({ type: 'REQUEST', method: 'GET' });
 
       expect(custom).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createLambdaAuthorizerRouter({ middleware: [middleware] });
+      router.token({
+        handler: async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        },
+      });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early return', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+      const denied = generatePolicy('user', 'Deny', 'arn:...');
+
+      async function blockingMiddleware(
+        _request: LambdaAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        return denied;
+      }
+
+      const router = createLambdaAuthorizerRouter({ middleware: [blockingMiddleware] });
+      router.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(denied);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createLambdaAuthorizerRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.token({
+        handler: async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        },
+      });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('catches a response thrown from within the middleware chain', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const thrownPolicy = generatePolicy('user', 'Deny', 'arn:...');
+
+      async function throwingMiddleware(
+        _request: LambdaAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        throw thrownPolicy;
+      }
+
+      const router = createLambdaAuthorizerRouter({ middleware: [throwingMiddleware] });
+      router.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual(thrownPolicy);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware from defineLambdaAuthorizerRoute', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { type: 'TOKEN' }, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        }),
+      );
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createLambdaAuthorizerRouter({ middleware: [routerMiddleware] });
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { type: 'TOKEN' }, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        }),
+      );
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
   });
 });

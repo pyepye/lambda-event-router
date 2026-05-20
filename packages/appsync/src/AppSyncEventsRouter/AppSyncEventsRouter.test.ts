@@ -1,6 +1,9 @@
 import { createAppSyncEventsEvent, createMockContext, test } from '@lambda-event-router/testing';
 
 import { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
+import type { AppSyncEventsRequest } from './types.js';
+
+type EventsNext = (request: AppSyncEventsRequest) => Promise<unknown>;
 
 let router: AppSyncEventsRouter;
 
@@ -518,6 +521,178 @@ suite('AppSyncEventsRouter', () => {
 
       const result = await router.handleEvent(event, context);
       expect(result).toBe('subscribe-result');
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async () => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createAppSyncEventsRouter({ middleware: [middleware] });
+      router.route(
+        defineEventsRoute({ filters: {} }).handle(async () => {
+          callOrder.push('handler');
+          return 'result';
+        }),
+      );
+
+      await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early return', async () => {
+      const handler = vi.fn().mockResolvedValue('result');
+
+      async function blockingMiddleware(_request: AppSyncEventsRequest, _next: EventsNext): Promise<unknown> {
+        return { error: 'Unauthorized' };
+      }
+
+      const router = createAppSyncEventsRouter({ middleware: [blockingMiddleware] });
+      router.route(defineEventsRoute({ filters: {} }).handle(handler));
+
+      const result = await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(result).toEqual({ error: 'Unauthorized' });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('mw1-pre');
+        const result = await next(request);
+        callOrder.push('mw1-post');
+        return result;
+      }
+
+      async function middlewareTwo(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('mw2-pre');
+        const result = await next(request);
+        callOrder.push('mw2-post');
+        return result;
+      }
+
+      const router = createAppSyncEventsRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route(
+        defineEventsRoute({ filters: {} }).handle(async () => {
+          callOrder.push('handler');
+          return 'result';
+        }),
+      );
+
+      await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['mw1-pre', 'mw2-pre', 'handler', 'mw2-post', 'mw1-post']);
+    });
+
+    test('allows middleware to modify the result', async () => {
+      async function middleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        const result = await next(request);
+        return { ...(result as Record<string, unknown>), cached: true };
+      }
+
+      const router = createAppSyncEventsRouter({ middleware: [middleware] });
+      router.route(defineEventsRoute({ filters: {} }).handle(async () => ({ id: '1' })));
+
+      const result = await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(result).toEqual({ id: '1', cached: true });
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware via publish convenience method', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.publish({
+        channelNamespace: '/default/*',
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return 'result';
+        },
+      });
+
+      await router.handleEvent(createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } }), createMockContext());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async () => {
+      const handler = vi.fn().mockResolvedValue('result');
+
+      async function blockingRouteMiddleware(_request: AppSyncEventsRequest, _next: EventsNext): Promise<unknown> {
+        return { error: 'blocked' };
+      }
+
+      router.route(defineEventsRoute({ filters: {}, middleware: [blockingRouteMiddleware] }).handle(handler));
+
+      const result = await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(result).toEqual({ error: 'blocked' });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('supports middleware on defineEventsRoute builder pattern', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route(
+        defineEventsRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return 'result';
+        }),
+      );
+
+      await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async () => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(request: AppSyncEventsRequest, next: EventsNext): Promise<unknown> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createAppSyncEventsRouter({ middleware: [routerMiddleware] });
+      router.route(
+        defineEventsRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return 'result';
+        }),
+      );
+
+      await router.handleEvent(createAppSyncEventsEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
   });
 });

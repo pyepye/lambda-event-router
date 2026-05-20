@@ -3,8 +3,10 @@ import type { MockInstance } from 'vitest';
 import * as base from '@lambda-event-router/base';
 import { createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
 
-import type { WebSocketFilterInput } from './types.js';
+import type { WebSocketConnectResponse, WebSocketFilterInput, WebSocketRequest } from './types.js';
 import { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
+
+type WebSocketNext = (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -608,6 +610,190 @@ suite('WebSocketRouter', () => {
     test('returns { statusCode: 200 } for unexpected response shape', () => {
       // @ts-expect-error - testing private method
       expect(router.buildResult('unexpected')).toEqual({ statusCode: 200 });
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async ({ webSocketHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: WebSocketRequest, next: WebSocketNext): Promise<WebSocketConnectResponse> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createWebSocketRouter({ middleware: [middleware] });
+      router.message({
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit by returning a response', async ({ webSocketHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingMiddleware(
+        _request: WebSocketRequest,
+        _next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        return { statusCode: 403 };
+      }
+
+      const router = createWebSocketRouter({ middleware: [blockingMiddleware] });
+      router.message({ handler });
+
+      const { event, context } = webSocketHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ statusCode: 403 });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async ({ webSocketHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: WebSocketRequest, next: WebSocketNext): Promise<WebSocketConnectResponse> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(request: WebSocketRequest, next: WebSocketNext): Promise<WebSocketConnectResponse> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createWebSocketRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.message({
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('catches a response thrown from within the middleware chain', async ({ webSocketHandlerEvent }) => {
+      async function throwingMiddleware(
+        _request: WebSocketRequest,
+        _next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        throw { statusCode: 401 };
+      }
+
+      const router = createWebSocketRouter({ middleware: [throwingMiddleware] });
+      router.message({ handler: vi.fn() });
+
+      const { event, context } = webSocketHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ statusCode: 401 });
+    });
+
+    test('does not execute middleware when body validation fails', async ({ webSocketHandlerEvent }) => {
+      const middleware = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const router = createWebSocketRouter({ middleware: [middleware] });
+      router.message({ bodySchema, handler: vi.fn() });
+
+      const { event, context } = webSocketHandlerEvent();
+      await expect(router.handleEvent(event, context)).rejects.toThrow('Body validation failed for WebSocket body');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware from a message route', async ({ webSocketHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: WebSocketRequest,
+        next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.message({
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('supports middleware on the defineWebSocketRoute builder pattern', async ({ webSocketHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: WebSocketRequest,
+        next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route(
+        defineWebSocketRoute({ filters: { eventType: 'MESSAGE' }, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+        }),
+      );
+
+      const { event, context } = webSocketHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async ({ webSocketHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(
+        request: WebSocketRequest,
+        next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(
+        request: WebSocketRequest,
+        next: WebSocketNext,
+      ): Promise<WebSocketConnectResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createWebSocketRouter({ middleware: [routerMiddleware] });
+      router.message({
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
   });
 });

@@ -1,28 +1,36 @@
 import type { AppSyncAuthorizerEvent, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import { isAppSyncAuthorizerResponse } from './response.js';
 import type {
+  AppSyncAuthorizerMiddleware,
   AppSyncAuthorizerRequest,
   AppSyncAuthorizerResponse,
   AppSyncAuthorizerRouteBuilder,
   AppSyncAuthorizerRouteDefinition,
+  AppSyncAuthorizerRouteInput,
+  AppSyncAuthorizerRouterOptions,
 } from './types.js';
 
-export function defineAuthorizerRoute(): AppSyncAuthorizerRouteBuilder {
+export function defineAuthorizerRoute(config?: AppSyncAuthorizerRouteInput): AppSyncAuthorizerRouteBuilder {
   return {
     handle(
       handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>,
     ): AppSyncAuthorizerRouteDefinition {
-      return { handler };
+      return { middleware: config?.middleware, handler };
     },
   };
 }
 
 export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorizerEvent, AppSyncAuthorizerResponse> {
   private routeDefinition: AppSyncAuthorizerRouteDefinition | undefined;
+  private middleware: AppSyncAuthorizerMiddleware[];
+
+  constructor(options?: AppSyncAuthorizerRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is AppSyncAuthorizerEvent {
     if (!isObject(event)) return false;
@@ -63,8 +71,10 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
       context,
     };
 
+    const allMiddleware = [...this.middleware, ...(this.routeDefinition.middleware ?? [])];
+
     try {
-      return await this.routeDefinition.handler(request);
+      return await handleEventWithMiddleware(allMiddleware, request, this.routeDefinition.handler);
     } catch (error) {
       if (isAppSyncAuthorizerResponse(error)) {
         return error;
@@ -74,6 +84,6 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
   }
 }
 
-export function createAppSyncAuthorizerRouter(): AppSyncAuthorizerRouter {
-  return new AppSyncAuthorizerRouter();
+export function createAppSyncAuthorizerRouter(options?: AppSyncAuthorizerRouterOptions): AppSyncAuthorizerRouter {
+  return new AppSyncAuthorizerRouter(options);
 }

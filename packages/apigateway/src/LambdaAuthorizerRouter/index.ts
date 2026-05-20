@@ -13,9 +13,11 @@ export type {
   LambdaAuthorizerFilterInput,
   LambdaAuthorizerFilters,
   LambdaAuthorizerHandler,
+  LambdaAuthorizerMiddleware,
   LambdaAuthorizerRequest,
   LambdaAuthorizerRequestRequest,
   LambdaAuthorizerResult,
   LambdaAuthorizerRouteDefinition,
+  LambdaAuthorizerRouterOptions,
   LambdaAuthorizerTokenRequest,
 } from './types.js';

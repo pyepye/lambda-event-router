@@ -9,7 +9,9 @@ import {
   createConfigScheduledRouter,
   defineConfigScheduledRoute,
 } from './ConfigScheduledRouter.js';
-import type { ConfigScheduledFilterInput } from './types.js';
+import type { ConfigScheduledFilterInput, ConfigScheduledRequest } from './types.js';
+
+type ScheduledNext = (request: ConfigScheduledRequest) => Promise<void>;
 
 const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 
@@ -393,6 +395,171 @@ suite('ConfigScheduledRouter', () => {
         filters,
         ruleParametersSchema: undefined,
         handler,
+      });
+    });
+  });
+
+  suite('middleware', () => {
+    function createScheduledConfigEvent(): ConfigEvent {
+      return createConfigEvent({ invokingEvent: { messageType: 'ScheduledNotification' } });
+    }
+
+    suite('router-level middleware', () => {
+      test('executes middleware before the route handler', async ({ context }) => {
+        const callOrder: string[] = [];
+
+        async function middleware(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('mw-pre');
+          await next(request);
+          callOrder.push('mw-post');
+        }
+
+        const router = createConfigScheduledRouter({ middleware: [middleware] });
+        router.route(
+          defineConfigScheduledRoute({ filters: {} }).handle(async () => {
+            callOrder.push('handler');
+          }),
+        );
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+      });
+
+      test('allows middleware to skip the handler by not calling next', async ({ context }) => {
+        const handler = vi.fn();
+
+        async function skipMiddleware(_request: ConfigScheduledRequest, _next: ScheduledNext): Promise<void> {
+          return;
+        }
+
+        const router = createConfigScheduledRouter({ middleware: [skipMiddleware] });
+        router.route(defineConfigScheduledRoute({ filters: {} }).handle(handler));
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+
+      test('executes multiple router-level middleware in order', async ({ context }) => {
+        const callOrder: string[] = [];
+
+        async function middlewareOne(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('mw1');
+          await next(request);
+        }
+
+        async function middlewareTwo(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('mw2');
+          await next(request);
+        }
+
+        const router = createConfigScheduledRouter({ middleware: [middlewareOne, middlewareTwo] });
+        router.route(
+          defineConfigScheduledRoute({ filters: {} }).handle(async () => {
+            callOrder.push('handler');
+          }),
+        );
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+      });
+    });
+
+    suite('route-level middleware', () => {
+      test('executes route-level middleware for a specific route', async ({ context }) => {
+        const callOrder: string[] = [];
+
+        async function routeMiddleware(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('route-mw');
+          await next(request);
+        }
+
+        router.route(
+          defineConfigScheduledRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+            callOrder.push('handler');
+          }),
+        );
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(callOrder).toEqual(['route-mw', 'handler']);
+      });
+
+      test('allows route-level middleware to short-circuit by not calling next', async ({ context }) => {
+        const handler = vi.fn();
+
+        async function blockingRouteMiddleware(_request: ConfigScheduledRequest, _next: ScheduledNext): Promise<void> {
+          return;
+        }
+
+        router.route(
+          defineConfigScheduledRoute({ filters: {}, middleware: [blockingRouteMiddleware] }).handle(handler),
+        );
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    suite('combined router and route middleware', () => {
+      test('executes router middleware before route middleware', async ({ context }) => {
+        const callOrder: string[] = [];
+
+        async function routerMiddleware(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('router-mw');
+          await next(request);
+        }
+
+        async function routeMiddleware(request: ConfigScheduledRequest, next: ScheduledNext): Promise<void> {
+          callOrder.push('route-mw');
+          await next(request);
+        }
+
+        const router = createConfigScheduledRouter({ middleware: [routerMiddleware] });
+        router.route(
+          defineConfigScheduledRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+            callOrder.push('handler');
+          }),
+        );
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+      });
+
+      test('router middleware short-circuit prevents route middleware from running', async ({ context }) => {
+        const routeMiddleware = vi.fn();
+        const handler = vi.fn();
+
+        async function blockingRouterMiddleware(_request: ConfigScheduledRequest, _next: ScheduledNext): Promise<void> {
+          return;
+        }
+
+        const router = createConfigScheduledRouter({ middleware: [blockingRouterMiddleware] });
+        router.route(defineConfigScheduledRoute({ filters: {}, middleware: [routeMiddleware] }).handle(handler));
+
+        await router.handleEvent(createScheduledConfigEvent(), context());
+
+        expect(routeMiddleware).not.toHaveBeenCalled();
+        expect(handler).not.toHaveBeenCalled();
+      });
+    });
+
+    suite('middleware does not run on validation failure', () => {
+      test('does not execute middleware when schema validation fails', async ({ context }) => {
+        const middleware = vi.fn();
+        const ruleParametersSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+        const router = createConfigScheduledRouter({ middleware: [middleware] });
+        router.route(defineConfigScheduledRoute({ filters: {}, ruleParametersSchema }).handle(vi.fn()));
+
+        await expect(router.handleEvent(createScheduledConfigEvent(), context())).rejects.toThrow(
+          'Schema validation failed for ruleParameters',
+        );
+        expect(middleware).not.toHaveBeenCalled();
       });
     });
   });

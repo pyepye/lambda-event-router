@@ -390,7 +390,7 @@ import { postToConnection } from '@lambda-event-router/apigateway'
 await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({ content }) })
 ```
 
-`WebSocketRouter` takes no middleware, at either level.
+`WebSocketRouter` takes router- and route-level middleware, both typed `WebSocketMiddleware<TBody>`.
 
 ## Examples
 

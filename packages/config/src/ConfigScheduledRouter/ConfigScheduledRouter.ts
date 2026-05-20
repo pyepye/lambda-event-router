@@ -3,15 +3,17 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, isObject, validateSchema } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
 
 import type { ConfigEvent, ConfigResponse } from '../types.js';
 import type {
   ConfigScheduledFilterInput,
+  ConfigScheduledMiddleware,
   ConfigScheduledRequest,
   ConfigScheduledRouteBuilder,
   ConfigScheduledRouteDefinition,
   ConfigScheduledRouteInput,
+  ConfigScheduledRouterOptions,
   InternalConfigScheduledRoute,
 } from './types.js';
 
@@ -28,6 +30,7 @@ export function defineConfigScheduledRoute<
       return {
         filters: config.filters,
         ruleParametersSchema: config.ruleParametersSchema as StandardSchemaV1<unknown, TParams> | undefined,
+        middleware: config.middleware,
         handler,
       };
     },
@@ -36,6 +39,11 @@ export function defineConfigScheduledRoute<
 
 export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, ConfigResponse> {
   private routes: InternalConfigScheduledRoute[] = [];
+  private middleware: ConfigScheduledMiddleware[] = [];
+
+  constructor(options?: ConfigScheduledRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is ConfigEvent {
     if (!isObject(event)) return false;
@@ -81,7 +89,8 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
       context,
     };
 
-    await route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private async matchRoute(input: ConfigScheduledFilterInput): Promise<InternalConfigScheduledRoute | undefined> {
@@ -113,6 +122,6 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
   }
 }
 
-export function createConfigScheduledRouter(): ConfigScheduledRouter {
-  return new ConfigScheduledRouter();
+export function createConfigScheduledRouter(options?: ConfigScheduledRouterOptions): ConfigScheduledRouter {
+  return new ConfigScheduledRouter(options);
 }

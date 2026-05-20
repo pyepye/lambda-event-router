@@ -1,6 +1,6 @@
 import type { Context } from 'aws-lambda';
 
-import type { FilterStringMatcher } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type AppSyncEventsOperation = 'PUBLISH' | 'SUBSCRIBE';
 
@@ -65,8 +65,11 @@ export interface AppSyncEventsFilters {
   custom?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 
+export type AppSyncEventsMiddleware = Middleware<AppSyncEventsRequest, unknown>;
+
 export interface AppSyncEventsRouteDefinition {
   filters: AppSyncEventsFilters;
+  middleware?: AppSyncEventsMiddleware[];
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
@@ -75,6 +78,7 @@ export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'custom'>
 export interface AppSyncEventsChannelInput {
   channelNamespace: string;
   filters?: AppSyncEventsOperationFilters;
+  middleware?: AppSyncEventsMiddleware[];
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }
 
@@ -83,6 +87,11 @@ export type AppSyncSubscribeInput = AppSyncEventsChannelInput;
 
 export interface AppSyncEventsRouteInput {
   filters?: AppSyncEventsFilters;
+  middleware?: AppSyncEventsMiddleware[];
+}
+
+export interface AppSyncEventsRouterOptions {
+  middleware?: AppSyncEventsMiddleware[];
 }
 
 export interface AppSyncEventsRouteBuilder {
@@ -91,5 +100,6 @@ export interface AppSyncEventsRouteBuilder {
 
 export interface InternalEventsRoute {
   filters: AppSyncEventsFilters;
+  middleware?: AppSyncEventsMiddleware[];
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }

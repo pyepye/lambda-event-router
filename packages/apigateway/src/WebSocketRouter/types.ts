@@ -6,6 +6,8 @@ import type {
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
+import type { Middleware } from '@lambda-event-router/base';
+
 export interface WebSocketEvent
   extends APIGatewayProxyWebsocketEventV2WithRequestContext<APIGatewayEventWebsocketRequestContextV2> {
   headers?: Record<string, string>;
@@ -60,8 +62,11 @@ export interface WebSocketRequest<TBody = unknown, TQueryString = Record<string,
 
 export type WebSocketHandler<TBody = unknown> = (request: WebSocketRequest<TBody>) => Promise<WebSocketConnectResponse>;
 
+export type WebSocketMiddleware<TBody = unknown> = Middleware<WebSocketRequest<TBody>, WebSocketConnectResponse>;
+
 export interface WebSocketRouteDefinition<TBody = unknown> {
   filters: WebSocketFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: WebSocketMiddleware<TBody>[];
   handler: WebSocketHandler<TBody>;
 }

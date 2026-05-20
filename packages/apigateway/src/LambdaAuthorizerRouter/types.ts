@@ -7,6 +7,8 @@ import type {
   Context,
 } from 'aws-lambda';
 
+import type { Middleware } from '@lambda-event-router/base';
+
 export type LambdaAuthorizerEvent =
   | APIGatewayTokenAuthorizerEvent
   | APIGatewayRequestAuthorizerEvent
@@ -55,7 +57,14 @@ export type LambdaAuthorizerResult = APIGatewayAuthorizerResult | APIGatewaySimp
 
 export type LambdaAuthorizerHandler = (request: LambdaAuthorizerRequest) => Promise<LambdaAuthorizerResult | boolean>;
 
+export type LambdaAuthorizerMiddleware = Middleware<LambdaAuthorizerRequest, LambdaAuthorizerResult | boolean>;
+
 export interface LambdaAuthorizerRouteDefinition {
   filters: LambdaAuthorizerFilters;
+  middleware?: LambdaAuthorizerMiddleware[];
   handler: LambdaAuthorizerHandler;
+}
+
+export interface LambdaAuthorizerRouterOptions {
+  middleware?: LambdaAuthorizerMiddleware[];
 }

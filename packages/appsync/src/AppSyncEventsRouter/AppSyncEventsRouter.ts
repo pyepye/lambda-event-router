@@ -1,14 +1,16 @@
 import type { Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   AppSyncEventsEvent,
+  AppSyncEventsMiddleware,
   AppSyncEventsRequest,
   AppSyncEventsRouteBuilder,
   AppSyncEventsRouteDefinition,
   AppSyncEventsRouteInput,
+  AppSyncEventsRouterOptions,
   AppSyncPublishInput,
   AppSyncSubscribeInput,
   InternalEventsRoute,
@@ -19,6 +21,7 @@ export function defineEventsRoute(config: AppSyncEventsRouteInput): AppSyncEvent
     handle(handler: (request: AppSyncEventsRequest) => Promise<unknown>): AppSyncEventsRouteDefinition {
       return {
         filters: config.filters ?? {},
+        middleware: config.middleware,
         handler,
       };
     },
@@ -27,6 +30,11 @@ export function defineEventsRoute(config: AppSyncEventsRouteInput): AppSyncEvent
 
 export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, unknown> {
   private routes: InternalEventsRoute[] = [];
+  private middleware: AppSyncEventsMiddleware[];
+
+  constructor(options?: AppSyncEventsRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is AppSyncEventsEvent {
     if (!isObject(event)) return false;
@@ -53,6 +61,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
         operation: 'PUBLISH',
         channelNamespace: input.channelNamespace,
       },
+      middleware: input.middleware,
       handler: input.handler,
     });
   }
@@ -64,6 +73,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
         operation: 'SUBSCRIBE',
         channelNamespace: input.channelNamespace,
       },
+      middleware: input.middleware,
       handler: input.handler,
     });
   }
@@ -92,7 +102,8 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       context,
     };
 
-    return route.handler(request);
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private async matchRoute(
@@ -133,6 +144,6 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
   }
 }
 
-export function createAppSyncEventsRouter(): AppSyncEventsRouter {
-  return new AppSyncEventsRouter();
+export function createAppSyncEventsRouter(options?: AppSyncEventsRouterOptions): AppSyncEventsRouter {
+  return new AppSyncEventsRouter(options);
 }

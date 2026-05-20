@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
 import { isWebSocketResponse } from './response.js';
 import type {
@@ -13,6 +13,7 @@ import type {
   WebSocketFilterInput,
   WebSocketFilters,
   WebSocketHandler,
+  WebSocketMiddleware,
   WebSocketRequest,
   WebSocketResult,
   WebSocketRouteDefinition,
@@ -21,13 +22,19 @@ import type {
 interface InternalRoute {
   filters: WebSocketFilters;
   bodySchema?: StandardSchemaV1;
+  middleware?: WebSocketMiddleware[];
   handler: WebSocketHandler;
+}
+
+export interface WebSocketRouterOptions {
+  middleware?: WebSocketMiddleware[];
 }
 
 interface RouteInput<
   TEventType extends WebSocketEventType | undefined = undefined,
   TRouteKey extends string | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
 > {
   filters: {
     eventType?: TEventType;
@@ -35,6 +42,7 @@ interface RouteInput<
     custom?: (input: WebSocketFilterInput) => boolean | Promise<boolean>;
   };
   bodySchema?: TBodySchema;
+  middleware?: WebSocketMiddleware<TBody>[];
 }
 
 interface RouteBuilder<TBody, TQueryString> {
@@ -60,21 +68,29 @@ export function defineWebSocketRoute<
 }
 
 export interface WebSocketConnectInput {
+  middleware?: WebSocketMiddleware[];
   handler: (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
 }
 
 export interface WebSocketDisconnectInput {
+  middleware?: WebSocketMiddleware[];
   handler: (request: WebSocketRequest) => Promise<void>;
 }
 
 export interface WebSocketMessageInput<TBody = unknown> {
   routeKey?: string;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: WebSocketMiddleware<TBody>[];
   handler: (request: WebSocketRequest<TBody>) => Promise<void>;
 }
 
 export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocketResult> {
   private routes: InternalRoute[] = [];
+  private middleware: WebSocketMiddleware[];
+
+  constructor(options?: WebSocketRouterOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
 
   canHandleEvent(event: unknown): event is WebSocketEvent {
     if (!isObject(event)) return false;
@@ -99,6 +115,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   >(definition: {
     filters: { eventType?: TEventType; routeKey?: TRouteKey };
     bodySchema?: TBodySchema;
+    middleware?: WebSocketMiddleware<TBody>[];
     handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<WebSocketConnectResponse>;
   }): this;
 
@@ -111,42 +128,49 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   >(definition: {
     filters: { eventType?: TEventType; routeKey?: TRouteKey };
     bodySchema?: TBodySchema;
+    middleware?: WebSocketMiddleware<TBody>[];
     handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<void>;
   }): this;
 
   route(definition: {
     filters: { eventType?: WebSocketEventType; routeKey?: string };
     bodySchema?: StandardSchemaV1;
+    middleware?: WebSocketMiddleware[];
     handler: (...args: never[]) => Promise<unknown>;
   }): this {
     this.routes.push({
       filters: definition.filters,
       bodySchema: definition.bodySchema,
+      middleware: definition.middleware,
       handler: definition.handler as WebSocketHandler,
     });
     return this;
   }
 
-  connect({ handler }: WebSocketConnectInput): this {
+  connect({ middleware, handler }: WebSocketConnectInput): this {
     this.routes.push({
       filters: { eventType: 'CONNECT' },
+      middleware,
       handler: handler as WebSocketHandler,
     });
     return this;
   }
 
-  disconnect({ handler }: WebSocketDisconnectInput): this {
+  disconnect({ middleware, handler }: WebSocketDisconnectInput): this {
     this.routes.push({
       filters: { eventType: 'DISCONNECT' },
+      middleware,
       handler: handler as WebSocketHandler,
     });
     return this;
   }
 
-  message<TBody>({ routeKey, bodySchema, handler }: WebSocketMessageInput<TBody>): this {
+  message<TBody>({ routeKey, bodySchema, middleware, handler }: WebSocketMessageInput<TBody>): this {
     this.routes.push({
       filters: { eventType: 'MESSAGE', routeKey },
       bodySchema,
+      // @ts-expect-error Contravariance: body-typed route middleware is safe at runtime because the schema validates the body before the chain runs
+      middleware,
       handler: handler as WebSocketHandler,
     });
     return this;
@@ -184,8 +208,10 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       context,
     };
 
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+
     try {
-      const response = await route.handler(request);
+      const response = await handleEventWithMiddleware(allMiddleware, request, route.handler);
       return this.buildResult(response);
     } catch (error) {
       if (isWebSocketResponse(error)) {
@@ -230,6 +256,6 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   }
 }
 
-export function createWebSocketRouter(): WebSocketRouter {
-  return new WebSocketRouter();
+export function createWebSocketRouter(options?: WebSocketRouterOptions): WebSocketRouter {
+  return new WebSocketRouter(options);
 }

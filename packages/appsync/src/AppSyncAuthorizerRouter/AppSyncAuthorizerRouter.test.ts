@@ -5,6 +5,9 @@ import {
   createAppSyncAuthorizerRouter,
   defineAuthorizerRoute,
 } from './AppSyncAuthorizerRouter.js';
+import type { AppSyncAuthorizerRequest, AppSyncAuthorizerResponse } from './types.js';
+
+type AuthorizerNext = (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>;
 
 let router: AppSyncAuthorizerRouter;
 
@@ -199,6 +202,162 @@ suite('AppSyncAuthorizerRouter', () => {
           context,
         }),
       );
+    });
+  });
+
+  suite('router-level middleware', () => {
+    test('executes middleware before the route handler', async () => {
+      const callOrder: string[] = [];
+
+      async function middleware(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const router = createAppSyncAuthorizerRouter({ middleware: [middleware] });
+      router.route(
+        defineAuthorizerRoute().handle(async () => {
+          callOrder.push('handler');
+          return { isAuthorized: true };
+        }),
+      );
+
+      await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early return', async () => {
+      const handler = vi.fn().mockResolvedValue({ isAuthorized: true });
+
+      async function blockingMiddleware(
+        _request: AppSyncAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        return { isAuthorized: false };
+      }
+
+      const router = createAppSyncAuthorizerRouter({ middleware: [blockingMiddleware] });
+      router.route(defineAuthorizerRoute().handle(handler));
+
+      const result = await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(result).toEqual({ isAuthorized: false });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple router-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const router = createAppSyncAuthorizerRouter({ middleware: [middlewareOne, middlewareTwo] });
+      router.route(
+        defineAuthorizerRoute().handle(async () => {
+          callOrder.push('handler');
+          return { isAuthorized: true };
+        }),
+      );
+
+      await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('catches a response thrown from within the middleware chain', async () => {
+      const thrownResponse = { isAuthorized: false, deniedFields: ['secret'] };
+
+      async function throwingMiddleware(
+        _request: AppSyncAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        throw thrownResponse;
+      }
+
+      const router = createAppSyncAuthorizerRouter({ middleware: [throwingMiddleware] });
+      router.route(defineAuthorizerRoute().handle(async () => ({ isAuthorized: true })));
+
+      const result = await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(result).toBe(thrownResponse);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware from defineAuthorizerRoute', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      router.route(
+        defineAuthorizerRoute({ middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return { isAuthorized: true };
+        }),
+      );
+
+      await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined router and route middleware', () => {
+    test('executes router middleware before route middleware', async () => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('router-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(
+        request: AppSyncAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<AppSyncAuthorizerResponse> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const router = createAppSyncAuthorizerRouter({ middleware: [routerMiddleware] });
+      router.route(
+        defineAuthorizerRoute({ middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return { isAuthorized: true };
+        }),
+      );
+
+      await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
   });
 });
