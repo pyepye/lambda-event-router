@@ -120,6 +120,16 @@ suite('vpcLatticeV2Adapter', () => {
       expect(normalized.query).toEqual({ tags: 'a,b,c' });
     });
 
+    test('preserves query key case', () => {
+      const event = createVPCLatticeV2Event({
+        queryStringParameters: { orderId: ['9'], Mixed: ['Case'] },
+      });
+
+      const normalized = vpcLatticeV2Adapter.normalize(event);
+
+      expect(normalized.query).toEqual({ orderId: '9', Mixed: 'Case' });
+    });
+
     test('returns empty headers when headers is undefined', () => {
       const event = createVPCLatticeV2Event({ headers: undefined });
 

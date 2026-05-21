@@ -41,22 +41,24 @@ function flattenHeaders(event: VPCLatticeEventV2): NormalizedHTTPEvent['headers'
   if (!event.headers) {
     return {};
   }
-  return flattenArrayValues(event.headers);
+  const headers: Record<string, string | undefined> = {};
+  // Header names are case-insensitive, so normalise to lower case
+  for (const [key, value] of Object.entries(event.headers)) {
+    headers[key.toLowerCase()] = value?.join();
+  }
+  return headers;
 }
 
 function flattenQuery(event: VPCLatticeEventV2): NormalizedHTTPEvent['query'] {
   if (!event.queryStringParameters) {
     return {};
   }
-  return flattenArrayValues(event.queryStringParameters);
-}
-
-function flattenArrayValues(data: Record<string, string[] | undefined>): Record<string, string | undefined> {
-  const result: Record<string, string | undefined> = {};
-  for (const [key, value] of Object.entries(data)) {
-    result[key.toLowerCase()] = value?.join();
+  const query: Record<string, string | undefined> = {};
+  // Query keys are case-sensitive, so keep the case the caller sent
+  for (const [key, value] of Object.entries(event.queryStringParameters)) {
+    query[key] = value?.join();
   }
-  return result;
+  return query;
 }
 
 function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
