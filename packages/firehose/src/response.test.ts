@@ -65,15 +65,8 @@ suite('response', () => {
   });
 
   suite('Failed', () => {
-    test('returns ProcessingFailed status with no args', () => {
+    test('returns ProcessingFailed status', () => {
       expect(Failed()).toEqual({ status: 'ProcessingFailed' });
-    });
-
-    test('returns ProcessingFailed with message as data', () => {
-      expect(Failed('something went wrong')).toEqual({
-        status: 'ProcessingFailed',
-        data: 'something went wrong',
-      });
     });
   });
 });

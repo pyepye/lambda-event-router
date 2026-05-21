@@ -33,9 +33,6 @@ export function Dropped(): FirehoseResponseResult {
   return { status: 'Dropped' };
 }
 
-export function Failed(message?: string): FirehoseResponseResult {
-  if (message) {
-    return { status: 'ProcessingFailed', data: message };
-  }
+export function Failed(): FirehoseResponseResult {
   return { status: 'ProcessingFailed' };
 }
