@@ -1,5 +1,11 @@
 import { isObject } from '@lambda-event-router/base';
-import type { FinalizedHTTPResponse, HTTPAdapter, HttpMethod, NormalizedHTTPEvent } from '@lambda-event-router/http';
+import {
+  buildValueMaps,
+  type FinalizedHTTPResponse,
+  type HTTPAdapter,
+  type HttpMethod,
+  type NormalizedHTTPEvent,
+} from '@lambda-event-router/http';
 
 export interface VPCLatticeEventBase {
   method: HttpMethod;
@@ -22,16 +28,6 @@ export interface VPCLatticeResult {
   headers?: Record<string, string>;
 }
 
-function flattenHeaders(event: VPCLatticeEventV1): Record<string, string | undefined> {
-  const headers: Record<string, string | undefined> = {};
-  if (event.headers) {
-    for (const [key, value] of Object.entries(event.headers)) {
-      headers[key.toLowerCase()] = value;
-    }
-  }
-  return headers;
-}
-
 export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResult> = {
   canHandleEvent(event: unknown): event is VPCLatticeEventV1 {
     // TODO: This needs confirming
@@ -45,11 +41,18 @@ export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResul
   },
 
   normalize(event: VPCLatticeEventV1): NormalizedHTTPEvent {
+    // VPC Lattice 1.0 carries only single-value headers and query params; each becomes a
+    // one-element entry in the multi-value maps.
+    const headers = buildValueMaps({ single: event.headers, lowercaseKeys: true });
+    const query = buildValueMaps({ single: event.query_string_parameters });
+
     return {
       method: event.method,
       path: event.raw_path,
-      headers: flattenHeaders(event),
-      query: event.query_string_parameters ?? {},
+      headers: headers.flat,
+      multiValueHeaders: headers.multiValue,
+      query: query.flat,
+      multiValueQuery: query.multiValue,
       body: event.body ?? undefined,
       isBase64Encoded: event.is_base64_encoded,
       auth: undefined,

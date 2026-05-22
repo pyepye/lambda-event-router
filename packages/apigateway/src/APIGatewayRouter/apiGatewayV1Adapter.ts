@@ -9,7 +9,13 @@ import type {
 } from 'aws-lambda';
 
 import { isObject } from '@lambda-event-router/base';
-import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+import {
+  type Auth,
+  buildValueMaps,
+  type FinalizedHTTPResponse,
+  type HTTPAdapter,
+  type NormalizedHTTPEvent,
+} from '@lambda-event-router/http';
 
 export type APIGatewayV1EventType =
   | APIGatewayProxyEvent
@@ -29,29 +35,6 @@ function isLambdaAuthorizer(
   authorizer: V1AuthorizerContext,
 ): authorizer is APIGatewayEventLambdaAuthorizerContext<unknown> {
   return isObject(authorizer) && 'principalId' in authorizer;
-}
-
-function flattenHeaders(event: APIGatewayV1EventType): NormalizedHTTPEvent['headers'] {
-  const headers: Record<string, string | undefined> = {};
-
-  if (event.headers) {
-    for (const [key, value] of Object.entries(event.headers)) {
-      headers[key.toLowerCase()] = value;
-    }
-  }
-
-  if (event.multiValueHeaders) {
-    // TODO: This is not how we should handle this, should we have multiValueHeaders as another property?
-    // TODO: Should probably use flattenArrayValues if moved to http
-    for (const [key, values] of Object.entries(event.multiValueHeaders)) {
-      if (values && values.length > 0) {
-        const lastValue = values[values.length - 1];
-        headers[key.toLowerCase()] = lastValue;
-      }
-    }
-  }
-
-  return headers;
 }
 
 function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
@@ -112,11 +95,25 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
   },
 
   normalize(event: APIGatewayV1EventType): NormalizedHTTPEvent {
+    // API Gateway V1 sends both the single-value and multi-value forms; read both so a repeated
+    // query param or header is not lost when the flat map keeps only the last value.
+    const headers = buildValueMaps({
+      single: event.headers,
+      multi: event.multiValueHeaders,
+      lowercaseKeys: true,
+    });
+    const query = buildValueMaps({
+      single: event.queryStringParameters,
+      multi: event.multiValueQueryStringParameters,
+    });
+
     return {
       method: event.httpMethod,
       path: event.path,
-      headers: flattenHeaders(event),
-      query: event.queryStringParameters ?? {},
+      headers: headers.flat,
+      multiValueHeaders: headers.multiValue,
+      query: query.flat,
+      multiValueQuery: query.multiValue,
       body: event.body ?? undefined,
       isBase64Encoded: event.isBase64Encoded,
       auth: extractV1Auth(event),

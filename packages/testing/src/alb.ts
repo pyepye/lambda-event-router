@@ -33,6 +33,7 @@ export function createALBEvent(overrides: ALBEventOverrides = {}): ALBEvent {
     headers: {},
     multiValueHeaders: undefined,
     queryStringParameters: undefined,
+    multiValueQueryStringParameters: undefined,
     body: resolvedBody,
     isBase64Encoded: false,
     requestContext: {

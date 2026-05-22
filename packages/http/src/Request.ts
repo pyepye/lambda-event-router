@@ -8,6 +8,7 @@ import type { ApiRequest, Auth, NormalizedHTTPEvent } from './types.js';
 
 export class Request {
   readonly headers: Record<string, string | undefined>;
+  readonly multiValueHeaders: Record<string, string[] | undefined>;
   readonly method: string;
   readonly path: string;
 
@@ -22,6 +23,7 @@ export class Request {
     readonly pathParams: Record<string, string>,
   ) {
     this.headers = normalizedEvent.headers;
+    this.multiValueHeaders = normalizedEvent.multiValueHeaders;
     this.method = normalizedEvent.method;
     this.path = normalizedEvent.path;
   }
@@ -52,6 +54,10 @@ export class Request {
     return this.normalizedEvent.query;
   }
 
+  get multiValueQueryParams(): Record<string, string[] | undefined> {
+    return this.normalizedEvent.multiValueQuery;
+  }
+
   async validateQuery(): Promise<Record<string, string | undefined>> {
     const result = await validateSchemaResult(this.queryParams, this.route.querySchema);
     if (!result.success) {
@@ -73,9 +79,11 @@ export class Request {
       method: this.method,
       path: this.pathParams,
       query,
+      multiValueQuery: this.multiValueQueryParams,
       auth: this.auth,
       body,
       headers: this.headers,
+      multiValueHeaders: this.multiValueHeaders,
       event: this.rawEvent,
       context: this.context,
     };

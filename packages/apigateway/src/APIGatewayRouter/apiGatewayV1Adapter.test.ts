@@ -121,6 +121,28 @@ suite('apiGatewayV1Adapter', () => {
       expect(normalized.query).toEqual({ page: '1', limit: '10' });
     });
 
+    test('reads repeated query params from multiValueQueryStringParameters', () => {
+      const event = createApiGatewayV1Event({
+        queryStringParameters: { tag: 'b' },
+        multiValueQueryStringParameters: { tag: ['a', 'b'] },
+      });
+
+      const normalized = apiGatewayV1Adapter.normalize(event);
+
+      expect(normalized.query).toEqual({ tag: 'b' });
+      expect(normalized.multiValueQuery).toEqual({ tag: ['a', 'b'] });
+    });
+
+    test('exposes repeated headers from multiValueHeaders', () => {
+      const event = createApiGatewayV1Event({
+        multiValueHeaders: { 'Set-Cookie': ['a=1', 'b=2'] },
+      });
+
+      const normalized = apiGatewayV1Adapter.normalize(event);
+
+      expect(normalized.multiValueHeaders['set-cookie']).toEqual(['a=1', 'b=2']);
+    });
+
     test('returns undefined body when event body is null', () => {
       const event = createApiGatewayV1Event();
 

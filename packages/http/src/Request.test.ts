@@ -31,7 +31,9 @@ function createNormalizedEvent(overrides: Partial<NormalizedHTTPEvent> = {}): No
     method: 'GET',
     path: '/',
     headers: {},
+    multiValueHeaders: {},
     query: {},
+    multiValueQuery: {},
     body: undefined,
     isBase64Encoded: false,
     auth: undefined,
@@ -137,6 +139,24 @@ suite('Request', () => {
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
       expect(request.queryParams).toEqual({});
+    });
+  });
+
+  suite('multiValueQueryParams', () => {
+    test('returns the multi-value query map from the normalized event', () => {
+      const normalizedEvent = createNormalizedEvent({ multiValueQuery: { tag: ['a', 'b'] } });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.multiValueQueryParams).toEqual({ tag: ['a', 'b'] });
+    });
+  });
+
+  suite('multiValueHeaders', () => {
+    test('exposes the multi-value header map from the normalized event', () => {
+      const normalizedEvent = createNormalizedEvent({ multiValueHeaders: { 'set-cookie': ['a=1', 'b=2'] } });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.multiValueHeaders).toEqual({ 'set-cookie': ['a=1', 'b=2'] });
     });
   });
 
@@ -248,6 +268,19 @@ suite('Request', () => {
       expect(apiRequest.headers).toEqual({ authorization: 'Bearer token' });
       expect(apiRequest.event).toBe(rawEvent);
       expect(apiRequest.context).toBe(mockContext);
+    });
+
+    test('carries the multi-value query and header maps unchanged', () => {
+      const normalizedEvent = createNormalizedEvent({
+        multiValueQuery: { tag: ['a', 'b'] },
+        multiValueHeaders: { 'set-cookie': ['a=1', 'b=2'] },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      const apiRequest = request.buildApiRequest({ tag: 'b' }, undefined);
+
+      expect(apiRequest.multiValueQuery).toEqual({ tag: ['a', 'b'] });
+      expect(apiRequest.multiValueHeaders).toEqual({ 'set-cookie': ['a=1', 'b=2'] });
     });
 
     test('carries the query and body it is handed rather than the raw request values', () => {

@@ -10,7 +10,13 @@ import type {
 } from 'aws-lambda';
 
 import { isObject } from '@lambda-event-router/base';
-import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+import {
+  type Auth,
+  buildValueMaps,
+  type FinalizedHTTPResponse,
+  type HTTPAdapter,
+  type NormalizedHTTPEvent,
+} from '@lambda-event-router/http';
 
 export type APIGatewayV2EventType =
   | APIGatewayProxyEventV2
@@ -64,11 +70,19 @@ export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayP
   },
 
   normalize(event: APIGatewayV2EventType): NormalizedHTTPEvent {
+    // API Gateway V2 sends no multi-value form: it comma-joins repeated headers and query params
+    // into one string before invoking the lambda. The multi-value map therefore holds that single
+    // joined string; it is not split back apart, since a value may legitimately contain a comma.
+    const headers = buildValueMaps({ single: event.headers, lowercaseKeys: true });
+    const query = buildValueMaps({ single: event.queryStringParameters });
+
     return {
       method: event.requestContext.http.method,
       path: event.rawPath,
-      headers: event.headers,
-      query: event.queryStringParameters ?? {},
+      headers: headers.flat,
+      multiValueHeaders: headers.multiValue,
+      query: query.flat,
+      multiValueQuery: query.multiValue,
       body: event.body,
       isBase64Encoded: event.isBase64Encoded,
       auth: extractV2Auth(event),

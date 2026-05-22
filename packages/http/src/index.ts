@@ -34,3 +34,4 @@ export type {
   PathParams,
   RouteDefinition,
 } from './types.js';
+export { type BuildValueMapsInput, buildValueMaps, type HttpValueMaps } from './valueMaps.js';

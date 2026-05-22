@@ -61,6 +61,20 @@ suite('apiGatewayV2Adapter', () => {
       expect(normalized.query).toEqual({});
     });
 
+    test('keeps V2 comma-joined values as a single multi-value entry (no comma splitting)', () => {
+      // API Gateway V2 joins repeated params itself; it is not split back apart
+      const event = createApiGatewayV2Event({
+        headers: { 'x-tag': 'a,b' },
+        queryStringParameters: { tag: 'a,b' },
+      });
+
+      const normalized = apiGatewayV2Adapter.normalize(event);
+
+      expect(normalized.query).toEqual({ tag: 'a,b' });
+      expect(normalized.multiValueQuery).toEqual({ tag: ['a,b'] });
+      expect(normalized.multiValueHeaders['x-tag']).toEqual(['a,b']);
+    });
+
     test('extracts JWT auth from V2 event', () => {
       const event = createApiGatewayV2WithJWTAuthorizerEvent({
         requestContext: {

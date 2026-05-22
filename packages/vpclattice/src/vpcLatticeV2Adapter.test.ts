@@ -100,24 +100,26 @@ suite('vpcLatticeV2Adapter', () => {
       expect(normalized.isBase64Encoded).toBe(false);
     });
 
-    test('flattens array headers to comma-joined lowercase values', () => {
+    test('collapses array headers to the last value with a lowercased key', () => {
       const event = createVPCLatticeV2Event({
         headers: { Accept: ['text/html', 'application/json'] },
       });
 
       const normalized = vpcLatticeV2Adapter.normalize(event);
 
-      expect(normalized.headers.accept).toBe('text/html,application/json');
+      expect(normalized.headers.accept).toBe('application/json');
+      expect(normalized.multiValueHeaders.accept).toEqual(['text/html', 'application/json']);
     });
 
-    test('flattens array query params to comma-joined values', () => {
+    test('collapses repeated query params to the last value and keeps every value', () => {
       const event = createVPCLatticeV2Event({
         queryStringParameters: { tags: ['a', 'b', 'c'] },
       });
 
       const normalized = vpcLatticeV2Adapter.normalize(event);
 
-      expect(normalized.query).toEqual({ tags: 'a,b,c' });
+      expect(normalized.query).toEqual({ tags: 'c' });
+      expect(normalized.multiValueQuery).toEqual({ tags: ['a', 'b', 'c'] });
     });
 
     test('preserves query key case', () => {

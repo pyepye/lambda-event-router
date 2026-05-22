@@ -1,5 +1,11 @@
 import { isObject } from '@lambda-event-router/base';
-import type { Auth, FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+import {
+  type Auth,
+  buildValueMaps,
+  type FinalizedHTTPResponse,
+  type HTTPAdapter,
+  type NormalizedHTTPEvent,
+} from '@lambda-event-router/http';
 
 import type { VPCLatticeEventBase, VPCLatticeResult } from './vpcLatticeV1Adapter';
 
@@ -37,30 +43,6 @@ export interface VPCLatticeEventV2 extends VPCLatticeEventBase {
   requestContext: VPCLatticeRequestContextV2;
 }
 
-function flattenHeaders(event: VPCLatticeEventV2): NormalizedHTTPEvent['headers'] {
-  if (!event.headers) {
-    return {};
-  }
-  const headers: Record<string, string | undefined> = {};
-  // Header names are case-insensitive, so normalise to lower case
-  for (const [key, value] of Object.entries(event.headers)) {
-    headers[key.toLowerCase()] = value?.join();
-  }
-  return headers;
-}
-
-function flattenQuery(event: VPCLatticeEventV2): NormalizedHTTPEvent['query'] {
-  if (!event.queryStringParameters) {
-    return {};
-  }
-  const query: Record<string, string | undefined> = {};
-  // Query keys are case-sensitive, so keep the case the caller sent
-  for (const [key, value] of Object.entries(event.queryStringParameters)) {
-    query[key] = value?.join();
-  }
-  return query;
-}
-
 function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
   const { requestContext } = event;
   // TODO: Deal with auth - what should be included? This is currently a guess and has not been thought about
@@ -86,11 +68,18 @@ export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResul
   },
 
   normalize(event: VPCLatticeEventV2): NormalizedHTTPEvent {
+    // VPC Lattice 2.0 always sends the multi-value form. Collapse to the last value for the flat
+    // maps, matching the other adapters, and keep every value in the multi-value maps.
+    const headers = buildValueMaps({ multi: event.headers, lowercaseKeys: true });
+    const query = buildValueMaps({ multi: event.queryStringParameters });
+
     return {
       method: event.method,
       path: event.path,
-      headers: flattenHeaders(event),
-      query: flattenQuery(event),
+      headers: headers.flat,
+      multiValueHeaders: headers.multiValue,
+      query: query.flat,
+      multiValueQuery: query.multiValue,
       body: event.body,
       isBase64Encoded: event.isBase64Encoded,
       auth: extractV2Auth(event),

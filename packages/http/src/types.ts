@@ -40,7 +40,9 @@ export interface NormalizedHTTPEvent {
   method: string;
   path: string;
   headers: Record<string, string | undefined>;
+  multiValueHeaders: Record<string, string[] | undefined>;
   query: Record<string, string | undefined>;
+  multiValueQuery: Record<string, string[] | undefined>;
   body: string | undefined;
   isBase64Encoded: boolean;
   auth: Auth | undefined;
@@ -67,9 +69,11 @@ export interface ApiRequest<
   method: string;
   path: TPath;
   query: TQuery;
+  multiValueQuery: Record<string, string[] | undefined>;
   body: TBody;
   auth: Auth | undefined;
   headers: Record<string, string | undefined>;
+  multiValueHeaders: Record<string, string[] | undefined>;
   event: TEvent;
   context: Context;
 }
@@ -86,7 +90,9 @@ export interface HTTPFilterInput<TEvent = unknown> {
   method: string;
   path: string;
   headers: Record<string, string | undefined>;
+  multiValueHeaders: Record<string, string[] | undefined>;
   query: Record<string, string | undefined>;
+  multiValueQuery: Record<string, string[] | undefined>;
   body: string | undefined;
   auth: Auth | undefined;
   event: TEvent;

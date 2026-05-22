@@ -82,6 +82,18 @@ suite('vpcLatticeV1Adapter', () => {
       expect(normalized.query).toEqual({ page: '1', limit: '10' });
     });
 
+    test('exposes single-value query and headers as one-element multi-value entries', () => {
+      const event = createVPCLatticeV1Event({
+        headers: { 'X-Trace': 'abc' },
+        query_string_parameters: { page: '1' },
+      });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.multiValueQuery).toEqual({ page: ['1'] });
+      expect(normalized.multiValueHeaders['x-trace']).toEqual(['abc']);
+    });
+
     test('returns undefined body when event body is undefined', () => {
       const event = createVPCLatticeV1Event();
 

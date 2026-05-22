@@ -1,30 +1,12 @@
 import type { ALBEvent, ALBResult } from 'aws-lambda';
 
 import { isObject } from '@lambda-event-router/base';
-import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
-
-// Duplicated from packages/apigateway/src/apiGatewayV1Adapter.ts
-function flattenHeaders(event: ALBEvent): NormalizedHTTPEvent['headers'] {
-  const headers: Record<string, string | undefined> = {};
-
-  if (event.headers) {
-    for (const [key, value] of Object.entries(event.headers)) {
-      headers[key.toLowerCase()] = value;
-    }
-  }
-
-  if (event.multiValueHeaders) {
-    // TODO: This is not how we should handle this, should we have multiValueHeaders as another property?
-    // TODO: Should probably use flattenArrayValues if moved to http
-    for (const [key, values] of Object.entries(event.multiValueHeaders)) {
-      if (values && values.length > 0) {
-        const lastValue = values[values.length - 1];
-        headers[key.toLowerCase()] = lastValue;
-      }
-    }
-  }
-  return headers;
-}
+import {
+  buildValueMaps,
+  type FinalizedHTTPResponse,
+  type HTTPAdapter,
+  type NormalizedHTTPEvent,
+} from '@lambda-event-router/http';
 
 export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
   canHandleEvent(event: unknown): event is ALBEvent {
@@ -41,11 +23,25 @@ export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
   },
 
   normalize(event: ALBEvent): NormalizedHTTPEvent {
+    // ALB sends the multi-value form only when the target group has multi-value headers enabled,
+    // and the single-value form otherwise. Read both so query and headers survive either mode.
+    const headers = buildValueMaps({
+      single: event.headers,
+      multi: event.multiValueHeaders,
+      lowercaseKeys: true,
+    });
+    const query = buildValueMaps({
+      single: event.queryStringParameters,
+      multi: event.multiValueQueryStringParameters,
+    });
+
     return {
       method: event.httpMethod,
       path: event.path,
-      headers: flattenHeaders(event),
-      query: event.queryStringParameters ?? {},
+      headers: headers.flat,
+      multiValueHeaders: headers.multiValue,
+      query: query.flat,
+      multiValueQuery: query.multiValue,
       body: event.body ?? undefined,
       isBase64Encoded: event.isBase64Encoded,
       auth: { targetGroupArn: event.requestContext.elb.targetGroupArn },

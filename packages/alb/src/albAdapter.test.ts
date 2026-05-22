@@ -110,6 +110,39 @@ suite('albAdapter', () => {
       expect(normalized.query).toEqual({ page: '1', limit: '10' });
     });
 
+    test('reads query from multiValueQueryStringParameters when single-value form is absent', () => {
+      // When the target group has multi-value enabled, ALB sends only the multi-value form
+      const event = createALBEvent({
+        queryStringParameters: undefined,
+        multiValueQueryStringParameters: { tag: ['a', 'b'], page: ['1'] },
+      });
+
+      const normalized = albAdapter.normalize(event);
+
+      expect(normalized.query).toEqual({ tag: 'b', page: '1' });
+      expect(normalized.multiValueQuery).toEqual({ tag: ['a', 'b'], page: ['1'] });
+    });
+
+    test('exposes single-value query params as one-element arrays in multiValueQuery', () => {
+      const event = createALBEvent({
+        queryStringParameters: { page: '1' },
+      });
+
+      const normalized = albAdapter.normalize(event);
+
+      expect(normalized.multiValueQuery).toEqual({ page: ['1'] });
+    });
+
+    test('exposes multiValueHeaders on the normalized event', () => {
+      const event = createALBEvent({
+        multiValueHeaders: { 'Set-Cookie': ['a=1', 'b=2'] },
+      });
+
+      const normalized = albAdapter.normalize(event);
+
+      expect(normalized.multiValueHeaders['set-cookie']).toEqual(['a=1', 'b=2']);
+    });
+
     test('returns undefined body when event body is null', () => {
       const event = createALBEvent();
 
