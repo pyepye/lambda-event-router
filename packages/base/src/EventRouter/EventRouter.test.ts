@@ -457,6 +457,40 @@ suite('EventRouter', () => {
     });
   });
 
+  suite('custom filter evaluation', () => {
+    test('runs each custom once across a canHandleEvent then handleEvent sequence', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(defineEventRoute({ filters: { custom } }).handle(async () => {}));
+
+      const event = { taskId: 'task-123' };
+      const context = createMockContext();
+      // Mirror the LambdaRouter dispatch: probe first, then handle the same event object.
+      expect(await router.canHandleEvent(event)).toBe(true);
+      await router.handleEvent(event, context);
+
+      expect(custom).toHaveBeenCalledTimes(1);
+    });
+
+    test('still runs middleware and the handler when the match is served from cache', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      const handler = vi.fn();
+      const middleware = vi.fn(async (request: EventRequest, next: EventNext) => next(request));
+
+      const router = createEventRouter({ middleware: [middleware] });
+      router.route(defineEventRoute({ filters: { custom } }).handle(handler));
+
+      const event = { taskId: 'task-123' };
+      const context = createMockContext();
+      // canHandleEvent caches the match; handleEvent reuses it but must still run everything else.
+      await router.canHandleEvent(event);
+      await router.handleEvent(event, context);
+
+      expect(custom).toHaveBeenCalledTimes(1);
+      expect(middleware).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+  });
+
   suite('handleEvent', () => {
     test('calls handler with request object containing event and context', async () => {
       const handler = vi.fn();

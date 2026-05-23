@@ -165,6 +165,7 @@ export interface EventRouterOptions<TResponse = unknown> {
 export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown, TResponse> {
   private routes: InternalEventRoute[] = [];
   private middleware: EventRouterMiddleware<unknown, TResponse>[];
+  private readonly matchedRoutes = new WeakMap<Record<string, unknown>, InternalEventRoute>();
 
   constructor(options?: EventRouterOptions<TResponse>) {
     this.middleware = options?.middleware ?? [];
@@ -207,6 +208,10 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
   }
 
   private async matchRoute(event: unknown): Promise<InternalEventRoute | undefined> {
+    // canHandleEvent calls handleEvent but both call matchRoute - cache so filters.custom isn't called twice
+    const cached = isObject(event) ? this.matchedRoutes.get(event) : undefined;
+    if (cached) return cached;
+
     const filterInput: EventFilterInput = { event };
     for (const route of this.routes) {
       const { filters } = route;
@@ -214,6 +219,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
         const match = await filters.custom(filterInput);
         if (!match) continue;
       }
+      if (isObject(event)) this.matchedRoutes.set(event, route);
       return route;
     }
     return undefined;
