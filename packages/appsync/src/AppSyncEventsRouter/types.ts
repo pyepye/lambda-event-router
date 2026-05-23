@@ -39,7 +39,7 @@ export interface AppSyncEventsEvent {
 }
 
 export interface AppSyncEventsRequest {
-  channel: string;
+  channelPath: string;
   channelNamespace: string;
   operation: AppSyncEventsOperation;
   identity: AppSyncEventsIdentity | null | undefined;
@@ -55,12 +55,13 @@ export interface AppSyncEventsRequest {
 export interface AppSyncEventsFilterInput {
   operation: AppSyncEventsOperation;
   channelNamespace: string;
-  channel: string;
+  channelPath: string;
   event: AppSyncEventsEvent;
 }
 
 export interface AppSyncEventsFilters {
   operation?: AppSyncEventsOperation | AppSyncEventsOperation[];
+  channelPath?: FilterStringMatcher;
   channelNamespace?: FilterStringMatcher;
   custom?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
@@ -76,7 +77,7 @@ export interface AppSyncEventsRouteDefinition {
 export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'custom'>;
 
 export interface AppSyncEventsChannelInput {
-  channelNamespace: string;
+  channelPath: FilterStringMatcher;
   filters?: AppSyncEventsOperationFilters;
   middleware?: AppSyncEventsMiddleware[];
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;

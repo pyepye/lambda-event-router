@@ -10,19 +10,19 @@ const appSyncEventsRouter = createAppSyncEventsRouter();
 
 // Convenience methods for common operations
 appSyncEventsRouter.publish({
-  channelNamespace: '/default/*',
+  channelPath: '/default/*',
   handler: onPublish,
 });
 
 appSyncEventsRouter.subscribe({
-  channelNamespace: '/default/*',
+  channelPath: '/default/*',
   handler: onSubscribe,
 });
 
 appSyncEventsRouter.route({
   filters: {
     operation: 'PUBLISH',
-    channelNamespace: '/default/*',
+    channelPath: '/default/*',
     custom: isChatChannel,
   },
   handler: onPublish,

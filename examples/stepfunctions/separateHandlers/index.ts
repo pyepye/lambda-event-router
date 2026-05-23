@@ -4,10 +4,10 @@ import { LambdaRouter } from '@lambda-event-router/base';
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions';
 
 import {
+  HumanApprovalSchema,
   handleEnrichData,
   handleHumanApproval,
   handleProcessOrder,
-  HumanApprovalSchema,
   ProcessOrderSchema,
 } from './handlers/taskHandlers.js';
 

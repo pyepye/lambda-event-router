@@ -213,15 +213,15 @@ const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route(
   defineEventsRoute({
-    filters: { operation: 'PUBLISH', channelNamespace: '/default/*' },
+    filters: { operation: 'PUBLISH', channelPath: '/default/*' },
   }).handle(async ({ events }) => {
     return { events }
   })
 )
 ```
 
-`channelNamespace` matches the channel path rather than the name of the namespace, so it takes
-`/default/*` and not `default`.
+`channelPath` matches the channel path, so it takes `/default/*`. To match by the namespace name
+instead, use `channelNamespace: 'default'`.
 
 #### Separate handlers
 
@@ -232,24 +232,24 @@ import { createAppSyncEventsRouter } from '@lambda-event-router/appsync'
 const eventsRouter = createAppSyncEventsRouter()
 
 eventsRouter.route({
-  filters: { operation: 'SUBSCRIBE', channelNamespace: '/default/*' },
+  filters: { operation: 'SUBSCRIBE', channelPath: '/default/*' },
   handler: handleSubscribe,
 })
 
 // Returning allows the subscription, throwing refuses it
-async function handleSubscribe({ channel, identity }: AppSyncEventsRequest) {
-  if (!identity) throw new Error(`Nobody may subscribe to ${channel} anonymously`)
+async function handleSubscribe({ channelPath, identity }: AppSyncEventsRequest) {
+  if (!identity) throw new Error(`Nobody may subscribe to ${channelPath} anonymously`)
 }
 ```
 
 #### Convenience methods
 
-`publish()` and `subscribe()` set the `operation` filter and take the channel pattern at the top level.
+`publish()` and `subscribe()` set the `operation` filter and take the channel path at the top level.
 
 ```ts
 eventsRouter
-  .publish({ channelNamespace: '/default/*', handler: handlePublish })
-  .subscribe({ channelNamespace: '/default/*', handler: handleSubscribe })
+  .publish({ channelPath: '/default/*', handler: handlePublish })
+  .subscribe({ channelPath: '/default/*', handler: handleSubscribe })
 ```
 
 ## Examples

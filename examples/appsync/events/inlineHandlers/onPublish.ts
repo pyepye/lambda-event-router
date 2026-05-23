@@ -5,12 +5,12 @@ import { type AppSyncEventsFilterInput, defineEventsRoute } from '@lambda-event-
 export const onPublishRoute = defineEventsRoute({
   filters: {
     operation: 'PUBLISH',
-    channelNamespace: '/default/*',
+    channelPath: '/default/*',
   },
 }).handle(async (request) => {
-  const { channel, events } = request;
+  const { channelPath, events } = request;
 
-  console.log(`Processing ${events.length} event(s) on channel ${channel}`);
+  console.log(`Processing ${events.length} event(s) on channel ${channelPath}`);
 
   // Transform or filter events before delivery to subscribers
   const processedEvents = events.map((event) => ({
@@ -25,15 +25,15 @@ export const onPublishRoute = defineEventsRoute({
 export const messageEventPublishRoute = defineEventsRoute({
   filters: {
     operation: 'PUBLISH',
-    channelNamespace: '/default/chat/*',
+    channelPath: '/default/chat/*',
     custom: ({ event }: AppSyncEventsFilterInput) => {
       return Object.keys(event.stash ?? {}).length > 1;
     },
   },
 }).handle(async (request) => {
-  const { channel, events } = request;
+  const { channelPath, events } = request;
 
-  console.log(`Chat message: ${events.length} event(s) on ${channel}`);
+  console.log(`Chat message: ${events.length} event(s) on ${channelPath}`);
 
   const processedEvents = events.map((event) => ({
     ...event,

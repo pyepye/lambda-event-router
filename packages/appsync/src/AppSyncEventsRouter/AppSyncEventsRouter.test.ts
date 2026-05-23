@@ -94,10 +94,10 @@ suite('AppSyncEventsRouter', () => {
     test('preserves filters and handler', () => {
       const handler = vi.fn();
       const definition = defineEventsRoute({
-        filters: { operation: 'PUBLISH', channelNamespace: '/default/*' },
+        filters: { operation: 'PUBLISH', channelPath: '/default/*' },
       }).handle(handler);
 
-      expect(definition.filters).toEqual({ operation: 'PUBLISH', channelNamespace: '/default/*' });
+      expect(definition.filters).toEqual({ operation: 'PUBLISH', channelPath: '/default/*' });
       expect(definition.handler).toBe(handler);
     });
 
@@ -124,7 +124,7 @@ suite('AppSyncEventsRouter', () => {
   suite('publish', () => {
     test('returns this for chaining', () => {
       const result = router.publish({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         handler: vi.fn(),
       });
 
@@ -135,7 +135,7 @@ suite('AppSyncEventsRouter', () => {
   suite('subscribe', () => {
     test('returns this for chaining', () => {
       const result = router.subscribe({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         handler: vi.fn(),
       });
 
@@ -178,9 +178,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeUndefined();
     });
 
-    test('matches channelNamespace with exact path', async () => {
+    test('matches channelPath with exact path', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '/default/channel' }, handler });
+      router.route({ filters: { channelPath: '/default/channel' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -189,9 +189,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace with wildcard /*', async () => {
+    test('matches channelPath with wildcard /*', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '/*' }, handler });
+      router.route({ filters: { channelPath: '/*' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -200,9 +200,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace with prefix wildcard /foo/*', async () => {
+    test('matches channelPath with prefix wildcard /foo/*', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '/default/*' }, handler });
+      router.route({ filters: { channelPath: '/default/*' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -211,9 +211,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace by namespace name', async () => {
+    test('matches channelPath with /namespace wildcard', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '*default*' }, handler });
+      router.route({ filters: { channelPath: '/default*' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -222,9 +222,9 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace with /namespace wildcard', async () => {
+    test('matches channelPath array', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: '/default*' }, handler });
+      router.route({ filters: { channelPath: ['/default*', '/fake*'] }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -233,9 +233,19 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('matches channelNamespace array', async () => {
+    test('does not match when channelPath does not match', async () => {
+      router.route({ filters: { channelPath: '/other/*' }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('matches channelNamespace by name', async () => {
       const handler = vi.fn();
-      router.route({ filters: { channelNamespace: ['/default*', '/fake*'] }, handler });
+      router.route({ filters: { channelNamespace: 'default' }, handler });
 
       const event = createAppSyncEventsEvent();
 
@@ -244,8 +254,50 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
-    test('does not match when channelNamespace does not match', async () => {
-      router.route({ filters: { channelNamespace: '/other/*' }, handler: vi.fn() });
+    test('matches channelNamespace with wildcard', async () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelNamespace: 'def*' }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when channelNamespace name differs', async () => {
+      router.route({ filters: { channelNamespace: 'other' }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('does not match a channelNamespace filter written as a channel path', async () => {
+      router.route({ filters: { channelNamespace: '/default/*' }, handler: vi.fn() });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
+    test('matches when channelPath and channelNamespace both pass', async () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelPath: '/default/*', channelNamespace: 'default' }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeDefined();
+    });
+
+    test('does not match when channelPath passes but channelNamespace does not', async () => {
+      router.route({ filters: { channelPath: '/default/*', channelNamespace: 'other' }, handler: vi.fn() });
 
       const event = createAppSyncEventsEvent();
 
@@ -330,7 +382,7 @@ suite('AppSyncEventsRouter', () => {
       router.route({
         filters: {
           operation: 'PUBLISH',
-          channelNamespace: '/default/*',
+          channelPath: '/default/*',
           custom: () => true,
         },
         handler,
@@ -347,7 +399,7 @@ suite('AppSyncEventsRouter', () => {
       router.route({
         filters: {
           operation: 'PUBLISH',
-          channelNamespace: '/default/',
+          channelPath: '/default/*',
           custom: () => false,
         },
         handler: vi.fn(),
@@ -388,7 +440,7 @@ suite('AppSyncEventsRouter', () => {
 
       expect(handler).toHaveBeenCalledWith(
         expect.objectContaining({
-          channel: '/chat/room1',
+          channelPath: '/chat/room1',
           channelNamespace: 'chat',
           operation: 'PUBLISH',
           identity: null,
@@ -434,7 +486,7 @@ suite('AppSyncEventsRouter', () => {
       const handler = vi.fn().mockResolvedValue('ok');
 
       router.publish({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         filters: { custom },
         handler,
       });
@@ -452,7 +504,7 @@ suite('AppSyncEventsRouter', () => {
       const custom = vi.fn().mockReturnValue(false);
 
       router.publish({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         filters: { custom },
         handler: vi.fn(),
       });
@@ -468,7 +520,7 @@ suite('AppSyncEventsRouter', () => {
       const handler = vi.fn().mockResolvedValue('ok');
 
       router.subscribe({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         filters: { custom },
         handler,
       });
@@ -486,7 +538,7 @@ suite('AppSyncEventsRouter', () => {
       const custom = vi.fn().mockReturnValue(false);
 
       router.subscribe({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         filters: { custom },
         handler: vi.fn(),
       });
@@ -502,7 +554,7 @@ suite('AppSyncEventsRouter', () => {
     test('routes PUBLISH events through publish()', async () => {
       const handler = vi.fn().mockResolvedValue('publish-result');
 
-      router.publish({ channelNamespace: '/default/*', handler });
+      router.publish({ channelPath: '/default/*', handler });
 
       const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
       const context = createMockContext();
@@ -514,7 +566,7 @@ suite('AppSyncEventsRouter', () => {
     test('routes SUBSCRIBE events through subscribe()', async () => {
       const handler = vi.fn().mockResolvedValue('subscribe-result');
 
-      router.subscribe({ channelNamespace: '/default/*', handler });
+      router.subscribe({ channelPath: '/default/*', handler });
 
       const event = createAppSyncEventsEvent({ info: { operation: 'SUBSCRIBE' } });
       const context = createMockContext();
@@ -619,7 +671,7 @@ suite('AppSyncEventsRouter', () => {
       }
 
       router.publish({
-        channelNamespace: '/default/*',
+        channelPath: '/default/*',
         middleware: [routeMiddleware],
         handler: async () => {
           callOrder.push('handler');

@@ -59,7 +59,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       filters: {
         ...input.filters,
         operation: 'PUBLISH',
-        channelNamespace: input.channelNamespace,
+        channelPath: input.channelPath,
       },
       middleware: input.middleware,
       handler: input.handler,
@@ -71,7 +71,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
       filters: {
         ...input.filters,
         operation: 'SUBSCRIBE',
-        channelNamespace: input.channelNamespace,
+        channelPath: input.channelPath,
       },
       middleware: input.middleware,
       handler: input.handler,
@@ -89,7 +89,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     }
 
     const request: AppSyncEventsRequest = {
-      channel: channelPath,
+      channelPath,
       channelNamespace,
       operation,
       identity: event.identity,
@@ -124,8 +124,13 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
         }
       }
 
+      if (filters.channelPath) {
+        const channelPathMatch = filterStringMatcher(channelPath, filters.channelPath);
+        if (!channelPathMatch) continue;
+      }
+
       if (filters.channelNamespace) {
-        const channelNamespaceMatch = filterStringMatcher(channelPath, filters.channelNamespace);
+        const channelNamespaceMatch = filterStringMatcher(channelNamespace, filters.channelNamespace);
         if (!channelNamespaceMatch) continue;
       }
 
@@ -133,7 +138,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
         const match = await filters.custom({
           operation: operationTyped,
           channelNamespace,
-          channel: channelPath,
+          channelPath,
           event,
         });
         if (!match) continue;
