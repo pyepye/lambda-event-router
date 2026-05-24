@@ -76,6 +76,7 @@ export function defineRoute(config: {
 }
 
 export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
+  readonly matchTier = 'catchAll';
   private routes: InternalRoute[] = [];
   private middleware: StepFunctionsMiddleware[];
 

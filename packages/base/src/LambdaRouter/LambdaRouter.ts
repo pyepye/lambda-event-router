@@ -20,11 +20,12 @@ export class LambdaRouter {
   private middleware: LambdaMiddleware[];
 
   constructor(options: LambdaRouterOptions) {
-    // EventRouter accepts arbitrary JSON payloads, making its canHandleEvent a catch-all.
-    // Always put it at the end so that it only handles events that no other router can handle.
-    const customEnvelopeRouters = options.routers.filter((r) => r.constructor.name === 'EventRouter');
-    const otherRouters = options.routers.filter((r) => r.constructor.name !== 'EventRouter');
-    this.routers = [...otherRouters, ...customEnvelopeRouters];
+    // Hack: Ordering so StepFunctionRouter then EventRouter are called last via matchTier. This is so routers that deal
+    // with custom payloads try to handle events last as they could accidentally match other service specific events.
+    const specificRouters = options.routers.filter((r) => !r.matchTier);
+    const catchAllRouters = options.routers.filter((r) => r.matchTier === 'catchAll');
+    const fallbackRouters = options.routers.filter((r) => r.matchTier === 'fallback');
+    this.routers = [...specificRouters, ...catchAllRouters, ...fallbackRouters];
     this.middleware = options.middleware ?? [];
     log.debug(`LambdaRouter middleware (${this.middleware.length}) ${this.middleware.map((m) => m.name)}`);
   }

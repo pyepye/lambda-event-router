@@ -28,6 +28,12 @@ suite('StepFunctionsRouter', () => {
     });
   });
 
+  suite('router ordering', () => {
+    test('marks itself a catch-all so LambdaRouter sorts it after dedicated routers', () => {
+      expect(router.matchTier).toBe('catchAll');
+    });
+  });
+
   suite('canHandleEvent', () => {
     test('returns true for a plain object event', () => {
       expect(router.canHandleEvent({ action: 'process', data: 123 })).toBe(true);

@@ -166,6 +166,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
   private routes: InternalEventRoute[] = [];
   private middleware: EventRouterMiddleware<unknown, TResponse>[];
   private readonly matchedRoutes = new WeakMap<Record<string, unknown>, InternalEventRoute>();
+  readonly matchTier = 'fallback'; // LambdaRouter sorts this last:
 
   constructor(options?: EventRouterOptions<TResponse>) {
     this.middleware = options?.middleware ?? [];

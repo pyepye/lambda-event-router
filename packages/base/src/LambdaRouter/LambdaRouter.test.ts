@@ -72,37 +72,69 @@ suite('LambdaRouter', () => {
 
       await expect(handler(unknownEvent, mockContext, vi.fn())).rejects.toThrow('No router found for event');
     });
+  });
 
-    test('reorders EventRouter to the end regardless of input order', () => {
-      const mockHandler = vi.fn();
+  suite('router ordering', () => {
+    function createOrderingRouter(matchTier?: 'catchAll' | 'fallback'): EventTypeRouter {
+      return {
+        matchTier,
+        canHandleEvent(_event: unknown): _event is unknown {
+          return true;
+        },
+        handleEvent: vi.fn(),
+      };
+    }
 
-      // The constructor reorders based on constructor.name === 'EventRouter'
-      class EventRouter implements EventTypeRouter {
-        canHandleEvent(event: unknown): event is unknown {
-          return typeof event === 'object';
+    function orderOf(routers: EventTypeRouter[]): EventTypeRouter[] {
+      const lambdaRouter = createLambdaRouter({ routers });
+      // @ts-expect-error reading private state to check order of routers
+      return lambdaRouter.routers;
+    }
+
+    test('sorts a fallback router last regardless of input order', () => {
+      const specific = createOrderingRouter();
+      const fallback = createOrderingRouter('fallback');
+
+      expect(orderOf([fallback, specific])).toEqual([specific, fallback]);
+    });
+
+    test('sorts a catch-all after specific routers and before a fallback', () => {
+      const specific = createOrderingRouter();
+      const catchAll = createOrderingRouter('catchAll');
+      const fallback = createOrderingRouter('fallback');
+
+      expect(orderOf([fallback, catchAll, specific])).toEqual([specific, catchAll, fallback]);
+    });
+
+    test('keys off matchTier not the class name, so minification cannot break it', () => {
+      // A minifier renames classes, so the sort must not depend on constructor.name.
+      class Renamed implements EventTypeRouter {
+        readonly matchTier = 'fallback';
+        canHandleEvent(_event: unknown): _event is unknown {
+          return true;
         }
-        handleEvent = mockHandler;
+        handleEvent = vi.fn();
       }
+      const specific = createOrderingRouter();
+      const fallback = new Renamed();
 
-      class SQSRouter implements EventTypeRouter {
-        canHandleEvent(event: unknown): event is unknown {
-          return typeof event === 'object';
-        }
-        handleEvent = mockHandler;
-      }
+      expect(orderOf([fallback, specific])).toEqual([specific, fallback]);
+    });
 
-      const eventRouter = new EventRouter();
-      const sqsRouter = new SQSRouter();
+    test('sorts a real EventRouter last as the fallback', () => {
+      const specific = createOrderingRouter();
+      const eventRouter = createEventRouter();
 
-      const lambdaRouter = createLambdaRouter({
-        routers: [eventRouter, sqsRouter],
-      });
+      const ordered = orderOf([eventRouter, specific]);
+      expect(ordered[ordered.length - 1]).toBe(eventRouter);
+    });
 
-      // @ts-expect-error accessing private property to check order of routers
-      const orderedRouters: EventTypeRouter[] = lambdaRouter.routers;
+    test('preserves registration order among specific routers', () => {
+      const first = createOrderingRouter();
+      const second = createOrderingRouter();
+      const fallback = createOrderingRouter('fallback');
 
-      expect(orderedRouters[0]).toBe(sqsRouter);
-      expect(orderedRouters[1]).toBe(eventRouter);
+      expect(orderOf([first, second, fallback])).toEqual([first, second, fallback]);
     });
   });
 
