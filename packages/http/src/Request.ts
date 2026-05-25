@@ -78,6 +78,7 @@ export class Request {
     return {
       method: this.method,
       path: this.pathParams,
+      rawPath: this.path,
       query,
       multiValueQuery: this.multiValueQueryParams,
       auth: this.auth,

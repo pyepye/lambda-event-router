@@ -68,6 +68,7 @@ export interface ApiRequest<
 > {
   method: string;
   path: TPath;
+  rawPath: string;
   query: TQuery;
   multiValueQuery: Record<string, string[] | undefined>;
   body: TBody;

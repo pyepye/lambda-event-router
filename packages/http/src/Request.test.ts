@@ -270,6 +270,15 @@ suite('Request', () => {
       expect(apiRequest.context).toBe(mockContext);
     });
 
+    test('carries the raw request path so middleware can read the string the caller asked for', () => {
+      const normalizedEvent = createNormalizedEvent({ path: '/items/42' });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), { id: '42' });
+
+      const apiRequest = request.buildApiRequest({}, undefined);
+
+      expect(apiRequest.rawPath).toBe('/items/42');
+    });
+
     test('carries the multi-value query and header maps unchanged', () => {
       const normalizedEvent = createNormalizedEvent({
         multiValueQuery: { tag: ['a', 'b'] },
