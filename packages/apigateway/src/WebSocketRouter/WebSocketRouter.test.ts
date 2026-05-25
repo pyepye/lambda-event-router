@@ -611,6 +611,15 @@ suite('WebSocketRouter', () => {
       // @ts-expect-error - testing private method
       expect(router.buildResult('unexpected')).toEqual({ statusCode: 200 });
     });
+
+    test('warns when an unexpected response shape defaults to { statusCode: 200 }', () => {
+      const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
+
+      // @ts-expect-error - testing private method
+      router.buildResult('unexpected');
+
+      expect(warnSpy).toHaveBeenCalledOnce();
+    });
   });
 
   suite('router-level middleware', () => {

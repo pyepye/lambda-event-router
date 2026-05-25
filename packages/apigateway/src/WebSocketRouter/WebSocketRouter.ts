@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
 import { isWebSocketResponse } from './response.js';
 import type {
@@ -251,7 +251,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       return { statusCode: response.statusCode };
     }
 
-    // TODO: Should log warn here
+    logger.warn('WebSocket handler returned an unexpected value; defaulting to statusCode 200', { response });
     return { statusCode: 200 };
   }
 }
