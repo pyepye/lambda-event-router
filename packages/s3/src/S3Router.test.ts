@@ -32,6 +32,11 @@ suite('S3Router', () => {
       expect(router.canHandleEvent(event)).toBe(true);
     });
 
+    test('returns true for an S3 test event', () => {
+      const event = { Service: 'Amazon S3', Event: 's3:TestEvent', Bucket: 'my-bucket' };
+      expect(router.canHandleEvent(event)).toBe(true);
+    });
+
     test('returns false for a non-S3 event', () => {
       const event = { detail: { foo: 'bar' }, source: 'custom.app' };
       expect(router.canHandleEvent(event)).toBe(false);
@@ -120,6 +125,57 @@ suite('S3Router', () => {
     });
   });
 
+  suite('testEvent', () => {
+    const rawTestEvent = {
+      Service: 'Amazon S3' as const,
+      Event: 's3:TestEvent' as const,
+      Time: '2024-01-01T00:00:00.000Z',
+      Bucket: 'my-bucket',
+      RequestId: 'REQ123',
+      HostId: 'HOST123',
+    };
+
+    test('returns the router instance for chaining', () => {
+      const result = router.testEvent({ handler: async () => {} });
+
+      expect(result).toBe(router);
+    });
+
+    test('calls the registered handler with the mapped request', async ({ context }) => {
+      const handler = vi.fn();
+      router.testEvent({ handler });
+
+      const ctx = context();
+      await router.handleEvent(rawTestEvent, ctx);
+
+      expect(handler).toHaveBeenCalledWith({
+        bucket: 'my-bucket',
+        time: '2024-01-01T00:00:00.000Z',
+        requestId: 'REQ123',
+        hostId: 'HOST123',
+        context: ctx,
+      });
+    });
+
+    test('returns undefined without a registered handler and does not throw', async ({ context }) => {
+      const result = await router.handleEvent(rawTestEvent, context());
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not run notification routes for a test event', async ({ context }) => {
+      const notificationHandler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(notificationHandler));
+      const testHandler = vi.fn();
+      router.testEvent({ handler: testHandler });
+
+      await router.handleEvent(rawTestEvent, context());
+
+      expect(notificationHandler).not.toHaveBeenCalled();
+      expect(testHandler).toHaveBeenCalledOnce();
+    });
+  });
+
   suite('convenience methods', () => {
     test.each([
       { method: 'objectCreated', eventName: 'ObjectCreated:*' },
@@ -144,7 +200,6 @@ suite('S3Router', () => {
       { method: 'objectAclPut', eventName: 'ObjectAcl:Put' },
       { method: 'reducedRedundancyLostObject', eventName: 'ReducedRedundancyLostObject' },
       { method: 'intelligentTiering', eventName: 'IntelligentTiering' },
-      { method: 'testEvent', eventName: 'TestEvent' },
     ])('$method sets eventName filter to $eventName', async ({ method, eventName }) => {
       const handler = vi.fn();
       // @ts-expect-error - dynamic method access for convenience method testing
@@ -625,6 +680,29 @@ suite('S3Router', () => {
         invocationId: event.invocationId,
         results: [{ taskId: event.tasks[0]?.taskId, resultCode: 'Succeeded', resultString: 'done' }],
       });
+    });
+
+    test('defaults treatMissingKeysAs to PermanentFailure when not set', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const }) });
+
+      const event = s3BatchEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.handleBatchEvent(event, context());
+
+      expect(result.treatMissingKeysAs).toBe('PermanentFailure');
+    });
+
+    test('uses treatMissingKeysAs from the batch definition when set', async ({ s3BatchEvent, context }) => {
+      router.batchOperation({
+        treatMissingKeysAs: 'Succeeded',
+        handler: async () => ({ resultCode: 'Succeeded' as const }),
+      });
+
+      const event = s3BatchEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.handleBatchEvent(event, context());
+
+      expect(result.treatMissingKeysAs).toBe('Succeeded');
     });
 
     test('processes every task and returns one result per task', async ({ s3BatchEvent, context }) => {

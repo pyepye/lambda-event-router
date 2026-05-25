@@ -1,3 +1,5 @@
+import type { Context } from 'aws-lambda';
+
 import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
@@ -42,17 +44,25 @@ export interface S3IntelligentTieringRouteDefinition {
 // Test Event
 // =============================================================================
 
-/* v8 ignore next -- @preserve - Constant declaration, no logic to test */
-export const TEST_EVENT_NAMES = ['TestEvent'] as const;
+export interface S3TestEvent {
+  Service: 'Amazon S3';
+  Event: 's3:TestEvent';
+  Time: string;
+  Bucket: string;
+  RequestId: string;
+  HostId: string;
+}
 
-export type S3TestEventName = (typeof TEST_EVENT_NAMES)[number];
-
-export interface S3TestEventRequest extends S3BaseRequest {}
+export interface S3TestEventRequest {
+  bucket: string;
+  time: string;
+  requestId: string;
+  hostId: string;
+  context: Context;
+}
 
 export type S3TestEventHandler = (request: S3TestEventRequest) => Promise<void>;
 
 export interface S3TestEventRouteDefinition {
-  filters?: S3FiltersWithoutEventNames;
-  middleware?: S3Middleware[];
   handler: S3TestEventHandler;
 }

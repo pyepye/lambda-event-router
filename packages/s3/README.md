@@ -187,6 +187,25 @@ s3Router.batchOperation({
 })
 ```
 
+Set `treatMissingKeysAs` on the route to control how the job counts a task left out of the response. It
+defaults to `PermanentFailure`.
+
+#### S3 test event
+
+S3 sends a one-off `s3:TestEvent` when you first configure a bucket notification. It has no `Records`,
+so register a handler with `testEvent()` rather than a normal route.
+
+```ts
+s3Router.testEvent({
+  handler: async ({ bucket, time }) => {
+    console.log(`Notifications live on ${bucket} from ${time}`)
+  },
+})
+```
+
+Skip `testEvent()` and the router still claims the event and returns without doing anything, so the
+invocation succeeds instead of failing with no matching route.
+
 ## Examples
 
 See the [examples/s3](../../examples/s3) directory for complete working examples.

@@ -83,8 +83,8 @@ export type {
   S3ReducedRedundancyLostObjectHandler,
   S3ReducedRedundancyLostObjectRequest,
   S3ReducedRedundancyLostObjectRouteDefinition,
+  S3TestEvent,
   S3TestEventHandler,
-  S3TestEventName,
   S3TestEventRequest,
   S3TestEventRouteDefinition,
 } from './replication.js';
@@ -92,5 +92,4 @@ export type {
 export {
   INTELLIGENT_TIERING_EVENT_NAMES,
   REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES,
-  TEST_EVENT_NAMES,
 } from './replication.js';

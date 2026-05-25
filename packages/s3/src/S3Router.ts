@@ -26,6 +26,8 @@ import type {
   S3ObjectRestoreRouteDefinition,
   S3ObjectTaggingRouteDefinition,
   S3ReducedRedundancyLostObjectRouteDefinition,
+  S3TestEvent,
+  S3TestEventRequest,
   S3TestEventRouteDefinition,
 } from './types/index.js';
 
@@ -79,13 +81,20 @@ function isS3BatchEvent(event: unknown): event is S3BatchEvent {
   );
 }
 
+function isS3TestEvent(event: unknown): event is S3TestEvent {
+  /* v8 ignore next -- @preserve - Guard is for TS. canHandleEvent already checks isObject */
+  if (!isObject(event)) return false;
+  return event.Event === 's3:TestEvent';
+}
+
 // =============================================================================
 // S3Router Class
 // =============================================================================
 
-export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefined | S3BatchResult> {
+export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3TestEvent, undefined | S3BatchResult> {
   private routes: InternalRoute[] = [];
   private batchRoute: S3BatchRouteDefinition | undefined;
+  private testEventRoute: S3TestEventRouteDefinition | undefined;
   private middleware: S3Middleware[] = [];
 
   constructor(options?: S3RouterOptions) {
@@ -95,11 +104,14 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
   // Event Detection
   // ===========================================================================
 
-  canHandleEvent(event: unknown): event is S3Event | S3BatchEvent {
+  canHandleEvent(event: unknown): event is S3Event | S3BatchEvent | S3TestEvent {
     if (!isObject(event)) return false;
 
     // Check for S3 Batch Event
     if (isS3BatchEvent(event)) return true;
+
+    // Check for S3 Test Event
+    if (isS3TestEvent(event)) return true;
 
     // Check for S3 Event Notification
     if (!Array.isArray(event.Records)) return false;
@@ -348,12 +360,8 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
   }
 
   testEvent(definition: S3TestEventRouteDefinition): this {
-    return this.addRoute(
-      'TestEvent',
-      definition.filters,
-      definition.middleware ?? [],
-      definition.handler as InternalHandler,
-    );
+    this.testEventRoute = definition;
+    return this;
   }
 
   // ===========================================================================
@@ -369,16 +377,35 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
   // Event Handling
   // ===========================================================================
 
-  async handleEvent(event: S3Event | S3BatchEvent, context: Context): Promise<undefined | S3BatchResult> {
+  async handleEvent(event: S3Event | S3BatchEvent | S3TestEvent, context: Context): Promise<undefined | S3BatchResult> {
     // Handle S3 Batch Event
     if (isS3BatchEvent(event)) {
       return this.handleBatchEvent(event, context);
+    }
+
+    // Handle S3 Test Event - short-circuits notification routing
+    if (isS3TestEvent(event)) {
+      return this.handleTestEvent(event, context);
     }
 
     // Handle S3 Event Notification - process records sequentially
     for (const record of event.Records) {
       await this.processRecord(record, context);
     }
+  }
+
+  private async handleTestEvent(event: S3TestEvent, context: Context): Promise<undefined> {
+    // No handler registered: swallow the setup ping so the invocation succeeds
+    if (!this.testEventRoute) return;
+
+    const request: S3TestEventRequest = {
+      bucket: event.Bucket,
+      time: event.Time,
+      requestId: event.RequestId,
+      hostId: event.HostId,
+      context,
+    };
+    await this.testEventRoute.handler(request);
   }
 
   // ===========================================================================
@@ -463,7 +490,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent, undefin
   private buildBatchResult(event: S3BatchEvent, results: S3BatchResult['results']): S3BatchResult {
     return {
       invocationSchemaVersion: event.invocationSchemaVersion,
-      treatMissingKeysAs: 'PermanentFailure',
+      treatMissingKeysAs: this.batchRoute?.treatMissingKeysAs ?? 'PermanentFailure',
       invocationId: event.invocationId,
       results,
     };

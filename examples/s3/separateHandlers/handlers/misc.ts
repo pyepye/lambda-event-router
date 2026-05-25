@@ -15,6 +15,6 @@ export async function intelligentTiering(request: S3IntelligentTieringRequest): 
 }
 
 export async function testEvent(request: S3TestEventRequest): Promise<void> {
-  const { bucket, key, eventTime } = request;
-  console.log(`Test event received: ${key} in ${bucket} at ${eventTime}`);
+  const { bucket, time, requestId } = request;
+  console.log(`Test event received for ${bucket} at ${time}, request ${requestId}`);
 }

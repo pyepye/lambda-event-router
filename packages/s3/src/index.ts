@@ -67,8 +67,8 @@ export type {
   S3ReducedRedundancyLostObjectRouteDefinition,
   // RouterOptions
   S3RouterOptions,
+  S3TestEvent,
   S3TestEventHandler,
-  S3TestEventName,
   S3TestEventRequest,
   S3TestEventRouteDefinition,
 } from './types/index.js';
@@ -83,5 +83,4 @@ export {
   OBJECT_RESTORE_EVENT_NAMES,
   OBJECT_TAGGING_EVENT_NAMES,
   REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES,
-  TEST_EVENT_NAMES,
 } from './types/index.js';
