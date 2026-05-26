@@ -111,6 +111,24 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches by configRuleName wildcard filter', async () => {
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule-*' } }).handle(async () => {}));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule-foo', accountId: '123456789012' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches by configRuleName RegExp filter', async () => {
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: /^my-rule-\d+$/ } }).handle(async () => {}));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule-42', accountId: '123456789012' });
+
+      expect(result).toBeDefined();
+    });
+
     test('rejects when configRuleName not in filter', async () => {
       router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } }).handle(async () => {}));
 
