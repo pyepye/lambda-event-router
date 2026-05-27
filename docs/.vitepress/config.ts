@@ -5,7 +5,7 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   srcExclude: ['README.md'],
   title: 'Lambda Event Router',
-  description: 'Type-safe routing for AWS Lambda events',
+  description: 'Type-safe event routing for AWS Lambda events',
   base: '/',
   cleanUrls: true,
   head: [['link', { rel: 'icon', href: '/lambda-event-router.svg' }]],
@@ -17,6 +17,7 @@ export default defineConfig({
     },
     siteTitle: 'Lambda Event Router',
     search: { provider: 'local' },
+    outline: [2, 3],
     nav: [
       { text: 'Packages', link: '/packages' },
       { text: 'Docs', link: '/docs/' },

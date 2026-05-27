@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Lambda Event Router
-  text: Type-safe routing for AWS Lambda
+  text: Type-safe event routing for AWS Lambda
   tagline: One handler, any event source. Route API Gateway, SQS, DynamoDB, S3 and more to the right code.
   image:
     light: /lambda-event-router-light.svg
@@ -21,7 +21,7 @@ features:
   - title: 🔀 Multi-source routing
     details: Combine routers from different AWS services in a single Lambda handler.
   - title: 🛡️ Type-safe routing
-    details: Full TypeScript support with inferred types from schemas and filters for inline handlers.
+    details: Full TypeScript support, with handler types inferred from the schemas and filters on the route.
   - title: 🎛️ Declarative filters
     details: Route events by ARN, eventType, topic, bucket, event name, detail type, and custom filter functions.
   - title: 🧱 25+ AWS services

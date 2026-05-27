@@ -42,6 +42,21 @@
   }
 }
 
+/* Required if we want 'event' in the tag line*/
+@media (min-width: 960px) {
+  .VPHome .VPHero.has-image.VPHomeHero .container .main {
+    max-width: 611px;
+  }
+  .VPHero.has-image.VPHomeHero .main h1.heading span.name,
+  .VPHero.has-image.VPHomeHero .main h1.heading span.text {
+    max-width: 611px;
+  }
+  .VPHero.has-image.VPHomeHero .container .image .image-container {
+    transform: translate(0px, -32px);
+  }
+}
+
+
 /* Packages page: custom grid with search and filter pills.
    Rules are scoped under `.vp-doc` because VitePress wraps extra markdown
    content in `.vp-doc` (home layout), which otherwise injects prose styles
