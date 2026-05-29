@@ -1,237 +1,246 @@
-# Quick Start
+# Quick start
 
-
-## Prerequisites
-
-- AWS lambda
-- NodeJS
-- Blurb around packages and know which AWS services you need
+A Lambda handling an SQS queue takes two files. Once that works, adding a second event source to the
+same Lambda is one more router, which is the part worth being here for.
 
 ## Install
 
-- blurb and link to packages page
+One package per event source your Lambda receives. `base` comes along as a dependency, so there is
+nothing else to add.
+
 ```bash
-npm install @lambda-event-router/[package]
+npm install @lambda-event-router/sqs
 ```
 
-- When need to support multiple aws services
+A Lambda sitting behind an HTTP API and a queue takes two:
+
 ```bash
 npm install @lambda-event-router/apigateway @lambda-event-router/sqs
 ```
 
+If you are not sure which package you need, the [packages page](/packages) lists every AWS event source
+we cover.
 
-## Your first lambda
+## Your first Lambda
 
-- Break down into steps
-1. LambdaRouter
+### 1. Create a router and register a route
 
-```ts
-import { LambdaRouter } from '@lambda-event-router/base'
-import { sqsRouter } from './sqs'
-
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter]
-})
-
-export const handler = lambdaRouter.handler()
-```
-
-2. SQS Router
 ```ts
 import { createSQSRouter } from '@lambda-event-router/sqs'
+import { z } from 'zod'
 
-const sqsRouter = createSQSRouter()
+import { orders } from '../services/orders.js'
 
-// Separate handler to define routes and handlers in different places
-sqsRouter.route({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: BodySchema,
-  handler: processOrder,
+const ORDER_QUEUE_ARN = 'arn:aws:sqs:eu-west-2:123456789012:orders'
+
+const OrderSchema = z.object({
+  orderId: z.string(),
+  quantity: z.number().int().positive(),
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processOrder({ body }) {
-  console.log(`Creating item: ${body.name} - $${body.price}`)
-}
+export const sqsRouter = createSQSRouter({ batchItemFailures: true })
+
+sqsRouter.route({
+  filters: {
+    eventSourceArn: ORDER_QUEUE_ARN,
+    messageAttributes: { type: 'OrderPlaced' },
+  },
+  bodySchema: OrderSchema,
+  handler: async ({ body }) => {
+    // body is typed from OrderSchema, with nothing to declare
+    await orders.save({ orderId: body.orderId, quantity: body.quantity })
+  },
+})
 ```
 
+Breaking that down:
 
-## Multiple routers
+1. `createSQSRouter` makes a router for one event source. `batchItemFailures: true` reports failing
+   records individually so only those get redelivered
+2. `filters` says which records this route takes, and every key has to match. This one only takes
+   `OrderPlaced` messages off that queue, so a second route can filter on `OrderCancelled` and get its
+   own handler. The keys come from the event source, and [routing](/docs/routing#filters) lists them
+3. `bodySchema` parses the message JSON and validates it, then types `body` from the same schema. See
+   [schema validation](/docs/routing#schema-validation) for which libraries work and what a failure does
+4. SQS hands Lambda a batch of records. The router unpacks it and calls your handler once per record, so
+   ten messages arriving together run it ten times and you write for one message rather than a loop.
+   [Handlers](/docs/handlers#requests) covers everything else the request carries
 
-- Example with file system with APIGateway, DynamoDB and SQS
+### 2. Export the Lambda handler
 
+```ts
+import type { Handler } from 'aws-lambda'
+import { LambdaRouter } from '@lambda-event-router/base'
 
-Support file linking.
+import { sqsRouter } from './routers/sqs.js'
 
-Open a file: [index.ts](#multi-router:index.ts) | [API router](#multi-router:routers/api.ts) | [SQS router](#multi-router:routers/sqs.ts) | [createItem handler](#multi-router:handlers/createItem.ts) | [package.json](#multi-router:package.json)
+const lambdaRouter = new LambdaRouter({ routers: [sqsRouter] })
 
-<!-- This is fake and needs replacing - it's just an example used for testing CodeFileViewer -->
+export const handler: Handler = lambdaRouter.handler()
+```
+
+`LambdaRouter` is what AWS invokes. It works out which of its [routers](/docs/routers) owns each event
+before any of your filters run, so nothing in your code has to sniff at the event shape.
+
+Congratulations, that is a working Lambda. Point the queue at it and every message reaches your handler
+already parsed, validated and typed.
+
+## Multiple event sources
+
+One `LambdaRouter` takes as many routers as you need, and each event reaches exactly one of them.
+Matching happens twice: `LambdaRouter` picks the router from the shape of the event, then that router
+picks the route from your filters.
+
+- A `PUT /items/:itemId` request goes to `apiRouter`, then to the route filtering on that method and path
+- A stream record with `eventName: 'INSERT'` goes to `dynamoRouter`, then to the route filtering on that
+  event name and stream ARN
+
+Adding the second router cannot change how the first one's events are routed, so the API behaves exactly
+as it did before the stream existed.
+
+Open a file: [api-handlers/putItem.ts](#multi-router:api-handlers/putItem.ts) |
+[db-handlers/onItemInserted.ts](#multi-router:db-handlers/onItemInserted.ts) |
+[api.ts](#multi-router:api.ts) |
+[dynamodb.ts](#multi-router:dynamodb.ts) |
+[index.ts](#multi-router:index.ts)
+
 <script setup>
-
-// Get files from disk for CodeFileViewer
-// import { fromGlob } from '../.vitepress/theme/utils/codeFiles'
-// const separateHandlerFiles = fromGlob(import.meta.glob('/examples/separateHandler/**/*', { query: '?raw', eager: true }))
-
 const files = [
   {
     path: 'index.ts',
-    code: `import { LambdaRouter } from '@lambda-event-router/base'
-import type { Handler } from 'aws-lambda'
+    code: `import type { Handler } from 'aws-lambda'
+import { LambdaRouter } from '@lambda-event-router/base'
 
-import { apiRouter } from './routers/api.js'
-import { sqsRouter } from './routers/sqs.js'
+import { apiRouter } from './api.js'
+import { dynamoRouter } from './dynamodb.js'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter, sqsRouter],
-})
+// Two event sources, one entry point
+const lambdaRouter = new LambdaRouter({ routers: [apiRouter, dynamoRouter] })
 
 export const handler: Handler = lambdaRouter.handler()`,
   },
   {
-    path: 'routers/api.ts',
+    path: 'api.ts',
     code: `import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
-import { createItem } from '../handlers/createItem.js'
-import { CreateItemBodySchema, QuerySchema } from '../schemas/item.js'
+
+import { putItem } from './api-handlers/putItem.js'
+import { ItemSchema } from './schemas/item.js'
 
 export const apiRouter = createAPIGatewayRouter()
 
-apiRouter.post({
-  path: '/orgs/:orgId/items/:itemId',
-  handler: createItem,
-  bodySchema: CreateItemBodySchema,
-  querySchema: QuerySchema,
+apiRouter.route({
+  filters: { method: 'PUT', path: '/items/:itemId' },
+  bodySchema: ItemSchema,
+  handler: putItem,
 })`,
   },
   {
-    path: 'routers/sqs.ts',
-    code: `import { createSQSRouter } from '@lambda-event-router/sqs'
-import { processOrder } from '../handlers/processOrder.js'
-import { OrderSchema } from '../schemas/order.js'
+    path: 'dynamodb.ts',
+    code: `import { createDynamoDBRouter } from '@lambda-event-router/dynamodb'
 
-export const sqsRouter = createSQSRouter()
+import { onItemInserted } from './db-handlers/onItemInserted.js'
+import { ItemKeysSchema, ItemSchema } from './schemas/item.js'
 
-sqsRouter.route({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:orders' },
-  bodySchema: OrderSchema,
-  handler: processOrder,
+const ITEM_STREAM_ARN = 'arn:aws:dynamodb:eu-west-2:123456789012:table/items/stream/2026-01-01T00:00:00.000'
+
+export const dynamoRouter = createDynamoDBRouter({ batchItemFailures: true })
+
+dynamoRouter.route({
+  filters: { eventName: 'INSERT', eventSourceArn: ITEM_STREAM_ARN },
+  keysSchema: ItemKeysSchema,
+  newImageSchema: ItemSchema,
+  handler: onItemInserted,
 })`,
   },
   {
-    path: 'handlers/createItem.ts',
-    code: `import type { ApiRequest, ApiResponse } from '@lambda-event-router/apigateway'
+    path: 'api-handlers/putItem.ts',
+    code: `import type { ApiRequest } from '@lambda-event-router/apigateway'
 
-type PathParams = { orgId: string; itemId: string }
-type QueryParams = { dryRun?: string }
-type Body = { name: string; price: number }
+import { type Item, type ItemKeys } from '../schemas/item.js'
+import { items } from '../services/items.js'
 
-interface CreateItemResponse {
-  orgId: string
-  itemId: string
-  name: string
-  price: number
-}
+type PathParams = { itemId: string }
+type StoredItem = Item & ItemKeys
 
-export async function createItem(
-  request: ApiRequest<PathParams, QueryParams, Body>,
-): Promise<ApiResponse<CreateItemResponse>> {
-  const { orgId, itemId } = request.path
-  const { name, price } = request.body
+// query is unknown because the route sets no querySchema
+export async function putItem(
+  request: ApiRequest<PathParams, unknown, Item>,
+): Promise<StoredItem> {
+  const { path, body } = request
 
-  return {
-    statusCode: 201,
-    body: { orgId, itemId, name, price },
-  }
+  const item = { itemId: path.itemId, ...body }
+  await items.put(item)
+
+  return item
 }`,
   },
   {
-    path: 'handlers/processOrder.ts',
-    code: `import type { SQSHandlerEvent } from '@lambda-event-router/sqs'
+    path: 'db-handlers/onItemInserted.ts',
+    code: `import type { DynamoDBInsertRequest, DynamoDBResponse } from '@lambda-event-router/dynamodb'
 
-interface Order {
-  orderId: string
-  product: string
-  quantity: number
-}
+import { type Item, type ItemKeys } from '../schemas/item.js'
+import { search } from '../services/search.js'
 
-export async function processOrder({ body }: SQSHandlerEvent<Order>) {
-  console.log(\`Processing order \${body.orderId}: \${body.quantity}x \${body.product}\`)
+export async function onItemInserted(
+  request: DynamoDBInsertRequest<ItemKeys, Item>,
+): Promise<DynamoDBResponse> {
+  const { keys, newImage } = request
+
+  await search.index(keys.itemId, newImage)
 }`,
   },
   {
     path: 'schemas/item.ts',
     code: `import { z } from 'zod'
 
-export const CreateItemBodySchema = z.object({
+export const ItemSchema = z.object({
   name: z.string(),
-  price: z.number(),
+  price: z.number().positive(),
 })
 
-export const QuerySchema = z.object({
-  dryRun: z.string().default('false'),
-})`,
-  },
-  {
-    path: 'schemas/order.ts',
-    code: `import { z } from 'zod'
+export const ItemKeysSchema = z.object({ itemId: z.string() })
 
-export const OrderSchema = z.object({
-  orderId: z.string(),
-  product: z.string(),
-  quantity: z.number().int().positive(),
-})`,
+// Derived from the schemas so the handlers and the validation cannot drift apart
+export type Item = z.infer<typeof ItemSchema>
+export type ItemKeys = z.infer<typeof ItemKeysSchema>`,
   },
   {
     path: 'package.json',
     lang: 'json',
     code: `{
-  "name": "my-lambda",
-  "version": "1.0.0",
+  "name": "items-lambda",
   "type": "module",
   "dependencies": {
-    "@lambda-event-router/base": "^1.0.0",
     "@lambda-event-router/apigateway": "^1.0.0",
-    "@lambda-event-router/sqs": "^1.0.0",
-    "zod": "^3.23.0"
+    "@lambda-event-router/dynamodb": "^1.0.0",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
-    "typescript": "^5.9.0",
-    "@types/aws-lambda": "^8.10.145"
+    "@types/aws-lambda": "^8.10.145",
+    "typescript": "^5.9.0"
   }
 }`,
-  },
-  {
-    path: 'api.js',
-    code: `import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
-import { createItem } from '../handlers/createItem.js'
-import { CreateItemBodySchema, QuerySchema } from '../schemas/item.js'
-
-export const apiRouter = createAPIGatewayRouter()
-
-apiRouter.post({
-  path: '/orgs/:orgId/items/:itemId',
-  handler: createItem,
-  bodySchema: CreateItemBodySchema,
-  querySchema: QuerySchema,
-})`,
-  },
-  {
-    path: 'api.html',
-    code: `\<!DOCTYPE html>
-\<html lang="en">
-  \<head>
-    \<meta charset="UTF-8">
-    \<meta name="viewport" content="width=device-width, initial-scale=1.0">
-    \<meta http-equiv="X-UA-Compatible" content="ie=edge">
-    \<title>HTML 5 Boilerplate\</title>
-    \<link rel="stylesheet" href="style.css">
-  \</head>
-  \<body>
-    \<h1>test</h1>
-  \</body>
-</html>`,
   },
 ]
 </script>
 
-<CodeFileViewer :files="files" default-file="schemas/item.ts" id="multi-router" line-numbers collapse-toggle fixed-height />
-<!-- <CodeFileViewer :files="files" id="multi-router" /> -->
+<CodeFileViewer :files="files" id="multi-router" default-file="api-handlers/putItem.ts" line-numbers collapse-toggle fixed-height />
+
+Both handlers above are plain functions with their request types named. Those types can be inferred from
+the route's filters and schemas instead when using `defineRoute`, which puts the route definition in the
+handler's file rather than the router's. See [handlers](/docs/handlers#inferred-handlers) for the same two
+handlers written that way.
+
+`ApiRequest` takes the path params, then the query params, then the body, and this route sets no
+`querySchema` so its query is `unknown`. Returning the item on its own gives a 200 with the item as the
+body, and the [response helpers](/docs/handlers#http-responses) cover the other status codes.
+
+## Where next
+
+| Page | What it covers |
+| --- | --- |
+| [Routers](/docs/routers) | What a router is, and what every one of them has in common |
+| [Routing](/docs/routing) | Filter keys, `custom`, match order and where schemas go |
+| [Handlers](/docs/handlers) | What a handler is given and what it may return |
+| [Middleware](/docs/middleware) | Running code around your handlers |
+| [Packages](/packages) | Every router, with a page each |
