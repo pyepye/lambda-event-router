@@ -124,7 +124,7 @@ activeMQRouter.route({
 | `eventSourceArn` | `FilterStringMatcher` | Matches the ARN of the broker the event came from |
 | `messageType` | `ActiveMQMessageType \| ActiveMQMessageType[]` | Matches the type of the message. See [Message types](#message-types) |
 | `destination` | `FilterStringMatcher` | Matches `destination.physicalName`, which is the queue or topic name on the broker |
-| `custom` | `(input: ActiveMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `messageType`, the `destination` and the decoded `record`. Can be async |
+| `custom` | `(input: ActiveMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `messageType`, the `destination`, the decoded `message` and the raw `record`. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
@@ -136,9 +136,10 @@ a filter that quietly matches nothing.
 `custom` is the only key that reaches the message itself, so the JMS properties in
 `record.properties`, the priority and `redelivered` are all filterable through it and nowhere else.
 
-**`custom` gets no parsed body.** It is handed the message with `data` decoded to text, so parse
-that yourself if you need to route on the contents. See [`custom`](/docs/routing#custom)
-for where it sits in the filter order.
+**`custom` gets no parsed body.** Schema validation runs after a route matches, so parse `message.data`
+yourself to route on the contents. The filter sees the same split as the handler: on a text message
+`message.data` is decoded text and `record.data` is the base64 AWS sent, and on a bytes message both
+stay base64. See [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
 ## Handler
 

@@ -87,7 +87,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       const decodedData = isBytesMessage ? message.data : Buffer.from(message.data, 'base64').toString('utf-8');
       const decodedMessage = isBytesMessage ? message : { ...message, data: decodedData };
 
-      const route = await this.matchRoute(event, decodedMessage);
+      const route = await this.matchRoute(event, decodedMessage, message);
       if (!route) {
         throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
       }
@@ -110,7 +110,11 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     }
   }
 
-  private async matchRoute(event: ActiveMQEvent, message: ActiveMQMessage): Promise<ActiveMQInternalRoute | undefined> {
+  private async matchRoute(
+    event: ActiveMQEvent,
+    message: ActiveMQMessage,
+    record: ActiveMQMessage,
+  ): Promise<ActiveMQInternalRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
 
@@ -134,7 +138,8 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
         const filterInput: ActiveMQFilterInput = {
           messageType: message.messageType,
           destination: message.destination.physicalName,
-          record: message,
+          message,
+          record,
         };
         const match = await filters.custom(filterInput);
         if (!match) continue;

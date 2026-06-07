@@ -7,7 +7,7 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 // --- AWS Event Types (not in @types/aws-lambda) ---
 
 export interface RabbitMQBasicProperties {
-  contentType: string;
+  contentType?: string;
   contentEncoding: string | null;
   headers: Record<string, unknown>;
   deliveryMode: number;
@@ -52,7 +52,8 @@ export interface RabbitMQRequest<TBody = unknown> {
 export interface RabbitMQFilterInput {
   queue: string;
   virtualHost: string | undefined;
-  contentType: string;
+  contentType: string | undefined;
+  message: RabbitMQMessage;
   record: RabbitMQMessage;
 }
 

@@ -93,18 +93,24 @@ rabbitMQRouter.route({
 | `eventSourceArn` | `FilterStringMatcher` | Matches the ARN of the broker the event came from |
 | `queue` | `FilterStringMatcher` | Matches the queue name, with the virtual host split off. See [Queue names](#queue-names) |
 | `virtualHost` | `FilterStringMatcher` | Matches the virtual host the queue lives on. See [Queue names](#queue-names) |
-| `contentType` | `FilterStringMatcher` | Matches `basicProperties.contentType` on the message |
-| `custom` | `(input: RabbitMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `queue`, the `virtualHost`, the `contentType` and the decoded `record`. Can be async |
+| `contentType` | `FilterStringMatcher` | Matches `basicProperties.contentType`, when the message has one |
+| `custom` | `(input: RabbitMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `queue`, the `virtualHost`, the `contentType`, the decoded `message` and the raw `record`. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
+**A message with no content type never matches a `contentType` filter.** Content type is an optional
+AMQP property, so a publisher can leave it off. When it is absent the router skips a `contentType`
+filter rather than matching it, the same way an absent virtual host skips a `virtualHost` filter. So
+`contentType: '*'` picks out the messages that have a content type, not every message.
+
 `custom` is the only key that reaches `basicProperties`, so priority, headers, `correlationId`
 and the `redelivered` flag are filterable through it and nowhere else.
 
-**`custom` gets no parsed body.** It is handed the message with `data` decoded to text, so parse
-that yourself if you need to route on the contents. See [`custom`](/docs/routing#custom)
-for where it sits in the filter order.
+**`custom` gets no parsed body.** Schema validation runs after a route matches, so parse `message.data`
+yourself to route on the contents. The filter sees the same split as the handler: `message` has its
+`data` decoded to text and `record` is the untouched AWS message with `data` still base64. See
+[`custom`](/docs/routing#custom) for where it sits in the filter order.
 
 ### Queue names
 

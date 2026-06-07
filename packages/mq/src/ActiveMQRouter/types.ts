@@ -63,6 +63,7 @@ export type ActiveMQRequest<TBody = unknown> = ActiveMQTextMessageRequest<TBody>
 export interface ActiveMQFilterInput {
   messageType: ActiveMQMessageType;
   destination: string;
+  message: ActiveMQMessage;
   record: ActiveMQMessage;
 }
 

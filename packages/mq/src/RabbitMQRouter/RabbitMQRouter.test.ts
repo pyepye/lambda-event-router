@@ -307,6 +307,38 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('matches a contentType wildcard when the message has a contentType', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { contentType: '*' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match a contentType filter when the message has no contentType', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { contentType: '*' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: undefined } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by custom', async ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({
@@ -355,14 +387,39 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'text/plain' } });
 
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(event, 'orders', '/production', message);
+      await router.matchRoute(event, 'orders', '/production', message, message);
 
       expect(filterSpy).toHaveBeenCalledWith({
         queue: 'orders',
         virtualHost: '/production',
         contentType: 'text/plain',
+        message,
         record: message,
       });
+    });
+
+    test('custom filter receives the raw record and the decoded message', async ({ rabbitMQMessage, context }) => {
+      let filterInput: RabbitMQFilterInput | undefined;
+      router.route(
+        defineRabbitMQRoute({
+          filters: {
+            custom: (input: RabbitMQFilterInput): boolean => {
+              filterInput = input;
+              return true;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const body = { action: 'process' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'orders::/production': [message] });
+      await router.handleEvent(event, context());
+
+      // record is the untouched AWS message, so its data is still base64
+      expect(filterInput?.record.data).toBe(message.data);
+      // message has data decoded to text, matching request.message
+      expect(filterInput?.message.data).toBe(JSON.stringify(body));
     });
 
     test('custom is not called when a preceding filter rejects', async ({ rabbitMQMessage }) => {

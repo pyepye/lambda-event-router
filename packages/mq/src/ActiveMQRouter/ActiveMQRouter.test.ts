@@ -390,13 +390,38 @@ suite('ActiveMQRouter', () => {
       });
 
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(event, message);
+      await router.matchRoute(event, message, message);
 
       expect(filterSpy).toHaveBeenCalledWith({
         messageType: 'jms/text-message',
         destination: 'orders-queue',
+        message,
         record: message,
       });
+    });
+
+    test('custom filter receives the raw record and the decoded message', async ({ activeMQMessage, context }) => {
+      let filterInput: ActiveMQFilterInput | undefined;
+      router.route(
+        defineActiveMQRoute({
+          filters: {
+            custom: (input: ActiveMQFilterInput): boolean => {
+              filterInput = input;
+              return true;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const body = { action: 'process' };
+      const message = activeMQMessage({ messageType: 'jms/text-message', data: body });
+      const event = createActiveMQEvent([message]);
+      await router.handleEvent(event, context());
+
+      // record is the untouched AWS message, so its data is still base64
+      expect(filterInput?.record.data).toBe(message.data);
+      // message has data decoded to text, matching request.message
+      expect(filterInput?.message.data).toBe(JSON.stringify(body));
     });
 
     test('custom is not called when a preceding filter rejects', async ({ activeMQMessage }) => {

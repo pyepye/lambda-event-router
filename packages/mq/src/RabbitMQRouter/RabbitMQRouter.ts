@@ -73,7 +73,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
         const decodedMessage = { ...message, data: decodedData };
 
-        const route = await this.matchRoute(event, queueName, virtualHost, decodedMessage);
+        const route = await this.matchRoute(event, queueName, virtualHost, decodedMessage, message);
         if (!route) {
           throw new Error(`No route matched for message on queue ${queueName} from ${event.eventSourceArn}`);
         }
@@ -101,6 +101,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     queueName: string,
     virtualHost: string | undefined,
     message: RabbitMQMessage,
+    record: RabbitMQMessage,
   ): Promise<RabbitMQInternalRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
@@ -123,7 +124,10 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
       }
 
       if (filters.contentType) {
-        const contentTypeMatch = filterStringMatcher(message.basicProperties.contentType, filters.contentType);
+        // A message with no content type cannot match a contentType filter, so skip it
+        const { contentType } = message.basicProperties;
+        if (contentType === undefined) continue;
+        const contentTypeMatch = filterStringMatcher(contentType, filters.contentType);
         if (!contentTypeMatch) continue;
       }
 
@@ -132,7 +136,8 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           queue: queueName,
           virtualHost,
           contentType: message.basicProperties.contentType,
-          record: message,
+          message,
+          record,
         };
         const matches = await filters.custom(filterInput);
         if (!matches) continue;

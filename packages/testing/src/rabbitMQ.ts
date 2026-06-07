@@ -8,7 +8,7 @@ import { type FixtureMap, fixture } from './fixtureHelper.js';
 // RabbitMQ has no @types/aws-lambda types, so we define the event shapes locally
 
 interface RabbitMQBasicProperties {
-  contentType: string;
+  contentType?: string;
   contentEncoding: string | null;
   headers: Record<string, unknown>;
   deliveryMode: number;
