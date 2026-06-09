@@ -18,9 +18,12 @@ import { Response } from './Response.js';
 import type {
   AnyHttpMethod,
   ApiRequest,
+  ContentType,
+  ContentTypeResponse,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,
+  HTTPErrorHandler,
   HTTPFilterInput,
   HttpMethod,
   NormalizedHTTPEvent,
@@ -37,6 +40,7 @@ interface RouteInput<
   TQuerySchema extends StandardSchemaV1 | undefined,
   TBodySchema extends StandardSchemaV1 | undefined,
   TResponseSchema extends StandardSchemaV1 | undefined,
+  TContentType,
   TPath = PathParams<TPathString>,
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
@@ -53,12 +57,13 @@ interface RouteInput<
   querySchema?: TQuerySchema;
   bodySchema?: TBodySchema;
   responseSchema?: TResponseSchema;
+  contentType?: TContentType;
 }
 
 // Builder that provides typed handle method
-interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse> {
+interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse, TContentType> {
   handle(
-    handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>,
+    handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<ContentTypeResponse<TContentType, TResponse>>,
   ): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>;
 }
 
@@ -67,6 +72,7 @@ export function defineRoute<
   TQuerySchema extends StandardSchemaV1 | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TResponseSchema extends StandardSchemaV1 | undefined = undefined,
+  TContentType extends ContentType | undefined = undefined,
   TPath = PathParams<TPathString>,
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
@@ -74,8 +80,8 @@ export function defineRoute<
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
   TResponse = ResponseType<TResponseSchema>,
 >(
-  config: RouteInput<TPathString, TQuerySchema, TBodySchema, TResponseSchema>,
-): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse> {
+  config: RouteInput<TPathString, TQuerySchema, TBodySchema, TResponseSchema, TContentType>,
+): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse, TContentType> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse> {
@@ -88,6 +94,8 @@ interface HTTPRouterOptions<TEvent, TResult> {
   adapter: HTTPAdapter<TEvent, TResult>;
   middleware?: Middleware<ApiRequest, HandlerResponse>[];
   cors?: CorsConfig;
+  contentType?: ContentType;
+  onError?: HTTPErrorHandler;
 }
 
 export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
@@ -96,6 +104,8 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
   private middleware: Middleware<ApiRequest, HandlerResponse>[];
   private adapter: HTTPAdapter<TEvent, TResult>;
   private corsConfig: CorsConfig | undefined;
+  private contentType: ContentType | undefined;
+  private onError: HTTPErrorHandler | undefined;
 
   constructor(options: HTTPAdapter<TEvent, TResult> | HTTPRouterOptions<TEvent, TResult>) {
     if ('canHandleEvent' in options) {
@@ -108,6 +118,8 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       this.adapter = options.adapter;
       this.middleware = options.middleware ?? [];
       this.corsConfig = options.cors;
+      this.contentType = options.contentType;
+      this.onError = options.onError;
     }
   }
 
@@ -243,6 +255,70 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return this.adapter.buildResult({ statusCode: 204, body: '', headers: corsHeaders }, event);
   }
 
+  private finalise(
+    rawResponse: unknown,
+    contentType: ContentType | undefined,
+    corsHeaders: Record<string, string> | undefined,
+    method: string,
+    event: TEvent,
+  ): TResult {
+    const response = this.response.create(rawResponse, contentType);
+    const responseWithHeaders = this.applyHeaders(response, corsHeaders);
+    const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
+    return this.adapter.buildResult(finalResponse, event);
+  }
+
+  // A text content type renders the message as plain text, otherwise as a JSON error object
+  private buildErrorResponse(
+    statusCode: number,
+    message: string,
+    contentType: ContentType | undefined,
+  ): HandlerResponse {
+    if (contentType?.startsWith('text/')) {
+      return { statusCode, body: message, headers: { 'content-type': 'text/plain; charset=utf-8' } };
+    }
+    return { statusCode, body: { error: message } };
+  }
+
+  // A best-effort request for onError when no route matched or validation threw before one was built
+  private buildEventApiRequest(normalizedEvent: NormalizedHTTPEvent, event: TEvent, context: Context): ApiRequest {
+    return {
+      method: normalizedEvent.method,
+      path: {},
+      rawPath: normalizedEvent.path,
+      query: normalizedEvent.query,
+      multiValueQuery: normalizedEvent.multiValueQuery,
+      auth: normalizedEvent.auth,
+      body: undefined,
+      headers: normalizedEvent.headers,
+      multiValueHeaders: normalizedEvent.multiValueHeaders,
+      event,
+      context,
+    };
+  }
+
+  private async renderError(
+    statusCode: number,
+    defaultResponse: HandlerResponse,
+    body: unknown,
+    error: unknown,
+    request: ApiRequest,
+    contentType: ContentType | undefined,
+    corsHeaders: Record<string, string> | undefined,
+    method: string,
+    event: TEvent,
+  ): Promise<TResult> {
+    if (this.onError) {
+      const override = await this.onError({ statusCode, body, request, error });
+      if (override !== undefined) {
+        // A bare body keeps the error status, a full response is used as given
+        const response = Response.isHTTPResponse(override) ? override : { statusCode, body: override };
+        return this.finalise(response, contentType, corsHeaders, method, event);
+      }
+    }
+    return this.finalise(defaultResponse, undefined, corsHeaders, method, event);
+  }
+
   async handleEvent(event: TEvent, context: Context): Promise<TResult> {
     const normalizedEvent = this.adapter.normalize(event);
     const { method, path } = normalizedEvent;
@@ -260,7 +336,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     };
     const routeData = await this.router.match(method, path, filterInput);
     if (!routeData) {
-      // Match registered OPTIONS route first, use  automatic fallback if one does not exist but CORS i
+      // Match registered OPTIONS route first, use automatic fallback if one does not exist but CORS is set
       if (method === 'OPTIONS' && this.corsConfig) {
         const preflightResult = await this.buildPreflightResult(normalizedEvent, event);
         if (preflightResult !== undefined) {
@@ -268,45 +344,69 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
         }
       }
 
-      // TODO: Could / should these notFound responses deal with CORS so we don't have to repeat here? Does it make sense?
-      const notFoundResponse = this.response.notFound();
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
-      const responseWithHeaders = this.applyHeaders(notFoundResponse, corsHeaders);
-      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
-      return this.adapter.buildResult(finalResponse, event);
+      const notFound = this.buildErrorResponse(404, 'Not found', this.contentType);
+      const request = this.buildEventApiRequest(normalizedEvent, event, context);
+      return this.renderError(
+        404,
+        notFound,
+        { error: 'Not found' },
+        undefined,
+        request,
+        this.contentType,
+        corsHeaders,
+        method,
+        event,
+      );
     }
 
     const { route, params } = routeData;
+    const contentType = route.contentType ?? this.contentType;
     const request = new Request(normalizedEvent, event, context, route, params);
 
+    let requestData: ApiRequest | undefined;
     try {
       const query = await request.validateQuery();
       const body = await request.validateBody();
-      const requestData = request.buildApiRequest(query, body);
+      requestData = request.buildApiRequest(query, body);
 
       const allMiddleware = [...this.middleware, ...route.middleware];
       const handlerResponse = await handleEventWithMiddleware(allMiddleware, requestData, route.handler);
 
       const validatedResponse = await this.validateResponse(route, handlerResponse);
-      const response = this.response.create(validatedResponse);
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
-      const responseWithHeaders = this.applyHeaders(response, corsHeaders);
-      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
-      return this.adapter.buildResult(finalResponse, event);
+      return this.finalise(validatedResponse, contentType, corsHeaders, method, event);
     } catch (error) {
       const corsHeaders = await this.getCorsHeaders(normalizedEvent, false);
+      const apiRequest = requestData ?? request.buildApiRequest(request.queryParams, request.body);
+      // A thrown response keeps its own body, an unhandled error becomes a 500 that follows contentType
       if (Response.isHTTPResponse(error)) {
-        const response = this.response.create(error);
-        const responseWithHeaders = this.applyHeaders(response, corsHeaders);
-        const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
-        return this.adapter.buildResult(finalResponse, event);
+        return this.renderError(
+          error.statusCode,
+          error,
+          error.body,
+          error,
+          apiRequest,
+          contentType,
+          corsHeaders,
+          method,
+          event,
+        );
       }
-      logger.error(`Unhandled error processing HTTP request`, { error });
-      const errorMessage = error instanceof Error ? error.message : undefined;
-      const errorResponse = this.response.internalServerError(errorMessage);
-      const responseWithHeaders = this.applyHeaders(errorResponse, corsHeaders);
-      const finalResponse = this.stripBodyForHead(responseWithHeaders, method);
-      return this.adapter.buildResult(finalResponse, event);
+      logger.error('Unhandled error processing HTTP request', { error });
+      const message = error instanceof Error ? error.message : 'Internal server error';
+      const errorResponse = this.buildErrorResponse(500, message, contentType);
+      return this.renderError(
+        500,
+        errorResponse,
+        { error: message },
+        error,
+        apiRequest,
+        contentType,
+        corsHeaders,
+        method,
+        event,
+      );
     }
   }
 }

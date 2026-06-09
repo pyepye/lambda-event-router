@@ -2,7 +2,16 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Middleware } from '@lambda-event-router/base';
 
-import type { ApiHandler, ApiRequest, HandlerResponse, HttpMethod, PathParams, RouteDefinition } from './types.js';
+import type {
+  ApiHandler,
+  ApiRequest,
+  ContentType,
+  ContentTypeResponse,
+  HandlerResponse,
+  HttpMethod,
+  PathParams,
+  RouteDefinition,
+} from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -20,6 +29,7 @@ export interface InternalRoute {
   querySchema?: StandardSchemaV1;
   bodySchema?: StandardSchemaV1;
   responseSchema?: StandardSchemaV1;
+  contentType?: ContentType;
 }
 
 interface PathRouterFilters<TPathString extends string> {
@@ -28,23 +38,24 @@ interface PathRouterFilters<TPathString extends string> {
 }
 
 // Base config shared by all route types
-interface BaseRouteConfig<TPathString extends string, TQuery, TResponse> {
+interface BaseRouteConfig<TPathString extends string, TQuery, TResponse, TContentType> {
   filters: PathRouterFilters<TPathString>;
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
+  contentType?: TContentType;
 }
 
 // Config for HTTP methods that don't support a request body (GET, HEAD, DELETE, OPTIONS)
-interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse>
-  extends BaseRouteConfig<TPathString, TQuery, TResponse> {
-  handler: ApiHandler<TPath, TQuery, undefined, TResponse>;
+interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse, TContentType>
+  extends BaseRouteConfig<TPathString, TQuery, TResponse, TContentType> {
+  handler: (request: ApiRequest<TPath, TQuery, undefined>) => Promise<ContentTypeResponse<TContentType, TResponse>>;
   middleware?: Middleware<ApiRequest<TPath, TQuery, undefined>, HandlerResponse<TResponse>>[];
 }
 
 // Config for HTTP methods that support a request body (POST, PUT, PATCH)
-interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse>
-  extends BaseRouteConfig<TPathString, TQuery, TResponse> {
-  handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
+interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse, TContentType>
+  extends BaseRouteConfig<TPathString, TQuery, TResponse, TContentType> {
+  handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<ContentTypeResponse<TContentType, TResponse>>;
   middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
@@ -67,8 +78,9 @@ export type BodyRouteMethodFn<TReturn = PathRouter> = <
   TQuery = Record<string, string | undefined>,
   TBody = unknown,
   TResponse = unknown,
+  TContentType extends ContentType | undefined = undefined,
 >(
-  config: BodyRouteConfig<TPathString, TPath, TQuery, TBody, TResponse>,
+  config: BodyRouteConfig<TPathString, TPath, TQuery, TBody, TResponse, TContentType>,
 ) => TReturn;
 
 // Method signature for routes without body support
@@ -77,8 +89,9 @@ export type NoBodyRouteMethodFn<TReturn = PathRouter> = <
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
   TResponse = unknown,
+  TContentType extends ContentType | undefined = undefined,
 >(
-  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TResponse>,
+  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TResponse, TContentType>,
 ) => TReturn;
 
 interface RouteMatch {
@@ -154,6 +167,7 @@ export class PathRouter {
       querySchema?: StandardSchemaV1;
       bodySchema?: StandardSchemaV1;
       responseSchema?: StandardSchemaV1;
+      contentType?: ContentType;
     },
   ): this {
     const { custom } = config.filters;
@@ -184,6 +198,7 @@ export class PathRouter {
       querySchema: config.querySchema,
       bodySchema: config.bodySchema,
       responseSchema: config.responseSchema,
+      contentType: config.contentType,
     });
     this.routesSorted = false;
 

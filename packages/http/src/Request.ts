@@ -47,7 +47,20 @@ export class Request {
 
     const decoded = isBase64Encoded ? Buffer.from(body, 'base64').toString('utf-8') : body;
 
+    const contentType = this.requestContentType();
+    // A text body is kept verbatim, a form is a flat object, everything else stays JSON
+    if (contentType.startsWith('text/')) {
+      return decoded;
+    }
+    if (contentType.startsWith('application/x-www-form-urlencoded')) {
+      return Object.fromEntries(new URLSearchParams(decoded));
+    }
     return safeJsonParse(decoded);
+  }
+
+  private requestContentType(): string {
+    const header = Object.entries(this.headers).find(([key]) => key.toLowerCase() === 'content-type');
+    return header?.[1]?.toLowerCase() ?? '';
   }
 
   get queryParams(): Record<string, string | undefined> {

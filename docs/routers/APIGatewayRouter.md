@@ -37,6 +37,8 @@ anything you have not registered and sends no CORS headers.
 | --- | --- | --- | --- | --- |
 | `middleware` | `HTTPMiddleware[]` | No | `[]` | Runs for every request this router handles, before any route middleware. See [Middleware](#middleware) |
 | `cors` | `CorsConfig` | No | | Answers preflight and adds CORS headers to every response. See [CORS](#cors) |
+| `contentType` | `ContentType` | No | | Default response content type for every route. See [Content type](#content-type) |
+| `onError` | `HTTPErrorHandler` | No | | Reshapes automatic errors. See [Errors](#errors) |
 
 ## Register routes
 
@@ -244,7 +246,7 @@ export async function getOrder(
 | `rawPath` | `string` | The path string the caller asked for, the same on a 1.0 or 2.0 payload |
 | `query` | `TQuery` | Query string params, one value per key. Where a name repeats, this is the last value |
 | `multiValueQuery` | `Record<string, string[] \| undefined>` | Every value for each query param, in the order they arrived |
-| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, and no body at all as `null` |
+| `body` | `TBody` | The parsed request body, JSON by default. The request content type decides parsing. No body at all is `null` |
 | `headers` | `Record<string, string \| undefined>` | Request headers. Read them lower cased. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `Auth \| undefined` | Whatever the authorizer put on the event. See [Auth](#auth) |
@@ -259,6 +261,13 @@ caller asked for. It reads the same on a 1.0 or 2.0 payload, so you don't have t
 branch on the version.
 
 A base64 encoded body is decoded before it is parsed, so `isBase64Encoded` is handled for you.
+
+How the body is parsed follows the request `Content-Type`. The default is JSON, so a body with no content
+type, or `application/json`, is parsed as JSON, and one that is not valid JSON arrives as the raw string. A
+`text/*` body is kept as the raw string. An `application/x-www-form-urlencoded` body is parsed into a flat
+object of string values, so an HTML form post reaches your handler as `{ name: 'Ada' }`, and a repeated key
+keeps its last value. `multipart/form-data` is not parsed, so it arrives as the raw string for you to
+handle.
 
 A REST API (1.0) payload carries every value for a repeated query param or header, so `request.multiValueQuery`
 and `request.multiValueHeaders` give you the full list while `query` and `headers` keep the last value.
@@ -402,7 +411,7 @@ is sent unchanged, without that check.
 
 ## Responses
 
-Return a value and the router works out the status code, serialises the body and sets a JSON content type
+Return a value and the router works out the status code, serialises the body and sets a content type
 where one applies.
 
 ```ts
@@ -415,7 +424,8 @@ return { statusCode: 200, body: order }       // Also the same 200
 | --- | --- |
 | An object | 200, with a JSON content type |
 | An array | 200, with a JSON content type |
-| A string, a number or `false` | 200 |
+| A string | 200, with a `text/plain` content type |
+| A number or `false` | 200 |
 | `undefined`, `null`, `''`, `true` or `{}` | 204 |
 
 ### Response helpers
@@ -428,6 +438,8 @@ arguments.
 | --- | --- | --- |
 | `Ok(body, headers?)` | 200 | Body is required |
 | `Created(body, headers?)` | 201 | Body is required |
+| `Text(body, headers?)` | 200 | A string body, sent as `text/plain` |
+| `Html(body, headers?)` | 200 | A string body, sent as `text/html` |
 | `NoContent()` | 204 | Empty |
 | `TemporaryRedirect(location)` | 307 | Empty, with a `Location` header |
 | `PermanentRedirect(location)` | 308 | Empty, with a `Location` header |
@@ -448,6 +460,31 @@ import { HTTP_STATUS_CODES } from '@lambda-event-router/apigateway'
 return { statusCode: HTTP_STATUS_CODES.SERVICE_UNAVAILABLE, body: { error: 'Down for maintenance' } }
 ```
 
+### Content type
+
+`Text` and `Html` set the content type for you. Both are 200-only, like `Ok`, so a non-200 body of a given
+type uses a status helper with a content-type header instead.
+
+```ts
+return Text('pong')                                                              // 200, text/plain
+return Html('<h1>Welcome</h1>')                                                  // 200, text/html
+return NotFound('<h1>Gone</h1>', { 'content-type': 'text/html; charset=utf-8' }) // 404, text/html
+```
+
+For a route or a whole router that always sends the same type, set `contentType` once. A route value
+overrides the router value.
+
+```ts
+const apiRouter = createAPIGatewayRouter({ contentType: 'text/html' })   // Default for every route
+
+apiRouter.get({ filters: { path: '/status' }, contentType: 'application/json', handler: getStatus })
+```
+
+`contentType` sets the header, it does not change how the body serialises. A string is sent as-is and an
+object is still JSON. Under a text `contentType` the handler must return a string, and the compiler enforces
+it. An explicit helper on the response wins over any `contentType`, so `Html(...)` from a handler on a JSON
+router still sends `text/html`.
+
 ### Throwing
 
 Throwing a helper works the same as returning it, and it carries the same weight from any depth, so a
@@ -467,6 +504,39 @@ the errors your handlers can throw. A `new Error('connect ETIMEDOUT 10.0.1.5:800
 the wire. The router logs it before answering.
 
 See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with the other HTTP routers.
+
+### Errors
+
+The router raises its own errors for a no-match 404, a schema validation 400 or 422, a `responseSchema`
+500 and an unhandled 500.
+
+The 404 and the unhandled 500 render their message per the resolved `contentType`. A JSON route gives
+`{ "error": "Not found" }`, a text route gives the message as plain text, and a route serving HTML gives
+the plain-text message rather than a made-up HTML page.
+
+The schema errors stay JSON whatever the `contentType`. A validation 400 or 422 carries the issues array,
+which is structured rather than a single message, so plain text does not fit it. The `responseSchema` 500
+carries `{ "error": "Internal server error" }`.
+
+`onError` reshapes any of them. It runs for every error the router raises. It is handed
+`{ statusCode, body, request, error }`, where `body` is the default body, so the issues array for a
+validation error or `{ error: message }` otherwise. Return a body to send at the same status, a full
+`{ statusCode, body, headers }` for full control, or nothing to keep the default.
+
+A returned body follows the router `contentType`, so under `text/html` you pass the status and body to your
+own template and return its output.
+
+```ts
+import { renderErrorPage } from './templates'
+
+const apiRouter = createAPIGatewayRouter({
+  contentType: 'text/html',
+  onError: ({ statusCode, body }) => renderErrorPage({ statusCode, detail: body }),
+})
+```
+
+A response you throw yourself is untouched by all this, so `throw NotFound('<h1>Gone</h1>', {
+'content-type': 'text/html; charset=utf-8' })` sends your HTML as-is.
 
 ## Auth
 

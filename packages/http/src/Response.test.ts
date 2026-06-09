@@ -1,8 +1,11 @@
+import * as base from '@lambda-event-router/base';
+
 import {
   BadRequest,
   Conflict,
   Created,
   Forbidden,
+  Html,
   InternalServerError,
   NoContent,
   NotFound,
@@ -10,6 +13,7 @@ import {
   PermanentRedirect,
   Response,
   TemporaryRedirect,
+  Text,
   Unauthorised,
   UnprocessableContent,
 } from './Response.js';
@@ -31,6 +35,32 @@ suite('Response', () => {
 
         expect(result.statusCode).toBe(201);
         expect(result.body).toEqual({ id: 'new-1' });
+      });
+    });
+
+    suite('Text', () => {
+      test('returns a 200 response with a text/plain content type', () => {
+        const result = Response.Text('hello');
+
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toBe('hello');
+        expect(result.headers).toEqual({ 'content-type': 'text/plain; charset=utf-8' });
+      });
+
+      test('lets a caller override the content type', () => {
+        const result = Response.Text('a,b', { 'content-type': 'text/csv' });
+
+        expect(result.headers).toEqual({ 'content-type': 'text/csv' });
+      });
+    });
+
+    suite('Html', () => {
+      test('returns a 200 response with a text/html content type', () => {
+        const result = Response.Html('<h1>hi</h1>');
+
+        expect(result.statusCode).toBe(200);
+        expect(result.body).toBe('<h1>hi</h1>');
+        expect(result.headers).toEqual({ 'content-type': 'text/html; charset=utf-8' });
       });
     });
 
@@ -234,10 +264,14 @@ suite('Response', () => {
       });
     });
 
-    test('converts a string body to a 200 response', () => {
+    test('converts a string body to a 200 response with a text/plain content type', () => {
       const result = response.create('hello');
 
-      expect(result).toEqual({ statusCode: 200, body: 'hello' });
+      expect(result).toEqual({
+        statusCode: 200,
+        body: 'hello',
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
     });
 
     test('converts a number body to a 200 response', () => {
@@ -300,6 +334,57 @@ suite('Response', () => {
     });
   });
 
+  suite('create with a configured content type', () => {
+    let response: Response;
+
+    beforeEach(() => {
+      response = new Response();
+    });
+
+    test('sets the configured content type on a matching string body', () => {
+      const warn = vi.spyOn(base.getLogger(), 'warn');
+
+      const result = response.create('<h1>hi</h1>', 'text/html; charset=utf-8');
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: '<h1>hi</h1>',
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    test('warns but still sends when a text config gets a non-string body', () => {
+      const warn = vi.spyOn(base.getLogger(), 'warn').mockImplementation(() => {});
+
+      const result = response.create({ ok: true }, 'text/html; charset=utf-8');
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: JSON.stringify({ ok: true }),
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+      expect(warn).toHaveBeenCalledOnce();
+      warn.mockRestore();
+    });
+
+    test('does not warn for a JSON config with an object body', () => {
+      const warn = vi.spyOn(base.getLogger(), 'warn');
+
+      response.create({ ok: true }, 'application/json');
+
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+
+    test('an explicit content type on the response wins over the config', () => {
+      const result = response.create(Html('<h1>hi</h1>'), 'application/json');
+
+      expect(result.headers).toEqual({ 'content-type': 'text/html; charset=utf-8' });
+    });
+  });
+
   suite('instance convenience methods', () => {
     let response: Response;
 
@@ -339,6 +424,8 @@ suite('Response', () => {
     test.each([
       { name: 'Ok', fn: Ok },
       { name: 'Created', fn: Created },
+      { name: 'Text', fn: Text },
+      { name: 'Html', fn: Html },
       { name: 'NoContent', fn: NoContent },
       { name: 'TemporaryRedirect', fn: TemporaryRedirect },
       { name: 'PermanentRedirect', fn: PermanentRedirect },

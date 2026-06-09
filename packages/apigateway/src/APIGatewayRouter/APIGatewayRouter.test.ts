@@ -19,6 +19,45 @@ suite('APIGatewayRouter', () => {
       const router = createAPIGatewayRouter();
       expect(router).toBeInstanceOf(APIGatewayRouter);
     });
+
+    test('forwards contentType to responses', async ({ apiGatewayV2HandlerEvent }) => {
+      const htmlRouter = createAPIGatewayRouter({ contentType: 'text/html' });
+      htmlRouter.get({ filters: { path: '/page' }, handler: async () => '<h1>hi</h1>' });
+
+      const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/page' } });
+      const result = await htmlRouter.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 200,
+          body: '<h1>hi</h1>',
+          headers: expect.objectContaining({ 'content-type': 'text/html' }),
+        }),
+      );
+    });
+
+    test('forwards onError to reshape an automatic error', async ({ apiGatewayV2HandlerEvent }) => {
+      const errorRouter = createAPIGatewayRouter({
+        onError: () => Response.InternalServerError('<h1>Boom</h1>', { 'content-type': 'text/html; charset=utf-8' }),
+      });
+      errorRouter.get({
+        filters: { path: '/boom' },
+        handler: async () => {
+          throw new Error('broke');
+        },
+      });
+
+      const { event, context } = apiGatewayV2HandlerEvent({ event: { rawPath: '/boom' } });
+      const result = await errorRouter.handleEvent(event, context);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 500,
+          body: '<h1>Boom</h1>',
+          headers: expect.objectContaining({ 'content-type': 'text/html; charset=utf-8' }),
+        }),
+      );
+    });
   });
 
   suite('cors', () => {

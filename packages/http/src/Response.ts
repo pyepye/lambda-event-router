@@ -1,5 +1,11 @@
+import { logger } from '@lambda-event-router/base';
+
 import { HTTP_STATUS_CODES } from './constants.js';
 import type { ApiResponse, FinalizedHTTPResponse, HTTPResponse } from './types.js';
+
+const CONTENT_TYPE_JSON = 'application/json';
+const CONTENT_TYPE_TEXT = 'text/plain; charset=utf-8';
+const CONTENT_TYPE_HTML = 'text/html; charset=utf-8';
 
 export class Response {
   // Static factory methods for creating raw response objects (body not yet stringified)
@@ -61,6 +67,14 @@ export class Response {
     return { statusCode: HTTP_STATUS_CODES.CREATED, body, headers };
   }
 
+  static Text(body: string, headers?: ApiResponse['headers']): HTTPResponse<string> {
+    return { statusCode: HTTP_STATUS_CODES.OK, body, headers: { 'content-type': CONTENT_TYPE_TEXT, ...headers } };
+  }
+
+  static Html(body: string, headers?: ApiResponse['headers']): HTTPResponse<string> {
+    return { statusCode: HTTP_STATUS_CODES.OK, body, headers: { 'content-type': CONTENT_TYPE_HTML, ...headers } };
+  }
+
   static NoContent(): HTTPResponse<undefined> {
     return { statusCode: HTTP_STATUS_CODES.NO_CONTENT, body: undefined };
   }
@@ -85,13 +99,38 @@ export class Response {
     return Response.isPlainObject(value) || Array.isArray(value);
   }
 
-  private static buildHTTPResponse(response: unknown): HTTPResponse {
-    if (Response.isHTTPResponse(response)) {
-      if (Response.isJsonBody(response.body)) {
-        // Create a new object and headers spread last so response.headers override
-        return { ...response, headers: { 'content-type': 'application/json', ...response.headers } };
+  private static hasContentType(headers: ApiResponse['headers']): boolean {
+    return headers !== undefined && Object.keys(headers).some((key) => key.toLowerCase() === 'content-type');
+  }
+
+  // The content type for a body, from config when set, else inferred from the runtime type
+  private static contentTypeForBody(body: unknown, configContentType?: string): string | undefined {
+    if (configContentType) {
+      if (configContentType.startsWith('text/') && typeof body !== 'string') {
+        logger.warn('Response body does not match the configured content type', {
+          contentType: configContentType,
+          bodyType: typeof body,
+        });
       }
-      return response;
+      return configContentType;
+    }
+    if (Response.isJsonBody(body)) return CONTENT_TYPE_JSON;
+    if (typeof body === 'string') return CONTENT_TYPE_TEXT;
+    return undefined;
+  }
+
+  private static buildHTTPResponse(response: unknown, configContentType?: string): HTTPResponse {
+    if (Response.isHTTPResponse(response)) {
+      // An explicit content type on the response wins over any router or route config
+      if (Response.hasContentType(response.headers)) {
+        return response;
+      }
+      const contentType = Response.contentTypeForBody(response.body, configContentType);
+      if (!contentType) {
+        return response;
+      }
+      // Create a new object and headers spread last so response.headers override
+      return { ...response, headers: { 'content-type': contentType, ...response.headers } };
     }
 
     // Only an empty plain object returns a 204. An empty array is valid JSON body so is a 200
@@ -100,7 +139,8 @@ export class Response {
       return Response.NoContent();
     }
 
-    const headers = Response.isJsonBody(response) ? { 'content-type': 'application/json' } : undefined;
+    const contentType = Response.contentTypeForBody(response, configContentType);
+    const headers = contentType ? { 'content-type': contentType } : undefined;
     return Response.Ok(response, headers);
   }
 
@@ -134,8 +174,8 @@ export class Response {
   }
 
   // Instance methods for building finalized responses (body stringified)
-  create(response: unknown): FinalizedHTTPResponse {
-    const validResponse = Response.buildHTTPResponse(response);
+  create(response: unknown, contentType?: string): FinalizedHTTPResponse {
+    const validResponse = Response.buildHTTPResponse(response, contentType);
     return {
       statusCode: validResponse.statusCode,
       body: Response.bodyToString(validResponse.body),
@@ -177,6 +217,8 @@ export class Response {
 // Re-export static methods as standalone functions
 export const Ok: typeof Response.Ok = Response.Ok;
 export const Created: typeof Response.Created = Response.Created;
+export const Text: typeof Response.Text = Response.Text;
+export const Html: typeof Response.Html = Response.Html;
 export const NoContent: typeof Response.NoContent = Response.NoContent;
 export const TemporaryRedirect: typeof Response.TemporaryRedirect = Response.TemporaryRedirect;
 export const PermanentRedirect: typeof Response.PermanentRedirect = Response.PermanentRedirect;

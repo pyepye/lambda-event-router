@@ -22,6 +22,31 @@ export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { 
 
 export type HandlerResponse<TResponse = unknown> = ApiResponse<TResponse> | TResponse;
 
+// The known response content types, kept open so any string is still valid
+export type ContentType = 'text/plain' | 'text/html' | 'application/json' | (string & {});
+
+// A text content type requires a string body, anything else is unconstrained
+export type BodyFor<TContentType> = TContentType extends `text/${string}` ? string : unknown;
+
+// A text content type constrains a bare handler return to a string, an explicit ApiResponse is always allowed
+export type ContentTypeResponse<TContentType, TResponse> = TContentType extends `text/${string}`
+  ? ApiResponse<unknown> | string
+  : HandlerResponse<TResponse>;
+
+// The resolved error handed to onError. `body` is the default body, so the issues array for a
+// validation error or `{ error: message }` otherwise. `error` is the raw thrown value.
+export interface HTTPErrorContext {
+  statusCode: number;
+  body: unknown;
+  request: ApiRequest;
+  error: unknown;
+}
+
+// Reshapes an error. Return a body to keep the error status, a full response, or undefined for the default
+export type HTTPErrorHandler = (
+  context: HTTPErrorContext,
+) => HandlerResponse | undefined | Promise<HandlerResponse | undefined>;
+
 // TODO: Does this need to be more dynamic based on the type?
 //       If not these types should all come from the actual interfaces like targetGroupArn
 export interface Auth {
@@ -132,4 +157,5 @@ export interface RouteDefinition<
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
+  contentType?: ContentType;
 }

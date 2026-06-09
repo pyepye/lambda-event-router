@@ -6,7 +6,14 @@ import { createMockContext, createMockSchema } from '@lambda-event-router/testin
 
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
-import type { ApiRequest, FinalizedHTTPResponse, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
+import type {
+  ApiRequest,
+  FinalizedHTTPResponse,
+  HandlerResponse,
+  HTTPAdapter,
+  HTTPErrorHandler,
+  NormalizedHTTPEvent,
+} from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
 type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
@@ -1491,6 +1498,173 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result.statusCode).toBe(404);
+    });
+  });
+
+  suite('handleEvent - content type and onError', () => {
+    test('applies the router content type to a string response', async () => {
+      const contentRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html' });
+      contentRouter.get({ filters: { path: '/' }, handler: async () => '<h1>hi</h1>' });
+
+      const result = await contentRouter.handleEvent(createMockEvent(), createMockContext());
+
+      expect(result).toEqual({ statusCode: 200, body: '<h1>hi</h1>', headers: { 'content-type': 'text/html' } });
+    });
+
+    test('a route content type overrides the router content type', async () => {
+      const contentRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html' });
+      contentRouter.get({
+        filters: { path: '/data' },
+        contentType: 'application/json',
+        handler: async () => ({ ok: true }),
+      });
+
+      const result = await contentRouter.handleEvent(createMockEvent({ path: '/data' }), createMockContext());
+
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
+      expect(result.body).toBe(JSON.stringify({ ok: true }));
+    });
+
+    test('renders an automatic 404 as text under a text content type', async () => {
+      const contentRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html' });
+
+      const result = await contentRouter.handleEvent(createMockEvent({ path: '/missing' }), createMockContext());
+
+      expect(result).toEqual({
+        statusCode: 404,
+        body: 'Not found',
+        headers: { 'content-type': 'text/plain; charset=utf-8' },
+      });
+    });
+
+    test('a bare body from onError keeps the error status and follows the content type', async () => {
+      const onError = vi.fn<HTTPErrorHandler>(({ statusCode }) => `<h1>${statusCode}</h1>`);
+      const errorRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html', onError });
+      errorRouter.get({
+        filters: { path: '/' },
+        handler: async () => {
+          throw new Error('broke');
+        },
+      });
+
+      const result = await errorRouter.handleEvent(createMockEvent(), createMockContext());
+
+      expect(result).toEqual({ statusCode: 500, body: '<h1>500</h1>', headers: { 'content-type': 'text/html' } });
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    test('onError also covers a no-match 404', async () => {
+      const onError = vi.fn<HTTPErrorHandler>(({ statusCode }) => `<h1>${statusCode}</h1>`);
+      const errorRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html', onError });
+
+      const result = await errorRouter.handleEvent(createMockEvent({ path: '/missing' }), createMockContext());
+
+      expect(result).toEqual({ statusCode: 404, body: '<h1>404</h1>', headers: { 'content-type': 'text/html' } });
+    });
+
+    test('a full response from onError is used as given', async () => {
+      const onError = vi.fn<HTTPErrorHandler>(({ statusCode }) => ({
+        statusCode,
+        body: `<h1>${statusCode}</h1>`,
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      }));
+      const errorRouter = new HTTPRouter({ adapter: mockAdapter, onError });
+      errorRouter.get({
+        filters: { path: '/' },
+        handler: async () => {
+          throw new Error('broke');
+        },
+      });
+
+      const result = await errorRouter.handleEvent(createMockEvent(), createMockContext());
+
+      expect(result).toEqual({
+        statusCode: 500,
+        body: '<h1>500</h1>',
+        headers: { 'content-type': 'text/html; charset=utf-8' },
+      });
+    });
+
+    test('onError returning undefined falls through to the default error', async () => {
+      const onError = vi.fn<HTTPErrorHandler>(() => undefined);
+      const errorRouter = new HTTPRouter({ adapter: mockAdapter, onError });
+      errorRouter.get({
+        filters: { path: '/' },
+        handler: async () => {
+          throw new Error('broke');
+        },
+      });
+
+      const result = await errorRouter.handleEvent(createMockEvent(), createMockContext());
+
+      expect(result).toEqual(expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'broke' }) }));
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    test('onError receives a validation error with its status and issues body', async () => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
+      const onError = vi.fn<HTTPErrorHandler>(({ statusCode, body }) => `${statusCode}:${JSON.stringify(body)}`);
+      const errorRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html', onError });
+      errorRouter.post({ filters: { path: '/' }, bodySchema, handler: async () => '<h1>ok</h1>' });
+
+      const result = await errorRouter.handleEvent(
+        createMockEvent({ method: 'POST', path: '/', body: JSON.stringify({ bad: 'data' }) }),
+        createMockContext(),
+      );
+
+      expect(result).toEqual({
+        statusCode: 422,
+        body: '422:[{"message":"invalid body"}]',
+        headers: { 'content-type': 'text/html' },
+      });
+      expect(onError).toHaveBeenCalledOnce();
+    });
+
+    test('a validation error under a text route stays JSON and does not warn', async () => {
+      const warn = vi.spyOn(base.getLogger(), 'warn');
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
+      const htmlRouter = new HTTPRouter({ adapter: mockAdapter, contentType: 'text/html' });
+      htmlRouter.post({ filters: { path: '/' }, bodySchema, handler: async () => '<h1>ok</h1>' });
+
+      const result = await htmlRouter.handleEvent(
+        createMockEvent({ method: 'POST', path: '/', body: JSON.stringify({ bad: 'data' }) }),
+        createMockContext(),
+      );
+
+      expect(result.statusCode).toBe(422);
+      expect(result.headers).toEqual({ 'content-type': 'application/json' });
+      expect(result.body).toBe(JSON.stringify([{ message: 'invalid body' }]));
+      expect(warn).not.toHaveBeenCalled();
+      warn.mockRestore();
+    });
+  });
+
+  suite('content type response type constraints', () => {
+    test('a text route accepts a string, rejects a bare object, and allows an explicit response', () => {
+      const typedRouter = new HTTPRouter(mockAdapter);
+
+      typedRouter.get({ filters: { path: '/text' }, contentType: 'text/html', handler: async () => '<h1>ok</h1>' });
+
+      typedRouter.get({
+        filters: { path: '/bad' },
+        contentType: 'text/html',
+        // @ts-expect-error a text/html route must return a string, not a bare object
+        handler: async () => ({ nope: true }),
+      });
+
+      typedRouter.get({
+        filters: { path: '/escape' },
+        contentType: 'text/html',
+        handler: async () => Ok({ ok: true }),
+      });
+
+      defineRoute({ filters: { method: 'GET', path: '/d' }, contentType: 'text/plain' }).handle(async () => 'plain');
+
+      defineRoute({ filters: { method: 'GET', path: '/d-bad' }, contentType: 'text/plain' })
+        // @ts-expect-error a text/plain route must return a string, not a bare object
+        .handle(async () => ({ nope: true }));
+
+      expect(true).toBe(true);
     });
   });
 });

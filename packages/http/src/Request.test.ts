@@ -98,6 +98,48 @@ suite('Request', () => {
       expect(request.body).toBe('plain text');
     });
 
+    test('keeps a text/plain body as a raw string without JSON parsing', () => {
+      const normalizedEvent = createNormalizedEvent({
+        body: '{"looks":"like json"}',
+        headers: { 'content-type': 'text/plain' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      safeJsonParseSpy.mockClear();
+      expect(request.body).toBe('{"looks":"like json"}');
+      expect(safeJsonParseSpy).not.toHaveBeenCalled();
+    });
+
+    test('parses a urlencoded form body into a flat object', () => {
+      const normalizedEvent = createNormalizedEvent({
+        body: 'name=Ada&role=admin',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toEqual({ name: 'Ada', role: 'admin' });
+    });
+
+    test('keeps the last value for a repeated urlencoded key', () => {
+      const normalizedEvent = createNormalizedEvent({
+        body: 'tag=a&tag=b',
+        headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toEqual({ tag: 'b' });
+    });
+
+    test('parses as JSON when the content type carries a charset parameter', () => {
+      const normalizedEvent = createNormalizedEvent({
+        body: JSON.stringify({ ok: true }),
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toEqual({ ok: true });
+    });
+
     test('caches the parsed body on subsequent accesses', () => {
       const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ count: 42 }) });
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
