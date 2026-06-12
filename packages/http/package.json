@@ -35,10 +35,8 @@
     "serverless"
   ],
   "license": "UNLICENSED",
-  "dependencies": {
-    "@lambda-event-router/base": "workspace:*"
-  },
   "peerDependencies": {
+    "@lambda-event-router/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {

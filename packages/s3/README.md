@@ -9,8 +9,10 @@ S3 event routing by bucket, key pattern and event name. Convenience methods for 
 ## Install
 
 ```bash
-npm install @lambda-event-router/s3
+npm install @lambda-event-router/base @lambda-event-router/s3
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

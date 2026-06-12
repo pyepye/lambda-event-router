@@ -10,10 +10,11 @@ about both, so your handler either transforms the messages going through or deci
 ## Install
 
 ```bash
-npm install @lambda-event-router/appsync
+npm install @lambda-event-router/base @lambda-event-router/appsync
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
 
 ## Create the router
 

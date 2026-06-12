@@ -11,8 +11,10 @@ AppSync routing for resolvers, authorizers and Event API handlers.
 ## Install
 
 ```bash
-npm install @lambda-event-router/appsync
+npm install @lambda-event-router/base @lambda-event-router/appsync
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

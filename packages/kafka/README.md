@@ -9,8 +9,10 @@ Apache Kafka routing for both Amazon MSK and self-managed clusters, with schema 
 ## Install
 
 ```bash
-npm install @lambda-event-router/kafka
+npm install @lambda-event-router/base @lambda-event-router/kafka
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

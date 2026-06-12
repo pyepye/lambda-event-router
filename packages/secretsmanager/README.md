@@ -5,8 +5,10 @@ Secrets Manager rotation step routing with typed methods for each rotation step.
 ## Install
 
 ```bash
-npm install @lambda-event-router/secretsmanager
+npm install @lambda-event-router/base @lambda-event-router/secretsmanager
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 ## Quick Start
 

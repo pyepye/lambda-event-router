@@ -5,17 +5,17 @@ same Lambda is one more router, which is the part worth being here for.
 
 ## Install
 
-One package per event source your Lambda receives. `base` comes along as a dependency, so there is
-nothing else to add.
+One package per event source your Lambda receives, plus `base`. `base` exports `LambdaRouter`, which
+every router plugs into. It is a peer dependency, so you install it yourself.
 
 ```bash
-npm install @lambda-event-router/sqs
+npm install @lambda-event-router/base @lambda-event-router/sqs
 ```
 
-A Lambda sitting behind an HTTP API and a queue takes two:
+A Lambda sitting behind an HTTP API and a queue adds one more:
 
 ```bash
-npm install @lambda-event-router/apigateway @lambda-event-router/sqs
+npm install @lambda-event-router/base @lambda-event-router/apigateway @lambda-event-router/sqs
 ```
 
 If you are not sure which package you need, the [packages page](/packages) lists every AWS event source

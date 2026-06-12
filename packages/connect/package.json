@@ -34,9 +34,6 @@
     "serverless"
   ],
   "license": "UNLICENSED",
-  "dependencies": {
-    "@lambda-event-router/base": "workspace:*"
-  },
   "devDependencies": {
     "@lambda-event-router/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
@@ -44,5 +41,8 @@
     "@vitest/coverage-v8": "catalog:",
     "tsup": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@lambda-event-router/base": "workspace:^"
   }
 }

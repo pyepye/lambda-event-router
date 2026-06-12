@@ -35,10 +35,10 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@aws-sdk/util-dynamodb": "catalog:",
-    "@lambda-event-router/base": "workspace:*"
+    "@aws-sdk/util-dynamodb": "catalog:"
   },
   "peerDependencies": {
+    "@lambda-event-router/base": "workspace:^",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@standard-schema/spec": "catalog:"
   },

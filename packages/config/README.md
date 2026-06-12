@@ -11,8 +11,10 @@ AWS Config rule evaluation routing for configuration change and scheduled evalua
 ## Install
 
 ```bash
-npm install @lambda-event-router/config
+npm install @lambda-event-router/base @lambda-event-router/config
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

@@ -14,10 +14,11 @@ notification type and go to [`ConfigScheduledRouter`](/routers/ConfigScheduledRo
 ## Install
 
 ```bash
-npm install @lambda-event-router/config
+npm install @lambda-event-router/base @lambda-event-router/config
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
 
 ## Create the router
 

@@ -9,8 +9,10 @@ CodeCommit repository event routing by repository, branch, and the kind of chang
 ## Install
 
 ```bash
-npm install @lambda-event-router/codecommit
+npm install @lambda-event-router/base @lambda-event-router/codecommit
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 ## Quick Start
 

@@ -9,8 +9,10 @@ DocumentDB Change Streams routing by operation type (insert, update, replace, de
 ## Install
 
 ```bash
-npm install @lambda-event-router/documentdb
+npm install @lambda-event-router/base @lambda-event-router/documentdb
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

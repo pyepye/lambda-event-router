@@ -9,10 +9,11 @@ deals with one message and never sees the batch.
 ## Install
 
 ```bash
-npm install @lambda-event-router/mq
+npm install @lambda-event-router/base @lambda-event-router/mq
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
 
 The package holds `ActiveMQRouter` as well, so the functions are named per router. You want
 `createRabbitMQRouter` and `defineRabbitMQRoute` rather than the `createRouter` and `defineRoute` a

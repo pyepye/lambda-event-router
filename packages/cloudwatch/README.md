@@ -9,8 +9,10 @@ CloudWatch Logs subscription routing by log group, subscription filter and messa
 ## Install
 
 ```bash
-npm install @lambda-event-router/cloudwatch
+npm install @lambda-event-router/base @lambda-event-router/cloudwatch
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

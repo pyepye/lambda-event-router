@@ -9,8 +9,10 @@ Application Load Balancer HTTP routing with path parameters, schema validation, 
 ## Install
 
 ```bash
-npm install @lambda-event-router/alb
+npm install @lambda-event-router/base @lambda-event-router/alb
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

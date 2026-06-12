@@ -9,8 +9,10 @@ Cognito User Pool trigger routing with typed methods for each trigger source (Pr
 ## Install
 
 ```bash
-npm install @lambda-event-router/cognito
+npm install @lambda-event-router/base @lambda-event-router/cognito
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

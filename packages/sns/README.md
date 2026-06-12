@@ -9,8 +9,10 @@ SNS notification routing by topic ARN, subject, and message attributes with sche
 ## Install
 
 ```bash
-npm install @lambda-event-router/sns
+npm install @lambda-event-router/base @lambda-event-router/sns
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

@@ -239,7 +239,7 @@ importers:
   packages/alb:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@lambda-event-router/http':
         specifier: workspace:*
@@ -273,7 +273,7 @@ importers:
         specifier: 'catalog:'
         version: 3.1000.0
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@lambda-event-router/http':
         specifier: workspace:*
@@ -304,7 +304,7 @@ importers:
   packages/appsync:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -357,7 +357,7 @@ importers:
   packages/cloudformation:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -382,7 +382,7 @@ importers:
   packages/cloudwatch:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -407,7 +407,7 @@ importers:
   packages/codecommit:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -435,7 +435,7 @@ importers:
         specifier: 'catalog:'
         version: 3.1000.0
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -463,7 +463,7 @@ importers:
   packages/cognito:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -491,7 +491,7 @@ importers:
   packages/config:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -519,7 +519,7 @@ importers:
   packages/connect:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -544,7 +544,7 @@ importers:
   packages/documentdb:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -575,7 +575,7 @@ importers:
         specifier: 'catalog:'
         version: 3.987.0(@aws-sdk/client-dynamodb@3.1019.0)
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -606,7 +606,7 @@ importers:
   packages/eventbridge:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -634,7 +634,7 @@ importers:
   packages/firehose:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -662,7 +662,7 @@ importers:
   packages/http:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -690,7 +690,7 @@ importers:
   packages/iot:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -715,7 +715,7 @@ importers:
   packages/kafka:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -743,7 +743,7 @@ importers:
   packages/kinesis:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -771,7 +771,7 @@ importers:
   packages/lex:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -796,7 +796,7 @@ importers:
   packages/mq:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -824,7 +824,7 @@ importers:
   packages/s3:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -849,7 +849,7 @@ importers:
   packages/secretsmanager:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -874,7 +874,7 @@ importers:
   packages/ses:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
     devDependencies:
       '@lambda-event-router/testing':
@@ -899,7 +899,7 @@ importers:
   packages/sns:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -927,7 +927,7 @@ importers:
   packages/sqs:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -955,7 +955,7 @@ importers:
   packages/stepfunctions:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@standard-schema/spec':
         specifier: 'catalog:'
@@ -1008,7 +1008,7 @@ importers:
   packages/vpclattice:
     dependencies:
       '@lambda-event-router/base':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../base
       '@lambda-event-router/http':
         specifier: workspace:*
@@ -1032,6 +1032,46 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
+
+  service-examples/sqs:
+    dependencies:
+      '@aws-sdk/client-sqs':
+        specifier: ^3.1034.0
+        version: 3.1039.0
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../../packages/base
+      '@lambda-event-router/sqs':
+        specifier: workspace:*
+        version: link:../../packages/sqs
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.6
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      aws-cdk:
+        specifier: ^2.1000.0
+        version: 2.1120.0
+      aws-cdk-lib:
+        specifier: ^2.190.0
+        version: 2.251.0(constructs@10.6.0)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
 packages:
 

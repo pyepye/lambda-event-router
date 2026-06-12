@@ -9,11 +9,13 @@ and on the message's route key, and the router hands your handler the connection
 ## Install
 
 ```bash
-npm install @lambda-event-router/apigateway
+npm install @lambda-event-router/base @lambda-event-router/apigateway
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself. So
-does `@aws-sdk/client-apigatewaymanagementapi`, which is what
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
+
+`@aws-sdk/client-apigatewaymanagementapi` comes along as a dependency. It is what
 [`postToConnection`](#sending-messages-to-a-client) sends through, so there is nothing extra to add to
 answer a client.
 

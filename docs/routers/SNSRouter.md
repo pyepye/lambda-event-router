@@ -8,10 +8,11 @@ routes should handle it. You can route on the topic, the subject or any message 
 ## Install
 
 ```bash
-npm install @lambda-event-router/sns
+npm install @lambda-event-router/base @lambda-event-router/sns
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
 
 ## Create the router
 

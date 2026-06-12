@@ -9,8 +9,10 @@ Amazon Lex V2 dialog and fulfillment code hook routing.
 ## Install
 
 ```bash
-npm install @lambda-event-router/lex
+npm install @lambda-event-router/base @lambda-event-router/lex
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

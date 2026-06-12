@@ -40,7 +40,7 @@
     "@aws-sdk/client-apigatewaymanagementapi": "catalog:"
   },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {

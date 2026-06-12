@@ -9,8 +9,10 @@ IoT Core rule action routing for Lambda function actions.
 ## Install
 
 ```bash
-npm install @lambda-event-router/iot
+npm install @lambda-event-router/base @lambda-event-router/iot
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

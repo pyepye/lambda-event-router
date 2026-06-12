@@ -9,12 +9,14 @@ versions, and hands your handler the same request object whichever one arrives.
 ## Install
 
 ```bash
-npm install @lambda-event-router/apigateway
+npm install @lambda-event-router/base @lambda-event-router/apigateway
 ```
 
-`@lambda-event-router/base` and `@lambda-event-router/http` both come along as dependencies, so you do
-not need to install either yourself. The shared HTTP types, [`HTTPMiddleware`](#middleware) among them,
-are re-exported from here.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
+
+`@lambda-event-router/http` comes along as a dependency. The shared HTTP types,
+[`HTTPMiddleware`](#middleware) among them, are re-exported from here.
 
 ## Create the router
 

@@ -11,8 +11,10 @@ Provides routers for API Gateway event sources: REST APIs, HTTP APIs, Lambda Aut
 ## Install
 
 ```bash
-npm install @lambda-event-router/apigateway
+npm install @lambda-event-router/base @lambda-event-router/apigateway
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

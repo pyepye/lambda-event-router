@@ -9,8 +9,10 @@ SQS message routing with schema validation, message attribute filtering, and bat
 ## Install
 
 ```bash
-npm install @lambda-event-router/sqs
+npm install @lambda-event-router/base @lambda-event-router/sqs
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

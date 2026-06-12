@@ -14,10 +14,11 @@ EventBridge envelope, so use [`EventRouter`](/routers/EventRouter) for those.
 ## Install
 
 ```bash
-npm install @lambda-event-router/eventbridge
+npm install @lambda-event-router/base @lambda-event-router/eventbridge
 ```
 
-`@lambda-event-router/base` comes along as a dependency, so you do not need to install it yourself.
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports
+`LambdaRouter`, which every router plugs into.
 
 ## Create the router
 

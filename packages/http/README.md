@@ -11,8 +11,10 @@ This package is typically not installed directly. Instead, use one of the HTTP s
 ## Install
 
 ```bash
-npm install @lambda-event-router/http
+npm install @lambda-event-router/base @lambda-event-router/http
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself.
 
 
 ## Quick Start

@@ -90,13 +90,13 @@ For usage details, check the individual READMEs linked in the table.
 Install the base package and the service router you need:
 
 ```bash
-npm install @lambda-event-router/[package]
+npm install @lambda-event-router/base @lambda-event-router/[package]
 ```
 
 For example, to install routers for apigateway and sqs
 
 ```bash
-npm install @lambda-event-router/apigateway @lambda-event-router/sqs
+npm install @lambda-event-router/base @lambda-event-router/apigateway @lambda-event-router/sqs
 ```
 
 

@@ -9,8 +9,10 @@ Kinesis Data Firehose transformation routing. Routes records for processing and 
 ## Install
 
 ```bash
-npm install @lambda-event-router/firehose
+npm install @lambda-event-router/base @lambda-event-router/firehose
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

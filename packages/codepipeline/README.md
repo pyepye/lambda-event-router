@@ -9,8 +9,10 @@ CodePipeline job handler for custom pipeline actions.
 ## Install
 
 ```bash
-npm install @lambda-event-router/codepipeline
+npm install @lambda-event-router/base @lambda-event-router/codepipeline
 ```
+
+`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
 
 ## Quick Start

@@ -35,10 +35,10 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
     "@aws-sdk/client-codepipeline": "catalog:"
   },
   "peerDependencies": {
+    "@lambda-event-router/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
