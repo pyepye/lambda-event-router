@@ -3,6 +3,7 @@ packages:
   - examples
   - docs
   - full-examples/*
+  - service-examples/*
 
 catalog:
   '@aws-sdk/client-apigatewaymanagementapi': ^3.0.0
