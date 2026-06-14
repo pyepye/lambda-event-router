@@ -231,20 +231,6 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
-    test('matches route by number messageAttribute value', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { count: 42 } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { count: 42 });
-
-      expect(result).toBeDefined();
-    });
-
     test('does not match when messageAttribute value is a Buffer', async ({ snsRecord }) => {
       router.route(
         defineRoute({
@@ -260,88 +246,18 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('matches when one member of a String.Array attribute matches', async ({ snsRecord }) => {
+    test('matches a String.Array attribute as the raw JSON text SNS sends', async ({ snsRecord }) => {
       router.route(
         defineRoute({
-          filters: { messageAttributes: { warehouses: 'manchester' } },
+          filters: { messageAttributes: { warehouses: '["london","manchester"]' } },
         }).handle(async () => {}),
       );
 
       const record = snsRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
+      const result = await router.matchRoute(record, {}, { warehouses: '["london","manchester"]' });
 
       expect(result).toBeDefined();
-    });
-
-    test('does not match when no member of a String.Array attribute matches', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { warehouses: 'leeds' } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
-
-      expect(result).toBeUndefined();
-    });
-
-    test('matches a String.Array attribute against a list of allowed values', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { warehouses: ['bristol', 'manchester'] } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches a String.Array attribute against a pattern', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { warehouses: /^man/ } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
-
-      expect(result).toBeDefined();
-    });
-
-    test('matches a numeric member of a String.Array attribute', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { attempts: 3 } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { attempts: [1, 3] });
-
-      expect(result).toBeDefined();
-    });
-
-    test('does not match an empty String.Array attribute', async ({ snsRecord }) => {
-      router.route(
-        defineRoute({
-          filters: { messageAttributes: { warehouses: 'london' } },
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord();
-      // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {}, { warehouses: [] });
-
-      expect(result).toBeUndefined();
     });
 
     test('does not match route when messageAttributes does not match', async ({ snsRecord }) => {
@@ -988,16 +904,16 @@ suite('SNSRouter', () => {
       });
     });
 
-    test('converts Number attributes to numeric values', () => {
+    test('keeps a Number attribute as a string', () => {
+      // SNS delivers every attribute to Lambda as String or Binary, so a Number type never arrives.
       const raw = {
         count: { Type: 'Number', Value: '42' },
-        ratio: { Type: 'Number', Value: '1.5' },
       };
 
       // @ts-expect-error - testing private method directly
       const result = router.convertMessageAttributes(raw);
 
-      expect(result).toEqual({ count: 42, ratio: 1.5 });
+      expect(result).toEqual({ count: '42' });
     });
 
     test('converts Binary attributes to Buffer values', () => {
@@ -1013,26 +929,16 @@ suite('SNSRouter', () => {
       expect(Buffer.isBuffer(payload) && payload.toString()).toBe('hello');
     });
 
-    test('converts String.Array attributes to JSON-parsed arrays', () => {
+    test('keeps a String.Array attribute as the raw JSON text', () => {
+      // SNS sends a published String.Array to Lambda as a String holding its JSON text.
       const raw = {
-        tags: { Type: 'String.Array', Value: JSON.stringify(['alpha', 42, true, null]) },
+        tags: { Type: 'String.Array', Value: '["alpha","beta"]' },
       };
 
       // @ts-expect-error - testing private method directly
       const result = router.convertMessageAttributes(raw);
 
-      expect(result).toEqual({ tags: ['alpha', 42, true, null] });
-    });
-
-    test('throws when String.Array attribute value is not a valid JSON array', () => {
-      const raw = {
-        tags: { Type: 'String.Array', Value: '{"not":"array"}' },
-      };
-
-      expect(() => {
-        // @ts-expect-error - testing private method directly
-        router.convertMessageAttributes(raw);
-      }).toThrow(/Invalid SNS String.Array attribute value/);
+      expect(result).toEqual({ tags: '["alpha","beta"]' });
     });
 
     test('returns empty object for empty attributes', () => {

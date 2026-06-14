@@ -20,7 +20,6 @@ import type {
   SNSRequest,
   SNSRouteDefinition,
   SNSRouterOptions,
-  SNSStringArrayItem,
 } from './types.js';
 
 interface InternalRoute {
@@ -103,32 +102,14 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     return undefined;
   }
 
+  // SNS sends Lambda nothing but String and Binary, whatever the attribute was published as. A Number
+  // arrives as its digits and a String.Array as its JSON text.
   private convertMessageAttributes(raw: SNSRawMessageAttributes): SNSMessageAttributes {
     const result: SNSMessageAttributes = {};
     for (const [key, attr] of Object.entries(raw)) {
-      if (attr.Type === 'Number') {
-        result[key] = Number(attr.Value);
-      } else if (attr.Type === 'Binary') {
-        result[key] = Buffer.from(attr.Value, 'base64');
-      } else if (attr.Type === 'String.Array') {
-        result[key] = this.parseStringArrayValue(attr.Value);
-      } else {
-        result[key] = attr.Value;
-      }
+      result[key] = attr.Type === 'Binary' ? Buffer.from(attr.Value, 'base64') : attr.Value;
     }
     return result;
-  }
-
-  private isStringArrayItem(value: unknown): value is SNSStringArrayItem {
-    return typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null;
-  }
-
-  private parseStringArrayValue(rawValue: string): SNSStringArrayItem[] {
-    const parsed: unknown = JSON.parse(rawValue);
-    if (!(Array.isArray(parsed) && parsed.every(this.isStringArrayItem))) {
-      throw new Error(`Invalid SNS String.Array attribute value: ${rawValue}`);
-    }
-    return parsed;
   }
 
   private async matchRoute(
@@ -201,30 +182,9 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  // String.Array attribute matches when any of its members does. This is how an SNS subscription
-  // filter policy treats a list attribute.
-  private matchMessageAttribute(
-    attr: SNSMessageAttributeValue,
-    allowed: FilterStringMatcher | number | number[],
-  ): boolean {
-    if (Array.isArray(attr)) {
-      return attr.some((item) => this.matchAttributeItem(item, allowed));
-    }
-    return this.matchAttributeItem(attr, allowed);
-  }
-
-  private matchAttributeItem(
-    item: SNSStringArrayItem | Buffer,
-    allowed: FilterStringMatcher | number | number[],
-  ): boolean {
-    // A Binary attribute reaches here as a Buffer and matches nothing, because no matcher describes one.
-    if (typeof allowed === 'number') {
-      return item === allowed;
-    }
-    if (Array.isArray(allowed)) {
-      return allowed.some((option) => this.matchAttributeItem(item, option));
-    }
-    return typeof item === 'string' && filterStringMatcher(item, allowed);
+  // A Binary attribute reaches here as a Buffer and matches nothing, because no matcher describes one.
+  private matchMessageAttribute(attr: SNSMessageAttributeValue, allowed: FilterStringMatcher): boolean {
+    return typeof attr === 'string' && filterStringMatcher(attr, allowed);
   }
 }
 

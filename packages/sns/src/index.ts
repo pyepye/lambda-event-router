@@ -11,5 +11,4 @@ export type {
   SNSResponse,
   SNSRouteDefinition,
   SNSRouterOptions,
-  SNSStringArrayItem,
 } from './types.js';

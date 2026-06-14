@@ -5,8 +5,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type SNSRawMessageAttributes = AWSSNSMessageAttributes;
-export type SNSStringArrayItem = string | number | boolean | null;
-export type SNSMessageAttributeValue = string | number | Buffer | SNSStringArrayItem[];
+export type SNSMessageAttributeValue = string | Buffer;
 export type SNSMessageAttributes = Record<string, SNSMessageAttributeValue>;
 
 export interface SNSRequest<TBody = unknown, TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes> {
@@ -37,7 +36,7 @@ export interface SNSFilterInput {
 export interface SNSFilters {
   topicArn?: FilterStringMatcher;
   subject?: FilterStringMatcher;
-  messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
+  messageAttributes?: Record<string, FilterStringMatcher>;
   custom?: (input: SNSFilterInput) => boolean | Promise<boolean>;
 }
 

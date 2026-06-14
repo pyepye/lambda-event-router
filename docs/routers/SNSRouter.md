@@ -76,7 +76,7 @@ snsRouter.route({
     messageAttributes: {
       Type: ['OrderCreated', 'OrderRefunded'],
       Region: 'eu-west-2', // Or a pattern: /^eu-/
-      Attempt: 1,
+      Attempt: '1', // Always a string, whatever it was published as
     },
     custom: ({ body }) => {
       // Only a custom reaches the parsed body
@@ -93,7 +93,7 @@ snsRouter.route({
 | --- | --- | --- |
 | `topicArn` | `FilterStringMatcher` | Matches against the record's topic ARN |
 | `subject` | `FilterStringMatcher` | Matches against the notification subject |
-| `messageAttributes` | `Record<string, FilterStringMatcher \| number \| number[]>` | Every key listed must be present on the message and match. A missing attribute means no match. A `String.Array` attribute matches when any of its members does |
+| `messageAttributes` | `Record<string, FilterStringMatcher>` | Every key listed must be present on the message and match. A missing attribute means no match |
 | `custom` | `(input: SNSFilterInput) => boolean \| Promise<boolean>` | Anything the other filters cannot express. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
@@ -101,6 +101,9 @@ snsRouter.route({
 
 **A `Binary` attribute never matches a `messageAttributes` filter.** It arrives as a `Buffer`, and no
 matcher describes one. Pick those out with a `custom` filter instead.
+
+**Every other attribute is a string when it reaches a filter**, so match `'1'` rather than `1`. See
+[Message attribute types](#message-attribute-types) for why.
 
 **A subject filter never matches a notification published without one.** `Subject` is optional in
 SNS, and plenty of publishers leave it unset. If some of your messages have no subject, route those on
@@ -139,17 +142,22 @@ export async function processOrder(
 
 ### Message attribute types
 
-SNS types its attributes and the router converts them for you rather than handing you raw strings.
+`Publish` takes four attribute types, but a Lambda subscription receives two. SNS flattens `Number`
+and `String.Array` to `String` on the way.
 
-| SNS type | You get | Notes |
-| --- | --- | --- |
-| `String` | `string` | |
-| `Number` | `number` | |
-| `Binary` | `Buffer` | Decoded from base64 |
-| `String.Array` | `Array<string \| number \| boolean \| null>` | Parsed from the JSON SNS stores it as |
+| You publish | Your handler gets |
+| --- | --- |
+| `String` | `'OrderPlaced'` |
+| `Number` | `'2'`, a string |
+| `String.Array` | `'["london","manchester"]'`, a string holding the JSON |
+| `Binary` | a `Buffer`, decoded from base64 |
 
-**A malformed `String.Array` attribute throws before your handler runs.** The value has to parse as a
-JSON array of strings, numbers, booleans or nulls. Anything else fails the record.
+Only `Binary` is converted for you. Handle the other two in your schema:
+
+```ts
+priority: z.coerce.number(), // '2' becomes 2
+warehouses: z.string().transform((value) => JSON.parse(value)),
+```
 
 ### Response type
 
@@ -318,8 +326,7 @@ All exported from `@lambda-event-router/sns`.
 | `SNSRouterOptions` | Options for `createSNSRouter` |
 | `SNSMiddleware<TBody, TMessageAttributes>` | Router and route middleware |
 | `SNSMessageAttributes` | `Record<string, SNSMessageAttributeValue>` |
-| `SNSMessageAttributeValue` | `string \| number \| Buffer \| SNSStringArrayItem[]` |
-| `SNSStringArrayItem` | `string \| number \| boolean \| null`, the members of a `String.Array` |
+| `SNSMessageAttributeValue` | `string \| Buffer` |
 | `SNSRawMessageAttributes` | The attributes as AWS sends them, before conversion |
 
 The `SNSRouter` class and the `createSNSRouter` and `defineRoute` functions come from the same place.
