@@ -34,11 +34,15 @@ interface InternalRoute {
 interface RouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TMessageAttributes extends SNSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SNSMessageAttributes
+    : SNSMessageAttributes,
 > {
   filters: SNSFilters;
   bodySchema?: TBodySchema;
   messageAttributesSchema?: TMessageAttributesSchema;
-  middleware?: Middleware<SNSRequest, void>[];
+  middleware?: Middleware<SNSRequest<TBody, TMessageAttributes>, void>[];
 }
 
 interface RouteBuilder<TBody, TMessageAttributes extends SNSMessageAttributes> {
@@ -63,11 +67,9 @@ export function defineRoute<
 
 export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   private routes: InternalRoute[] = [];
-  private batchItemFailures: boolean;
   private middleware: Middleware<SNSRequest, void>[];
 
   constructor(options?: SNSRouterOptions) {
-    this.batchItemFailures = options?.batchItemFailures ?? false;
     this.middleware = options?.middleware ?? [];
   }
 
@@ -96,14 +98,9 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   }
 
   async handleEvent(event: SNSEvent, context: Context): Promise<undefined> {
-    if (!this.batchItemFailures) {
-      const recordPromises = event.Records.map((record) => this.processRecord(record, context));
-      await Promise.all(recordPromises);
-      return;
-    }
-
     const recordPromises = event.Records.map((record) => this.processRecord(record, context));
-    await Promise.allSettled(recordPromises);
+    await Promise.all(recordPromises);
+    return undefined;
   }
 
   private convertMessageAttributes(raw: SNSRawMessageAttributes): SNSMessageAttributes {
@@ -204,17 +201,30 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  // String.Array attribute matches when any of its members does. This is how an SNS subscription
+  // filter policy treats a list attribute.
   private matchMessageAttribute(
     attr: SNSMessageAttributeValue,
     allowed: FilterStringMatcher | number | number[],
   ): boolean {
+    if (Array.isArray(attr)) {
+      return attr.some((item) => this.matchAttributeItem(item, allowed));
+    }
+    return this.matchAttributeItem(attr, allowed);
+  }
+
+  private matchAttributeItem(
+    item: SNSStringArrayItem | Buffer,
+    allowed: FilterStringMatcher | number | number[],
+  ): boolean {
+    // A Binary attribute reaches here as a Buffer and matches nothing, because no matcher describes one.
     if (typeof allowed === 'number') {
-      return attr === allowed;
+      return item === allowed;
     }
     if (Array.isArray(allowed)) {
-      return allowed.some((item) => this.matchMessageAttribute(attr, item));
+      return allowed.some((option) => this.matchAttributeItem(item, option));
     }
-    return typeof attr === 'string' && filterStringMatcher(attr, allowed);
+    return typeof item === 'string' && filterStringMatcher(item, allowed);
   }
 }
 

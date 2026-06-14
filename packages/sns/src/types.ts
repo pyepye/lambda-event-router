@@ -53,6 +53,5 @@ export interface SNSRouteDefinition<
 }
 
 export interface SNSRouterOptions {
-  batchItemFailures?: boolean;
   middleware?: SNSMiddleware[];
 }

@@ -5,7 +5,7 @@ import { createSNSRouter } from '@lambda-event-router/sns';
 
 import { createItemRoute, urgentNotificationRoute } from './createItem.js';
 
-const snsRouter = createSNSRouter(); // Defaults to batchItemFailures: false
+const snsRouter = createSNSRouter();
 
 snsRouter.route(createItemRoute).route(urgentNotificationRoute);
 

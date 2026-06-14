@@ -5,9 +5,7 @@ import { createSNSRouter, type SNSFilterInput } from '@lambda-event-router/sns';
 
 import { CreateItemBodySchema, createItem, createItemOther, MessageAttributesSchema } from './createItem.js';
 
-const snsRouter = createSNSRouter({
-  batchItemFailures: true,
-});
+const snsRouter = createSNSRouter();
 
 const SOME_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-topic';
 const SOME_DL_TOPIC_ARN = 'arn:aws:sns:region:account-id:some-dl-topic';

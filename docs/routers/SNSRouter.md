@@ -21,18 +21,16 @@ import { createSNSRouter } from '@lambda-event-router/sns'
 import { logInvocation } from './middleware/logInvocation'
 
 const snsRouter = createSNSRouter({
-  batchItemFailures: false,  // Optional
   middleware: [logInvocation],  // Optional
 })
 ```
 
-Both options can be left out. `createSNSRouter()` on its own is what you want most of the time.
+The option can be left out. `createSNSRouter()` on its own is what you want most of the time.
 
 ### Options
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `batchItemFailures` | `boolean` | No | `false` | Swallow record errors instead of failing the invocation. Read [Failures and retries](#failures-and-retries) before turning this on |
 | `middleware` | `SNSMiddleware[]` | No | `[]` | Runs for every record this router handles, before any route middleware. See [Middleware](#middleware) |
 
 ## Register routes
@@ -62,8 +60,8 @@ Routes match in registration order and the first match wins, so give each route 
 can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
 
 **A record that matches no route throws.** That fails the invocation, which is usually what you want,
-since it lets the subscription retry. With `batchItemFailures` on it is swallowed instead. [Nothing
-matched](/docs/routing#nothing-matched) covers what the other routers do.
+since it lets Lambda retry the notification. [Nothing matched](/docs/routing#nothing-matched) covers
+what the other routers do.
 
 ## Filters
 
@@ -95,11 +93,14 @@ snsRouter.route({
 | --- | --- | --- |
 | `topicArn` | `FilterStringMatcher` | Matches against the record's topic ARN |
 | `subject` | `FilterStringMatcher` | Matches against the notification subject |
-| `messageAttributes` | `Record<string, FilterStringMatcher \| number \| number[]>` | Every key listed must be present on the message and match. A missing attribute means no match |
+| `messageAttributes` | `Record<string, FilterStringMatcher \| number \| number[]>` | Every key listed must be present on the message and match. A missing attribute means no match. A `String.Array` attribute matches when any of its members does |
 | `custom` | `(input: SNSFilterInput) => boolean \| Promise<boolean>` | Anything the other filters cannot express. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
+
+**A `Binary` attribute never matches a `messageAttributes` filter.** It arrives as a `Buffer`, and no
+matcher describes one. Pick those out with a `custom` filter instead.
 
 **A subject filter never matches a notification published without one.** `Subject` is optional in
 SNS, and plenty of publishers leave it unset. If some of your messages have no subject, route those on
@@ -259,21 +260,14 @@ matched, so a record failing its schema throws rather than falling through to th
 
 ## Failures and retries
 
-By default the router processes every record and lets the first error through, so the invocation fails
-and you get retries plus, if the subscription has one, a dead letter queue.
+The router lets the first error through, so the invocation fails. A handler that throws, a record
+matching no route and a record failing schema validation all fail it the same way.
 
-**`batchItemFailures` does not report failures for SNS.** There is no partial batch response for an
-SNS subscription, so with the option on the router runs every record, discards the outcomes and returns
-nothing. A handler that throws, a record matching no route and a record failing schema validation all
-leave the invocation looking successful.
+**There is no partial batch response for an SNS subscription**, so the router has nowhere to report one
+record's failure. Failing the invocation is what lets Lambda retry it and then reach the function's
+on-failure destination, so there is no option to turn that off.
 
-```ts
-// Errors from here on are swallowed, not reported
-const snsRouter = createSNSRouter({ batchItemFailures: true })
-```
-
-Leave it off unless your handlers do their own error handling and you genuinely want a failure to stop
-there. If you want per-record retries, subscribe an SQS queue to the topic and use
+If you want per-record retries across a batch, subscribe an SQS queue to the topic and use
 [SQSRouter](/routers/SQSRouter), which does report individual failures.
 
 ## Middleware
@@ -300,6 +294,10 @@ snsRouter.route({
   handler: processOrder,
 })
 ```
+
+A route middleware can name the route's own types, so `SNSMiddleware<Order, OrderAttributes>` reads
+`request.body` as an `Order`. Name both parameters even if you only touch the body, because `next`
+makes the type invariant.
 
 Where an event does carry several records they run in parallel, so pass per-record values on each log
 call rather than reaching for `appendKeys`. See [middleware](/docs/middleware) for the execution order

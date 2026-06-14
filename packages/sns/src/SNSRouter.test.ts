@@ -260,6 +260,90 @@ suite('SNSRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('matches when one member of a String.Array attribute matches', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: 'manchester' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when no member of a String.Array attribute matches', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: 'leeds' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches a String.Array attribute against a list of allowed values', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: ['bristol', 'manchester'] } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a String.Array attribute against a pattern', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: /^man/ } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { warehouses: ['london', 'manchester'] });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a numeric member of a String.Array attribute', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { attempts: 3 } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { attempts: [1, 3] });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match an empty String.Array attribute', async ({ snsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: 'london' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { warehouses: [] });
+
+      expect(result).toBeUndefined();
+    });
+
     test('does not match route when messageAttributes does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({
@@ -637,7 +721,7 @@ suite('SNSRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
     });
 
-    test('propagates handler error when batchItemFailures is disabled', async ({ snsHandlerEvent }) => {
+    test('propagates a handler error', async ({ snsHandlerEvent }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       router.route(
         defineRoute({
@@ -649,6 +733,26 @@ suite('SNSRouter', () => {
 
       const { event, context } = snsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('handler exploded');
+    });
+
+    test('throws when one record of several fails', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const failingRecord = snsRecord({ Sns: { TopicArn: topicArn } });
+
+      router.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async (request) => {
+          if (request.record.Sns.MessageId === failingRecord.Sns.MessageId) {
+            throw new Error('processing failed');
+          }
+        }),
+      );
+
+      const records = [snsRecord({ Sns: { TopicArn: topicArn } }), failingRecord];
+      const event = snsEvent(records);
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('processing failed');
     });
 
     test('calls the handler for every matching record', async ({ snsRecord, snsEvent, context }) => {
@@ -712,99 +816,6 @@ suite('SNSRouter', () => {
     });
   });
 
-  suite('handleEvent - batchItemFailures', () => {
-    let router: SNSRouter;
-
-    beforeAll(() => {
-      router = new SNSRouter({ batchItemFailures: true });
-    });
-
-    test('returns undefined when all records succeed', async ({ snsRecord, snsEvent, context }) => {
-      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      router.route(
-        defineRoute({
-          filters: { topicArn },
-        }).handle(async () => {}),
-      );
-
-      const records = [
-        snsRecord({ Sns: { TopicArn: topicArn } }),
-        snsRecord({ Sns: { TopicArn: topicArn } }),
-        snsRecord({ Sns: { TopicArn: topicArn } }),
-      ];
-      const event = snsEvent(records);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-    });
-
-    test('does not throw when handler fails', async ({ snsRecord, snsEvent, context }) => {
-      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      router.route(
-        defineRoute({
-          filters: { topicArn },
-        }).handle(async () => {
-          throw new Error('processing failed');
-        }),
-      );
-
-      const record = snsRecord({ Sns: { TopicArn: topicArn } });
-      const event = snsEvent([record]);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-    });
-
-    test('does not throw when no route matches', async ({ snsHandlerEvent }) => {
-      const { event, context } = snsHandlerEvent();
-      const result = await router.handleEvent(event, context);
-
-      expect(result).toBeUndefined();
-    });
-
-    test('returns undefined even when records fail', async ({ snsRecord, snsEvent, context }) => {
-      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const failingRecord = snsRecord({ Sns: { TopicArn: topicArn } });
-
-      router.route(
-        defineRoute({
-          filters: { topicArn },
-        }).handle(async (request) => {
-          if (request.record.Sns.MessageId === failingRecord.Sns.MessageId) {
-            throw new Error('processing failed');
-          }
-        }),
-      );
-
-      const records = [
-        snsRecord({ Sns: { TopicArn: topicArn } }),
-        failingRecord,
-        snsRecord({ Sns: { TopicArn: topicArn } }),
-      ];
-      const event = snsEvent(records);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-    });
-
-    test('does not throw when schema validation fails', async ({ snsRecord, snsEvent, context }) => {
-      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
-      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
-      router.route(
-        defineRoute({
-          filters: { topicArn },
-          bodySchema,
-        }).handle(async () => {}),
-      );
-
-      const record = snsRecord({ Sns: { TopicArn: topicArn } });
-      const event = snsEvent([record]);
-      const result = await router.handleEvent(event, context());
-
-      expect(result).toBeUndefined();
-    });
-  });
-
   suite('handleEvent - schema validation', () => {
     test('handler receives validated body from bodySchema', async ({ snsRecord, snsEvent, context }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
@@ -832,11 +843,7 @@ suite('SNSRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
     });
 
-    test('throws when bodySchema validation fails and batchItemFailures is disabled', async ({
-      snsRecord,
-      snsEvent,
-      context,
-    }) => {
+    test('throws when bodySchema validation fails', async ({ snsRecord, snsEvent, context }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
@@ -888,11 +895,7 @@ suite('SNSRouter', () => {
       );
     });
 
-    test('throws when messageAttributesSchema validation fails and batchItemFailures is disabled', async ({
-      snsRecord,
-      snsEvent,
-      context,
-    }) => {
+    test('throws when messageAttributesSchema validation fails', async ({ snsRecord, snsEvent, context }) => {
       const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
       const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(
