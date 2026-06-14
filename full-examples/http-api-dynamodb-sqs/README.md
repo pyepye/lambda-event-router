@@ -26,6 +26,20 @@ It also has tracing middleware configured as an example to show how it can be us
 - CDK bootstrap already run for the target account / region
 - Node 22 and pnpm installed
 
+## Permissions
+
+`deploy-policy.json` holds the minimum permissions needed to deploy this example and test it. Attach
+it to the user or role you run the commands with.
+
+CloudFormation work is done by the CDK bootstrap roles, so the policy only allows assuming those
+roles. The rest covers reading the table, poking the queue, and reading the logs and X-Ray traces.
+Actions are locked down, resources are not.
+
+The API routes have no authoriser, so the `curl` calls below need no AWS credentials.
+
+Note: the policy assumes the default bootstrap qualifier `hnb659fds`. Change the role and parameter
+ARNs if your account uses a custom one.
+
 ## Deploy
 
 From this directory:
@@ -56,9 +70,24 @@ curl -X POST -H 'content-type: application/json' \
   "$API/orders"
 ```
 
-## What to look for in the logs
+## Checking the logs
 
-Tail CloudWatch logs for `WorkerFn`. For the first POST you should see, in order:
+Save the worker logs to a file:
+
+```bash
+aws logs tail /aws/lambda/http-api-dynamodb-sqs-worker --since 10m --format short > worker.log
+```
+
+The API function logs to its own group, `/aws/lambda/http-api-dynamodb-sqs-api`.
+
+Widen the window with `--since`, which takes a single unit such as `30m`, `2h` or `1d`. Add
+`--follow` to keep writing to the file while you send more requests. Both functions log in JSON, so
+`--format json` pretty prints the fields.
+
+Note: the group names are `/aws/lambda/<stackName>-worker` and `/aws/lambda/<stackName>-api`, so they
+change if you deploy with a different `stackName`.
+
+For the first POST you should see, in order:
 
 1. `orderProcessor` - one log line, `decrementCount: 2, confirmationCount: 1`.
 2. `decrementStock` x2 - one per SKU, with the resulting quantity.
