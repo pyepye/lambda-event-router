@@ -134,7 +134,8 @@ dynamoRouter.route({
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
-Numeric key values are compared as numbers, so `partitionKey: 42` matches a key DynamoDB stores as `N`.
+A key DynamoDB stores as `N` is matched on its digits, so `42`, `'42'` and `/^4/` all match the key
+`42`.
 
 **Filtering on `partitionKey` or `sortKey` needs the router's `keys` option once your table has both.**
 Without it the router reads the key name off the record, which only works when there is a single key
@@ -306,10 +307,13 @@ Any [Standard Schema](https://standardschema.dev) library works. Validation runs
 matched, so a record failing its schema throws rather than falling through to the next route. See
 [schema validation](/docs/routing#schema-validation) for what your handler receives after coercion.
 
-**An image schema fails every record that carries no such image.** A route covering
-`['INSERT', 'MODIFY']` with an `oldImageSchema` set throws on each insert it takes, since an insert has
-no old image to validate. Split it into an `insert()` and a `modify()` route, which only accept the
-schemas their event can fill.
+An image schema is skipped for an event that cannot carry that image. A route covering
+`['INSERT', 'MODIFY']` with an `oldImageSchema` runs it on the modifies and not on the inserts. The
+handler gets `oldImage: undefined` on an insert, which is what its type already says.
+
+An image the event should carry but the record does not still fails. A `MODIFY` route with a
+`newImageSchema` reading a `KEYS_ONLY` stream fails every record, because no image ever arrives. Match
+the schemas to the stream's view type.
 
 ## Failures and retries
 

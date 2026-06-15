@@ -3,7 +3,7 @@ import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEven
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
+import type { EventTypeRouter, FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 import {
   filterStringMatcher,
   handleEventWithMiddleware,
@@ -281,17 +281,23 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       `Image validation failed for Keys on record ${record.eventID}`,
     );
 
-    const validatedNewImage = await validateSchema(
-      newImage,
-      route.newImageSchema,
-      `Image validation failed for NewImage on record ${record.eventID}`,
-    );
+    let validatedNewImage = newImage;
+    if (eventName !== 'REMOVE') {
+      validatedNewImage = await validateSchema(
+        newImage,
+        route.newImageSchema,
+        `Image validation failed for NewImage on record ${record.eventID}`,
+      );
+    }
 
-    const validatedOldImage = await validateSchema(
-      oldImage,
-      route.oldImageSchema,
-      `Image validation failed for OldImage on record ${record.eventID}`,
-    );
+    let validatedOldImage = oldImage;
+    if (eventName !== 'INSERT') {
+      validatedOldImage = await validateSchema(
+        oldImage,
+        route.oldImageSchema,
+        `Image validation failed for OldImage on record ${record.eventID}`,
+      );
+    }
 
     const request = {
       keys: validatedKeys,
@@ -342,13 +348,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         if (!partitionKeyName) continue;
         const partitionKey = this.getKeyValue(partitionKeyName, keys, newImage, oldImage);
         if (typeof partitionKey !== 'string' && typeof partitionKey !== 'number') continue;
-        const partitionKeysMap = Array.isArray(filters.partitionKey) ? filters.partitionKey : [filters.partitionKey];
-        if (typeof partitionKey === 'number') {
-          if (!partitionKeysMap.includes(partitionKey)) continue;
-        }
-        const partitionKeyFilters = partitionKeysMap.map((key) => String(key));
-        const resourceIdMatch = filterStringMatcher(String(partitionKey), partitionKeyFilters);
-        if (!resourceIdMatch) continue;
+        if (!filterStringMatcher(String(partitionKey), this.toKeyMatchers(filters.partitionKey))) continue;
       }
 
       if (filters.sortKey) {
@@ -356,14 +356,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         if (!sortKeyName) continue;
         const sortKey = this.getKeyValue(sortKeyName, keys, newImage, oldImage);
         if (typeof sortKey !== 'string' && typeof sortKey !== 'number') continue;
-
-        const sortKeysMap = Array.isArray(filters.sortKey) ? filters.sortKey : [filters.sortKey];
-        if (typeof sortKey === 'number') {
-          if (!sortKeysMap.includes(sortKey)) continue;
-        }
-        const sortKeyFilters = sortKeysMap.map((key) => String(key));
-        const resourceIdMatch = filterStringMatcher(String(sortKey), sortKeyFilters);
-        if (!resourceIdMatch) continue;
+        if (!filterStringMatcher(String(sortKey), this.toKeyMatchers(filters.sortKey))) continue;
       }
 
       if (filters.custom) {
@@ -403,6 +396,11 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     if (newImage && Object.hasOwn(newImage, name)) return newImage[name];
     if (oldImage && Object.hasOwn(oldImage, name)) return oldImage[name];
     return undefined;
+  }
+
+  private toKeyMatchers(filter: NonNullable<DynamoDBFilters['partitionKey']>): FilterStringMatcher {
+    const values = Array.isArray(filter) ? filter : [filter];
+    return values.map((value) => (typeof value === 'number' ? String(value) : value));
   }
 }
 

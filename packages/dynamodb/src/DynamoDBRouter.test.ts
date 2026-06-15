@@ -4,7 +4,7 @@ import * as base from '@lambda-event-router/base';
 import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
-import type { DynamoDBFilterInput, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
+import type { DynamoDBFilterInput, DynamoDBFilters, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
 
 type DynamoDBNext = (request: DynamoDBRequest) => Promise<void>;
 
@@ -626,6 +626,85 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches a string partition key against a RegExp', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: /^ORDER#/ },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const match = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ORDER#1', sk: 'sk-1' });
+      // @ts-expect-error - testing private method directly
+      const miss = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ITEM#1', sk: 'sk-1' });
+
+      expect(match).toBeDefined();
+      expect(miss).toBeUndefined();
+    });
+
+    test('matches a string partition key against an array holding a RegExp', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { partitionKey: ['ORDER#1', /^ITEM#/] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ITEM#9', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a numeric partition key against every string matcher form', async ({ dynamoDBInsertRecord }) => {
+      const record = dynamoDBInsertRecord();
+
+      async function matches(partitionKey: DynamoDBFilters['partitionKey']): Promise<boolean> {
+        const scoped = new DynamoDBRouter({ keys: { partitionKey: 'pk', sortKey: 'sk' } });
+        scoped.route(defineRoute({ filters: { partitionKey } }).handle(async () => {}));
+        // @ts-expect-error - testing private method directly
+        return Boolean(await scoped.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42 }));
+      }
+
+      expect(await matches('42')).toBe(true);
+      expect(await matches('4*')).toBe(true);
+      expect(await matches(/^4/)).toBe(true);
+      expect(await matches(['7', '42'])).toBe(true);
+      expect(await matches('43')).toBe(false);
+    });
+
+    test('matches a sort key against a RegExp', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: /^PAYMENT#/ },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const match = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 'PAYMENT#1' });
+      // @ts-expect-error - testing private method directly
+      const miss = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 'REFUND#1' });
+
+      expect(match).toBeDefined();
+      expect(miss).toBeUndefined();
+    });
+
+    test('matches a numeric sort key against a wildcard', async ({ dynamoDBInsertRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { sortKey: '20*' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 2026 });
+
+      expect(result).toBeDefined();
+    });
+
     test('infers partition key from a single-attribute keys map when router has no keys option', async ({
       dynamoDBInsertRecord,
     }) => {
@@ -1213,15 +1292,11 @@ suite('DynamoDBRouter', () => {
       });
     });
 
-    test('passes undefined newImage through validation on REMOVE', async ({
-      dynamoDBRemoveRecord,
-      dynamoDBStreamEvent,
-      context,
-    }) => {
+    test('skips newImageSchema on REMOVE', async ({ dynamoDBRemoveRecord, dynamoDBStreamEvent, context }) => {
       const handler = vi.fn();
-      const newImageSchema = createMockSchema();
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route({
-        filters: { eventName: 'REMOVE' },
+        filters: { eventName: ['MODIFY', 'REMOVE'] },
         newImageSchema,
         handler,
       });
@@ -1230,7 +1305,58 @@ suite('DynamoDBRouter', () => {
       const event = dynamoDBStreamEvent([record]);
       await router.handleEvent(event, context());
 
+      expect(validateSchemaSpy).not.toHaveBeenCalledWith(undefined, newImageSchema, expect.any(String));
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: undefined }));
+    });
+
+    test('skips oldImageSchema on INSERT', async ({ dynamoDBInsertRecord, dynamoDBStreamEvent, context }) => {
+      const handler = vi.fn();
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      router.route({
+        filters: { eventName: ['INSERT', 'MODIFY'] },
+        oldImageSchema,
+        handler,
+      });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await router.handleEvent(event, context());
+
+      expect(validateSchemaSpy).not.toHaveBeenCalledWith(undefined, oldImageSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ oldImage: undefined }));
+    });
+
+    test('still validates oldImageSchema on MODIFY when the route takes two event names', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      router.route({
+        filters: { eventName: ['INSERT', 'MODIFY'] },
+        oldImageSchema,
+        handler: async () => {},
+      });
+
+      const record = dynamoDBModifyRecord();
+      const event = dynamoDBStreamEvent([record]);
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Image validation failed for OldImage');
+    });
+
+    test('throws when the event carries an image the stream view type left out', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      router.modify({ filters: {}, newImageSchema, handler: async () => {} });
+
+      const record = dynamoDBModifyRecord();
+      delete record.dynamodb?.NewImage;
+      const event = dynamoDBStreamEvent([record]);
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('Image validation failed for NewImage');
     });
   });
 
