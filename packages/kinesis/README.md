@@ -117,6 +117,20 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `KinesisMiddleware<Reading>` rather than `KinesisMiddleware`.
+
+```ts
+import type { KinesisMiddleware } from '@lambda-event-router/kinesis'
+
+const withDeviceContext: KinesisMiddleware<Reading> = async (request, next) => {
+  console.log(`Device ${request.data.deviceId}`)
+  return next(request)
+}
+```
+
 #### Batch failure reporting
 
 ```ts

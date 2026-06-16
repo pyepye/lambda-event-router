@@ -311,6 +311,10 @@ scheduledRouter.route({
 })
 ```
 
+**Route middleware carries the route's parameters type.** A route with a `ruleParametersSchema` needs
+`ConfigScheduledMiddleware<TagAuditParams>`. `ConfigScheduledMiddleware` on its own does not compile
+there. Router middleware takes no type argument, because it runs for every route.
+
 Router middleware runs before route middleware, and both run before the handler. A middleware that
 does not call `next` short-circuits the chain, so the handler never runs. A schema validation failure
 throws before the chain starts, so middleware never sees it.
@@ -326,7 +330,7 @@ All exported from `@lambda-event-router/config`.
 | `ConfigScheduledRequest` | The handler argument |
 | `ConfigScheduledFilters` | The `filters` object |
 | `ConfigScheduledFilterInput` | What a `custom` receives |
-| `ConfigScheduledMiddleware` | Router and route middleware |
+| `ConfigScheduledMiddleware<TParams>` | Router and route middleware |
 | `ConfigScheduledRouteDefinition` | A full route passed to `route()` |
 | `ConfigScheduledRouterOptions` | Options for `createConfigScheduledRouter` |
 | `ConfigEvent` | The untouched event from AWS |
@@ -341,8 +345,8 @@ The `ConfigScheduledRouter` class and the `createConfigScheduledRouter` and
 | --- | --- | --- |
 | `TParams` | `ruleParameters`, from `ruleParametersSchema` | `Record<string, string>` |
 
-`ConfigScheduledRequest<TParams>` takes the one parameter, so leave it off to get the default when a
-route has no `ruleParametersSchema`.
+`ConfigScheduledRequest<TParams>` and `ConfigScheduledMiddleware<TParams>` take the one parameter, so
+leave it off to get the default when a route has no `ruleParametersSchema`.
 
 ## Code example
 

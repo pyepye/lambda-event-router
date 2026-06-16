@@ -326,9 +326,9 @@ firehoseRouter.route({
 })
 ```
 
-**`FirehoseMiddleware` takes no type parameter**, so `request.data` is `unknown` inside middleware
-whatever schema the route sets. Narrow it with `isObject` from `@lambda-event-router/base` if you need
-to read it.
+**Route middleware carries the route's data type.** A route with a `dataSchema` needs
+`FirehoseMiddleware<LogLine>`. `FirehoseMiddleware` on its own does not compile there. Router
+middleware takes no type argument, because it runs for every route.
 
 Middleware returns a `FirehoseResponse`, so returning `Dropped()` without calling `next` drops the
 record and the handler never runs.
@@ -351,15 +351,14 @@ All exported from `@lambda-event-router/firehose`.
 | `FirehoseFilterInput` | What `custom` receives |
 | `FirehoseRouteDefinition<TData>` | A full route passed to `route()` |
 | `FirehoseRouterOptions` | Options for `createFirehoseRouter` |
-| `FirehoseMiddleware` | Router and route middleware |
+| `FirehoseMiddleware<TData>` | Router and route middleware |
 
 The `FirehoseRouter` class, the `createFirehoseRouter` and `defineRoute` functions and the `Ok`,
 `Dropped` and `Failed` helpers come from the same place.
 
 ### Generic parameters
 
-`FirehoseRequest` and `FirehoseRouteDefinition` take one parameter between them. `FirehoseMiddleware`
-takes none.
+The types above that take a parameter all take the same one.
 
 | Parameter | Types | Default |
 | --- | --- | --- |

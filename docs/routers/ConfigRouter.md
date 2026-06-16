@@ -352,8 +352,12 @@ configRouter.route({
 })
 ```
 
-A middleware sees the request as the union of both notification shapes, since it runs before the
-handler narrows it. See [middleware](/docs/middleware) for the execution order and the three levels
+**Route middleware carries the route's schema types.** A route with a `configurationSchema` or a
+`ruleParametersSchema` needs `ConfigMiddleware<Configuration, Params>`. `ConfigMiddleware` on its own
+does not compile there. Router middleware takes no type argument, because it runs for every route.
+
+A middleware still gets the request as the union of both notification shapes. It runs before the
+handler picks one. See [middleware](/docs/middleware) for the execution order and the three levels
 it attaches at.
 
 ## Types
@@ -367,7 +371,7 @@ All exported from `@lambda-event-router/config`.
 | `ConfigChangeFilters` | The `filters` object |
 | `ConfigChangeFilterInput` | What a `custom` receives |
 | `ConfigMessageType` | The notification message types |
-| `ConfigMiddleware` | Router and route middleware |
+| `ConfigMiddleware<TConfig, TParams>` | Router and route middleware |
 | `ConfigChangeHandler` | The `handler` function |
 | `ConfigRouteDefinition` | A full route passed to `route()` |
 | `ConfigRouterOptions` | Options for `createConfigRouter` |
@@ -386,9 +390,10 @@ place.
 | `TConfig` | `configurationItem.configuration`, from `configurationSchema` | `Record<string, unknown>` |
 | `TParams` | `ruleParameters`, from `ruleParametersSchema` | `Record<string, string>` |
 
-`ConfigRequest<TConfig, TParams>` takes both, and `ConfigurationItem<TConfig>` takes the first, so you
-can pass only `TConfig` and leave `TParams` on its default. `ConfigOversizedRequest<TParams>` takes
-only `TParams`, since an oversized notification has no configuration to type.
+`ConfigRequest<TConfig, TParams>` and `ConfigMiddleware<TConfig, TParams>` take both, and
+`ConfigurationItem<TConfig>` takes the first, so you can pass only `TConfig` and leave `TParams` on
+its default. `ConfigOversizedRequest<TParams>` takes only `TParams`, since an oversized notification
+has no configuration to type.
 
 ## Code example
 

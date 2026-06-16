@@ -29,6 +29,6 @@ export type PostConfirmationHandler<TUserAttributes extends UserAttributes = Use
 export interface PostConfirmationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PostConfirmationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: PostConfirmationHandler<TUserAttributes>;
 }

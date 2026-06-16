@@ -76,7 +76,12 @@ export interface ActiveMQFilters {
 
 // --- Handler Types ---
 
-export type ActiveMQMiddleware = Middleware<ActiveMQRequest, void>;
+// Takes the same message type parameter as a route, so a middleware on a pinned route sees that
+// route's request rather than the union of both.
+export type ActiveMQMiddleware<
+  TBody = unknown,
+  TMessageType extends ActiveMQMessageType | undefined = undefined,
+> = Middleware<MessageTypeToRequest<TMessageType, TBody>, void>;
 
 // --- Route Definition Types ---
 
@@ -91,21 +96,21 @@ export interface ActiveMQRouteDefinition<
     messageType?: TMessageType | TMessageType[];
   };
   bodySchema?: StandardSchemaV1<unknown, TBody>;
-  middleware?: ActiveMQMiddleware[];
+  middleware?: ActiveMQMiddleware<NoInfer<TBody>, TMessageType>[];
   handler: (request: MessageTypeToRequest<TMessageType, TBody>) => Promise<void>;
 }
 
 export interface ActiveMQTextMessageRouteDefinition<TBody = unknown> {
   filters: Omit<ActiveMQFilters, 'messageType'>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
-  middleware?: ActiveMQMiddleware[];
+  middleware?: ActiveMQMiddleware<NoInfer<TBody>, 'jms/text-message'>[];
   handler: (request: ActiveMQTextMessageRequest<TBody>) => Promise<void>;
 }
 
 // A bytes message body is a Buffer, so there is no JSON to validate and no bodySchema.
 export interface ActiveMQBytesMessageRouteDefinition {
   filters: Omit<ActiveMQFilters, 'messageType'>;
-  middleware?: ActiveMQMiddleware[];
+  middleware?: ActiveMQMiddleware<unknown, 'jms/bytes-message'>[];
   handler: (request: ActiveMQBytesMessageRequest) => Promise<void>;
 }
 
@@ -133,7 +138,7 @@ export type ActiveMQRouteInput<TBody = unknown, TMessageType extends ActiveMQMes
   filters: Omit<ActiveMQFilters, 'messageType'> & {
     messageType?: TMessageType | TMessageType[];
   };
-  middleware?: ActiveMQMiddleware[];
+  middleware?: ActiveMQMiddleware<NoInfer<TBody>, TMessageType>[];
 } & ([TMessageType] extends ['jms/bytes-message']
   ? { bodySchema?: never }
   : { bodySchema?: StandardSchemaV1<unknown, TBody> });

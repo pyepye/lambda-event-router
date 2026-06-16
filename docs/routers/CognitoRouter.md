@@ -335,6 +335,10 @@ cognitoRouter.preSignUp({
 })
 ```
 
+**Route middleware carries the route's user attributes type.** A route with a
+`userAttributesSchema` needs `CognitoMiddleware<Attributes>`. `CognitoMiddleware` on its own does not
+compile there. Router middleware takes no type argument, because it runs for every route.
+
 Router middleware runs before route middleware, and a schema failure throws before either runs. See
 [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
@@ -350,7 +354,7 @@ All exported from `@lambda-event-router/cognito`.
 | `CognitoFilterInput` | What `custom` receives |
 | `CognitoRouteDefinition<TUserAttributes>` | A full route passed to `route()` |
 | `CognitoRouterOptions` | Options for `createCognitoRouter` |
-| `CognitoMiddleware` | Router and route middleware |
+| `CognitoMiddleware<TUserAttributes>` | Router and route middleware |
 | `CognitoTriggerSource` | The union of every trigger source |
 | `UserAttributes` | The user attribute record, `Record<string, string>` |
 | `UserAttributeFilter` | A single attribute matcher, `string \| RegExp \| ((value: string) => boolean)` |

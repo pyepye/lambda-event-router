@@ -28,7 +28,7 @@ import type {
 export function defineRabbitMQRoute<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
->(config: RabbitMQRouteInput<TBodySchema>): RabbitMQRouteBuilder<TBody> {
+>(config: RabbitMQRouteInput<TBodySchema, TBody>): RabbitMQRouteBuilder<TBody> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): RabbitMQRouteDefinition<TBody> {

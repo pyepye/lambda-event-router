@@ -318,6 +318,11 @@ codePipelineRouter.route({
 })
 ```
 
+**Route middleware carries the route's user parameters type.** A route with a
+`userParametersSchema` needs `CodePipelineMiddleware<DeployParameters>`. `CodePipelineMiddleware` on
+its own does not compile there. Router middleware takes no type argument, because it runs for every
+route.
+
 Middleware does not run when a schema fails, since validation comes first. See
 [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
@@ -334,7 +339,7 @@ All exported from `@lambda-event-router/codepipeline`.
 | `CodePipelineFilters` | The `filters` object |
 | `CodePipelineFilterInput<TUserParameters>` | What `custom` receives |
 | `CodePipelineRouteDefinition<TUserParameters>` | A full route passed to `route()` |
-| `CodePipelineMiddleware` | Router and route middleware |
+| `CodePipelineMiddleware<TUserParameters>` | Router and route middleware |
 | `CodePipelineRouterOptions` | Options for `createCodePipelineRouter` |
 
 The `CodePipelineRouter` class and the `createCodePipelineRouter` and `defineRoute` functions come

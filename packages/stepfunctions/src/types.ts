@@ -26,11 +26,17 @@ export interface StepFunctionsTaskTokenRequest<TInput = unknown> {
   context: Context;
 }
 
-/**
- * Typed over the two keys both request shapes carry, so one middleware runs on either kind of route.
- * A task token route's request also has taskToken and input, which middleware does not see.
- */
-export type StepFunctionsMiddleware<TResponse = unknown> = Middleware<StepFunctionsRequest, TResponse>;
+/** Middleware for a regular route, where `event` holds the validated payload. */
+export type StepFunctionsMiddleware<TResponse = unknown, TInput = unknown> = Middleware<
+  StepFunctionsRequest<TInput>,
+  TResponse
+>;
+
+/** Middleware for a task token route, where `input` holds the validated payload and `event` is raw. */
+export type StepFunctionsTaskTokenMiddleware<TResponse = unknown, TInput = unknown> = Middleware<
+  StepFunctionsTaskTokenRequest<TInput>,
+  TResponse
+>;
 
 export type StepFunctionsHandler<TInput = unknown> = (request: StepFunctionsRequest<TInput>) => Promise<unknown>;
 
@@ -41,13 +47,13 @@ export type StepFunctionsTaskTokenHandler<TInput = unknown> = (
 export interface StepFunctionsRouteDefinition<TInput = unknown> {
   filters: StepFunctionsFilters;
   eventSchema?: StandardSchemaV1<unknown, TInput>;
-  middleware?: StepFunctionsMiddleware[];
+  middleware?: StepFunctionsMiddleware<unknown, NoInfer<TInput>>[];
   handler: StepFunctionsHandler<TInput>;
 }
 
 export interface StepFunctionsTaskTokenRouteDefinition<TInput = unknown> {
   filters: StepFunctionsFilters & { taskToken: true };
   eventSchema?: StandardSchemaV1<unknown, TInput>;
-  middleware?: StepFunctionsMiddleware[];
+  middleware?: StepFunctionsTaskTokenMiddleware<unknown, NoInfer<TInput>>[];
   handler: StepFunctionsTaskTokenHandler<TInput>;
 }

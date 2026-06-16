@@ -36,9 +36,12 @@ interface InternalRoute {
   handler: (request: FirehoseRequest) => Promise<FirehoseResponse>;
 }
 
-interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
+interface RouteInput<
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
+> {
   filters: FirehoseFilters;
-  middleware?: FirehoseMiddleware[];
+  middleware?: FirehoseMiddleware<NoInfer<TData>>[];
   dataSchema?: TDataSchema;
 }
 
@@ -49,7 +52,7 @@ interface RouteBuilder<TData> {
 export function defineRoute<
   TDataSchema extends StandardSchemaV1 | undefined = undefined,
   TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
->(config: RouteInput<TDataSchema>): RouteBuilder<TData> {
+>(config: RouteInput<TDataSchema, TData>): RouteBuilder<TData> {
   return {
     handle(handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>): FirehoseRouteDefinition<TData> {
       return {

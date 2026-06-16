@@ -29,6 +29,6 @@ export type PreSignUpHandler<TUserAttributes extends UserAttributes = UserAttrib
 export interface PreSignUpRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreSignUpTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: PreSignUpHandler<TUserAttributes>;
 }

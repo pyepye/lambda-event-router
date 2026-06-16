@@ -22,7 +22,7 @@ export function defineConfigScheduledRoute<
   TParams = TParamsSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TParamsSchema>
     : Record<string, string>,
->(config: ConfigScheduledRouteInput<TParamsSchema>): ConfigScheduledRouteBuilder<TParams> {
+>(config: ConfigScheduledRouteInput<TParamsSchema, TParams>): ConfigScheduledRouteBuilder<TParams> {
   return {
     handle(
       handler: (request: ConfigScheduledRequest<TParams>) => Promise<void>,
@@ -61,7 +61,7 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     return invokingEvent.messageType === 'ScheduledNotification';
   }
 
-  route<TParams>(definition: ConfigScheduledRouteDefinition<TParams>): this {
+  route<TParams = Record<string, string>>(definition: ConfigScheduledRouteDefinition<TParams>): this {
     this.routes.push(definition as InternalConfigScheduledRoute);
     return this;
   }

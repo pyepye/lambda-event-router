@@ -168,6 +168,25 @@ async function runComplianceCheck({ accountId }) {
 }
 ```
 
+### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schemas. Each router has its own alias.
+
+```ts
+import type { ConfigMiddleware, ConfigScheduledMiddleware } from '@lambda-event-router/config'
+
+const withChangeContext: ConfigMiddleware<Configuration, Params> = async (request, next) => {
+  console.log(`Rule ${request.configRuleName}`)
+  return next(request)
+}
+
+const withAuditContext: ConfigScheduledMiddleware<TagAuditParams> = async (request, next) => {
+  console.log(`Auditing for ${request.ruleParameters.requiredTag}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/config](../../examples/config) directory for complete working examples.

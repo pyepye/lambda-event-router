@@ -12,6 +12,7 @@ import type {
   StepFunctionsRequest,
   StepFunctionsRouteDefinition,
   StepFunctionsTaskTokenHandler,
+  StepFunctionsTaskTokenMiddleware,
   StepFunctionsTaskTokenRequest,
   StepFunctionsTaskTokenRouteDefinition,
 } from './types.js';
@@ -43,7 +44,7 @@ export function defineRoute<
 >(config: {
   filters: StepFunctionsFilters & { taskToken: true };
   eventSchema?: TEventSchema;
-  middleware?: StepFunctionsMiddleware[];
+  middleware?: StepFunctionsTaskTokenMiddleware<unknown, NoInfer<TInput>>[];
 }): TaskTokenRouteBuilder<TInput>;
 
 // Regular route
@@ -53,13 +54,13 @@ export function defineRoute<
 >(config: {
   filters: StepFunctionsFilters;
   eventSchema?: TEventSchema;
-  middleware?: StepFunctionsMiddleware[];
+  middleware?: StepFunctionsMiddleware<unknown, NoInfer<TInput>>[];
 }): RegularRouteBuilder<TInput>;
 
 export function defineRoute(config: {
   filters: StepFunctionsFilters;
   eventSchema?: StandardSchemaV1;
-  middleware?: StepFunctionsMiddleware[];
+  middleware?: StepFunctionsMiddleware[] | StepFunctionsTaskTokenMiddleware[];
 }): TaskTokenRouteBuilder<unknown> | RegularRouteBuilder<unknown> {
   return {
     handle(
@@ -133,7 +134,9 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     this.routes.push({
       filters: definition.filters,
       eventSchema: definition.eventSchema,
-      middleware: definition.middleware ?? [],
+      // Cast needed: storing a payload-typed chain in general storage (contravariance). Both request
+      // shapes reach the chain through runRoute, which casts the request the same way.
+      middleware: (definition.middleware ?? []) as StepFunctionsMiddleware[],
       handler: definition.handler as (request: never) => Promise<unknown>,
       isTaskTokenRoute: isTaskToken,
     });
@@ -177,8 +180,8 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     return this.runRoute(route, request);
   }
 
-  // Middleware is typed over { event, context }, which a task token request also carries. The cast
-  // lets both request shapes share one chain rather than needing a middleware type each.
+  // A task token request carries the two keys StepFunctionsRequest declares, so the cast lets both
+  // request shapes run through one chain.
   private async runRoute(route: InternalRoute, request: StepFunctionsRequest): Promise<unknown> {
     const allMiddleware = [...this.middleware, ...route.middleware];
     return handleEventWithMiddleware(

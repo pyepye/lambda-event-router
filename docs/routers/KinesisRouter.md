@@ -292,10 +292,9 @@ kinesisRouter.route({
 })
 ```
 
-**Route middleware carries the route's data type.** A `dataSchema` or an annotated handler narrows the
-route to `KinesisMiddleware<Reading>`, and a plain `KinesisMiddleware` will not assign next to it. The
-bare alias is right everywhere else, on the router and on a `defineRoute` route, since the schema there
-does not narrow it.
+**Route middleware carries the route's data type.** A route with a `dataSchema` needs
+`KinesisMiddleware<Reading>`. `KinesisMiddleware` on its own does not compile there. Router middleware
+takes no type argument, because it runs for every route.
 
 Records are handled one at a time, so `appendKeys` on the shared logger cannot interleave the way it
 does on SQS. Keys are cleared per invocation rather than per record, so one you set for a record stays

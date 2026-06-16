@@ -305,9 +305,11 @@ rabbitMQRouter.route({
 })
 ```
 
-`RabbitMQMiddleware` takes no type parameters, so `request.body` is `unknown` inside middleware
-whatever the route's schema says. See [middleware](/docs/middleware) for the execution order and the
-three levels it attaches at.
+**Route middleware carries the route's body type.** A route with a `bodySchema` needs
+`RabbitMQMiddleware<Order>`. `RabbitMQMiddleware` on its own does not compile there. Router middleware
+takes no type argument, because it runs for every route.
+
+See [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
 
@@ -321,7 +323,7 @@ All exported from `@lambda-event-router/mq`.
 | `RabbitMQFilterInput` | What `custom` receives |
 | `RabbitMQRouteDefinition<TBody>` | A full route passed to `route()` |
 | `RabbitMQRouterOptions` | Options for `createRabbitMQRouter` |
-| `RabbitMQMiddleware` | Router and route middleware |
+| `RabbitMQMiddleware<TBody>` | Router and route middleware |
 | `RabbitMQMessage` | One message, as `request.message` and `request.record` |
 | `RabbitMQBasicProperties` | The AMQP properties on a message |
 | `RabbitMQEvent` | The whole event, with its messages keyed by queue |
@@ -331,15 +333,15 @@ the same place.
 
 ### Generic parameters
 
-Two of the types above take a parameter, and it is the same one.
+The types above that take a parameter all take the same one.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TBody` | `request.body` | `unknown` |
 
-Leave it off and the body is `unknown`, which is what `RabbitMQMiddleware` and `RabbitMQFilterInput`
-see however the route is typed. You only need it for [annotated handlers](#annotated-handlers), since
-inference covers the rest.
+Leave it off and the body is `unknown`, which is what `RabbitMQFilterInput` sees however the route is
+typed. You only need it for [annotated handlers](#annotated-handlers), since inference covers the
+rest.
 
 ## Code example
 

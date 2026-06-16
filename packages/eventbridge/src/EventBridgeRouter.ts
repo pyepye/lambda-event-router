@@ -28,13 +28,14 @@ interface EventBridgeRouteInput<
   TDetailSchema extends StandardSchemaV1 | undefined = undefined,
   TSources extends string | readonly string[] | undefined = undefined,
   TDetailTypes extends string | readonly string[] | undefined = undefined,
+  TDetail = unknown,
 > {
   filters: Omit<EventBridgeFilters, 'source' | 'detailType'> & {
     source?: TSources;
     detailType?: TDetailTypes;
   };
   detailSchema?: TDetailSchema;
-  middleware?: EventBridgeMiddleware[];
+  middleware?: EventBridgeMiddleware<NoInfer<TDetail>>[];
 }
 
 interface EventBridgeRouteBuilder<TDetail> {
@@ -48,7 +49,7 @@ export function defineRoute<
   TDetail = TDetailSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TDetailSchema>
     : LookupDetailType<TSources, TDetailTypes>,
->(config: EventBridgeRouteInput<TDetailSchema, TSources, TDetailTypes>): EventBridgeRouteBuilder<TDetail> {
+>(config: EventBridgeRouteInput<TDetailSchema, TSources, TDetailTypes, TDetail>): EventBridgeRouteBuilder<TDetail> {
   return {
     handle(handler: EventBridgeHandler<TDetail>): EventBridgeRouteDefinition<TDetail> {
       // Cast needed: generic type narrowing from builder input to route definition
@@ -79,12 +80,13 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
   }
 
   route<TDetail>(definition: EventBridgeRouteDefinition<TDetail>): this {
-    // Cast needed: storing specific handler type in general storage (contravariance)
+    // Cast needed: storing a specific handler and middleware chain in general storage (contravariance)
     const handler = definition.handler as EventBridgeHandler<unknown>;
+    const middleware = definition.middleware as EventBridgeMiddleware[] | undefined;
     this.routes.push({
       filters: definition.filters,
       detailSchema: definition.detailSchema,
-      middleware: definition.middleware,
+      middleware,
       handler,
     });
     return this;

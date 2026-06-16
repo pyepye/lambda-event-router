@@ -30,6 +30,6 @@ export type UserMigrationHandler<TUserAttributes extends UserAttributes = UserAt
 export interface UserMigrationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<UserMigrationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: UserMigrationHandler<TUserAttributes>;
 }

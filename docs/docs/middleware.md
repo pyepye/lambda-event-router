@@ -286,6 +286,10 @@ Every package exports an alias with its own request and response filled in, so `
 `Middleware<SQSRequest, void>` and `CognitoMiddleware` is `Middleware<CognitoRequest, CognitoEvent>`.
 Reach for the alias, since the base type leaves you naming both parameters yourself.
 
+Each alias also takes the payload type, so `SQSMiddleware<Order>` reads `request.body` as an `Order`.
+Type route middleware this way when the route has a schema. Router middleware takes no type argument,
+because it runs for every route. Each router page lists the parameters its alias takes.
+
 ```ts
 import { logger } from '@lambda-event-router/base'
 import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge'
@@ -308,7 +312,7 @@ Most packages name it `<Source>Middleware`, so `SQSMiddleware`, `DynamoDBMiddlew
 | `CloudWatchLogsRouter` | `CloudWatchLogsMiddleware` | `@lambda-event-router/cloudwatch` |
 | `S3Router` | `S3Middleware`, and `S3BatchMiddleware` on a Batch route | `@lambda-event-router/s3` |
 | `EventRouter` | `EventRouterMiddleware` | `@lambda-event-router/base` |
-| `StepFunctionsRouter` | `StepFunctionsMiddleware` | `@lambda-event-router/stepfunctions` |
+| `StepFunctionsRouter` | `StepFunctionsMiddleware`, and `StepFunctionsTaskTokenMiddleware` on a callback route | `@lambda-event-router/stepfunctions` |
 
 **`S3Router` router middleware does not run for S3 Batch tasks.** A Batch route runs the middleware on
 the route itself and nothing else.

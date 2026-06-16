@@ -27,7 +27,7 @@ import type {
 export function defineRoute<
   TValueSchema extends StandardSchemaV1 | undefined = undefined,
   TValue = TValueSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TValueSchema> : unknown,
->(config: RouteInput<TValueSchema>): RouteBuilder<TValue> {
+>(config: RouteInput<TValueSchema, TValue>): RouteBuilder<TValue> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): KafkaRouteDefinition<TValue> {

@@ -94,7 +94,7 @@ export type CognitoRequest<TUserAttributes extends UserAttributes = UserAttribut
 export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> {
   filters?: CognitoFilters<CognitoTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: (request: CognitoRequest<TUserAttributes>) => Promise<CognitoEvent>;
 }
 
@@ -141,7 +141,10 @@ export type EventForTrigger<TTrigger extends CognitoTriggerSource> = TriggerEven
 // Route definition types
 // =============================================================================
 
-export type CognitoMiddleware = Middleware<CognitoRequest, CognitoEvent>;
+export type CognitoMiddleware<TUserAttributes extends UserAttributes = UserAttributes> = Middleware<
+  CognitoRequest<TUserAttributes>,
+  CognitoEvent
+>;
 
 // Route definition returned by defineRoute().handle()
 // Handlers receive a cloned event, modify it, and return it
@@ -151,7 +154,7 @@ export interface TypedRouteDefinition<
 > {
   filters?: CognitoFilters<TTrigger>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: (request: RequestForTrigger<TTrigger, TUserAttributes>) => Promise<EventForTrigger<TTrigger>>;
 }
 
@@ -169,10 +172,11 @@ export interface RouteInputFilters<TTrigger extends CognitoTriggerSource> {
 export interface RouteInput<
   TTrigger extends CognitoTriggerSource,
   TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TUserAttributes extends UserAttributes = UserAttributes,
 > {
   filters?: RouteInputFilters<TTrigger>;
   userAttributesSchema?: TUserAttributesSchema;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
 }
 
 // Route builder returned by defineRoute

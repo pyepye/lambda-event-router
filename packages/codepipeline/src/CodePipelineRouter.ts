@@ -35,9 +35,14 @@ interface InternalRoute {
   handler: CodePipelineHandler;
 }
 
-interface RouteInput<TUserParametersSchema extends StandardSchemaV1 | undefined = undefined> {
+interface RouteInput<
+  TUserParametersSchema extends StandardSchemaV1 | undefined = undefined,
+  TUserParameters = TUserParametersSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TUserParametersSchema>
+    : unknown,
+> {
   filters: CodePipelineFilters;
-  middleware?: CodePipelineMiddleware[];
+  middleware?: CodePipelineMiddleware<NoInfer<TUserParameters>>[];
   userParametersSchema?: TUserParametersSchema;
 }
 
@@ -53,7 +58,7 @@ export function defineRoute<
   TUserParameters = TUserParametersSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TUserParametersSchema>
     : unknown,
->(config: RouteInput<TUserParametersSchema>): RouteBuilder<TUserParameters> {
+>(config: RouteInput<TUserParametersSchema, TUserParameters>): RouteBuilder<TUserParameters> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): CodePipelineRouteDefinition<TUserParameters> {

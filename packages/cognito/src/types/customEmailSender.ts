@@ -29,6 +29,6 @@ export type CustomEmailSenderHandler<TUserAttributes extends UserAttributes = Us
 export interface CustomEmailSenderRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomEmailSenderTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: CustomEmailSenderHandler<TUserAttributes>;
 }

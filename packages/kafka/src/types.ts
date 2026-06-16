@@ -49,7 +49,7 @@ export type KafkaMiddleware<TValue = unknown> = Middleware<KafkaRequest<TValue>,
 export interface KafkaRouteDefinition<TValue = unknown> {
   filters: KafkaFilters;
   valueSchema?: StandardSchemaV1<unknown, TValue>;
-  middleware?: KafkaMiddleware<TValue>[];
+  middleware?: KafkaMiddleware<NoInfer<TValue>>[];
   handler: (request: KafkaRequest<TValue>) => Promise<void>;
 }
 

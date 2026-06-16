@@ -326,10 +326,9 @@ kafkaRouter.route({
 })
 ```
 
-**Route middleware carries the handler's value type.** An annotated handler narrows the route to
-`KafkaMiddleware<StockMovement>` and a plain `KafkaMiddleware` will not assign next to it. The bare
-alias is the right one on the router, and the only one that assigns on a `defineRoute` route, since
-`defineRoute` does not thread the value type through to its middleware.
+**Route middleware carries the route's value type.** A route with a `valueSchema` needs
+`KafkaMiddleware<StockMovement>`. `KafkaMiddleware` on its own does not compile there. Router
+middleware takes no type argument, because it runs for every route.
 
 Records are handled one at a time, so `appendKeys` on the shared logger cannot interleave the way it
 does on SQS. Keys are cleared per invocation rather than per record, so one you set for a record stays

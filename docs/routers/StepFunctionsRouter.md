@@ -325,8 +325,23 @@ stepFunctionsRouter.route({
 })
 ```
 
-Middleware is typed over the `event` and `context` both request shapes share, so a callback route's
-`taskToken` and `input` are not visible to it. Router middleware runs before route middleware. See
+**A callback route takes a different middleware type.** The validated payload sits on `event` for a
+regular route and on `input` for a `taskToken` route, so each has its own alias.
+
+```ts
+const withOrderContext: StepFunctionsMiddleware<unknown, Order> = async (request, next) => {
+  logger.appendKeys({ orderId: request.event.orderId })
+  return next(request)
+}
+
+const withApprovalContext: StepFunctionsTaskTokenMiddleware<unknown, Approval> = async (request, next) => {
+  logger.appendKeys({ approvalId: request.input.approvalId })
+  return next(request)
+}
+```
+
+Type route middleware to the route's `eventSchema`. Router middleware takes no type argument, because
+it runs for every route. It also runs before route middleware. See
 [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
@@ -341,7 +356,8 @@ All exported from `@lambda-event-router/stepfunctions`.
 | `StepFunctionsTaskTokenHandler<TInput>` | The callback handler, returning `Promise<unknown>` |
 | `StepFunctionsFilters` | The `filters` object |
 | `StepFunctionsFilterInput` | What `custom` receives, `{ event: unknown }` |
-| `StepFunctionsMiddleware` | Router and route middleware |
+| `StepFunctionsMiddleware<TResponse, TInput>` | Router and route middleware on a regular route |
+| `StepFunctionsTaskTokenMiddleware<TResponse, TInput>` | Route middleware on a `taskToken` route |
 | `StepFunctionsRouteDefinition<TInput>` | A full route passed to `route()` |
 | `StepFunctionsTaskTokenRouteDefinition<TInput>` | A `taskToken` route passed to `route()` |
 | `StepFunctionsRouterOptions` | Options for `createStepFunctionsRouter` |
@@ -357,6 +373,10 @@ The types above that take a parameter all take the same one.
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TInput` | `request.event` on a regular route, `request.input` on a `taskToken` route | `unknown` |
+| `TResponse` | What a middleware returns | `unknown` |
+
+The two middleware aliases take `TResponse` first, so a typed middleware reads
+`StepFunctionsMiddleware<unknown, Order>`.
 
 Leave it off and the payload is `unknown`, which is what you get without an `eventSchema`. An
 `eventSchema` sets it for you through `defineRoute`; pass it yourself only for [annotated

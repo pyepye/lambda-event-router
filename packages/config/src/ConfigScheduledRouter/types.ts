@@ -15,7 +15,10 @@ export interface ConfigScheduledRequest<TParams = Record<string, string>> {
   context: Context;
 }
 
-export type ConfigScheduledMiddleware = Middleware<ConfigScheduledRequest, void>;
+export type ConfigScheduledMiddleware<TParams = Record<string, string>> = Middleware<
+  ConfigScheduledRequest<TParams>,
+  void
+>;
 
 export interface ConfigScheduledFilterInput {
   configRuleName: string;
@@ -31,7 +34,7 @@ export interface ConfigScheduledFilters {
 export interface ConfigScheduledRouteDefinition<TParams = Record<string, string>> {
   filters: ConfigScheduledFilters;
   ruleParametersSchema?: StandardSchemaV1<unknown, TParams>;
-  middleware?: ConfigScheduledMiddleware[];
+  middleware?: ConfigScheduledMiddleware<NoInfer<TParams>>[];
   handler: (request: ConfigScheduledRequest<TParams>) => Promise<void>;
 }
 
@@ -46,10 +49,13 @@ export interface ConfigScheduledRouteBuilder<TParams> {
   handle(handler: (request: ConfigScheduledRequest<TParams>) => Promise<void>): ConfigScheduledRouteDefinition<TParams>;
 }
 
-export interface ConfigScheduledRouteInput<TParamsSchema extends StandardSchemaV1 | undefined = undefined> {
+export interface ConfigScheduledRouteInput<
+  TParamsSchema extends StandardSchemaV1 | undefined = undefined,
+  TParams = Record<string, string>,
+> {
   filters: ConfigScheduledFilters;
   ruleParametersSchema?: TParamsSchema;
-  middleware?: ConfigScheduledMiddleware[];
+  middleware?: ConfigScheduledMiddleware<NoInfer<TParams>>[];
 }
 
 export interface ConfigScheduledRouterOptions {

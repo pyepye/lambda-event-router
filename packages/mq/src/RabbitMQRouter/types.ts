@@ -67,12 +67,12 @@ export interface RabbitMQFilters {
 
 // --- Route Definition Types ---
 
-export type RabbitMQMiddleware = Middleware<RabbitMQRequest, void>;
+export type RabbitMQMiddleware<TBody = unknown> = Middleware<RabbitMQRequest<TBody>, void>;
 
 export interface RabbitMQRouteDefinition<TBody = unknown> {
   filters: RabbitMQFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
-  middleware?: RabbitMQMiddleware[];
+  middleware?: RabbitMQMiddleware<NoInfer<TBody>>[];
   handler: (request: RabbitMQRequest<TBody>) => Promise<void>;
 }
 
@@ -87,9 +87,12 @@ export interface RabbitMQInternalRoute {
 
 // --- Route Builder Types ---
 
-export interface RabbitMQRouteInput<TBodySchema extends StandardSchemaV1 | undefined = undefined> {
+export interface RabbitMQRouteInput<
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+> {
   filters: RabbitMQFilters;
-  middleware?: RabbitMQMiddleware[];
+  middleware?: RabbitMQMiddleware<TBody>[];
   bodySchema?: TBodySchema;
 }
 

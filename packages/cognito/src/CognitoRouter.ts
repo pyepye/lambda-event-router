@@ -69,7 +69,7 @@ export function defineRoute<
   TUserAttributes extends UserAttributes = TUserAttributesSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TUserAttributesSchema> & UserAttributes
     : UserAttributes,
->(config: RouteInput<TTrigger, TUserAttributesSchema>): RouteBuilder<TTrigger, TUserAttributes> {
+>(config: RouteInput<TTrigger, TUserAttributesSchema, TUserAttributes>): RouteBuilder<TTrigger, TUserAttributes> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): TypedRouteDefinition<TTrigger, TUserAttributes> {
@@ -202,7 +202,8 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     this.routes.push({
       filters: definition.filters ?? {},
       userAttributesSchema: definition.userAttributesSchema,
-      middleware: definition.middleware,
+      // Cast needed: storing an attribute-typed chain in general storage (contravariance)
+      middleware: definition.middleware as CognitoMiddleware[] | undefined,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
     return this;
@@ -512,7 +513,8 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
         triggerSource: triggerSources,
       },
       userAttributesSchema: definition.userAttributesSchema,
-      middleware: definition.middleware,
+      // Cast needed: storing an attribute-typed chain in general storage (contravariance)
+      middleware: definition.middleware as CognitoMiddleware[] | undefined,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
     return this;

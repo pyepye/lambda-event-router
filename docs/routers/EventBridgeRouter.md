@@ -333,6 +333,11 @@ eventBridgeRouter.route({
 })
 ```
 
+**Route middleware carries the route's detail type.** A route with a `detailSchema` needs
+`EventBridgeMiddleware<Order>`. A `source` and `detailType` pair from the detail type map sets that
+type too. `EventBridgeMiddleware` on its own does not compile on either route. Router middleware takes
+no type argument, because it runs for every route.
+
 See [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
@@ -347,7 +352,7 @@ All exported from `@lambda-event-router/eventbridge`.
 | `EventBridgeFilterInput` | What `custom` receives |
 | `EventBridgeRouteDefinition<TDetail>` | A full route passed to `route()` |
 | `EventBridgeRouterOptions` | Options for `createEventBridgeRouter` |
-| `EventBridgeMiddleware` | Router and route middleware |
+| `EventBridgeMiddleware<TDetail>` | Router and route middleware |
 | `EventBridgeEventEnvelope<TDetail>` | The raw event, as `request.event` |
 | `EventBridgeDetailTypeMap` | The source to detail type map you augment for your own events |
 | `EC2StateChangeDetail` | The `detail` for an EC2 state change |

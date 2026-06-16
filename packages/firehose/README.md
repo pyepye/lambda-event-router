@@ -111,6 +111,20 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `FirehoseMiddleware<LogLine>` rather than `FirehoseMiddleware`.
+
+```ts
+import type { FirehoseMiddleware } from '@lambda-event-router/firehose'
+
+const withLogLineContext: FirehoseMiddleware<LogLine> = async (request, next) => {
+  console.log(`Transforming ${request.data.path}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/firehose](../../examples/firehose) directory for complete working examples.

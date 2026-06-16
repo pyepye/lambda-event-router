@@ -138,6 +138,20 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `EventBridgeMiddleware<Order>` rather than `EventBridgeMiddleware`.
+
+```ts
+import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge'
+
+const withOrderContext: EventBridgeMiddleware<Order> = async (request, next) => {
+  console.log(`Order ${request.detail.orderId}`)
+  return next(request)
+}
+```
+
 #### AWS service events
 
 ```ts

@@ -29,6 +29,6 @@ export type CustomMessageHandler<TUserAttributes extends UserAttributes = UserAt
 export interface CustomMessageRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomMessageTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: CustomMessageHandler<TUserAttributes>;
 }

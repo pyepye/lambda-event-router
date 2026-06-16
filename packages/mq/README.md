@@ -201,6 +201,26 @@ defineRabbitMQRoute({
 })
 ```
 
+### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's `bodySchema`. Each router has its own alias.
+
+```ts
+import type { ActiveMQMiddleware, RabbitMQMiddleware } from '@lambda-event-router/mq'
+
+const withOrderContext: RabbitMQMiddleware<Order> = async (request, next) => {
+  console.log(`Order ${request.body.orderId}`)
+  return next(request)
+}
+
+// The second parameter pins the request to one message type
+const withTextOrderContext: ActiveMQMiddleware<Order, 'jms/text-message'> = async (request, next) => {
+  console.log(`Order ${request.body.orderId}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/mq](../../examples/mq) directory for complete working examples.

@@ -179,6 +179,20 @@ cognitoRouter.postConfirmation({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `CognitoMiddleware<Attributes>` rather than `CognitoMiddleware`.
+
+```ts
+import type { CognitoMiddleware } from '@lambda-event-router/cognito'
+
+const withTenant: CognitoMiddleware<Attributes> = async (request, next) => {
+  console.log(`Tenant ${request.userAttributes['custom:tenantId']}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/cognito](../../examples/cognito) directory for complete working examples.

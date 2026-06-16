@@ -8,6 +8,7 @@ export type {
   StepFunctionsRequest,
   StepFunctionsRouteDefinition,
   StepFunctionsTaskTokenHandler,
+  StepFunctionsTaskTokenMiddleware,
   StepFunctionsTaskTokenRequest,
   StepFunctionsTaskTokenRouteDefinition,
 } from './types.js';

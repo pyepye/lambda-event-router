@@ -21,10 +21,13 @@ interface InternalRoute {
   handler: (request: KinesisRequest) => Promise<void>;
 }
 
-interface RouteInput<TDataSchema extends StandardSchemaV1 | undefined = undefined> {
+interface RouteInput<
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
+> {
   filters: KinesisFilters;
   dataSchema?: TDataSchema;
-  middleware?: Middleware<KinesisRequest, void>[];
+  middleware?: Middleware<KinesisRequest<NoInfer<TData>>, void>[];
 }
 
 interface RouteBuilder<TData> {
@@ -34,7 +37,7 @@ interface RouteBuilder<TData> {
 export function defineRoute<
   TDataSchema extends StandardSchemaV1 | undefined = undefined,
   TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
->(config: RouteInput<TDataSchema>): RouteBuilder<TData> {
+>(config: RouteInput<TDataSchema, TData>): RouteBuilder<TData> {
   return {
     handle(handler: (request: KinesisRequest<TData>) => Promise<void>): KinesisRouteDefinition<TData> {
       return {

@@ -29,6 +29,6 @@ export type PreTokenGenerationHandler<TUserAttributes extends UserAttributes = U
 export interface PreTokenGenerationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreTokenGenerationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
-  middleware?: CognitoMiddleware[];
+  middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
   handler: PreTokenGenerationHandler<TUserAttributes>;
 }

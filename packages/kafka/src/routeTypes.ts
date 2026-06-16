@@ -11,10 +11,13 @@ export interface InternalRoute {
   handler: (request: KafkaRequest) => Promise<void>;
 }
 
-export interface RouteInput<TValueSchema extends StandardSchemaV1 | undefined = undefined> {
+export interface RouteInput<
+  TValueSchema extends StandardSchemaV1 | undefined = undefined,
+  TValue = TValueSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TValueSchema> : unknown,
+> {
   filters: KafkaFilters;
   valueSchema?: TValueSchema;
-  middleware?: Middleware<KafkaRequest, void>[];
+  middleware?: Middleware<KafkaRequest<NoInfer<TValue>>, void>[];
 }
 
 export interface RouteBuilder<TValue> {

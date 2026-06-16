@@ -129,6 +129,20 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `CodePipelineMiddleware<DeployParameters>` rather than `CodePipelineMiddleware`.
+
+```ts
+import type { CodePipelineMiddleware } from '@lambda-event-router/codepipeline'
+
+const withDeployContext: CodePipelineMiddleware<DeployParameters> = async (request, next) => {
+  console.log(`Deploying to ${request.userParameters.environment}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/codepipeline](../../examples/codepipeline) directory for complete working examples.

@@ -24,7 +24,10 @@ export interface CodePipelineSuccessResult {
 
 export type CodePipelineResponse = CodePipelineSuccessResult | undefined;
 
-export type CodePipelineMiddleware = Middleware<CodePipelineRequest, CodePipelineResponse>;
+export type CodePipelineMiddleware<TUserParameters = unknown> = Middleware<
+  CodePipelineRequest<TUserParameters>,
+  CodePipelineResponse
+>;
 
 export type CodePipelineHandler<TUserParameters = unknown> = (
   request: CodePipelineRequest<TUserParameters>,
@@ -48,7 +51,7 @@ export interface CodePipelineFilters {
 export interface CodePipelineRouteDefinition<TUserParameters = unknown> {
   filters: CodePipelineFilters;
   userParametersSchema?: StandardSchemaV1<unknown, TUserParameters>;
-  middleware?: CodePipelineMiddleware[];
+  middleware?: CodePipelineMiddleware<NoInfer<TUserParameters>>[];
   handler: CodePipelineHandler<TUserParameters>;
 }
 

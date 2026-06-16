@@ -41,8 +41,9 @@ export interface EventBridgeDetailTypeMap {
 }
 
 // Normalize bare strings to single-element tuples so LookupDetailType can
-// destructure either form uniformly
-type NormalizeToTuple<T> = T extends readonly string[] ? T : T extends string ? readonly [T] : never;
+// destructure either form uniformly. An absent filter gives an empty tuple, which LookupDetailType
+// falls through to unknown.
+type NormalizeToTuple<T> = T extends readonly string[] ? T : T extends string ? readonly [T] : readonly [];
 
 // Lookup detail type from source and detailType
 // Returns unknown if not found in the map
@@ -85,7 +86,7 @@ export interface EventBridgeRequest<TDetail = unknown> {
   context: Context;
 }
 
-export type EventBridgeMiddleware = Middleware<EventBridgeRequest, void>;
+export type EventBridgeMiddleware<TDetail = unknown> = Middleware<EventBridgeRequest<TDetail>, void>;
 
 export type EventBridgeHandler<TDetail = unknown> = (request: EventBridgeRequest<TDetail>) => Promise<void>;
 
@@ -108,7 +109,7 @@ export interface EventBridgeFilters {
 export interface EventBridgeRouteDefinition<TDetail = unknown> {
   filters: EventBridgeFilters;
   detailSchema?: StandardSchemaV1<unknown, TDetail>;
-  middleware?: EventBridgeMiddleware[];
+  middleware?: EventBridgeMiddleware<NoInfer<TDetail>>[];
   handler: EventBridgeHandler<TDetail>;
 }
 

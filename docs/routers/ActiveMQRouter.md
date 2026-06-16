@@ -366,9 +366,12 @@ activeMQRouter.textMessage({
 })
 ```
 
-`ActiveMQMiddleware` takes no type parameters, so middleware always sees the union request with an
-`unknown` body, however the route it is attached to is typed. See [middleware](/docs/middleware) for
-the execution order and the three levels it attaches at.
+**Route middleware carries the route's body type and message type.** A `textMessage()` route with a
+`bodySchema` needs `ActiveMQMiddleware<Order, 'jms/text-message'>`. That gives `request.body` the
+schema output. Leave the second parameter off and `request` is the union of both message types. Router
+middleware takes no type argument, because it runs for every route.
+
+See [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
 
@@ -387,7 +390,7 @@ All exported from `@lambda-event-router/mq`.
 | `ActiveMQTextMessageRouteDefinition<TBody>` | A route passed to `textMessage()`, with no `messageType` filter |
 | `ActiveMQBytesMessageRouteDefinition` | A route passed to `bytesMessage()`, with no `messageType` filter and no `bodySchema` |
 | `ActiveMQRouterOptions` | Options for `createActiveMQRouter` |
-| `ActiveMQMiddleware` | Router and route middleware |
+| `ActiveMQMiddleware<TBody, TMessageType>` | Router and route middleware |
 | `ActiveMQMessage` | One message, as `request.message` and `request.record` |
 | `ActiveMQDestination` | The `destination` on a message, holding `physicalName` |
 | `ActiveMQEvent` | The whole event, with its messages in one array |
@@ -397,15 +400,16 @@ the same place.
 
 ### Generic parameters
 
-The types above that take a parameter all take the same one.
+The types above take one or both of these.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TBody` | `request.body` | `unknown` |
+| `TMessageType` | Which request shape a middleware takes | `undefined`, meaning the union |
 
-Leave it off and the body is `unknown`, which is what `ActiveMQMiddleware` and `ActiveMQFilterInput`
-see however the route is typed. You only need it for [annotated handlers](#annotated-handlers), since
-inference covers the rest.
+Only `ActiveMQMiddleware` takes the second parameter. Leave `TBody` off and the body is `unknown`,
+which is what `ActiveMQFilterInput` sees however the route is typed. You only need it for
+[annotated handlers](#annotated-handlers), since inference covers the rest.
 
 ## Code example
 

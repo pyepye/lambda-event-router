@@ -79,7 +79,10 @@ export interface ConfigOversizedRequest<TParams = Record<string, string>> {
   context: Context;
 }
 
-export type ConfigMiddleware = Middleware<ConfigRequest | ConfigOversizedRequest, void>;
+export type ConfigMiddleware<TConfig = Record<string, unknown>, TParams = Record<string, string>> = Middleware<
+  ConfigRequest<TConfig, TParams> | ConfigOversizedRequest<TParams>,
+  void
+>;
 
 export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Record<string, string>> =
   | ((request: ConfigRequest<TConfig, TParams>) => Promise<void>)
@@ -104,7 +107,7 @@ export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParam
   filters: ConfigChangeFilters;
   ruleParametersSchema?: StandardSchemaV1<unknown, TParams>;
   configurationSchema?: StandardSchemaV1<unknown, TConfig>;
-  middleware?: ConfigMiddleware[];
+  middleware?: ConfigMiddleware<NoInfer<TConfig>, NoInfer<TParams>>[];
   handler: ConfigChangeHandler<TConfig, TParams>;
 }
 
@@ -125,11 +128,13 @@ export interface ConfigRouteBuilder<TConfig, TParams> {
 export interface ConfigRouteInput<
   TParamsSchema extends StandardSchemaV1 | undefined = undefined,
   TConfigSchema extends StandardSchemaV1 | undefined = undefined,
+  TParams = Record<string, string>,
+  TConfig = Record<string, unknown>,
 > {
   filters: ConfigChangeFilters;
   ruleParametersSchema?: TParamsSchema;
   configurationSchema?: TConfigSchema;
-  middleware?: ConfigMiddleware[];
+  middleware?: ConfigMiddleware<NoInfer<TConfig>, NoInfer<TParams>>[];
 }
 
 export interface ConfigRouterOptions {

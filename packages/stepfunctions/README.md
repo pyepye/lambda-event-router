@@ -133,11 +133,27 @@ Handlers receive `{ event, context }`, where `context` is the Lambda `Context`. 
 receive `{ taskToken, input, event, context }`. Middleware runs over that request. Register it on the
 router to cover every route, or on a single route. Router middleware runs before route middleware.
 
+Type route middleware to the route's `eventSchema`. The validated payload sits on `event` for a regular
+route and on `input` for a TaskToken route, so each has its own alias.
+
 ```ts
-import type { StepFunctionsMiddleware } from '@lambda-event-router/stepfunctions'
+import type {
+  StepFunctionsMiddleware,
+  StepFunctionsTaskTokenMiddleware,
+} from '@lambda-event-router/stepfunctions'
 
 const withLogging: StepFunctionsMiddleware = async (request, next) => {
   console.log(`Handling task ${request.context.awsRequestId}`)
+  return next(request)
+}
+
+const withOrderContext: StepFunctionsMiddleware<unknown, Order> = async (request, next) => {
+  console.log(`Handling order ${request.event.orderId}`)
+  return next(request)
+}
+
+const withApprovalContext: StepFunctionsTaskTokenMiddleware<unknown, Approval> = async (request, next) => {
+  console.log(`Awaiting approval ${request.input.approvalId}`)
   return next(request)
 }
 
@@ -147,8 +163,8 @@ const stepFunctionsRouter = createStepFunctionsRouter({ middleware: [withLogging
 // Route-level: runs for this route only
 const processOrder = defineRoute({
   filters: { custom: ({ event }) => isObject(event) && event.taskType === 'process-order' },
-  eventSchema: EventSchema,
-  middleware: [withLogging],
+  eventSchema: OrderSchema,
+  middleware: [withOrderContext],
 }).handle(async ({ event, context }) => {
   console.log(`Processing order ${event.orderId} (${context.awsRequestId})`)
 })

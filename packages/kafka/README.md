@@ -121,6 +121,20 @@ defineRoute({
 })
 ```
 
+#### Middleware
+
+Register middleware on the router to cover every route, or on a single route. Type route middleware to
+the route's schema, so `KafkaMiddleware<StockMovement>` rather than `KafkaMiddleware`.
+
+```ts
+import type { KafkaMiddleware } from '@lambda-event-router/kafka'
+
+const withWarehouseContext: KafkaMiddleware<StockMovement> = async (request, next) => {
+  console.log(`Movement of ${request.value.sku}`)
+  return next(request)
+}
+```
+
 ## Examples
 
 See the [examples/kafka](../../examples/kafka) directory for complete working examples.

@@ -31,13 +31,12 @@ export interface FirehoseRequest<TData = unknown> {
 
 export type FirehoseResponse = FirehoseResponseResult;
 
-// TODO: Is unknown correct here? Can we infer etc?
-export type FirehoseMiddleware = Middleware<FirehoseRequest<unknown>, FirehoseResponse>;
+export type FirehoseMiddleware<TData = unknown> = Middleware<FirehoseRequest<TData>, FirehoseResponse>;
 
 export interface FirehoseRouteDefinition<TData = unknown> {
   filters: FirehoseFilters;
   dataSchema?: StandardSchemaV1<unknown, TData>;
-  middleware?: FirehoseMiddleware[];
+  middleware?: FirehoseMiddleware<NoInfer<TData>>[];
   handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>;
 }
 

@@ -32,7 +32,7 @@ export type KinesisMiddleware<TData = unknown> = Middleware<KinesisRequest<TData
 export interface KinesisRouteDefinition<TData = unknown> {
   filters: KinesisFilters;
   dataSchema?: StandardSchemaV1<unknown, TData>;
-  middleware?: KinesisMiddleware<TData>[];
+  middleware?: KinesisMiddleware<NoInfer<TData>>[];
   handler: (request: KinesisRequest<TData>) => Promise<void>;
 }
 
