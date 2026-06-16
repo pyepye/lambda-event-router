@@ -1033,6 +1033,49 @@ importers:
         specifier: 'catalog:'
         version: 4.0.18(@types/node@24.10.13)(jiti@2.6.1)(tsx@4.21.0)
 
+  service-examples/dynamodb:
+    dependencies:
+      '@aws-sdk/client-dynamodb':
+        specifier: 'catalog:'
+        version: 3.1019.0
+      '@aws-sdk/util-dynamodb':
+        specifier: 'catalog:'
+        version: 3.987.0(@aws-sdk/client-dynamodb@3.1019.0)
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../../packages/base
+      '@lambda-event-router/dynamodb':
+        specifier: workspace:*
+        version: link:../../packages/dynamodb
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.6
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      aws-cdk:
+        specifier: ^2.1000.0
+        version: 2.1120.0
+      aws-cdk-lib:
+        specifier: ^2.190.0
+        version: 2.251.0(constructs@10.6.0)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   service-examples/sns:
     dependencies:
       '@aws-sdk/client-sns':
