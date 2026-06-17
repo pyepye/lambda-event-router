@@ -9,12 +9,18 @@ catalogs:
     '@aws-sdk/client-apigatewaymanagementapi':
       specifier: ^3.0.0
       version: 3.1000.0
+    '@aws-sdk/client-cloudwatch-logs':
+      specifier: ^3.0.0
+      version: 3.1069.0
     '@aws-sdk/client-codepipeline':
       specifier: ^3.0.0
       version: 3.1000.0
     '@aws-sdk/client-dynamodb':
       specifier: ^3.0.0
       version: 3.1019.0
+    '@aws-sdk/client-kinesis':
+      specifier: ^3.0.0
+      version: 3.1069.0
     '@aws-sdk/util-dynamodb':
       specifier: ^3.0.0
       version: 3.987.0
@@ -1053,7 +1059,50 @@ importers:
     devDependencies:
       '@types/aws-lambda':
         specifier: 'catalog:'
-        version: 8.10.160
+        version: 8.10.162
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.13.2
+      aws-cdk:
+        specifier: ^2.1000.0
+        version: 2.1127.0
+      aws-cdk-lib:
+        specifier: ^2.190.0
+        version: 2.259.0(constructs@10.6.0)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      tsx:
+        specifier: ^4.19.2
+        version: 4.22.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  service-examples/kinesis:
+    dependencies:
+      '@aws-sdk/client-cloudwatch-logs':
+        specifier: 'catalog:'
+        version: 3.1069.0
+      '@aws-sdk/client-kinesis':
+        specifier: 'catalog:'
+        version: 3.1069.0
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../../packages/base
+      '@lambda-event-router/kinesis':
+        specifier: workspace:*
+        version: link:../../packages/kinesis
+      zod:
+        specifier: ^4.3.5
+        version: 4.4.3
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.162
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.13
