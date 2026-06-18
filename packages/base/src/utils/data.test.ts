@@ -1,5 +1,6 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
+import { SchemaValidationError } from '../errors/SchemaValidationError.js';
 import { filterStringMatcher, isObject, safeJsonParse, validateSchema, validateSchemaResult } from './data.js';
 
 suite('filterStringMatcher', () => {
@@ -210,14 +211,13 @@ suite('validateSchema', () => {
     await expect(validateSchema({}, schema, 'Custom error')).rejects.toThrow('Custom error');
   });
 
-  test('includes issues as error cause', async () => {
+  test('throws a SchemaValidationError carrying the issues', async () => {
     const issues = [{ message: 'field is required' }];
     const schema = createMockSchema({ issues });
 
     const error = await validateSchema({}, schema).catch((thrown: unknown) => thrown);
-    expect(error).toBeInstanceOf(Error);
-    // @ts-expect-error - error is asserted as Error above
-    expect(error.cause).toBe(issues);
+    expect(SchemaValidationError.isSchemaValidationError(error)).toBe(true);
+    expect((error as SchemaValidationError).issues).toBe(issues);
   });
 });
 

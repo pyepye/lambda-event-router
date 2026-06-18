@@ -1,5 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
+import { SchemaValidationError } from '../errors/SchemaValidationError.js';
+
 export type FilterStringMatcher = string | RegExp | Array<string | RegExp>;
 
 export function filterStringMatcher(testString: string, matcher: FilterStringMatcher): boolean {
@@ -55,7 +57,7 @@ export async function validateSchema<TData, TSchema extends StandardSchemaV1 | u
   const result = await schema['~standard'].validate(data);
   if (result.issues) {
     const errorMessage = customErrorMessage ?? 'Schema validation failed';
-    throw new Error(errorMessage, { cause: result.issues });
+    throw new SchemaValidationError(errorMessage, result.issues);
   }
   return result.value as ValidateSchemaOutput<TData, TSchema>;
 }

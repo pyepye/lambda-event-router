@@ -18,6 +18,45 @@ function isLogLevelName(value: string): value is LogLevelName {
 export type LogMeta = Record<string, unknown>;
 type LogProps = { message: string; meta: LogMeta };
 
+function serialiseError(error: Error): LogMeta {
+  const { name, message, stack, cause, ...ownProperties } = error;
+
+  return {
+    name,
+    message,
+    stack,
+    ...(cause !== undefined && { cause }),
+    ...ownProperties,
+  };
+}
+
+function isPlainObject(value: unknown): value is LogMeta {
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+// JSON.stringify turns an Error into {}, and console reaches every level of the meta, so every level
+// has to be swapped out. Walking plain objects and arrays only keeps a Buffer or a Date whole.
+// `ancestors` holds the path back to the root: a value already on it is a cycle, and returning
+// undefined drops the key.
+function serialiseErrorsIn(value: unknown, ancestors: Set<object>): unknown {
+  if (typeof value !== 'object' || value === null) return value;
+  if (ancestors.has(value)) return undefined;
+
+  const replaced: unknown = value instanceof Error ? serialiseError(value) : value;
+  if (!(Array.isArray(replaced) || isPlainObject(replaced))) return replaced;
+
+  ancestors.add(value);
+
+  const walked = Array.isArray(replaced)
+    ? replaced.map((item) => serialiseErrorsIn(item, ancestors))
+    : Object.fromEntries(Object.entries(replaced).map(([key, item]) => [key, serialiseErrorsIn(item, ancestors)]));
+
+  ancestors.delete(value);
+
+  return walked;
+}
+
 export interface LoggerOptions {
   logLevel?: LogLevelName;
   persistentLogAttributes?: LogMeta;
@@ -86,12 +125,19 @@ export class Logger {
   }
 
   private mergedMeta(meta?: LogMeta): LogMeta {
-    return {
+    const merged: LogMeta = {
       ...(this.serviceName && { serviceName: this.serviceName }),
       ...this.persistentLogAttributes,
       ...this.temporaryKeys,
       ...(meta ?? {}),
     };
+
+    const ancestors = new Set<object>();
+    for (const [key, value] of Object.entries(merged)) {
+      merged[key] = serialiseErrorsIn(value, ancestors);
+    }
+
+    return merged;
   }
 
   private formatText(message: unknown, meta?: LogMeta): LogProps {

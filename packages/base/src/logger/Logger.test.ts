@@ -220,6 +220,109 @@ suite('Logger', () => {
     });
   });
 
+  suite('errors in meta', () => {
+    function loggedMeta(meta: Record<string, unknown>): Record<string, unknown> {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      new Logger({ logLevel: 'ERROR' }).error('failed', meta);
+      return consoleErrorSpy.mock.calls[0]?.[0] as Record<string, unknown>;
+    }
+
+    function loggedError(meta: Record<string, unknown>): Record<string, unknown> {
+      return loggedMeta(meta).error as Record<string, unknown>;
+    }
+
+    // console hands the payload to JSON.stringify, and that is where a bare Error becomes {}. Asserting
+    // on the object console was given would pass either way.
+    function loggedJson(meta: Record<string, unknown>): Record<string, unknown> {
+      return JSON.parse(JSON.stringify(loggedMeta(meta)));
+    }
+
+    test('serialises an Error into name, message and stack', () => {
+      const error = loggedError({ error: new TypeError('bad input') });
+      expect(error.name).toBe('TypeError');
+      expect(error.message).toBe('bad input');
+      expect(error.stack).toContain('bad input');
+    });
+
+    test('keeps the cause, which console drops because it is not enumerable', () => {
+      const error = loggedError({ error: new Error('outer', { cause: [{ message: 'total is required' }] }) });
+      expect(error.cause).toEqual([{ message: 'total is required' }]);
+    });
+
+    test('recurses when the cause is itself an Error', () => {
+      const error = loggedError({ error: new Error('outer', { cause: new Error('inner') }) });
+      expect(error.cause).toMatchObject({ name: 'Error', message: 'inner' });
+    });
+
+    test('omits cause when there is none', () => {
+      const error = loggedError({ error: new Error('plain') });
+      expect(error).not.toHaveProperty('cause');
+    });
+
+    test('keeps a property the error carries of its own', () => {
+      class ValidationError extends Error {
+        readonly issues = [{ message: 'total is required' }];
+      }
+
+      const error = loggedError({ error: new ValidationError('nope') });
+      expect(error.issues).toEqual([{ message: 'total is required' }]);
+    });
+
+    test('serialises an Error nested in a plain object', () => {
+      const meta = loggedJson({ context: { attempt: 2, failure: new Error('timed out') } });
+      const context = meta.context as Record<string, unknown>;
+
+      expect(context.attempt).toBe(2);
+      expect(context.failure).toMatchObject({ name: 'Error', message: 'timed out' });
+    });
+
+    test('serialises every Error in an array', () => {
+      const meta = loggedJson({ failures: [new Error('first'), new Error('second')] });
+
+      expect(meta.failures).toMatchObject([{ message: 'first' }, { message: 'second' }]);
+    });
+
+    test('serialises an Error the cause carries', () => {
+      const meta = loggedJson({ error: new Error('outer', { cause: [new Error('inner')] }) });
+      const error = meta.error as Record<string, unknown>;
+
+      expect(error.cause).toMatchObject([{ name: 'Error', message: 'inner' }]);
+    });
+
+    test('drops a value that refers back to itself', () => {
+      const context: Record<string, unknown> = { name: 'batch' };
+      context.self = context;
+
+      expect(loggedJson({ context }).context).toEqual({ name: 'batch' });
+    });
+
+    test('drops a cause chain that loops', () => {
+      const outer = new Error('outer');
+      const inner = new Error('inner', { cause: outer });
+      outer.cause = inner;
+
+      const meta = loggedJson({ error: outer });
+      const error = meta.error as Record<string, unknown>;
+      const cause = error.cause as Record<string, unknown>;
+
+      expect(cause.message).toBe('inner');
+      expect(cause).not.toHaveProperty('cause');
+    });
+
+    test('leaves a Date whole rather than walking into it', () => {
+      const at = new Date(0);
+      const meta = loggedMeta({ context: { at } });
+
+      expect((meta.context as Record<string, unknown>).at).toBe(at);
+    });
+
+    test('leaves values that are not errors alone', () => {
+      process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
+      new Logger({ logLevel: 'ERROR' }).error('failed', { error: 'a string' });
+      expect(consoleErrorSpy).toHaveBeenCalledWith({ message: 'failed', error: 'a string' });
+    });
+  });
+
   suite('keys', () => {
     test('appendKeys, removeKeys, and resetKeys manage temporary meta', () => {
       const logger = new Logger({ logLevel: 'INFO' });
