@@ -119,16 +119,20 @@ secretsManagerRouter.route({
 | Filter | Type | Description |
 | --- | --- | --- |
 | `step` | `SecretsManagerRotationEventStep \| SecretsManagerRotationEventStep[]` | Exact match against the rotation step: `createSecret`, `setSecret`, `testSecret` or `finishSecret`. Not a pattern, so list every step you want |
-| `secretId` | `FilterStringMatcher` | Matches the ARN or name of the secret being rotated |
+| `secretId` | `FilterStringMatcher` | Matches the ARN of the secret being rotated, and its name on its own |
 | `custom` | `(input: SecretsManagerFilterInput) => boolean \| Promise<boolean>` | Given the secret id, the step and the client request token. Anything the other filters cannot express. Can be async |
 
 `step` is an exact-match union, not a pattern, so a value has to be one of the four steps. Only
 `secretId` is a `FilterStringMatcher`, which is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
+**secretId can match either the ARN or the secret name**. Events contain the ARN which includes a 6 character suffix
+(`arn:aws:secretsmanager:<region>:<account>:secret:<name>-<sixcharacters>`) added to the name by Secrets Manager.
+THe secretId matches against both, allowing patterns like `prod/database/*` to work.
+
 **`custom` is the only filter that reaches the client request token.** It receives the secret id,
-the step and that token, so use it to match on the token that no built-in key covers. Unlike most
-routers it is not handed the raw event, so there is nothing to narrow. See
+the secret name, the step and that token, so use it to match on the token that no built-in key
+covers. Unlike most routers it is not handed the raw event, so there is nothing to narrow. See
 [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
 ## Handler
@@ -152,14 +156,19 @@ export async function createDatabaseSecret(
 | Field | Type | Description |
 | --- | --- | --- |
 | `step` | `SecretsManagerRotationEventStep` | The rotation step to carry out |
-| `secretId` | `string` | The ARN or name of the secret being rotated |
+| `secretId` | `string` | The ARN of the secret being rotated, exactly as the event carries it |
+| `secretName` | `string` | The secret name, taken out of the ARN |
 | `clientRequestToken` | `string` | The token tying the four steps of one rotation together, used as the new version id |
-| `event` | `SecretsManagerRotationEvent` | The untouched event from AWS |
+| `rotationToken` | `string \| undefined` | Identifies the caller. `PutSecretValue` needs it when the rotation assumes a role or crosses accounts |
+| `event` | `SecretsManagerEvent` | The untouched event from AWS |
 | `context` | `Context` | The Lambda context |
 
-`SecretsManagerRotationEvent` and `Context` come from `aws-lambda`, not this package. `step`,
-`secretId` and `clientRequestToken` are the `Step`, `SecretId` and `ClientRequestToken` off that event,
-lower-cased.
+`Context` comes from `aws-lambda`, not this package. `step`, `secretId`, `clientRequestToken` and
+`rotationToken` are the `Step`, `SecretId`, `ClientRequestToken` and `RotationToken` off the event,
+lower-cased. `secretName` is derived, because the event carries no name of its own.
+
+`SecretsManagerEvent` is this package's own type. It is `aws-lambda`'s `SecretsManagerRotationEvent`
+plus `RotationToken`, which every rotation event carries and that type leaves out.
 
 ### Response type
 
@@ -268,6 +277,7 @@ All exported from `@lambda-event-router/secretsmanager`.
 
 | Type | Description |
 | --- | --- |
+| `SecretsManagerEvent` | The rotation event, `SecretsManagerRotationEvent` plus `RotationToken` |
 | `SecretsManagerRequest` | The handler argument |
 | `SecretsManagerResponse` | Handler return type, `undefined` |
 | `SecretsManagerHandler` | The handler function, `(request: SecretsManagerRequest) => Promise<undefined>` |

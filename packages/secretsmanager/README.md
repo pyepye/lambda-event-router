@@ -32,24 +32,28 @@ secretsManagerRouter
 const secretsManagerRouter = createSecretsManagerRouter()
 
 secretsManagerRouter.createSecret({
+  filters: { secretId: 'prod/database/*' },
   handler: async ({ secretId, clientRequestToken, step }) => {
     console.log(`Creating secret ${secretId} - step: ${step}`)
   },
 })
 
 secretsManagerRouter.setSecret({
+  filters: { secretId: 'prod/database/*' },
   handler: async ({ secretId }) => {
     console.log(`Setting secret ${secretId}`)
   },
 })
 
 secretsManagerRouter.testSecret({
+  filters: { secretId: 'prod/database/*' },
   handler: async ({ secretId }) => {
     console.log(`Testing secret ${secretId}`)
   },
 })
 
 secretsManagerRouter.finishSecret({
+  filters: { secretId: 'prod/database/*' },
   handler: async ({ secretId }) => {
     console.log(`Finishing rotation for ${secretId}`)
   },
@@ -63,10 +67,14 @@ defineRoute({
   filters: {
     step: 'createSecret',
     secretId: /^prod\/database\//,
-    custom: ({ secretId }) => secretId.startsWith('prod/'),
+    custom: ({ secretName }) => secretName.startsWith('prod/'),
   },
 })
 ```
+
+`secretId` is matched against the secret ARN and against the name on its own, so either form works.
+The event itself only ever carries the ARN, which is why `secretName` exists on the request and on
+the filter input.
 
 ## Examples
 

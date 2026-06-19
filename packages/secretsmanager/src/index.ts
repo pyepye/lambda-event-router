@@ -1,5 +1,6 @@
 export { createSecretsManagerRouter, defineRoute, SecretsManagerRouter } from './SecretsManagerRouter.js';
 export type {
+  SecretsManagerEvent,
   SecretsManagerFilterInput,
   SecretsManagerFilters,
   SecretsManagerHandler,

@@ -1,9 +1,10 @@
-import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
+import type { Context, SecretsManagerRotationEventStep } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
+  SecretsManagerEvent,
   SecretsManagerFilterInput,
   SecretsManagerFilters,
   SecretsManagerHandler,
@@ -25,6 +26,12 @@ function isValidStep(step: string): step is SecretsManagerRotationEventStep {
   return (VALID_STEPS as readonly string[]).includes(step);
 }
 
+function secretNameFromId(secretId: string): string {
+  if (!secretId.startsWith('arn:')) return secretId;
+  const resource = secretId.split(':').slice(6).join(':');
+  return resource.replace(/-[A-Za-z0-9]{6}$/, '');
+}
+
 interface RouteBuilder {
   handle(handler: SecretsManagerHandler): SecretsManagerRouteDefinition;
 }
@@ -40,7 +47,7 @@ export function defineRoute(config: {
   };
 }
 
-export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotationEvent, undefined> {
+export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerEvent, undefined> {
   private routes: SecretsManagerRouteDefinition[] = [];
   private middleware: SecretsManagerMiddleware[] = [];
 
@@ -48,7 +55,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     this.middleware = options?.middleware ?? [];
   }
 
-  canHandleEvent(event: unknown): event is SecretsManagerRotationEvent {
+  canHandleEvent(event: unknown): event is SecretsManagerEvent {
     if (!isObject(event)) return false;
     if (typeof event.SecretId !== 'string') return false;
     if (typeof event.ClientRequestToken !== 'string') return false;
@@ -94,11 +101,12 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
     });
   }
 
-  async handleEvent(event: SecretsManagerRotationEvent, context: Context): Promise<undefined> {
+  async handleEvent(event: SecretsManagerEvent, context: Context): Promise<undefined> {
     const secretId = event.SecretId;
+    const secretName = secretNameFromId(secretId);
     const clientRequestToken = event.ClientRequestToken;
     const step = event.Step;
-    const filterInput: SecretsManagerFilterInput = { secretId, clientRequestToken, step };
+    const filterInput: SecretsManagerFilterInput = { secretId, secretName, clientRequestToken, step };
 
     const route = await this.matchRoute(filterInput);
     if (!route) {
@@ -106,20 +114,22 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerRotat
         `No route matched for Secrets Manager rotation event (step: ${event.Step}, secretId: ${event.SecretId})`,
       );
     }
-    const request: SecretsManagerRequest = { ...filterInput, event, context };
+    const request: SecretsManagerRequest = { ...filterInput, rotationToken: event.RotationToken, event, context };
 
     const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
   private async matchRoute(request: SecretsManagerFilterInput): Promise<SecretsManagerRouteDefinition | undefined> {
-    const { secretId, step } = request;
+    const { secretId, secretName, step } = request;
 
     for (const route of this.routes) {
       const { filters } = route;
 
       if (filters.secretId) {
-        const secretIdMatch = filterStringMatcher(secretId, filters.secretId);
+        // The event carries the ARN, so a filter written as the secret name has to match as well.
+        const secretIdMatch =
+          filterStringMatcher(secretId, filters.secretId) || filterStringMatcher(secretName, filters.secretId);
         if (!secretIdMatch) continue;
       }
 

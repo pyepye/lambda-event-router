@@ -2,12 +2,21 @@ import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventS
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
-// Change case for properties on SecretsManagerRotationEvent
+// Secrets Manager sends a fourth key that `SecretsManagerRotationEvent` does not type.
+// `PutSecretValue` needs it when a rotation assumes a role or crosses accounts.
+export interface SecretsManagerEvent extends SecretsManagerRotationEvent {
+  RotationToken?: string;
+}
+
+// Change case for properties on SecretsManagerEvent. `secretName` is derived, because the event
+// carries the secret ARN and nothing else.
 export interface SecretsManagerRequest {
-  step: SecretsManagerRotationEvent['Step'];
-  secretId: SecretsManagerRotationEvent['SecretId'];
-  clientRequestToken: SecretsManagerRotationEvent['ClientRequestToken'];
-  event: SecretsManagerRotationEvent;
+  step: SecretsManagerEvent['Step'];
+  secretId: SecretsManagerEvent['SecretId'];
+  secretName: string;
+  clientRequestToken: SecretsManagerEvent['ClientRequestToken'];
+  rotationToken: SecretsManagerEvent['RotationToken'];
+  event: SecretsManagerEvent;
   context: Context;
 }
 
@@ -19,6 +28,7 @@ export type SecretsManagerHandler = (request: SecretsManagerRequest) => Promise<
 
 export interface SecretsManagerFilterInput {
   secretId: string;
+  secretName: string;
   clientRequestToken: string;
   step: SecretsManagerRotationEventStep;
 }

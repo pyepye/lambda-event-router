@@ -5,10 +5,15 @@ import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type SecretsManagerRotationEventOverrides = DeepPartial<SecretsManagerRotationEvent>;
+// Secrets Manager sends a fourth key that `SecretsManagerRotationEvent` does not type.
+export interface SecretsManagerEvent extends SecretsManagerRotationEvent {
+  RotationToken?: string;
+}
+
+export type SecretsManagerRotationEventOverrides = DeepPartial<SecretsManagerEvent>;
 
 export interface SecretsManagerHandlerEvent {
-  event: SecretsManagerRotationEvent;
+  event: SecretsManagerEvent;
   context: Context;
 }
 
@@ -19,11 +24,12 @@ export interface CreateSecretsManagerHandlerEventOptions {
 
 export function createSecretsManagerRotationEvent(
   overrides: SecretsManagerRotationEventOverrides = {},
-): SecretsManagerRotationEvent {
-  const defaults: SecretsManagerRotationEvent = {
+): SecretsManagerEvent {
+  const defaults: SecretsManagerEvent = {
     Step: 'createSecret',
     SecretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
     ClientRequestToken: crypto.randomUUID(),
+    RotationToken: crypto.randomUUID(),
   };
 
   return deepMerge(defaults, overrides);
@@ -38,7 +44,7 @@ export function createSecretsManagerHandlerEvent(
 }
 
 export interface SecretsManagerFixtures {
-  secretsManagerEvent: (overrides?: SecretsManagerRotationEventOverrides) => SecretsManagerRotationEvent;
+  secretsManagerEvent: (overrides?: SecretsManagerRotationEventOverrides) => SecretsManagerEvent;
   secretsManagerHandlerEvent: (options?: CreateSecretsManagerHandlerEventOptions) => SecretsManagerHandlerEvent;
 }
 

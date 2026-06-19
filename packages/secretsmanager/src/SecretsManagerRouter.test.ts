@@ -82,7 +82,7 @@ suite('SecretsManagerRouter', () => {
   suite('defineRoute', () => {
     test('returns a route builder with a handle method', () => {
       const builder = defineRoute({
-        filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret' },
+        filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123' },
       });
 
       expect(builder).toHaveProperty('handle');
@@ -92,7 +92,7 @@ suite('SecretsManagerRouter', () => {
     test('preserves filters and handler in the definition', () => {
       const handler = vi.fn();
       const filters: SecretsManagerFilters = {
-        secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+        secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
         step: 'createSecret',
       };
 
@@ -105,7 +105,7 @@ suite('SecretsManagerRouter', () => {
   suite('route', () => {
     test('returns the router instance for chaining', () => {
       const definition = defineRoute({
-        filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret' },
+        filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123' },
       }).handle(async () => {});
 
       const result = router.route(definition);
@@ -127,6 +127,7 @@ suite('SecretsManagerRouter', () => {
 
       const request: SecretsManagerFilterInput = {
         secretId: 'my-secret',
+        secretName: 'my-secret',
         clientRequestToken: 'token',
         step,
       };
@@ -137,12 +138,13 @@ suite('SecretsManagerRouter', () => {
 
     test('preserves other filters alongside injected steps', async () => {
       const handler = vi.fn();
-      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
 
       router.createSecret({ filters: { secretId: secretId }, handler });
 
       const matchingRequest: SecretsManagerFilterInput = {
         secretId,
+        secretName: 'my-secret',
         clientRequestToken: 'token',
         step: 'createSecret',
       };
@@ -152,6 +154,7 @@ suite('SecretsManagerRouter', () => {
 
       const nonMatchingRequest: SecretsManagerFilterInput = {
         secretId: 'other-secret',
+        secretName: 'other-secret',
         clientRequestToken: 'token',
         step: 'createSecret',
       };
@@ -172,10 +175,15 @@ suite('SecretsManagerRouter', () => {
   suite('matchRoute', () => {
     suite('secretIds', () => {
       test('matches on secretId', async () => {
-        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
         router.route(defineRoute({ filters: { secretId: secretId } }).handle(async () => {}));
 
-        const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
+        const request: SecretsManagerFilterInput = {
+          secretId,
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
         // @ts-expect-error - testing private method directly
         const result = await router.matchRoute(request);
         expect(result).toBeDefined();
@@ -184,12 +192,13 @@ suite('SecretsManagerRouter', () => {
       test('does not match when secretId', async () => {
         router.route(
           defineRoute({
-            filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other' },
+            filters: { secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other-def456' },
           }).handle(async () => {}),
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -199,12 +208,13 @@ suite('SecretsManagerRouter', () => {
       });
 
       test('matches when secretId is one of multiple allowed', async () => {
-        const secretIdA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a';
-        const secretIdB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b';
+        const secretIdA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a-abc123';
+        const secretIdB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b-def456';
         router.route(defineRoute({ filters: { secretId: [secretIdA, secretIdB] } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
           secretId: secretIdB,
+          secretName: 'secret-b',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -217,7 +227,8 @@ suite('SecretsManagerRouter', () => {
         router.route(defineRoute({ filters: { secretId: '*123456789012*' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -230,7 +241,8 @@ suite('SecretsManagerRouter', () => {
         router.route(defineRoute({ filters: { secretId: '*999999999999*' } }).handle(async () => {}));
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -245,13 +257,70 @@ suite('SecretsManagerRouter', () => {
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
         // @ts-expect-error - testing private method directly
         const result = await router.matchRoute(request);
         expect(result).toBeDefined();
+      });
+
+      test('matches when the filter is the secret name and the event carries the arn', async () => {
+        router.route(defineRoute({ filters: { secretId: 'my-secret' } }).handle(async () => {}));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeDefined();
+      });
+
+      test('matches a wildcard that only fits the name', async () => {
+        router.route(defineRoute({ filters: { secretId: '*-secret' } }).handle(async () => {}));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeDefined();
+      });
+
+      test('matches a regex that only fits the name', async () => {
+        router.route(defineRoute({ filters: { secretId: /^my-secret$/ } }).handle(async () => {}));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeDefined();
+      });
+
+      test('does not match when neither the arn nor the name fits', async () => {
+        router.route(defineRoute({ filters: { secretId: 'other-secret' } }).handle(async () => {}));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeUndefined();
       });
     });
 
@@ -261,6 +330,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -274,6 +344,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -287,6 +358,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'setSecret',
         };
@@ -306,6 +378,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -323,6 +396,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -337,6 +411,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'my-token',
           step: 'testSecret',
         };
@@ -345,6 +420,7 @@ suite('SecretsManagerRouter', () => {
 
         expect(custom).toHaveBeenCalledWith({
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'my-token',
           step: 'testSecret',
         });
@@ -360,6 +436,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'my-secret',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -372,20 +449,30 @@ suite('SecretsManagerRouter', () => {
 
     suite('combined filters (AND logic)', () => {
       test('matches when both secretIds and steps match', async () => {
-        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
         router.route(defineRoute({ filters: { secretId: secretId, step: 'createSecret' } }).handle(async () => {}));
 
-        const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
+        const request: SecretsManagerFilterInput = {
+          secretId,
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
         // @ts-expect-error - testing private method directly
         const result = await router.matchRoute(request);
         expect(result).toBeDefined();
       });
 
       test('does not match when secretIds matches but steps does not', async () => {
-        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
         router.route(defineRoute({ filters: { secretId: secretId, step: 'setSecret' } }).handle(async () => {}));
 
-        const request: SecretsManagerFilterInput = { secretId, clientRequestToken: 'token', step: 'createSecret' };
+        const request: SecretsManagerFilterInput = {
+          secretId,
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
         // @ts-expect-error - testing private method directly
         const result = await router.matchRoute(request);
         expect(result).toBeUndefined();
@@ -395,14 +482,15 @@ suite('SecretsManagerRouter', () => {
         router.route(
           defineRoute({
             filters: {
-              secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other',
+              secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other-def456',
               step: 'createSecret',
             },
           }).handle(async () => {}),
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -422,7 +510,8 @@ suite('SecretsManagerRouter', () => {
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -442,7 +531,8 @@ suite('SecretsManagerRouter', () => {
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -458,6 +548,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'any-secret',
+          secretName: 'any-secret',
           clientRequestToken: 'any-token',
           step: 'createSecret',
         };
@@ -475,6 +566,7 @@ suite('SecretsManagerRouter', () => {
 
         const request: SecretsManagerFilterInput = {
           secretId: 'any-secret',
+          secretName: 'any-secret',
           clientRequestToken: 'any-token',
           step: 'createSecret',
         };
@@ -488,6 +580,7 @@ suite('SecretsManagerRouter', () => {
       test('returns undefined when no routes are defined', async () => {
         const request: SecretsManagerFilterInput = {
           secretId: 'any-secret',
+          secretName: 'any-secret',
           clientRequestToken: 'any-token',
           step: 'createSecret',
         };
@@ -501,14 +594,15 @@ suite('SecretsManagerRouter', () => {
         router.route(
           defineRoute({
             filters: {
-              secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other',
+              secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:other-def456',
               custom,
             },
           }).handle(async () => {}),
         );
 
         const request: SecretsManagerFilterInput = {
-          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret',
+          secretId: 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123',
+          secretName: 'my-secret',
           clientRequestToken: 'token',
           step: 'createSecret',
         };
@@ -522,7 +616,7 @@ suite('SecretsManagerRouter', () => {
   suite('handleEvent', () => {
     test('calls matched handler with the parsed request', async ({ secretsManagerHandlerEvent }) => {
       const handler = vi.fn();
-      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
       router.route(defineRoute({ filters: { secretId: secretId } }).handle(handler));
 
       const { event, context } = secretsManagerHandlerEvent({
@@ -532,11 +626,56 @@ suite('SecretsManagerRouter', () => {
 
       expect(handler).toHaveBeenCalledWith({
         secretId,
+        secretName: 'my-secret',
         clientRequestToken: 'my-token',
+        rotationToken: event.RotationToken,
         step: 'createSecret',
         event,
         context,
       });
+    });
+
+    test('derives the secret name from the arn', async ({ secretsManagerHandlerEvent }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = secretsManagerHandlerEvent({
+        event: { SecretId: 'arn:aws:secretsmanager:eu-west-2:123456789012:secret:prod/orders/api-token-TiYun4' },
+      });
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ secretName: 'prod/orders/api-token' }));
+    });
+
+    test('uses the secret id as the name when it is not an arn', async ({ secretsManagerHandlerEvent }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = secretsManagerHandlerEvent({ event: { SecretId: 'my-secret' } });
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ secretName: 'my-secret' }));
+    });
+
+    test('passes the rotation token through', async ({ secretsManagerHandlerEvent }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = secretsManagerHandlerEvent({ event: { RotationToken: 'rotation-token' } });
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rotationToken: 'rotation-token' }));
+    });
+
+    test('leaves the rotation token undefined when the event has none', async ({ secretsManagerHandlerEvent }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = secretsManagerHandlerEvent();
+      delete event.RotationToken;
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rotationToken: undefined }));
     });
 
     test('returns undefined on success', async ({ secretsManagerHandlerEvent }) => {
@@ -589,8 +728,8 @@ suite('SecretsManagerRouter', () => {
     test('routes to different handlers based on secretIds', async ({ secretsManagerHandlerEvent }) => {
       const secretAHandler = vi.fn();
       const secretBHandler = vi.fn();
-      const secretA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a';
-      const secretB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b';
+      const secretA = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-a-abc123';
+      const secretB = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:secret-b-def456';
 
       router.route(defineRoute({ filters: { secretId: secretA } }).handle(secretAHandler));
       router.route(defineRoute({ filters: { secretId: secretB } }).handle(secretBHandler));
@@ -623,7 +762,7 @@ suite('SecretsManagerRouter', () => {
 
     test('step convenience methods with other filters work together', async ({ secretsManagerHandlerEvent }) => {
       const handler = vi.fn();
-      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret';
+      const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
 
       router.createSecret({ filters: { secretId: secretId }, handler });
 
