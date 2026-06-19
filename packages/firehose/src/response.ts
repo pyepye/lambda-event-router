@@ -15,8 +15,9 @@ export function isFirehoseResponse(value: unknown): value is FirehoseResponseRes
 }
 
 export function Ok(data?: unknown, metadata?: FirehoseTransformationMetadata): FirehoseResponseResult {
+  // Set partition keys without rewriting the record when no data is provided
   if (data === undefined) {
-    return { status: 'Ok' };
+    return metadata ? { status: 'Ok', metadata } : { status: 'Ok' };
   }
 
   const stringified = typeof data === 'string' ? data : JSON.stringify(data);

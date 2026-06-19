@@ -15,9 +15,12 @@ const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 suite('FirehoseRouter', () => {
   let router: FirehoseRouter;
+  let testLogger: base.Logger;
 
   beforeEach(() => {
     router = new FirehoseRouter();
+    testLogger = new base.Logger({ logLevel: 'SILENT' }); // Keep the logger quiet for all the tests which fail things
+    base.setLogger(testLogger);
   });
 
   suite('createFirehoseRouter', () => {
@@ -439,6 +442,20 @@ suite('FirehoseRouter', () => {
       });
     });
 
+    test('logs an error naming the record when no route matches', async ({ firehoseRecord, context }) => {
+      const errorSpy = vi.spyOn(testLogger, 'error');
+
+      const record = firehoseRecord({ recordId: 'unroutable-record' });
+      const event = createFirehoseEvent([record]);
+
+      // @ts-expect-error - testing private method directly
+      await router.processRecord(record, event, context());
+
+      expect(errorSpy).toHaveBeenCalledWith('Error processing Firehose record unroutable-record', {
+        error: expect.objectContaining({ message: expect.stringContaining('No route matched') }),
+      });
+    });
+
     test('returns ProcessingFailed when handler throws non-response error', async ({ firehoseRecord, context }) => {
       router.route(
         defineRoute({
@@ -788,6 +805,30 @@ suite('FirehoseRouter', () => {
 
       expect(record?.result).toBe('Ok');
       expect(record?.data).toBe(expectedData);
+    });
+
+    test('Ok(emptyString) returns Ok result with empty data', async ({ firehoseHandlerEvent }) => {
+      router.route(defineRoute({ filters: {} }).handle(async () => Ok('')));
+
+      const { event, context } = firehoseHandlerEvent();
+      const result = await router.handleEvent(event, context);
+      const record = result.records[0];
+
+      expect(record?.result).toBe('Ok');
+      expect(record?.data).toBe('');
+    });
+
+    test('Ok(undefined, metadata) returns the original data with metadata', async ({ firehoseHandlerEvent }) => {
+      const metadata = { partitionKeys: { tenantId: 'alpha' } };
+      router.route(defineRoute({ filters: {} }).handle(async () => Ok(undefined, metadata)));
+
+      const { event, context } = firehoseHandlerEvent();
+      const result = await router.handleEvent(event, context);
+      const record = result.records[0];
+
+      expect(record?.result).toBe('Ok');
+      expect(record?.data).toBe(event.records[0]?.data);
+      expect(record?.metadata).toEqual(metadata);
     });
 
     test('Ok(data, metadata) returns Ok result with data and metadata', async ({ firehoseHandlerEvent }) => {

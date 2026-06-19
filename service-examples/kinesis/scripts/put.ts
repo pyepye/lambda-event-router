@@ -66,14 +66,14 @@ async function put(streamName: string, partitionKey: string, data: unknown): Pro
 }
 
 // A failing record holds its shard until Lambda gives up on the batch, and every record behind it in
-// that batch is discarded with it. So each failing record has to be alone in its own batch, which means
-// waiting for the batch in front of it to be finished with before putting the next group.
+// that batch is discarded with it. So each group has to reach the worker on its own, which means waiting
+// for the group in front of it to be finished with before putting the next one.
 //
 // Waiting a fixed time does not do that. An event source mapping takes up to a minute to start reading
 // a stream it has just been attached to, and until it does every group piles into one batch. Read the
-// worker's log instead: once the failing sequence number has appeared and then stopped appearing,
+// worker's log instead: once the group's last sequence number has appeared and then stopped appearing,
 // Lambda has run its last attempt and moved past the batch.
-async function waitForBatchGivenUp(sequenceNumber: string): Promise<void> {
+async function waitForShardToClear(sequenceNumber: string): Promise<void> {
   const startedAt = Date.now();
   let seen = 0;
   let quiet = 0;
@@ -123,19 +123,24 @@ await put(orders.streamName, 'customer-7734', order('ord-2', 1850, 'GBP'));
 await put(orders.streamName, 'customer-4821', order('ord-3', 129, 'EUR'));
 const noRouteSequence = await put(orders.streamName, 'web-checkout', order('ord-4', 55, 'GBP'));
 
-// Telemetry is a second stream, so it has its own shard and its own invocation. The quarantined device
-// goes last for the same reason.
-console.log('Putting the telemetry group');
+// Telemetry is a second stream, so it has its own shard and its own invocations. Two readings with
+// nothing wrong with them, so one batch of the run returns no failures at all.
+console.log('Putting the telemetry readings that both work');
 await put(telemetry.streamName, 'device-0117', reading('device-0117', 'temperature', 21.4));
-await put(telemetry.streamName, 'device-0204', reading('device-0204', 'humidity', 48));
+const cleanBatchSequence = await put(telemetry.streamName, 'device-0204', reading('device-0204', 'humidity', 48));
+
+console.log('Waiting for the orders group and the clean batch');
+await Promise.all([waitForShardToClear(noRouteSequence), waitForShardToClear(cleanBatchSequence)]);
+
+// The quarantined device, on its own, so the throw is the only thing in its batch.
+console.log('Putting the reading from the quarantined device');
 const quarantinedSequence = await put(
   telemetry.streamName,
   QUARANTINED_DEVICE_KEY,
   reading(QUARANTINED_DEVICE_KEY, 'temperature', 88.1),
 );
 
-console.log('Waiting for both batches to be given up on');
-await Promise.all([waitForBatchGivenUp(noRouteSequence), waitForBatchGivenUp(quarantinedSequence)]);
+await waitForShardToClear(quarantinedSequence);
 
 // An order with no total. Its partition key sends it to processOrder, where it fails OrderSchema.
 console.log('Putting the order with no total');
@@ -152,7 +157,7 @@ console.log('Putting the reading that is not JSON');
 await put(telemetry.streamName, 'device-0117', reading('device-0117', 'humidity', 51));
 const badReadingSequence = await put(telemetry.streamName, 'device-0117', 'device-0117 humidity 51');
 
-console.log('Waiting for both batches to be given up on');
-await Promise.all([waitForBatchGivenUp(badOrderSequence), waitForBatchGivenUp(badReadingSequence)]);
+console.log('Waiting for both schema failures to clear');
+await Promise.all([waitForShardToClear(badOrderSequence), waitForShardToClear(badReadingSequence)]);
 
 console.log(`Run ${runId} done. Six records on the orders stream and five on telemetry.`);

@@ -111,8 +111,8 @@ Two notifications are handled:
 - `Marketing notification held for batching` for the sale email. It matches the channel filter as
   well, but the custom filter is registered first and wins.
 
-Five notifications fail. Each one logs `Error processing SQS record <id>`, and the `errorMessage`
-tells them apart:
+Five notifications fail. Each one logs `Error processing SQS record <id>`, and `error.message` tells
+them apart:
 
 - `SMS gateway unavailable` comes from the handler. That record has a `logInvocation` line, because
   the handler ran.

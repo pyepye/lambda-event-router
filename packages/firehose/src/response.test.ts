@@ -56,6 +56,12 @@ suite('response', () => {
       const expectedData = Buffer.from('hello').toString('base64');
       expect(result).toEqual({ status: 'Ok', data: expectedData, metadata });
     });
+
+    test('returns metadata with no data when only metadata is provided', () => {
+      const metadata = { partitionKeys: { key: 'value' } };
+      const result = Ok(undefined, metadata);
+      expect(result).toEqual({ status: 'Ok', metadata });
+    });
   });
 
   suite('Dropped', () => {

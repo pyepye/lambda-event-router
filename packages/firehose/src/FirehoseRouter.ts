@@ -111,7 +111,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
 
       const route = await this.matchRoute(event, record, data);
       if (!route) {
-        return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
+        throw new Error(`No route matched for record ${record.recordId} from ${event.deliveryStreamArn}`);
       }
 
       const validatedData = await validateSchema(
@@ -153,7 +153,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       return { recordId: record.recordId, result: 'Dropped', data: record.data };
     }
 
-    if (response.data) {
+    if (response.data !== undefined) {
       return {
         recordId: record.recordId,
         result: 'Ok',

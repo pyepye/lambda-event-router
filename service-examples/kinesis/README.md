@@ -19,7 +19,7 @@ to SQS or SNS, and this example stays on one service.
 
 ## What it covers
 
-One `put:records` puts four groups of records on the two streams. Together they hit every filter the
+One `put:records` puts five groups of records on the two streams. Together they hit every filter the
 router has and every failure path.
 
 | Feature | Where |
@@ -33,10 +33,11 @@ router has and every failure path.
 | Route middleware | `withOrderContext` on `flagHighValueOrder`, typed to the route's data |
 | Lambda middleware | `logBatchResponse` logs what the router hands back to Lambda |
 | Batch item failures | `createKinesisRouter({ batchItemFailures: true })`, both streams report them |
+| A batch with no failures | Two readings that both work, so the router returns nothing to report |
 | No route matched | An order with a `web-checkout` partition key and a low total |
 | Handler failure | `quarantineDevice` throws, after its middleware has run |
 | Schema failures | An order with no total, and a reading that is not JSON |
-| Retries | Every failing batch is retried once, then discarded |
+| Retries | Every failing record is delivered a second time, then discarded |
 
 Kinesis carries raw bytes. The router base64 decodes each record and then parses it as JSON, so a JSON
 number arrives as a number. A payload that is not JSON is not rejected at that point. It reaches the
@@ -91,18 +92,19 @@ pnpm -F @lambda-event-router/service-example-kinesis run put:records \
 
 That is 11 records, six on the orders stream and five on telemetry. Four are meant to fail.
 
-The records go in four groups, with one failing record at the end of each. Each failing record has to
-be alone in its batch, otherwise it discards the records behind it before they are ever routed.
+The records go in five groups. Four end in a failing record, and one has nothing wrong with it. A
+failing record has to be alone in its batch, otherwise it discards the records behind it before they
+are ever routed.
 
-The script gets that separation by reading the worker's log. It puts a group, then polls for the
-failing record's sequence number until the line stops repeating. That means Lambda has run its last
-attempt and moved past the batch.
+The script gets that separation by reading the worker's log. It puts a group, then polls for the last
+record's sequence number until the line stops repeating. That means Lambda has run its last attempt and
+moved past the batch.
 
 Note: a fixed wait does not work here. An event source mapping takes up to a minute to start reading a
 stream it has just been attached to. Until it does, every group piles into one batch.
 
-The script takes about 45 seconds on a warm stack, and up to two minutes on the first run after a
-deploy. It exits once the log is complete, so there is nothing to wait for afterwards.
+The script takes about a minute on a warm stack, and up to two minutes on the first run after a deploy.
+It exits once the log is complete, so there is nothing to wait for afterwards.
 
 Records go one at a time. `PutRecords` does not promise to keep the order of its entries, and the order
 is what puts each failing record at the end of its batch.
@@ -127,13 +129,13 @@ in JSON, so `--format json` pretty prints the fields.
 Note: the log group is `/aws/lambda/<stackName>-worker`, so the name changes if you deploy with a
 different `stackName`.
 
-One run produces 12 invocations, three per failing batch.
+One run produces 12 invocations across five batches. The batch with nothing wrong in it runs once.
 
-There are 10 `Handling Kinesis record` lines. A record that matches no route, or fails its schema, never
+There are 9 `Handling Kinesis record` lines. A record that matches no route, or fails its schema, never
 gets one. The router matches and validates before it runs middleware.
 
-Every failure logs the same message, `Error processing Kinesis record <eventID>`, and the detail sits in
-`error.errorMessage`. The eventID reads `shardId-000000000000:<sequenceNumber>`.
+Every failure logs the same line, `Error processing Kinesis record <eventID>`, and the detail sits under
+`error`. The eventID reads `shardId-000000000000:<sequenceNumber>`.
 
 The first four orders share a shard, so they arrive in one batch in the order they were put:
 
@@ -143,36 +145,41 @@ The first four orders share a shard, so they arrive in one batch in the order th
   the route middleware and the second is the handler. Its total of 1850 is what sent it here rather
   than to `processOrder`.
 - `Order accepted for fulfilment` for `ord-3`.
-- An error for `ord-4` whose `errorMessage` starts `No route matched`. Its partition key is
+- An error for `ord-4` whose `error.message` starts `No route matched`. Its partition key is
   `web-checkout`, which `customer-*` does not cover, and its total sits below the high value line.
 
-Telemetry is a second stream, so its first three records are a batch of their own:
+Telemetry is a second stream, so its records are batches of their own. The first two both work:
 
-- `Device reading recorded` twice, for `device-0117` and `device-0204`.
-- An error for `device-0042` whose `errorMessage` is `Device device-0042 is quarantined`. It comes from
-  the handler, so that record has a `Handling Kinesis record` line.
+- `Device reading recorded` for `device-0117` and for `device-0204`.
+- `Batch response returned` with no `response` field. The router returns `undefined` when it has no
+  failure to report, and `JSON.stringify` drops the key. That batch runs once and is never retried.
+
+The quarantined device follows, on its own:
+
+- An error whose `error.message` is `Device device-0042 is quarantined`. It comes from the handler, so
+  that record has a `Handling Kinesis record` line.
 
 Two more batches follow, one per stream, each holding a schema failure:
 
-- `Order accepted for fulfilment` for `ord-5`, then an `errorMessage` of
+- `Order accepted for fulfilment` for `ord-5`, then an `error.message` of
   `Data validation failed for record <eventID>` for `ord-6`, which has no `total`.
 - `Device reading recorded` for `device-0117`, then the same `Data validation failed` message for the
   reading that is not JSON. The router hands `ReadingSchema` a raw string.
 
-Both schema failures give the same `errorMessage`, so only the eventID tells them apart. The Zod issues
-are attached to the error as `cause` and never reach the log.
+Both schema failures give the same `error.message`. `error.issues` is what names the field. `ord-6` reads
+`path: ["total"]`, and the reading that is not JSON reads an empty path, because the whole record failed
+rather than one field.
 
-Every invocation ends with `Batch response returned`. The response names the failing record and every
-record behind it in the batch. Each failing record is last in its group, so the response names a single
-sequence number.
+Every invocation ends with `Batch response returned`. Where there is a failure, the response names that
+record and every record behind it in the batch. Each failing record is last in its group, so the
+response names a single sequence number.
 
-Each failing batch runs three times under two request ids. The first delivery gets one request id, and
-the retry gets the other and arrives twice. The retry carries the failing record alone, so nothing
-already handled runs again. `quarantineDevice` is the exception. Its handler runs on every delivery, so
-`device-0042` gets three `Handling Kinesis record` lines.
+`retryAttempts` is 1, so each failing record gets a second delivery and is then discarded. That second
+delivery carries the failing record alone, so nothing already handled runs again. `quarantineDevice` is
+the exception. Its handler runs on both deliveries, so `device-0042` gets two `Handling Kinesis record`
+lines.
 
-Note: an event source mapping delivers at least once. A handler has to cope with the same record
-arriving twice under one request id.
+Note: the same record can reach a handler more than once. Make handlers idempotent.
 
 Note: nothing is logged when Lambda gives up on a batch. The record simply stops appearing.
 
