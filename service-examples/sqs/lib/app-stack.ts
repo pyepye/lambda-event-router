@@ -1,11 +1,11 @@
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { CfnOutput, Duration, Stack, type StackProps } from 'aws-cdk-lib';
+import { CfnOutput, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
 import { LoggingFormat, Runtime } from 'aws-cdk-lib/aws-lambda';
 import { SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction, type NodejsFunctionProps, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import type { Construct } from 'constructs';
 
@@ -50,6 +50,12 @@ export class AppStack extends Stack {
       deadLetterQueue: { queue: priorityDlq, maxReceiveCount: DLQ_MAX_RECEIVE_COUNT },
     });
 
+    const workerLogGroup = new LogGroup(this, 'WorkerLogGroup', {
+      logGroupName: `/aws/lambda/${this.stackName}-worker`,
+      retention: RetentionDays.ONE_DAY,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
     const workerFn = new NodejsFunction(this, 'WorkerFn', {
       functionName: `${this.stackName}-worker`,
       entry,
@@ -58,7 +64,7 @@ export class AppStack extends Stack {
       memorySize: 512,
       timeout: Duration.seconds(30),
       loggingFormat: LoggingFormat.JSON,
-      logRetention: RetentionDays.ONE_DAY,
+      logGroup: workerLogGroup,
       environment: {
         NOTIFICATIONS_QUEUE_ARN: notificationsQueue.queueArn,
         PRIORITY_QUEUE_ARN: priorityQueue.queueArn,
