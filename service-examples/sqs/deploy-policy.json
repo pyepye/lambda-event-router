@@ -20,6 +20,17 @@
       "Resource": "*"
     },
     {
+      "Sid": "HotswapFunctionCode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "SendAndInspectTestMessages",
       "Effect": "Allow",
       "Action": [

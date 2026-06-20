@@ -20,6 +20,17 @@
       "Resource": "*"
     },
     {
+      "Sid": "HotswapFunctionCode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "WriteTestItems",
       "Effect": "Allow",
       "Action": ["dynamodb:DescribeTable", "dynamodb:PutItem", "dynamodb:DeleteItem"],

@@ -20,6 +20,17 @@
       "Resource": "*"
     },
     {
+      "Sid": "HotswapFunctionCode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "*"
+    },
+    {
       "Sid": "PublishTestMessages",
       "Effect": "Allow",
       "Action": ["sns:GetTopicAttributes", "sns:Publish"],
