@@ -569,7 +569,11 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
       }
 
       if (filters.clientId) {
-        const clientIdMatch = filterStringMatcher(event.callerContext.clientId, filters.clientId);
+        // Cognito omits clientId on an admin confirmation, though the event type declares a string.
+        // Without this guard the absent value stringifies and a wildcard filter matches it.
+        const { clientId } = event.callerContext;
+        if (!clientId) continue;
+        const clientIdMatch = filterStringMatcher(clientId, filters.clientId);
         if (!clientIdMatch) continue;
       }
 

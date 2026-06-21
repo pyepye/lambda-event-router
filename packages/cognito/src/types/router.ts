@@ -17,6 +17,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 import type {
+  CognitoFilterInput,
   CognitoFilters,
   CreateAuthChallengeRequest,
   CreateAuthChallengeTriggerSource,
@@ -166,6 +167,7 @@ export interface RouteInputFilters<TTrigger extends CognitoTriggerSource> {
     | PreSignUpTriggerEvent['callerContext']['clientId']
     | readonly PreSignUpTriggerEvent['callerContext']['clientId'][];
   userAttributes?: Record<string, FilterStringMatcher>;
+  custom?: (input: CognitoFilterInput<TTrigger>) => boolean | Promise<boolean>;
 }
 
 // Input for defineRoute

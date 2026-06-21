@@ -98,6 +98,37 @@ suite('CognitoRouter', () => {
       expect(definition.userAttributesSchema).toBe(userAttributesSchema);
       expect(definition.handler).toBe(handler);
     });
+
+    test('carries a custom filter through to the route', async ({ cognitoPreSignUpEvent }) => {
+      const custom = vi.fn().mockReturnValue(true);
+
+      router.preSignUpSignUp(
+        defineRoute({
+          filters: { triggerSource: 'PreSignUp_SignUp', custom },
+        }).handle(async ({ event }) => event),
+      );
+
+      const event = cognitoPreSignUpEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, event.triggerSource);
+
+      expect(result).toBeDefined();
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ triggerSource: 'PreSignUp_SignUp' }));
+    });
+
+    test('does not match when a custom filter returns false', async ({ cognitoPreSignUpEvent }) => {
+      router.preSignUpSignUp(
+        defineRoute({
+          filters: { triggerSource: 'PreSignUp_SignUp', custom: () => false },
+        }).handle(async ({ event }) => event),
+      );
+
+      const event = cognitoPreSignUpEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, event.triggerSource);
+
+      expect(result).toBeUndefined();
+    });
   });
 
   suite('route', () => {
@@ -269,6 +300,39 @@ suite('CognitoRouter', () => {
         const result = await router.matchRoute(event, event.triggerSource);
 
         expect(result).toBeDefined();
+      });
+
+      // Cognito omits clientId on an admin confirmation, though the event type says it is a string.
+      test('does not match a wildcard when the event carries no clientId', async ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { clientId: '*' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - Cognito omits the field the event type declares
+        event.callerContext.clientId = undefined;
+
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeUndefined();
+      });
+
+      test('does not match a named clientId when the event carries no clientId', async ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { clientId: 'test-client-id' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - Cognito omits the field the event type declares
+        event.callerContext.clientId = undefined;
+
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeUndefined();
       });
     });
 

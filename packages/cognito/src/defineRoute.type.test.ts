@@ -16,6 +16,7 @@ import { createMockSchema } from '@lambda-event-router/testing';
 
 import { defineRoute } from './CognitoRouter.js';
 import type {
+  CognitoFilterInput,
   CognitoTriggerSource,
   CreateAuthChallengeRequest,
   CustomEmailSenderRequest,
@@ -27,6 +28,7 @@ import type {
   PreSignUpRequest,
   PreTokenGenerationRequest,
   RouteBuilder,
+  RouteInput,
   TypedRouteDefinition,
   UserAttributes,
   UserMigrationRequest,
@@ -408,6 +410,24 @@ suite('defineRoute type inference', () => {
       const builder = defineRoute({});
 
       expectTypeOf(builder).toEqualTypeOf<RouteBuilder<CognitoTriggerSource, UserAttributes>>();
+    });
+  });
+
+  suite('custom filter', () => {
+    test('narrows the filter input to the pinned trigger source', () => {
+      type Filters = NonNullable<RouteInput<'PreSignUp_SignUp'>['filters']>;
+
+      expectTypeOf<NonNullable<Filters['custom']>>()
+        .parameter(0)
+        .toEqualTypeOf<CognitoFilterInput<'PreSignUp_SignUp'>>();
+    });
+
+    test('accepts an async custom filter', () => {
+      const builder = defineRoute({
+        filters: { triggerSource: 'PostConfirmation_ConfirmSignUp', custom: async () => true },
+      });
+
+      expectTypeOf(builder).toEqualTypeOf<RouteBuilder<'PostConfirmation_ConfirmSignUp', UserAttributes>>();
     });
   });
 

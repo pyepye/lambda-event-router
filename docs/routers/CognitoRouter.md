@@ -152,6 +152,12 @@ cognitoRouter.route({
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
+**`clientId` is not always there, though the event type says it is a string.** `AdminConfirmSignUp`
+sends no client id at all, and `AdminCreateUser` sends the literal `CLIENT_ID_NOT_APPLICABLE`.
+
+A route filtering on `clientId` skips any event without one, `*` included. Use the filter to pick out
+traffic from an app client, not to tell one admin call from another.
+
 **`custom` sees the event before any schema has run**, and its `event` is typed `unknown`, so
 narrow with `isObject` from `@lambda-event-router/base` before reading into it. UserMigration events
 carry no user yet, so `input.request.userAttributes` is `undefined` for them. See
