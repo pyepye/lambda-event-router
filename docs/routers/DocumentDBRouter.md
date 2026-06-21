@@ -191,9 +191,18 @@ it narrows the documents to the ones that change carries. Filtering a route to o
 you the narrow type without the check, which [Inferred handlers](#inferred-handlers) covers.
 
 **Open your change stream with the documents your routes read.** `fullDocument: 'updateLookup'` is what
-puts the document on an update event, and a before-change document needs `fullDocumentBeforeChange` set
-to `whenAvailable` or `required`. Without them the field arrives `undefined`, and a route carrying a
+puts the document on an update event. Without it the field arrives `undefined`, and a route carrying a
 schema for it fails the change instead.
+
+**A Lambda event source mapping never sends a before-change document.** Its
+`DocumentDBEventSourceConfig` sets `FullDocument` and nothing else, so `fullDocumentBeforeChange` is
+always `undefined` when Lambda is the consumer. Give a route a schema for it and that route fails
+every change it takes. The filter and the schema are for a change stream you open yourself.
+
+**`updateLookup` reads the document when the change is polled, not when it changed.** A document
+deleted between the two arrives as no document at all, and an update behind another change reports the
+later state. Treat `fullDocument` on an update as the document now, not the document as that change
+left it.
 
 ### Response type
 
@@ -588,8 +597,7 @@ what stops an unmatched change taking down the batch.
 
 `onOrderUpdated` guards `fullDocument` even though the route declares `updateLookup`, because the
 declaration only types a `defineRoute` handler. The delete route sets no document schemas at all, since
-a delete carries nothing but the key unless the change stream is opened with
-`fullDocumentBeforeChange`.
+a delete carries nothing but the key.
 
 `index.ts` hands the router to `LambdaRouter`, which is what AWS invokes and what every router in the
 Lambda gets registered on. See [routers](/docs/routers) for how the two levels of matching fit
