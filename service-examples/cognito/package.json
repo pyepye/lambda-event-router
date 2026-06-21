@@ -1,0 +1,38 @@
+{
+  "name": "@lambda-event-router/service-example-cognito",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "trigger": "tsx scripts/trigger.ts",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "deploy": "cdk deploy --require-approval never",
+    "watch": "cdk watch --hotswap-fallback",
+    "destroy": "cdk destroy --force"
+  },
+  "dependencies": {
+    "@aws-crypto/decrypt-node": "^4.2.1",
+    "@aws-crypto/kms-keyring-node": "^4.2.1",
+    "@aws-crypto/material-management-node": "^4.2.1",
+    "@aws-sdk/client-cloudformation": "^3.700.0",
+    "@aws-sdk/client-cloudwatch-logs": "catalog:",
+    "@aws-sdk/client-cognito-identity-provider": "^3.700.0",
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/cognito": "workspace:*",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "aws-cdk": "^2.1000.0",
+    "aws-cdk-lib": "^2.190.0",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:"
+  }
+}
