@@ -18,17 +18,17 @@ export interface ActiveMQMessage {
   messageType: ActiveMQMessageType;
   timestamp: number;
   deliveryMode: number;
-  correlationID: string;
+  correlationID?: string;
   replyTo: string | null;
   destination: ActiveMQDestination;
   redelivered: boolean;
-  type: string;
+  type?: string;
   expiration: number;
   priority: number;
   data: string;
   brokerInTime: number;
   brokerOutTime: number;
-  properties: Record<string, unknown>;
+  properties?: Record<string, unknown>;
 }
 
 export interface ActiveMQEvent {
@@ -57,24 +57,23 @@ export function createActiveMQMessage(overrides: ActiveMQMessageOverrides = {}):
   const encodedData =
     dataString !== undefined ? Buffer.from(dataString).toString('base64') : Buffer.from(defaultBody).toString('base64');
 
+  // Shaped like a message Amazon MQ delivers: no correlationID, no type, no properties, and replyTo as
+  // the string "null". Override any of them to test a message that carries them.
   const defaults: ActiveMQMessage = {
-    messageID: crypto.randomUUID(),
+    messageID: `ID:b-${crypto.randomUUID()}-1.mq.eu-west-2.amazonaws.com-41895-1789053486532-3:1:-1:1:1`,
     messageType: 'jms/text-message',
     timestamp: now,
     deliveryMode: 1,
-    correlationID: crypto.randomUUID(),
-    replyTo: null,
+    replyTo: 'null',
     destination: {
       physicalName: 'test-queue',
     },
     redelivered: false,
-    type: '',
     expiration: 0,
     priority: 4,
     data: encodedData,
     brokerInTime: now,
     brokerOutTime: now + 1,
-    properties: {},
   };
 
   return deepMerge(defaults, restOverrides);

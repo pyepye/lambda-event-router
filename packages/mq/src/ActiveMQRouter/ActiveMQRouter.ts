@@ -11,6 +11,7 @@ import {
 
 import type {
   ActiveMQBytesMessageRouteDefinition,
+  ActiveMQDecodedMessage,
   ActiveMQEvent,
   ActiveMQFilterInput,
   ActiveMQInternalRoute,
@@ -82,10 +83,16 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     for (const message of event.messages) {
       const destination = message.destination.physicalName;
 
-      // Decode text by leave bytes-message as it's an unknown binary buffer we can't guess at decoding
+      // Decode text and leave a bytes-message alone, as it's an unknown binary buffer we can't guess at
+      // decoding. Amazon MQ omits `properties` when the message carries none, so fill it in here and a
+      // filter can read it without a guard.
       const isBytesMessage = message.messageType === 'jms/bytes-message';
       const decodedData = isBytesMessage ? message.data : Buffer.from(message.data, 'base64').toString('utf-8');
-      const decodedMessage = isBytesMessage ? message : { ...message, data: decodedData };
+      const decodedMessage: ActiveMQDecodedMessage = {
+        ...message,
+        data: decodedData,
+        properties: message.properties ?? {},
+      };
 
       const route = await this.matchRoute(event, decodedMessage, message);
       if (!route) {
@@ -112,7 +119,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
 
   private async matchRoute(
     event: ActiveMQEvent,
-    message: ActiveMQMessage,
+    message: ActiveMQDecodedMessage,
     record: ActiveMQMessage,
   ): Promise<ActiveMQInternalRoute | undefined> {
     for (const route of this.routes) {

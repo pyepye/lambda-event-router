@@ -11,15 +11,15 @@ interface RabbitMQBasicProperties {
   contentType?: string;
   contentEncoding: string | null;
   headers: Record<string, unknown>;
-  deliveryMode: number;
-  priority: number;
+  deliveryMode: number | null;
+  priority: number | null;
   correlationId: string | null;
   replyTo: string | null;
-  expiration: string;
+  expiration: string | null;
   messageId: string | null;
-  timestamp: string;
+  timestamp: string | null;
   type: string | null;
-  userId: string;
+  userId: string | null;
   appId: string | null;
   clusterId: string | null;
   bodySize: number;
@@ -55,20 +55,21 @@ export function createRabbitMQMessage(overrides: RabbitMQMessageOverrides = {}):
   const encodedData =
     dataString !== undefined ? Buffer.from(dataString).toString('base64') : Buffer.from(defaultBody).toString('base64');
 
+  // Shaped like a message Amazon MQ delivers: every property the publisher did not set arrives as null.
   const defaults: RabbitMQMessage = {
     basicProperties: {
       contentType: 'application/json',
       contentEncoding: null,
       headers: {},
-      deliveryMode: 1,
-      priority: 0,
+      deliveryMode: null,
+      priority: null,
       correlationId: null,
       replyTo: null,
-      expiration: '',
+      expiration: null,
       messageId: null,
-      timestamp: String(Date.now()),
+      timestamp: null,
       type: null,
-      userId: 'guest',
+      userId: null,
       appId: null,
       clusterId: null,
       bodySize: defaultBody.length,

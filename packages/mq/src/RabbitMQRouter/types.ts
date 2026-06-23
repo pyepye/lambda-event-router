@@ -6,19 +6,21 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
 
+// An AMQP property the publisher does not set arrives as null rather than as a default, so every field
+// a publisher may leave out is nullable.
 export interface RabbitMQBasicProperties {
   contentType?: string;
   contentEncoding: string | null;
   headers: Record<string, unknown>;
-  deliveryMode: number;
-  priority: number;
+  deliveryMode: number | null;
+  priority: number | null;
   correlationId: string | null;
   replyTo: string | null;
-  expiration: string;
+  expiration: string | null;
   messageId: string | null;
-  timestamp: string;
+  timestamp: string | null;
   type: string | null;
-  userId: string;
+  userId: string | null;
   appId: string | null;
   clusterId: string | null;
   bodySize: number;

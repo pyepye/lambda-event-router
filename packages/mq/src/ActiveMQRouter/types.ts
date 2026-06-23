@@ -12,21 +12,27 @@ export interface ActiveMQDestination {
   physicalName: string;
 }
 
+// Amazon MQ leaves a field out rather than sending it empty. `properties` is absent unless the message
+// carries JMS properties, and `correlationID` and `type` are absent unless the sender sets them.
 export interface ActiveMQMessage {
   messageID: string;
   messageType: ActiveMQMessageType;
   timestamp: number;
   deliveryMode: number;
-  correlationID: string;
+  correlationID?: string;
   replyTo: string | null;
   destination: ActiveMQDestination;
   redelivered: boolean;
-  type: string;
+  type?: string;
   expiration: number;
   priority: number;
   data: string;
   brokerInTime: number;
   brokerOutTime: number;
+  properties?: Record<string, unknown>;
+}
+
+export interface ActiveMQDecodedMessage extends ActiveMQMessage {
   properties: Record<string, unknown>;
 }
 
@@ -39,7 +45,7 @@ export interface ActiveMQEvent {
 // --- Request Types ---
 
 interface ActiveMQRequestBase {
-  message: ActiveMQMessage;
+  message: ActiveMQDecodedMessage;
   destination: string;
   record: ActiveMQMessage;
   context: Context;
@@ -63,7 +69,7 @@ export type ActiveMQRequest<TBody = unknown> = ActiveMQTextMessageRequest<TBody>
 export interface ActiveMQFilterInput {
   messageType: ActiveMQMessageType;
   destination: string;
-  message: ActiveMQMessage;
+  message: ActiveMQDecodedMessage;
   record: ActiveMQMessage;
 }
 

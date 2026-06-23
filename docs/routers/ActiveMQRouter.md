@@ -135,7 +135,10 @@ it accepts only the two `ActiveMQMessageType` values, so a misspelled one is a c
 a filter that quietly matches nothing.
 
 `custom` is the only key that reaches the message itself, so the JMS properties in
-`record.properties`, the priority and `redelivered` are all filterable through it and nowhere else.
+`message.properties`, the priority and `redelivered` are all filterable through it and nowhere else.
+
+Amazon MQ omits `properties` when a message carries none. `message.properties` is filled in with an
+empty object so a filter can read it either way, and `record.properties` is left as Amazon MQ sent it.
 
 **`custom` gets no parsed body.** Schema validation runs after a route matches, so parse `message.data`
 yourself to route on the contents. The filter sees the same split as the handler: on a text message

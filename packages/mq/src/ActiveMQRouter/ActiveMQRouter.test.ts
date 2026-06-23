@@ -424,6 +424,29 @@ suite('ActiveMQRouter', () => {
       expect(filterInput?.message.data).toBe(JSON.stringify(body));
     });
 
+    test('custom filter reads properties on a message that carries none', async ({ activeMQMessage, context }) => {
+      let filterInput: ActiveMQFilterInput | undefined;
+      router.route(
+        defineActiveMQRoute({
+          filters: {
+            custom: (input: ActiveMQFilterInput): boolean => {
+              filterInput = input;
+              return input.message.properties.orderPriority === 'urgent';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // Amazon MQ leaves the key out when the message carries no JMS properties
+      const message = activeMQMessage();
+      expect(message.properties).toBeUndefined();
+
+      await expect(router.handleEvent(createActiveMQEvent([message]), context())).rejects.toThrow('No route matched');
+
+      expect(filterInput?.message.properties).toEqual({});
+      expect(filterInput?.record.properties).toBeUndefined();
+    });
+
     test('custom is not called when a preceding filter rejects', async ({ activeMQMessage }) => {
       const customFilterSpy = vi.fn().mockReturnValue(true);
       router.route(

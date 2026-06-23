@@ -141,10 +141,17 @@ defineActiveMQRoute({
     eventSourceArn: 'arn:aws:mq:eu-west-2:123456789012:broker:MyBroker:b-1234',
     destination: ['order-queue', 'refund-queue'],
     messageType: 'jms/text-message',
-    custom: ({ destination }) => destination.includes('priority'),
+    custom: ({ message }) => message.properties.orderPriority === 'urgent',
   },
 })
 ```
+
+Amazon MQ omits a field rather than sending it empty. `message.properties` is filled in with an empty
+object so a filter can read it either way, and `record.properties` is left as Amazon MQ sent it. The
+same goes for `correlationID` and `type`, which are absent unless the sender sets them.
+
+An unset AMQP property arrives as `null`, so `basicProperties.priority`, `deliveryMode`, `expiration`,
+`timestamp` and `userId` are all nullable on a RabbitMQ message.
 
 ### RabbitMQRouter
 
@@ -196,7 +203,7 @@ defineRabbitMQRoute({
     queue: ['order-queue', 'refund-queue'],
     virtualHost: '/production',
     contentType: 'application/json',
-    custom: ({ record }) => record.basicProperties.priority >= 5,
+    custom: ({ record }) => (record.basicProperties.priority ?? 0) >= 5,
   },
 })
 ```

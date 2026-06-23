@@ -82,7 +82,7 @@ rabbitMQRouter.route({
     contentType: 'application/json',
     custom: ({ record }) => {
       // Only a custom reaches the message itself
-      return record.basicProperties.priority >= HIGH_PRIORITY
+      return (record.basicProperties.priority ?? 0) >= HIGH_PRIORITY
     },
   },
   handler: processOrder,

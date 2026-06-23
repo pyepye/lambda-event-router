@@ -2,6 +2,7 @@ export { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './Act
 export type {
   ActiveMQBytesMessageRequest,
   ActiveMQBytesMessageRouteDefinition,
+  ActiveMQDecodedMessage,
   ActiveMQDestination,
   ActiveMQEvent,
   ActiveMQFilterInput,
