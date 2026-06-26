@@ -9,13 +9,11 @@ export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 export type LowercaseHttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options' | 'head';
 export type AnyHttpMethod = HttpMethod | LowercaseHttpMethod;
 
-// Extract path params from route string
-// "/items/:itemId/sub/:subId" -> { itemId: string; subId: string }
 type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${infer Rest}`
   ? { [K in Param | keyof ExtractParams<Rest>]: string }
   : T extends `${string}:${infer Param}`
     ? { [K in Param]: string }
-    : Record<string, never>;
+    : Record<never, never>;
 
 // Clean up the extracted params into a proper object type
 export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;

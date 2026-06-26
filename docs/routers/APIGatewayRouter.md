@@ -171,6 +171,7 @@ the same syntax to type `request.path`, so naming the params is what types them.
 | --- | --- | --- |
 | `/orders/:orderId` | `/orders/9` | `{ orderId: '9' }` |
 | `/orgs/:orgId/orders/:orderId` | `/orgs/acme/orders/9` | `{ orgId: 'acme', orderId: '9' }` |
+| `/orgs/:orgId/orders` | `/orgs/acme/orders` | `{ orgId: 'acme' }` |
 | `/orders/:orderId` | `/orders/9/items` | No match, a param stops at the next `/` |
 | `/orders` | `/orders/` | `{}`, a trailing slash comes off both sides |
 | `/orders/{orderId}` | `/orders/9` | No match |
@@ -190,32 +191,6 @@ string. Use `:orderId`.
 **A `.`, `+` or other regex metacharacter in a literal segment matches itself.** The literal parts of a
 pattern are escaped before it is compiled to a regular expression, so `/v1.0/orders` matches `/v1.0/orders`
 and nothing else.
-
-**A param followed by a literal segment types nothing.** `PathParams` only reads a pattern whose last
-segment is a param, so `/orgs/:orgId/orders/:orderId` gives you `{ orgId: string; orderId: string }` while
-`/orgs/:orgId/orders` collapses to `Record<string, string>`. Matching is unaffected and `path.orgId` still
-holds the right value at runtime. The types just stop knowing about it, and an inferred handler reads it as
-`string | undefined`.
-
-That is the shape of most collection routes, so it comes up on the `POST` half of a resource more often
-than the `GET`. Either narrow it in the handler, or annotate the request and skip inference for that route.
-
-```ts
-// Inferred, so narrow what you are given
-defineRoute({ filters: { method: 'POST', path: '/orgs/:orgId/orders' } }).handle(async ({ path }) => {
-  const { orgId } = path
-  if (!orgId) throw BadRequest({ error: 'Missing orgId' })
-
-  return Created(await orders.create(orgId))
-})
-```
-
-```ts
-// Annotated, so say what the path holds
-async function createOrder(request: ApiRequest<{ orgId: string }>): Promise<HandlerResponse<Order>> {
-  return Created(await orders.create(request.path.orgId))
-}
-```
 
 ## Handler
 

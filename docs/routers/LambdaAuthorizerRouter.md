@@ -115,7 +115,7 @@ authRouter.route({
 | --- | --- | --- |
 | `type` | `'TOKEN' \| 'REQUEST'` | Which kind of authorizer sent the event. One value, not a `FilterStringMatcher`, so no array and no pattern |
 | `method` | `string` | The method of the request being authorised. An exact match and case sensitive, so `GET` rather than `get` |
-| `custom` | `(input: LambdaAuthorizerFilterInput) => boolean \| Promise<boolean>` | Given `{ type, method }`. Can be async |
+| `custom` | `(input: LambdaAuthorizerFilterInput) => boolean \| Promise<boolean>` | Given the request without the Lambda context. Can be async |
 
 Neither key is a [`FilterStringMatcher`](/docs/routing#filters), so neither takes an array or a
 `RegExp` the way `bucket` on S3 or `messageAttributes` on SNS do. `type` has only two values to pick
@@ -125,8 +125,8 @@ between, and `method` matches one method per route.
 custom filter runs, `method` has already narrowed the route to one value, so anything the function adds
 is unreachable. Use one or the other.
 
-Matching a group of methods is where the `custom` earns its place, since
-`{ method: 'POST' }` and `{ method: 'PUT' }` are two registrations while one function covers both.
+Matching a group of methods is one thing a `custom` is for, since `{ method: 'POST' }` and
+`{ method: 'PUT' }` are two registrations while one function covers both.
 
 ```ts
 authRouter.route({
@@ -138,9 +138,21 @@ authRouter.route({
 })
 ```
 
-`custom` gets the same two values the keys above match and nothing else, so it cannot read the
-token, the headers or the raw event. Filter on the type and the method, and check the rest in the
-handler. See [`custom`](/docs/routing#custom) for where it sits in the filter order.
+`custom` is given the request the handler would get, minus the Lambda context, so it can read the
+token, the headers, the path and the query as well as the two keys above. Which of those are set
+depends on the authorizer type, so they are all optional.
+
+```ts
+authRouter.route({
+  filters: {
+    type: 'REQUEST',
+    custom: ({ headers }) => headers?.['x-tenant'] === 'internal',
+  },
+  handler: authoriseInternal,
+})
+```
+
+See [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
 **A `method` filter never matches a TOKEN event.** A token authorizer is configured against a header
 rather than a route, so the event carries no method and `{ type: 'TOKEN', method: 'GET' }` matches

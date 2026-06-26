@@ -122,7 +122,7 @@ wsRouter.route({
 | --- | --- | --- |
 | `eventType` | `'CONNECT' \| 'MESSAGE' \| 'DISCONNECT'` | Which point in the connection's life this event is. One value, not a `FilterStringMatcher`, so no array and no pattern |
 | `routeKey` | `string` | The route key API Gateway picked. An exact match, so no array and no pattern |
-| `custom` | `(input: WebSocketFilterInput) => boolean \| Promise<boolean>` | Given `{ eventType, routeKey }`. Can be async |
+| `custom` | `(input: WebSocketFilterInput) => boolean \| Promise<boolean>` | Given `{ eventType, routeKey, body, event }`. Can be async |
 
 Neither key is a [`FilterStringMatcher`](/docs/routing#filters), so neither takes an array or a
 `RegExp` the way `bucket` on S3 or `messageAttributes` on SNS do. Matching a family of route keys is
@@ -148,9 +148,23 @@ wsRouter.route(
 )
 ```
 
-`custom` gets the same two values the keys above match and nothing else, so it cannot read the
-message body or the raw event. Filter on what the route key tells you and check the rest in the
-handler. See [`custom`](/docs/routing#custom) for where it sits in the filter order.
+`custom` also gets the parsed frame as `body` and the raw event, so it can route on a field inside
+the message. The body reaches it before any `bodySchema` runs, so it is `unknown` and wants a guard.
+
+```ts
+import { isObject } from '@lambda-event-router/base'
+
+wsRouter.route(
+  defineWebSocketRoute({
+    filters: {
+      eventType: 'MESSAGE',
+      custom: ({ body }) => isObject(body) && body.priority === 'urgent',
+    },
+  }).handle(urgentAction),
+)
+```
+
+See [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
 ### Route keys
 
