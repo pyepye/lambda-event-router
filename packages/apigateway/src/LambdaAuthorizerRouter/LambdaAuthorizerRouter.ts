@@ -178,16 +178,14 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
   }
 
   async handleEvent(event: LambdaAuthorizerEvent, context: Context): Promise<LambdaAuthorizerResult> {
-    const filterInput = this.extractFilterInput(event);
+    const request = this.buildRequest(event, context);
 
-    const route = await this.matchRoute(filterInput);
+    const route = await this.matchRoute(request);
     if (!route) {
       throw new Error(
-        `No route matched for Lambda Authorizer event (type: ${filterInput.type}, method: ${filterInput.method ?? 'N/A'})`,
+        `No route matched for Lambda Authorizer event (type: ${request.type}, method: ${request.method ?? 'N/A'})`,
       );
     }
-
-    const request = this.buildRequest(event, context, filterInput);
 
     const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
 
@@ -213,32 +211,10 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     }
   }
 
-  private extractFilterInput(event: LambdaAuthorizerEvent): LambdaAuthorizerFilterInput {
-    const type: AuthorizerType = event.type;
-
-    if (type === 'TOKEN') {
-      return { type };
-    }
-
-    if (isRequestV1Event(event)) {
-      return { type, method: event.httpMethod };
-    }
-
-    if (isRequestV2Event(event)) {
-      return { type, method: event.requestContext.http.method };
-    }
-
-    throw new Error(`Unrecognised REQUEST authorizer event`);
-  }
-
-  private buildRequest(
-    event: LambdaAuthorizerEvent,
-    context: Context,
-    filterInput: LambdaAuthorizerFilterInput,
-  ): LambdaAuthorizerRequest {
+  private buildRequest(event: LambdaAuthorizerEvent, context: Context): LambdaAuthorizerRequest {
     if (isTokenEvent(event)) {
       return {
-        type: filterInput.type,
+        type: event.type,
         resourceArn: event.methodArn,
         authorizationToken: event.authorizationToken,
         event,
@@ -248,7 +224,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
 
     if (isRequestV1Event(event)) {
       return {
-        type: filterInput.type,
+        type: event.type,
         resourceArn: event.methodArn,
         method: event.httpMethod,
         path: event.path,
@@ -261,7 +237,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
 
     if (isRequestV2Event(event)) {
       return {
-        type: filterInput.type,
+        type: event.type,
         resourceArn: event.routeArn,
         method: event.requestContext.http.method,
         path: event.rawPath,

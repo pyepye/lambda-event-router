@@ -179,9 +179,13 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
   async handleEvent(event: WebSocketEvent, context: Context): Promise<WebSocketResult> {
     const { connectionId, eventType, routeKey, domainName, stage } = event.requestContext;
 
+    const parsedBody = safeJsonParse(event.body);
+
     const filterInput: WebSocketFilterInput = {
       eventType,
       routeKey,
+      body: parsedBody,
+      event,
     };
 
     const route = await this.matchRoute(filterInput);
@@ -189,7 +193,6 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       throw new Error(`No route matched for WebSocket event (eventType: ${eventType}, routeKey: ${routeKey})`);
     }
 
-    const parsedBody = safeJsonParse(event.body);
     const validatedBody = await validateSchema(
       parsedBody,
       route.bodySchema,

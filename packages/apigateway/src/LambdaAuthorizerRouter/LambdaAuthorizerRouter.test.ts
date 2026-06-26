@@ -401,41 +401,81 @@ suite('LambdaAuthorizerRouter', () => {
     });
   });
 
-  suite('extractFilterInput (private)', () => {
-    test('returns { type: "TOKEN" } for TOKEN events', () => {
-      const event = createApiGatewayLambdaAuthorizerTokenEvent();
-
-      // @ts-expect-error - testing private method
-      const result = router.extractFilterInput(event);
-
-      expect(result).toEqual({ type: 'TOKEN' });
-    });
-
-    test('returns { type: "REQUEST", method } for V1 events', () => {
-      const event = createApiGatewayLambdaAuthorizerRequestV1Event({ httpMethod: 'GET' });
-
-      // @ts-expect-error - testing private method
-      const result = router.extractFilterInput(event);
-
-      expect(result).toEqual({ type: 'REQUEST', method: 'GET' });
-    });
-
-    test('returns { type: "REQUEST", method } for V2 events from requestContext.http.method', () => {
-      const event = createApiGatewayLambdaAuthorizerRequestV2Event({
-        requestContext: { http: { method: 'POST' } },
+  suite('filter input', () => {
+    test('hands a TOKEN custom filter the token and the resource', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerTokenEvent({
+        authorizationToken: 'Bearer secret',
+        methodArn: 'arn:aws:execute-api:eu-west-2:1:api/prod/GET/items',
       });
 
-      // @ts-expect-error - testing private method
-      const result = router.extractFilterInput(event);
+      await router.handleEvent(event, context());
 
-      expect(result).toEqual({ type: 'REQUEST', method: 'POST' });
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'TOKEN',
+          authorizationToken: 'Bearer secret',
+          resourceArn: 'arn:aws:execute-api:eu-west-2:1:api/prod/GET/items',
+          event,
+        }),
+      );
     });
 
-    test('throws for unrecognised event format', () => {
-      const event = { type: 'REQUEST' };
+    test('hands a REQUEST custom filter the method, path, headers and query', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event({
+        httpMethod: 'GET',
+        path: '/items/42',
+        headers: { 'X-Api-Key': 'valid-key' },
+        queryStringParameters: { dryRun: 'true' },
+      });
 
-      // @ts-expect-error - testing private method with invalid event
-      expect(() => router.extractFilterInput(event)).toThrow('Unrecognised REQUEST authorizer event');
+      await router.handleEvent(event, context());
+
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REQUEST',
+          method: 'GET',
+          path: '/items/42',
+          headers: { 'x-api-key': 'valid-key' },
+          query: { dryRun: 'true' },
+        }),
+      );
+    });
+
+    test('routes on a header a custom filter reads', async ({ context }) => {
+      const staffHandler = vi.fn().mockResolvedValue(generatePolicy('staff', 'Allow', 'arn:...'));
+      const publicHandler = vi.fn().mockResolvedValue(generatePolicy('anonymous', 'Deny', 'arn:...'));
+
+      router
+        .route(
+          defineLambdaAuthorizerRoute({
+            filters: {
+              type: 'REQUEST',
+              custom: ({ headers }: LambdaAuthorizerFilterInput): boolean => headers?.['x-api-key'] === 'valid-key',
+            },
+          }).handle(staffHandler),
+        )
+        .request({ handler: publicHandler });
+
+      const allowed = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: { 'x-api-key': 'valid-key' } });
+      const refused = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: {} });
+
+      await router.handleEvent(allowed, context());
+      await router.handleEvent(refused, context());
+
+      expect(staffHandler).toHaveBeenCalledTimes(1);
+      expect(publicHandler).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -448,7 +488,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'TOKEN' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -470,7 +510,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'POST' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -495,7 +535,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'GET' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result).toEqual(
         expect.objectContaining({
@@ -514,7 +554,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'TOKEN' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result.event).toBe(event);
       expect(result.context).toBe(mockContext);
@@ -525,7 +565,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'GET' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result.headers).toEqual({});
     });
@@ -535,7 +575,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'GET' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result.query).toEqual({});
     });
@@ -545,7 +585,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'GET' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result.headers).toEqual({});
     });
@@ -555,7 +595,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing private method
-      const result = router.buildRequest(event, mockContext, { type: 'REQUEST', method: 'GET' });
+      const result = router.buildRequest(event, mockContext);
 
       expect(result.query).toEqual({});
     });
@@ -564,7 +604,7 @@ suite('LambdaAuthorizerRouter', () => {
       const mockContext = context();
 
       // @ts-expect-error - testing with invalid event that bypasses type guards
-      expect(() => router.buildRequest({ type: 'REQUEST' }, mockContext, { type: 'REQUEST', method: 'GET' })).toThrow(
+      expect(() => router.buildRequest({ type: 'REQUEST' }, mockContext)).toThrow(
         'Unrecognized Lambda Authorizer event format',
       );
     });

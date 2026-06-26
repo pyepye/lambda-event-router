@@ -487,21 +487,57 @@ suite('WebSocketRouter', () => {
       expect(result).toBeUndefined();
     });
 
-    test('passes correct filterInput to custom', async () => {
+    test('passes correct filterInput to custom', async ({ context }) => {
       const custom = vi.fn().mockReturnValue(true);
       router.route(
         defineWebSocketRoute({
           filters: { custom },
         }).handle(async () => ({ statusCode: 200 })),
       );
+      const event = createWebSocketEvent({
+        requestContext: { eventType: 'MESSAGE', routeKey: 'sendMessage' },
+        body: JSON.stringify({ action: 'sendMessage', content: 'hello' }),
+      });
 
-      // @ts-expect-error - testing private method
-      router.matchRoute({ eventType: 'CONNECT', routeKey: '$connect' });
+      await router.handleEvent(event, context());
 
       expect(custom).toHaveBeenCalledWith({
-        eventType: 'CONNECT',
-        routeKey: '$connect',
+        eventType: 'MESSAGE',
+        routeKey: 'sendMessage',
+        body: { action: 'sendMessage', content: 'hello' },
+        event,
       });
+    });
+
+    test('routes on a field inside the frame', async ({ context }) => {
+      const urgentHandler = vi.fn().mockResolvedValue(undefined);
+      const routineHandler = vi.fn().mockResolvedValue(undefined);
+
+      router
+        .route(
+          defineWebSocketRoute({
+            filters: {
+              eventType: 'MESSAGE',
+              custom: ({ body }: WebSocketFilterInput): boolean => base.isObject(body) && body.priority === 'urgent',
+            },
+          }).handle(urgentHandler),
+        )
+        .message({ handler: routineHandler });
+
+      const urgent = createWebSocketEvent({
+        requestContext: { eventType: 'MESSAGE', routeKey: 'send' },
+        body: JSON.stringify({ priority: 'urgent' }),
+      });
+      const routine = createWebSocketEvent({
+        requestContext: { eventType: 'MESSAGE', routeKey: 'send' },
+        body: JSON.stringify({ priority: 'routine' }),
+      });
+
+      await router.handleEvent(urgent, context());
+      await router.handleEvent(routine, context());
+
+      expect(urgentHandler).toHaveBeenCalledTimes(1);
+      expect(routineHandler).toHaveBeenCalledTimes(1);
     });
 
     test('matches when standard filters and custom both pass', async () => {

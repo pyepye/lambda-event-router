@@ -26,6 +26,8 @@ export interface WebSocketFilters {
 export interface WebSocketFilterInput {
   eventType: WebSocketEventType;
   routeKey: string;
+  body: unknown;
+  event: WebSocketEvent;
 }
 
 export interface WebSocketBaseRequest {

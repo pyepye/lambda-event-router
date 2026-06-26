@@ -22,11 +22,6 @@ export interface LambdaAuthorizerFilters {
   custom?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
 }
 
-export interface LambdaAuthorizerFilterInput {
-  type: AuthorizerType;
-  method?: string;
-}
-
 export interface LambdaAuthorizerBaseRequest {
   type: AuthorizerType;
   resourceArn: string;
@@ -52,6 +47,8 @@ export interface LambdaAuthorizerRequest extends LambdaAuthorizerBaseRequest {
   headers?: Record<string, string | undefined>;
   query?: Record<string, string | undefined>;
 }
+
+export type LambdaAuthorizerFilterInput = Omit<LambdaAuthorizerRequest, 'context'>;
 
 export type LambdaAuthorizerResult = APIGatewayAuthorizerResult | APIGatewaySimpleAuthorizerResult;
 
