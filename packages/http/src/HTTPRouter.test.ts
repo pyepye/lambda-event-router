@@ -440,7 +440,6 @@ suite('HTTPRouter', () => {
       const middlewareSpy = vi.fn<Middleware<ApiRequest, HandlerResponse>>((request, next) => next(request));
       const route = defineRoute({
         filters: { method: 'GET', path: '/items' },
-        // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [middlewareSpy],
       }).handle(async () => Ok(null));
       router.route(route);
@@ -743,7 +742,6 @@ suite('HTTPRouter', () => {
 
       const route = defineRoute({
         filters: { method: 'GET', path: '/' },
-        // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [blockingRouteMiddleware],
       }).handle(handler);
       router.route(route);
@@ -777,7 +775,6 @@ suite('HTTPRouter', () => {
 
       const route = defineRoute({
         filters: { method: 'GET', path: '/' },
-        // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [routeMiddlewareOne, routeMiddlewareTwo],
       }).handle(async () => {
         callOrder.push('handler');
@@ -810,7 +807,6 @@ suite('HTTPRouter', () => {
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [routerMiddleware] });
       const route = defineRoute({
         filters: { method: 'GET', path: '/' },
-        // @ts-expect-error - mock middleware uses default generic types, not exact route types
         middleware: [routeMiddleware],
       }).handle(async () => {
         callOrder.push('handler');
