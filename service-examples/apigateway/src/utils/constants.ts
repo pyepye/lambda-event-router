@@ -16,6 +16,10 @@ export const STAFF_ID_HEADER = 'x-staff-id';
 export const STAFF_ROLE_HEADER = 'x-staff-role';
 export const DISPATCH_ROLE = 'dispatcher';
 
+// A caller names the depots it wants by repeating this header, so the handlers read it from the
+// multi-value map rather than the flat one.
+export const DEPOT_HEADER = 'x-depot';
+
 // The custom filter on PATCH /orders/:orderId reads this.
 export const CHANNEL_HEADER = 'x-channel';
 export const WAREHOUSE_FLOOR_CHANNEL = 'warehouse-floor';

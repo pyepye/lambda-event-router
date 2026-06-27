@@ -1,6 +1,7 @@
 import { defineRoute, NotFound, Ok } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
+import { DEPOT_HEADER } from '../utils/constants.js';
 import { CONSIGNMENTS } from '../utils/warehouse.js';
 
 // An HTTP API route on payload format 1.0, so the same adapter normalises it as a REST API request
@@ -15,6 +16,7 @@ export const getConsignment = defineRoute({
     message: 'Consignment read',
     consignmentId: consignment.consignmentId,
     depots: request.multiValueQuery.depot,
+    depotHeaders: request.multiValueHeaders[DEPOT_HEADER],
     query: request.query,
   });
 

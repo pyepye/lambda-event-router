@@ -56,18 +56,18 @@ failure path each router has. They also cover all three payload formats API Gate
 | `method` filter on a route | GET, POST, PUT, PATCH, DELETE, HEAD and OPTIONS |
 | `path` filter | Path params, two params in one path, and a literal outranking a param |
 | `custom` filter on a route | `amendOrderOnFloor` reads a header the schemas never see |
-| `defineRoute` | Eleven routes, including every route that takes a `custom` |
+| `defineRoute` | Thirteen routes, including every route that takes a `custom` |
 | Convenience methods | `get`, `post`, `put`, `patch`, `delete`, `head` and `options`, one route each |
 | `querySchema` | `getOrder` coerces `page` to a number |
 | `bodySchema` | `createOrder`, `amendOrder`, `bookConsignment`, `adjustStock`, `reconcileStock` |
 | `responseSchema` | `quoteCarrierRate` returns a price its own schema rejects |
 | Router middleware | `logRequest`, `logSocketEvent` and `logAuthorizerAttempt`, one per router |
 | Route middleware | `withOrderContext` logs, `requireDispatchRole` throws, `withAuditTrail` reads the result |
-| CORS | An origin function, an automatic preflight, and a registered `options()` route that wins |
-| Multi-value headers and query | A repeated query param on all three payload formats |
+| CORS | An origin function, credentials, exposed headers, an automatic preflight, and a registered `options()` route that wins |
+| Multi-value headers and query | A repeated query param on all three payload formats, and a repeated header on both adapters |
 | HEAD responses | `headStockRecord` builds a body and the router strips it |
 | Auth from a TOKEN authorizer | `createOrder` reads `auth.principalId` and `auth.context` |
-| Auth from a REQUEST authorizer | `getOrder` reads the principal the policy named |
+| Auth from a REQUEST authorizer | `getOrder` reads the principal the policy named. `generatePolicy` attaches no context, so `auth.context` is empty |
 | Auth from an HTTP API authorizer | `reconcileStock` reads `auth.context.lambda` |
 | Auth from an API key | `getStockLevel` reads `auth.apiKeyId` |
 | Auth from IAM | `getStockAudit` reads `auth.iam` off a SigV4 signed request |
@@ -122,6 +122,9 @@ CDK outputs include `RestApiUrl`, `HttpApiUrl`, `WebSocketUrl`, `StockApiKeyId`,
 The four Lambda authorizers cache a decision for five minutes by default. Every one is deployed with
 a TTL of zero. A second run of the trigger reaches the authorizer Lambda rather than a cached policy.
 
+Note: a new API key takes about a minute to start working. Wait that long after the first deploy of
+the stack, or the stock levels step answers 403.
+
 ## Send sample requests
 
 ```bash
@@ -137,6 +140,10 @@ running it twice in a row gives the same answer.
 
 Nine of the requests never reach the worker. An authorizer denies them, an authorizer fails, or API
 Gateway rejects them itself for a missing API key or an unsigned request.
+
+Note: the two requests that repeat a header go through `node:https` rather than `fetch`. `fetch`
+folds a repeated header name into one comma-joined value, which hides the difference between the two
+adapters.
 
 API Gateway invokes the Lambda once per request, so no invocation here holds more than one event.
 
@@ -170,16 +177,18 @@ Two `ERROR` records are the router reporting a handler that had already run:
 
 Seven requests reach the worker with no `Handling API request` line:
 
-- The two preflights and the request to `/nowhere` match no route, and are answered before any
-  middleware runs.
+- The two automatic preflights and the request to `/nowhere` match no route, and are answered before
+  any middleware runs.
 - The four schema failures do match a route. The router validates the query and the body before it
   builds the middleware chain, and a request that fails either one gets no further.
 
 The rest of the log is one line per handler:
 
-- `Order read` carries `page` as the number 2, `tags` as `['urgent', 'fragile']` and the principal
-  and context the REQUEST authorizer allowed. It is absent for `ord-9999`, where the handler throws
-  `NotFound` before logging.
+- `Order read authorised` is the route middleware, and it names the principal the REQUEST authorizer
+  allowed. There is one for `ord-1042` and one for `ord-9999`.
+- `Order read` carries `page` as the number 2 and `tags` as `['urgent', 'fragile']`. Its
+  `authorizerContext` is `{}`, because `generatePolicy` returns a policy with no context on it. It
+  is absent for `ord-9999`, where the handler throws `NotFound` before logging.
 - `Pending orders listed` proves `/orders/pending` is reached despite being registered after
   `/orders/:orderId`.
 - `Order created` carries the TOKEN authorizer's context. API Gateway sends every context value on
@@ -191,17 +200,17 @@ The rest of the log is one line per handler:
   lines of text, so a body the router had not decoded would count as one.
 - `Stock levels read` carries the API key's id. The key value is a credential, so the handler logs
   only whether it is there.
-- `Consignment read` carries `depots` as `['leeds', 'hull']`. Payload format 1.0 sends the
-  multi-value form of the query, so the two values survive.
-- `Stock record read` carries `depot` as `'leeds,hull'` and `depots` as `['leeds,hull']`. Payload
-  format 2.0 has no multi-value form: API Gateway joins the repeats before the Lambda sees them, and
-  the router does not split them back apart.
+- `Consignment read` carries `depots` and `depotHeaders` both as `['leeds', 'hull']`. Payload format
+  1.0 sends the multi-value form of the query and the headers, so the two values survive.
+- `Stock record read` carries `depot` and `depotHeader` as `'leeds,hull'`, and `depots` and
+  `depotHeaders` as `['leeds,hull']`. Payload format 2.0 has no multi-value form. API Gateway joins
+  the repeats before the Lambda sees them, and the router does not split them back apart.
 - `Stock audit read` carries the `accountId` and `userArn` API Gateway resolved the signature to.
 - `Stock record checked` is the HEAD route. It builds the same response as the GET route and the
   router strips the body.
 - `Stock options described` is the registered `options()` route answering a preflight itself.
-- `Stock adjusted` carries whatever `auth` the simple-response authorizer left behind. That
-  authorizer answers with a boolean, so it attaches no context of its own.
+- `Stock adjusted` carries `auth` as `{ context: { lambda: null } }`. The simple-response authorizer
+  answers with a boolean, so API Gateway sends a context whose `lambda` field is null.
 - `Stock reconciled` carries `authorizerContext.lambda` with `costCentre` and `shift`. An HTTP API
   nests a policy-mode authorizer's context under `lambda`.
 - `Stock record discarded` is the SKU with no units left. The SKU that still holds stock throws
@@ -238,6 +247,8 @@ no Lambda.
 - `Token decision recorded` appears 4 times. It is the route middleware reading the policy on the way
   back out. It is absent for the revoked token, whose handler throws its policy: the router catches
   the throw above the middleware.
+- One of those four carries no `effect`. That is the token whose handler answers with a boolean, so
+  there is no policy for the middleware to read.
 - `Warehouse read checked` appears 4 times, with `staffId` set or absent. Absent means the route
   answers with a `Deny` and API Gateway returns 403 without invoking the worker.
 - `Service call checked` appears twice, once with `authorised` true and once false. It is the

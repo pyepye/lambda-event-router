@@ -1,10 +1,12 @@
 import { defineRoute, NotFound, Ok } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
+import { DEPOT_HEADER } from '../utils/constants.js';
 import { STOCK } from '../utils/warehouse.js';
 
 // An HTTP API route on payload format 2.0. That payload has no multi-value form, so a query param
-// sent twice arrives as one comma-joined string and the multi-value map holds that single string.
+// or a header sent twice arrives as one comma-joined string and the multi-value map holds that
+// single string.
 export const getStockRecord = defineRoute({
   filters: { method: 'GET', path: '/inventory/:sku' },
 }).handle(async (request) => {
@@ -16,6 +18,8 @@ export const getStockRecord = defineRoute({
     sku: record.sku,
     depot: request.query.depot,
     depots: request.multiValueQuery.depot,
+    depotHeader: request.headers[DEPOT_HEADER],
+    depotHeaders: request.multiValueHeaders[DEPOT_HEADER],
   });
 
   return Ok(record);

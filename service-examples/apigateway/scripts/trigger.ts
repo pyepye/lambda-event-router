@@ -1,3 +1,5 @@
+import { request as httpsRequest } from 'node:https';
+
 import { Sha256 } from '@aws-crypto/sha256-js';
 import { APIGatewayClient, GetApiKeyCommand } from '@aws-sdk/client-api-gateway';
 import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
@@ -8,6 +10,7 @@ import WebSocket from 'ws';
 
 import {
   CHANNEL_HEADER,
+  DEPOT_HEADER,
   DISPATCH_ROLE,
   EXPIRED_TOKEN,
   RETIRED_SERVICE_TOKEN,
@@ -98,22 +101,75 @@ interface Expected {
   headers?: Record<string, string | null>;
 }
 
-async function call(step: string, url: string, init: RequestInit, expected: Expected): Promise<void> {
-  const response = await fetch(url, { redirect: 'manual', ...init });
-  const body = await response.text();
+interface Received {
+  status: number;
+  body: string;
+  headers: Record<string, string | undefined>;
+}
+
+function assertResponse(step: string, received: Received, expected: Expected): void {
+  const { status, body } = received;
   const problems: string[] = [];
 
-  if (response.status !== expected.status) problems.push(`status ${response.status} (${body.slice(0, 120)})`);
+  if (status !== expected.status) problems.push(`status ${status} (${body.slice(0, 120)})`);
   if (expected.bodyIncludes && !body.includes(expected.bodyIncludes)) problems.push(`body ${body.slice(0, 200)}`);
   if (expected.bodyIs !== undefined && body !== expected.bodyIs) problems.push(`body ${JSON.stringify(body)}`);
 
   for (const [name, value] of Object.entries(expected.headers ?? {})) {
-    const actual = response.headers.get(name);
-    if (value === null && actual !== null) problems.push(`${name} is ${actual}`);
+    const actual = received.headers[name];
+    if (value === null && actual !== undefined) problems.push(`${name} is ${actual}`);
     if (value !== null && actual !== value) problems.push(`${name} is ${String(actual)}`);
   }
 
   assert(step, problems);
+}
+
+async function call(step: string, url: string, init: RequestInit, expected: Expected): Promise<void> {
+  const response = await fetch(url, { redirect: 'manual', ...init });
+  const body = await response.text();
+  const headers = Object.fromEntries(response.headers.entries());
+
+  assertResponse(step, { status: response.status, body, headers }, expected);
+}
+
+// `fetch` folds repeated header names into one comma-joined value. A header the API has to see
+// twice goes through node:https, which writes one line per array entry.
+function callRaw(
+  step: string,
+  url: string,
+  headers: Record<string, string | string[]>,
+  expected: Expected,
+): Promise<void> {
+  const target = new URL(url);
+
+  return new Promise((resolve, reject) => {
+    const outbound = httpsRequest(
+      { hostname: target.hostname, path: `${target.pathname}${target.search}`, method: 'GET', headers },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on('data', (chunk: Buffer) => chunks.push(chunk));
+        response.on('end', () => {
+          const received = Object.entries(response.headers).map(
+            ([name, value]) => [name, Array.isArray(value) ? value.join(', ') : value] as const,
+          );
+
+          assertResponse(
+            step,
+            {
+              status: response.statusCode ?? 0,
+              body: Buffer.concat(chunks).toString(),
+              headers: Object.fromEntries(received),
+            },
+            expected,
+          );
+          resolve();
+        });
+      },
+    );
+
+    outbound.on('error', reject);
+    outbound.end();
+  });
 }
 
 // =============================================================================
@@ -259,10 +315,10 @@ await call('REST read stock levels with no API key', `${restUrl}/warehouse/stock
 // HTTP API: payload format 1.0
 // =============================================================================
 
-await call(
+await callRaw(
   'HTTP 1.0 read a consignment',
   `${httpUrl}/dispatch/con-5501?depot=leeds&depot=hull`,
-  {},
+  { [DEPOT_HEADER]: ['leeds', 'hull'] },
   { status: 200, bodyIncludes: 'palletline' },
 );
 
@@ -320,14 +376,19 @@ await call(
 // HTTP API: payload format 2.0
 // =============================================================================
 
-await call(
+await callRaw(
   'HTTP 2.0 read a stock record',
   `${httpUrl}/inventory/brk-9?depot=leeds&depot=hull`,
-  { headers: { origin: ALLOWED_ORIGIN } },
+  { origin: ALLOWED_ORIGIN, [DEPOT_HEADER]: ['leeds', 'hull'] },
   {
     status: 200,
     bodyIncludes: '"quantity":120',
-    headers: { 'access-control-allow-origin': ALLOWED_ORIGIN, vary: 'Origin' },
+    headers: {
+      'access-control-allow-origin': ALLOWED_ORIGIN,
+      'access-control-allow-credentials': 'true',
+      'access-control-expose-headers': 'x-order-version, x-stock-quantity',
+      vary: 'Origin',
+    },
   },
 );
 

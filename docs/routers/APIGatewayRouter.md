@@ -464,6 +464,10 @@ how the API is secured. It is `undefined` on an unsecured route.
 `context`, so a `principalId` you set in the authorizer appears once rather than twice. HTTP API Lambda
 authorizers put everything on `context`.
 
+`scopes` is filled in only when the route declares authorization scopes. Without them API Gateway sends
+`null`, whatever the token's own `scope` claim says. Check the field before reading it rather than
+trusting its `string[]` type.
+
 Only one group is populated per request and the checks run in order, so an API key on a REST API wins over
 an authorizer on the same request.
 
