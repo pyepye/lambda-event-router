@@ -4,6 +4,7 @@ import type { Middleware } from '@lambda-event-router/base';
 import * as base from '@lambda-event-router/base';
 import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
+import { BinaryBody } from './binaryBody.js';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent, Ok } from './Response.js';
 import type { ApiRequest, FinalizedHTTPResponse, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
@@ -24,6 +25,7 @@ interface MockResult {
   statusCode: number;
   body: string;
   headers?: Record<string, string>;
+  isBase64Encoded: boolean;
 }
 
 const mockAdapter: HTTPAdapter<MockEvent, MockResult> = {
@@ -50,6 +52,7 @@ const mockAdapter: HTTPAdapter<MockEvent, MockResult> = {
       statusCode: response.statusCode,
       body: response.body,
       headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
     };
   },
 };
@@ -462,6 +465,92 @@ suite('HTTPRouter', () => {
       await router.handleEvent(event, context);
 
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ page: '2', limit: '10' }, querySchema);
+    });
+  });
+
+  suite('handleEvent - binary bodies', () => {
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+    test('hands the handler the bytes of a base64 body its content type says are not text', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      router.post({ filters: { path: '/labels' }, handler });
+
+      const event = createMockEvent({
+        method: 'POST',
+        path: '/labels',
+        headers: { 'content-type': 'image/png' },
+        body: png.toString('base64'),
+        isBase64Encoded: true,
+      });
+      await router.handleEvent(event, createMockContext());
+
+      const request = handler.mock.calls[0]?.[0] as ApiRequest;
+      expect(request.body).toEqual(png);
+      expect(request.rawBody).toBe(png.toString('base64'));
+      expect(request.isBase64Encoded).toBe(true);
+    });
+
+    test('base64 encodes a handler that answers with bytes', async () => {
+      router.get({ filters: { path: '/labels/1' }, handler: async () => png });
+
+      const result = await router.handleEvent(createMockEvent({ path: '/labels/1' }), createMockContext());
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: png.toString('base64'),
+        headers: { 'content-type': 'application/octet-stream' },
+        isBase64Encoded: true,
+      });
+    });
+
+    test('keeps the content type a handler sets on its bytes', async () => {
+      router.get({ filters: { path: '/labels/2' }, handler: async () => Ok(png, { 'content-type': 'image/png' }) });
+
+      const result = await router.handleEvent(createMockEvent({ path: '/labels/2' }), createMockContext());
+
+      expect(result.headers).toEqual({ 'content-type': 'image/png' });
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    test('types a route that takes bytes and refuses a caller that sends text', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      router.put({ filters: { path: '/labels/4' }, bodySchema: BinaryBody, handler });
+
+      const event = createMockEvent({
+        method: 'PUT',
+        path: '/labels/4',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ sku: 'brk-9' }),
+      });
+      const result = await router.handleEvent(event, createMockContext());
+
+      expect(result.statusCode).toBe(422);
+      expect(result.body).toContain('Expected a binary body, got an object');
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('hands a route that takes bytes the buffer the caller sent', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      router.put({ filters: { path: '/labels/5' }, bodySchema: BinaryBody, handler });
+
+      const event = createMockEvent({
+        method: 'PUT',
+        path: '/labels/5',
+        headers: { 'content-type': 'image/png' },
+        body: png.toString('base64'),
+        isBase64Encoded: true,
+      });
+      await router.handleEvent(event, createMockContext());
+
+      expect(handler.mock.calls[0]?.[0]).toEqual(expect.objectContaining({ body: png }));
+    });
+
+    test('leaves a text response unencoded', async () => {
+      router.get({ filters: { path: '/labels/3' }, handler: async () => Ok({ ok: true }) });
+
+      const result = await router.handleEvent(createMockEvent({ path: '/labels/3' }), createMockContext());
+
+      expect(result.isBase64Encoded).toBe(false);
     });
   });
 

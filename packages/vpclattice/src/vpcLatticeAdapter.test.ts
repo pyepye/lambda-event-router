@@ -52,20 +52,20 @@ suite('vpcLatticeAdapter', () => {
   suite('buildResult', () => {
     test('delegates to V2 adapter for V2 events', () => {
       const event = createVPCLatticeV2Event();
-      const response = { statusCode: 200, body: 'ok' };
+      const response = { statusCode: 200, body: 'ok', isBase64Encoded: false };
 
       const result = vpcLatticeAdapter.buildResult(response, event);
 
-      expect(result).toEqual({ statusCode: 200, body: 'ok', headers: undefined });
+      expect(result).toEqual({ statusCode: 200, body: 'ok', headers: undefined, isBase64Encoded: false });
     });
 
     test('delegates to V1 adapter for V1 events', () => {
       const event = createVPCLatticeV1Event();
-      const response = { statusCode: 200, body: 'ok' };
+      const response = { statusCode: 200, body: 'ok', isBase64Encoded: false };
 
       const result = vpcLatticeAdapter.buildResult(response, event);
 
-      expect(result).toEqual({ statusCode: 200, body: 'ok', headers: undefined });
+      expect(result).toEqual({ statusCode: 200, body: 'ok', headers: undefined, isBase64Encoded: false });
     });
   });
 });

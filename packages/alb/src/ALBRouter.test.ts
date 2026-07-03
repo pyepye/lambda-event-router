@@ -17,6 +17,41 @@ suite('ALBRouter', () => {
     });
   });
 
+  suite('response headers', () => {
+    test('sends the multi-value form back when the request arrived in it', async ({ albHandlerEvent }) => {
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({ ok: true }, { 'x-page': '2' }) });
+
+      const { event, context } = albHandlerEvent({
+        event: { path: '/items', httpMethod: 'GET', headers: undefined, multiValueHeaders: { host: ['alb.example'] } },
+      });
+      const result = await router.handleEvent(event, context);
+
+      expect(result.multiValueHeaders).toEqual({ 'content-type': ['application/json'], 'x-page': ['2'] });
+      expect(result.headers).toBeUndefined();
+    });
+
+    test('sends the single-value form back when the request arrived in it', async ({ albHandlerEvent }) => {
+      router.get({ filters: { path: '/items' }, handler: async () => Ok({ ok: true }, { 'x-page': '2' }) });
+
+      const { event, context } = albHandlerEvent({ event: { path: '/items', httpMethod: 'GET' } });
+      const result = await router.handleEvent(event, context);
+
+      expect(result.headers).toEqual({ 'content-type': 'application/json', 'x-page': '2' });
+      expect(result.multiValueHeaders).toBeUndefined();
+    });
+
+    test('base64 encodes a handler that answers with bytes', async ({ albHandlerEvent }) => {
+      const label = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
+      router.get({ filters: { path: '/labels/1' }, handler: async () => Ok(label, { 'content-type': 'image/png' }) });
+
+      const { event, context } = albHandlerEvent({ event: { path: '/labels/1', httpMethod: 'GET' } });
+      const result = await router.handleEvent(event, context);
+
+      expect(result.body).toBe(label.toString('base64'));
+      expect(result.isBase64Encoded).toBe(true);
+    });
+  });
+
   suite('cors', () => {
     test('answers an OPTIONS preflight when cors is configured', async ({ albHandlerEvent }) => {
       const corsRouter = createALBRouter({ cors: { origin: 'https://app.example.com' } });

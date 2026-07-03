@@ -221,7 +221,9 @@ export async function getOrder(
 | `rawPath` | `string` | The path string the caller asked for, the same on a 1.0 or 2.0 payload |
 | `query` | `TQuery` | Query string params, one value per key. Where a name repeats, this is the last value |
 | `multiValueQuery` | `Record<string, string[] \| undefined>` | Every value for each query param, in the order they arrived |
-| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, and no body at all as `null` |
+| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, a binary body as a `Buffer`, and no body at all as `null` |
+| `rawBody` | `string \| undefined` | The body exactly as the service sent it, still base64 where `isBase64Encoded` is true |
+| `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers. Read them lower cased. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `Auth \| undefined` | Whatever the authorizer put on the event. See [Auth](#auth) |
@@ -235,7 +237,25 @@ from here.
 caller asked for. It reads the same on a 1.0 or 2.0 payload, so you don't have to reach into the event and
 branch on the version.
 
-A base64 encoded body is decoded before it is parsed, so `isBase64Encoded` is handled for you.
+The `Content-Type` header on the request decides the shape of `body`. The router decodes base64 for
+you, so you never check the flag yourself.
+
+| `Content-Type` | What you get in `body` |
+| --- | --- |
+| Anything holding `json`, `xml` or `yaml`, such as `application/json` or `application/vnd.api+json` | The parsed value, or the raw string when it will not parse |
+| `text/*`, `application/x-www-form-urlencoded`, `application/javascript` or `application/graphql` | The string |
+| Anything else, such as `image/png`, `application/gzip` or `application/octet-stream` | A `Buffer` of the bytes that were sent |
+
+A route's body type stays the same however the caller sent it, so a route taking bytes gets a `Buffer`
+whether or not the body arrived base64 encoded. See [binary bodies](#binary-bodies) for typing one.
+
+A request with no `Content-Type` header gives you the string. The one exception is a base64 body holding
+bytes utf-8 cannot carry, which you get as a `Buffer` because a string would lose them.
+
+The router lowercases header names, so you read the header itself back as `request.headers['content-type']`.
+
+`request.rawBody` holds the body exactly as the caller sent it, still base64 when `request.isBase64Encoded`
+is true. You need it about as often as you need `request.event`.
 
 A REST API (1.0) payload carries every value for a repeated query param or header, so `request.multiValueQuery`
 and `request.multiValueHeaders` give you the full list while `query` and `headers` keep the last value.
@@ -377,6 +397,26 @@ hands `query.page` the number `2` for `?page=2` and `1` when the param is absent
 stripped. A value the handler returns that fails its `responseSchema` answers 500; an explicit HTTP response
 is sent unchanged, without that check.
 
+### Binary bodies
+
+A route that takes bytes says so with `BinaryBody`. It types `request.body` as a `Buffer` and answers 422
+when the request's `Content-Type` is one the router reads as text.
+
+```ts
+import { BinaryBody, defineRoute, Ok } from '@lambda-event-router/apigateway'
+
+export const uploadLabel = defineRoute({
+  filters: { method: 'PUT', path: '/labels/:labelId' },
+  bodySchema: BinaryBody,
+}).handle(async (request) => Ok({ bytes: request.body.length }))
+```
+
+It is a Standard Schema like any other, so an [annotated handler](#annotated-handlers) works the same way.
+Type its body as `Buffer` and a signature that disagrees with the schema fails the compile.
+
+Leave the `bodySchema` off and `body` is `unknown`, which the compiler makes you narrow with
+`Buffer.isBuffer(request.body)` before you can use it.
+
 ## Responses
 
 Return a value and the router works out the status code, serialises the body and sets a JSON content type
@@ -393,7 +433,11 @@ return { statusCode: 200, body: order }       // Also the same 200
 | An object | 200, with a JSON content type |
 | An array | 200, with a JSON content type |
 | A string, a number or `false` | 200 |
+| A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | 200, base64 encoded with an `application/octet-stream` content type |
 | `undefined`, `null`, `''`, `true` or `{}` | 204 |
+
+**A REST API sends bytes on only when the response `Content-Type` is in its `binaryMediaTypes`.** Set that
+list on the API, or the caller gets the base64 text. An HTTP API needs no setting.
 
 ### Response helpers
 
@@ -691,8 +735,8 @@ and request types carry no `APIGateway` prefix because `ALBRouter` and `VPCLatti
 ones.
 
 The `APIGatewayRouter` class and the `createAPIGatewayRouter` and `defineRoute` functions come from the
-same place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES` and the three
-adapters.
+same place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES`, `BinaryBody` and
+the three adapters.
 
 `HTTPRouter` is exported too, for [pinning a router to one payload
 version](#api-gateway-event-versions). `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter`

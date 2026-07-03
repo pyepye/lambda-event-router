@@ -174,7 +174,12 @@ suite('apiGatewayV2Adapter', () => {
   suite('buildResult', () => {
     test('converts finalized response to API Gateway V2 result', () => {
       const event = createApiGatewayV2Event();
-      const response = { statusCode: 200, body: '{"ok":true}', headers: { 'x-custom': 'value' } };
+      const response = {
+        statusCode: 200,
+        body: '{"ok":true}',
+        headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
+      };
 
       const result = apiGatewayV2Adapter.buildResult(response, event);
 
@@ -182,7 +187,17 @@ suite('apiGatewayV2Adapter', () => {
         statusCode: 200,
         body: '{"ok":true}',
         headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
       });
+    });
+
+    test('passes a base64 body through with its flag', () => {
+      const event = createApiGatewayV2Event();
+      const body = Buffer.from([0x00, 0x01]).toString('base64');
+
+      const result = apiGatewayV2Adapter.buildResult({ statusCode: 200, body, isBase64Encoded: true }, event);
+
+      expect(result).toEqual({ statusCode: 200, body, headers: undefined, isBase64Encoded: true });
     });
   });
 });

@@ -85,11 +85,26 @@ export class Response {
     return Response.isPlainObject(value) || Array.isArray(value);
   }
 
+  private static isBytes(value: unknown): value is Uint8Array | ArrayBuffer {
+    return value instanceof Uint8Array || value instanceof ArrayBuffer;
+  }
+
+  private static toBuffer(value: Uint8Array | ArrayBuffer): Buffer {
+    return value instanceof ArrayBuffer ? Buffer.from(new Uint8Array(value)) : Buffer.from(value);
+  }
+
+  private static defaultContentType(body: unknown): string | undefined {
+    if (Response.isJsonBody(body)) return 'application/json';
+    if (Response.isBytes(body)) return 'application/octet-stream';
+    return undefined;
+  }
+
   private static buildHTTPResponse(response: unknown): HTTPResponse {
     if (Response.isHTTPResponse(response)) {
-      if (Response.isJsonBody(response.body)) {
+      const contentType = Response.defaultContentType(response.body);
+      if (contentType) {
         // Create a new object and headers spread last so response.headers override
-        return { ...response, headers: { 'content-type': 'application/json', ...response.headers } };
+        return { ...response, headers: { 'content-type': contentType, ...response.headers } };
       }
       return response;
     }
@@ -100,8 +115,8 @@ export class Response {
       return Response.NoContent();
     }
 
-    const headers = Response.isJsonBody(response) ? { 'content-type': 'application/json' } : undefined;
-    return Response.Ok(response, headers);
+    const contentType = Response.defaultContentType(response);
+    return Response.Ok(response, contentType ? { 'content-type': contentType } : undefined);
   }
 
   private static bodyToString(body: unknown): string {
@@ -136,11 +151,14 @@ export class Response {
   // Instance methods for building finalized responses (body stringified)
   create(response: unknown): FinalizedHTTPResponse {
     const validResponse = Response.buildHTTPResponse(response);
-    return {
-      statusCode: validResponse.statusCode,
-      body: Response.bodyToString(validResponse.body),
-      headers: validResponse.headers,
-    };
+    const { statusCode, body, headers } = validResponse;
+
+    // Bytes travel as base64 and every service decodes them from the same flag.
+    if (Response.isBytes(body)) {
+      return { statusCode, body: Response.toBuffer(body).toString('base64'), headers, isBase64Encoded: true };
+    }
+
+    return { statusCode, body: Response.bodyToString(body), headers, isBase64Encoded: false };
   }
 
   unauthorised(message?: string): FinalizedHTTPResponse {

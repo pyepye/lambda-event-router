@@ -240,7 +240,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       return undefined;
     }
 
-    return this.adapter.buildResult({ statusCode: 204, body: '', headers: corsHeaders }, event);
+    return this.adapter.buildResult({ statusCode: 204, body: '', headers: corsHeaders, isBase64Encoded: false }, event);
   }
 
   async handleEvent(event: TEvent, context: Context): Promise<TResult> {

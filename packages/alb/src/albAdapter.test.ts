@@ -210,7 +210,12 @@ suite('albAdapter', () => {
   suite('buildResult', () => {
     test('converts finalized response to ALB result', () => {
       const event = createALBEvent();
-      const response = { statusCode: 200, body: '{"ok":true}', headers: { 'x-custom': 'value' } };
+      const response = {
+        statusCode: 200,
+        body: '{"ok":true}',
+        headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
+      };
 
       const result = albAdapter.buildResult(response, event);
 
@@ -218,7 +223,40 @@ suite('albAdapter', () => {
         statusCode: 200,
         body: '{"ok":true}',
         headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
       });
+    });
+
+    test('sends response headers in the multi-value form when the event came in that form', () => {
+      const event = createALBEvent({ multiValueHeaders: { host: ['desk.example'] } });
+      const response = {
+        statusCode: 200,
+        body: '{"ok":true}',
+        headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
+      };
+
+      const result = albAdapter.buildResult(response, event);
+
+      expect(result.multiValueHeaders).toEqual({ 'x-custom': ['value'] });
+      expect(result.headers).toBeUndefined();
+    });
+
+    test('sends no headers of either form when the response has none', () => {
+      const event = createALBEvent({ multiValueHeaders: { host: ['desk.example'] } });
+
+      const result = albAdapter.buildResult({ statusCode: 204, body: '', isBase64Encoded: false }, event);
+
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
+    });
+
+    test('passes a base64 body through with its flag', () => {
+      const event = createALBEvent();
+      const body = Buffer.from([0x00, 0x01]).toString('base64');
+
+      const result = albAdapter.buildResult({ statusCode: 200, body, isBase64Encoded: true }, event);
+
+      expect(result).toEqual({ statusCode: 200, body, isBase64Encoded: true });
     });
   });
 });

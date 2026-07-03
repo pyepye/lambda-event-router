@@ -98,6 +98,50 @@ suite('Request', () => {
       expect(request.body).toBe('plain text');
     });
 
+    test('hands over a body as bytes when the content type is not text, base64 or not', () => {
+      const normalizedEvent = createNormalizedEvent({
+        body: 'sku,4\n',
+        headers: { 'content-type': 'application/octet-stream' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toEqual(Buffer.from('sku,4\n', 'utf-8'));
+    });
+
+    test('hands over a base64 body as bytes when the content type is not text', () => {
+      const bytes = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+      const normalizedEvent = createNormalizedEvent({
+        body: bytes.toString('base64'),
+        isBase64Encoded: true,
+        headers: { 'content-type': 'image/png' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toBeInstanceOf(Buffer);
+      expect(Buffer.compare(request.body as Buffer, bytes)).toBe(0);
+    });
+
+    test('parses a base64 body as JSON when the content type says JSON', () => {
+      const encoded = Buffer.from(JSON.stringify({ id: 2 })).toString('base64');
+      const normalizedEvent = createNormalizedEvent({
+        body: encoded,
+        isBase64Encoded: true,
+        headers: { 'content-type': 'application/json; charset=utf-8' },
+      });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toEqual({ id: 2 });
+    });
+
+    test('hands over a base64 body with no content type as bytes when it is not valid utf-8', () => {
+      const bytes = Buffer.from([0xff, 0xfe, 0x00, 0x80]);
+      const normalizedEvent = createNormalizedEvent({ body: bytes.toString('base64'), isBase64Encoded: true });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      expect(request.body).toBeInstanceOf(Buffer);
+      expect(Buffer.compare(request.body as Buffer, bytes)).toBe(0);
+    });
+
     test('caches the parsed body on subsequent accesses', () => {
       const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ count: 42 }) });
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
@@ -277,6 +321,17 @@ suite('Request', () => {
       const apiRequest = request.buildApiRequest({}, undefined);
 
       expect(apiRequest.rawPath).toBe('/items/42');
+    });
+
+    test('carries the body as the service sent it alongside the parsed one', () => {
+      const encoded = Buffer.from('note').toString('base64');
+      const normalizedEvent = createNormalizedEvent({ body: encoded, isBase64Encoded: true });
+      const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
+
+      const apiRequest = request.buildApiRequest({}, 'note');
+
+      expect(apiRequest.rawBody).toBe(encoded);
+      expect(apiRequest.isBase64Encoded).toBe(true);
     });
 
     test('carries the multi-value query and header maps unchanged', () => {

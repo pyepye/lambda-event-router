@@ -161,37 +161,38 @@ suite('Response', () => {
         statusCode: 200,
         body: JSON.stringify({ message: 'hello' }),
         headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
       });
     });
 
     test('returns a 204 with empty body for null', () => {
       const result = response.create(null);
 
-      expect(result).toEqual({ statusCode: 204, body: '' });
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
     });
 
     test('returns a 204 with empty body for undefined', () => {
       const result = response.create(undefined);
 
-      expect(result).toEqual({ statusCode: 204, body: '' });
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
     });
 
     test('returns a 204 for an empty string', () => {
       const result = response.create('');
 
-      expect(result).toEqual({ statusCode: 204, body: '' });
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
     });
 
     test('returns a 204 for true', () => {
       const result = response.create(true);
 
-      expect(result).toEqual({ statusCode: 204, body: '' });
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
     });
 
     test('returns a 204 for an empty object', () => {
       const result = response.create({});
 
-      expect(result).toEqual({ statusCode: 204, body: '' });
+      expect(result).toEqual({ statusCode: 204, body: '', isBase64Encoded: false });
     });
 
     test('wraps a non-HTTPResponse value in a 200', () => {
@@ -201,6 +202,7 @@ suite('Response', () => {
         statusCode: 200,
         body: JSON.stringify({ data: 'value' }),
         headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
       });
     });
 
@@ -211,6 +213,7 @@ suite('Response', () => {
         statusCode: 200,
         body: JSON.stringify([1, 2, 3]),
         headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
       });
     });
 
@@ -221,6 +224,7 @@ suite('Response', () => {
         statusCode: 200,
         body: JSON.stringify([1, 2]),
         headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
       });
     });
 
@@ -231,25 +235,31 @@ suite('Response', () => {
         statusCode: 200,
         body: '[]',
         headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
       });
     });
 
     test('converts a string body to a 200 response', () => {
       const result = response.create('hello');
 
-      expect(result).toEqual({ statusCode: 200, body: 'hello' });
+      expect(result).toEqual({ statusCode: 200, body: 'hello', isBase64Encoded: false });
     });
 
     test('converts a number body to a 200 response', () => {
       const result = response.create(42);
 
-      expect(result).toEqual({ statusCode: 200, body: '42' });
+      expect(result).toEqual({ statusCode: 200, body: '42', isBase64Encoded: false });
     });
 
     test('preserves headers from the HTTPResponse', () => {
       const result = response.create(Response.TemporaryRedirect('/new-location'));
 
-      expect(result).toEqual({ statusCode: 307, body: '', headers: { Location: '/new-location' } });
+      expect(result).toEqual({
+        statusCode: 307,
+        body: '',
+        headers: { Location: '/new-location' },
+        isBase64Encoded: false,
+      });
     });
 
     test('does not mutate the given response object or its headers', () => {
@@ -275,19 +285,59 @@ suite('Response', () => {
     test('returns empty string for a function body', () => {
       const result = response.create(Response.Ok(() => {}));
 
-      expect(result).toEqual({ statusCode: 200, body: '' });
+      expect(result).toEqual({ statusCode: 200, body: '', isBase64Encoded: false });
     });
 
     test('returns empty string for NaN body', () => {
       const result = response.create(Response.Ok(Number.NaN));
 
-      expect(result).toEqual({ statusCode: 200, body: '' });
+      expect(result).toEqual({ statusCode: 200, body: '', isBase64Encoded: false });
     });
 
     test('converts a boolean body to its string representation', () => {
       const result = response.create(Response.Ok(false));
 
-      expect(result).toEqual({ statusCode: 200, body: 'false' });
+      expect(result).toEqual({ statusCode: 200, body: 'false', isBase64Encoded: false });
+    });
+
+    test('base64 encodes a Buffer body and gives it a byte content type', () => {
+      const bytes = Buffer.from([0x00, 0x01, 0xff]);
+
+      const result = response.create(bytes);
+
+      expect(result).toEqual({
+        statusCode: 200,
+        body: bytes.toString('base64'),
+        headers: { 'content-type': 'application/octet-stream' },
+        isBase64Encoded: true,
+      });
+    });
+
+    test('base64 encodes a Uint8Array body', () => {
+      const bytes = Uint8Array.from([0x10, 0x20]);
+
+      const result = response.create(bytes);
+
+      expect(result.body).toBe(Buffer.from(bytes).toString('base64'));
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    test('base64 encodes an ArrayBuffer body', () => {
+      const bytes = Uint8Array.from([0x10, 0x20]);
+
+      const result = response.create(bytes.buffer);
+
+      expect(result.body).toBe(Buffer.from(bytes).toString('base64'));
+      expect(result.isBase64Encoded).toBe(true);
+    });
+
+    test('keeps the content type a handler set on a byte body', () => {
+      const bytes = Buffer.from([0x25, 0x50, 0x44, 0x46]);
+
+      const result = response.create(Response.Ok(bytes, { 'content-type': 'application/pdf' }));
+
+      expect(result.headers).toEqual({ 'content-type': 'application/pdf' });
+      expect(result.isBase64Encoded).toBe(true);
     });
 
     test('falls back to String() for a body with circular references', () => {

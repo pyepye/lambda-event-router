@@ -1,5 +1,6 @@
 import { isObject } from '@lambda-event-router/base';
 import {
+  type Auth,
   buildValueMaps,
   type FinalizedHTTPResponse,
   type HTTPAdapter,
@@ -7,20 +8,21 @@ import {
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
+import { IDENTITY_HEADER, pathWithoutQuery, principalFromIdentityHeader } from './latticeEvent.js';
+
 export interface VPCLatticeEventBase {
   method: HttpMethod;
   body?: string;
 }
 
-// TODO: This needs confirming - Can we use AWS Powertools types here?
 export interface VPCLatticeEventV1 extends VPCLatticeEventBase {
   raw_path: string;
   headers?: Record<string, string>;
   query_string_parameters?: Record<string, string>;
   is_base64_encoded: boolean;
+  request_id?: string;
 }
 
-// TODO: This needs confirming
 export interface VPCLatticeResult {
   statusCode: number;
   body?: string;
@@ -28,9 +30,13 @@ export interface VPCLatticeResult {
   headers?: Record<string, string>;
 }
 
+function extractV1Auth(headers: Record<string, string | undefined>): Auth | undefined {
+  const principalId = principalFromIdentityHeader(headers[IDENTITY_HEADER]);
+  return principalId ? { principalId } : undefined;
+}
+
 export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResult> = {
   canHandleEvent(event: unknown): event is VPCLatticeEventV1 {
-    // TODO: This needs confirming
     if (!isObject(event)) return false;
     if (typeof event.raw_path !== 'string') return false;
     if (typeof event.method !== 'string') return false;
@@ -48,14 +54,14 @@ export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResul
 
     return {
       method: event.method,
-      path: event.raw_path,
+      path: pathWithoutQuery(event.raw_path),
       headers: headers.flat,
       multiValueHeaders: headers.multiValue,
       query: query.flat,
       multiValueQuery: query.multiValue,
       body: event.body ?? undefined,
       isBase64Encoded: event.is_base64_encoded,
-      auth: undefined,
+      auth: extractV1Auth(headers.flat),
     };
   },
 
@@ -64,6 +70,7 @@ export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResul
       statusCode: response.statusCode,
       body: response.body,
       headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
     };
   },
 };

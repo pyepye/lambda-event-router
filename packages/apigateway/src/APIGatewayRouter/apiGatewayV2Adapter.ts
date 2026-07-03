@@ -94,6 +94,7 @@ export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayP
       statusCode: response.statusCode,
       body: response.body,
       headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
     };
   },
 };

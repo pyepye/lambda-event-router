@@ -1,3 +1,4 @@
+export { BinaryBody } from './binaryBody.js';
 export { HTTP_STATUS_CODES } from './constants.js';
 export type { CorsConfig, CorsOriginFunction } from './cors.js';
 export { defineRoute, HTTPRouter } from './HTTPRouter.js';

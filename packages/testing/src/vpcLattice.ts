@@ -14,6 +14,7 @@ interface VPCLatticeEventV1 {
   headers?: Record<string, string>;
   query_string_parameters?: Record<string, string>;
   is_base64_encoded: boolean;
+  request_id?: string;
 }
 
 interface VPCLatticeRequestContextV2 {
@@ -45,6 +46,7 @@ interface VPCLatticeEventV2 {
   queryStringParameters?: Record<string, string[]>;
   isBase64Encoded: boolean;
   requestContext: VPCLatticeRequestContextV2;
+  requestId?: string;
 }
 
 export type VPCLatticeV1EventOverrides = Omit<DeepPartial<VPCLatticeEventV1>, 'body'> & {
@@ -69,6 +71,7 @@ export function createVPCLatticeV1Event(overrides: VPCLatticeV1EventOverrides = 
     raw_path: '/',
     is_base64_encoded: false,
     headers: {},
+    request_id: '77eda9db-9c5a-4d77-b1f5-c6ec08404525',
     ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
   };
 
@@ -120,8 +123,9 @@ export function createVPCLatticeV2Event(overrides: VPCLatticeV2EventOverrides = 
       serviceNetworkArn: 'arn:aws:vpc-lattice:us-east-1:123456789012:servicenetwork/sn-1234567890abcdef0',
       targetGroupArn: 'arn:aws:vpc-lattice:us-east-1:123456789012:targetgroup/tg-1234567890abcdef0',
       region: 'us-east-1',
-      timeEpoch: 1704067200000,
+      timeEpoch: '1704067200000000',
     },
+    requestId: '843988de-98d2-4c5e-b2ea-07ab19e33614',
     ...(resolvedBody !== undefined ? { body: resolvedBody } : {}),
   };
 

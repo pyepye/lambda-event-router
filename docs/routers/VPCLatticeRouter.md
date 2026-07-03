@@ -222,10 +222,12 @@ export async function getOrder(
 | `rawPath` | `string` | The path string the caller asked for, the same on a 1.0 or 2.0 payload |
 | `query` | `TQuery` | Query string params, one value per key. Where a name repeats, this is the last value |
 | `multiValueQuery` | `Record<string, string[] \| undefined>` | Every value for each query param, in the order they arrived |
-| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, and no body at all as `null` |
+| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, a binary body as a `Buffer`, and no body at all as `null` |
+| `rawBody` | `string \| undefined` | The body exactly as the service sent it, still base64 where `isBase64Encoded` is true |
+| `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
-| `auth` | `Auth \| undefined` | Only ever `principalId`, and only on a 2.0 payload. See [Auth](#auth) |
+| `auth` | `Auth \| undefined` | Only ever `principalId`, on either payload version. See [Auth](#auth) |
 | `event` | `TEvent` | The untouched event, typed `VPCLatticeEvent` |
 | `context` | `Context` | The Lambda context |
 
@@ -236,8 +238,25 @@ from here.
 caller asked for. It reads the same on a 1.0 or 2.0 payload, so you don't have to reach into the event and
 branch on the version.
 
-A base64 encoded body is decoded before it is parsed, so the base64 flag is handled for you under either
-field name.
+The `Content-Type` header on the request decides the shape of `body`. The router decodes base64 for
+you under either field name, so you never check the flag yourself.
+
+| `Content-Type` | What you get in `body` |
+| --- | --- |
+| Anything holding `json`, `xml` or `yaml`, such as `application/json` or `application/vnd.api+json` | The parsed value, or the raw string when it will not parse |
+| `text/*`, `application/x-www-form-urlencoded`, `application/javascript` or `application/graphql` | The string |
+| Anything else, such as `image/png`, `application/gzip` or `application/octet-stream` | A `Buffer` of the bytes that were sent |
+
+A route's body type stays the same however the caller sent it, so a route taking bytes gets a `Buffer`
+whether or not the body arrived base64 encoded. See [binary bodies](#binary-bodies) for typing one.
+
+A request with no `Content-Type` header gives you the string. The one exception is a base64 body holding
+bytes utf-8 cannot carry, which you get as a `Buffer` because a string would lose them.
+
+The router lowercases header names, so you read the header itself back as `request.headers['content-type']`.
+
+`request.rawBody` holds the body exactly as the caller sent it, still base64 when `request.isBase64Encoded`
+is true. You need it about as often as you need `request.event`.
 
 A 2.0 payload carries every value as an array. The flat `query` and `headers` keep the last value where a
 name repeats, matching `ALBRouter` and `APIGatewayRouter`, and the full list lives on
@@ -380,6 +399,26 @@ stripped. A value the handler returns that fails its `responseSchema` answers 50
 is sent unchanged, without that check. [Schema validation](/docs/routing#schema-validation) describes the
 same behaviour on the record routers.
 
+### Binary bodies
+
+A route that takes bytes says so with `BinaryBody`. It types `request.body` as a `Buffer` and answers 422
+when the request's `Content-Type` is one the router reads as text.
+
+```ts
+import { BinaryBody, defineRoute, Ok } from '@lambda-event-router/vpclattice'
+
+export const uploadLabel = defineRoute({
+  filters: { method: 'PUT', path: '/labels/:labelId' },
+  bodySchema: BinaryBody,
+}).handle(async (request) => Ok({ bytes: request.body.length }))
+```
+
+It is a Standard Schema like any other, so an [annotated handler](#annotated-handlers) works the same way.
+Type its body as `Buffer` and a signature that disagrees with the schema fails the compile.
+
+Leave the `bodySchema` off and `body` is `unknown`, which the compiler makes you narrow with
+`Buffer.isBuffer(request.body)` before you can use it.
+
 ## Responses
 
 Return a value and the router works out the status code, serialises the body and sets a JSON content type
@@ -396,6 +435,7 @@ return { statusCode: 200, body: order }       // Also the same 200
 | An object | 200, with a JSON content type |
 | An array | 200, with a JSON content type |
 | A string, a number or `false` | 200 |
+| A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | 200, base64 encoded with an `application/octet-stream` content type |
 | `undefined`, `null`, `''`, `true` or `{}` | 204 |
 
 ### Response helpers
@@ -450,27 +490,27 @@ See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with t
 
 ## Auth
 
-`request.auth` is `undefined` on a 1.0 payload, and on a 2.0 payload it carries at most one field.
+`request.auth` carries at most one field, and both payload versions fill it.
 
 | Field | Type | Comes from |
 | --- | --- | --- |
-| `principalId` | `string` | `requestContext.identity.principal` on a 2.0 payload |
+| `principalId` | `string` | `requestContext.identity.principal` on a 2.0 payload, and the `x-amzn-lattice-identity` header on a 1.0 one |
+
+Lattice names the caller in a different place on each version, and the router reads both, so a handler behind
+either listener gets the same `principalId`. A 1.0 payload has no request context at all, and its header holds
+`Principal=`, `SessionName=` and `Type=` as one semicolon separated string.
 
 `Auth` is shared across the HTTP routers, so it declares `claims`, `scopes` and the rest as optional. None of
 them are ever populated here.
 
-**A 2.0 request with no `identity.principal` gets `auth: undefined`,** so a route that needs a caller identity
-has to handle that rather than assume the field is there. VPC Lattice populates `identity` from the auth policy
-on the service, so an unauthenticated service sends nothing.
+**A request Lattice cannot name gets `auth: undefined`,** so a route that needs a caller identity has to handle
+that rather than assume the field is there. A service with an auth type of `NONE`, or one whose auth policy
+grants anonymous access, sends no principal for an unsigned caller.
 
-The rest of what Lattice sends about the caller is on the event and not on `auth`, so read
+The rest of what Lattice sends about the caller is on the event and not on `auth`. Read
 `request.event.requestContext.identity` for `sourceVpcArn`, `principalOrgID` and the `x509*` fields when a
-client certificate is involved. Narrow the event to a 2.0 payload first, since a 1.0 one has no
-`requestContext` at all.
-
-**This package's VPC Lattice types are hand written and marked as unconfirmed in the source,** including which
-`identity` fields arrive and what the result shape should be. Check a real invocation against them before
-building on any field beyond `principal`.
+client certificate is involved, narrowing the event to a 2.0 payload first. On a 1.0 payload the same detail is
+in the `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers.
 
 ## CORS
 
@@ -556,11 +596,22 @@ two name almost every field differently, which is the reason the router normalis
 | Query | `query_string_parameters`, one string per key | `queryStringParameters`, an array per key |
 | Headers | `headers`, one string per key | `headers`, an array per key |
 | Base64 flag | `is_base64_encoded` | `isBase64Encoded` |
+| Request id | `request_id` | `requestId` |
+| Caller | `x-amzn-lattice-identity` header | `requestContext.identity` |
 | Request context | Absent | `requestContext`, with `serviceArn` and `identity` |
 
 Your handler is given the same [request object](#request-object) either way. A 2.0 payload can carry more
 than one value per query param or header, so reach for `request.multiValueQuery` and
 `request.multiValueHeaders` when a name repeats. See [Request object](#request-object).
+
+**Lattice sends the query string twice, and one of the copies is on the path.** `raw_path` and `path` both
+arrive as `/orders/9?expand=lines`, which no other HTTP event source does. The adapter takes everything from
+the first `?` off before the router matches, so your routes are written against the path alone.
+
+**A 1.0 payload collapses a repeat two different ways in the same event.** A query param sent twice keeps its
+first value and loses the rest, so `?tag=a&tag=b` gives `query.tag` of `'a'` and `multiValueQuery.tag` of
+`['a']`. A header sent twice is joined instead, so two `x-tag` lines give `headers['x-tag']` of `'a,b'` and
+`multiValueHeaders['x-tag']` of `['a,b']`. A 2.0 payload keeps every value in both.
 
 `canHandleEvent` picks 2.0 when `version` is `'2.0'` and 1.0 when the event has a `raw_path` and no
 `requestContext`.
@@ -631,8 +682,9 @@ latticeRouter.put({
 ```
 
 A middleware can also short-circuit by returning a response instead of calling `next`, so an auth check or a
-maintenance window can answer without the handler running. A check like the one above rejects every 1.0 payload,
-because `auth` is always `undefined` there, so put it on the routes that only take 2.0 traffic.
+maintenance window can answer without the handler running. A check like the one above rejects any caller
+Lattice could not name, on either payload version, so it belongs on the routes that need an identity rather
+than on the router.
 
 The bare alias is the right one for router middleware, which runs for every route and so cannot know any one
 route's shape.
@@ -697,7 +749,8 @@ that package. The route definition and request types carry no `VPCLattice` prefi
 `APIGatewayRouter` and `ALBRouter` use the same ones.
 
 The `VPCLatticeRouter` class and the `createVPCLatticeRouter` and `defineRoute` functions come from the same
-place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES` and the three adapters.
+place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES`, `BinaryBody` and the
+three adapters.
 
 `HTTPRouter` is exported too, for [pinning a router to one payload version](#event-versions).
 `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter` go with it for writing an adapter of

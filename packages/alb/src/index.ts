@@ -19,6 +19,7 @@ export type {
 } from '@lambda-event-router/http';
 export {
   BadRequest,
+  BinaryBody,
   Conflict,
   Created,
   defineRoute,

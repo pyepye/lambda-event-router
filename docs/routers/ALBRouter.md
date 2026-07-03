@@ -223,7 +223,9 @@ export async function getOrder(
 | `rawPath` | `string` | The path string the caller asked for |
 | `query` | `TQuery` | Query string params, one value per key. Where a name repeats, this is the last value |
 | `multiValueQuery` | `Record<string, string[] \| undefined>` | Every value for each query param, in the order they arrived |
-| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, and no body at all as `null` |
+| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, a binary body as a `Buffer`, and no body at all as `null` |
+| `rawBody` | `string \| undefined` | The body exactly as the service sent it, still base64 where `isBase64Encoded` is true |
+| `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `Auth` | Always set, and only ever carries `targetGroupArn`. See [Auth](#auth) |
@@ -236,7 +238,25 @@ there when you name them.
 `path` holds the params rather than the path itself. Read `request.rawPath` when you want the string the
 caller asked for.
 
-A base64 encoded body is decoded before it is parsed, so `isBase64Encoded` is handled for you.
+The `Content-Type` header on the request decides the shape of `body`. The router decodes base64 for
+you, so you never check the flag yourself.
+
+| `Content-Type` | What you get in `body` |
+| --- | --- |
+| Anything holding `json`, `xml` or `yaml`, such as `application/json` or `application/vnd.api+json` | The parsed value, or the raw string when it will not parse |
+| `text/*`, `application/x-www-form-urlencoded`, `application/javascript` or `application/graphql` | The string |
+| Anything else, such as `image/png`, `application/gzip` or `application/octet-stream` | A `Buffer` of the bytes that were sent |
+
+A route's body type stays the same however the caller sent it, so a route taking bytes gets a `Buffer`
+whether or not the body arrived base64 encoded. See [binary bodies](#binary-bodies) for typing one.
+
+A request with no `Content-Type` header gives you the string. The one exception is a base64 body holding
+bytes utf-8 cannot carry, which you get as a `Buffer` because a string would lose them.
+
+The router lowercases header names, so you read the header itself back as `request.headers['content-type']`.
+
+`request.rawBody` holds the body exactly as the caller sent it, still base64 when `request.isBase64Encoded`
+is true. You need it about as often as you need `request.event`.
 
 Multi-value headers is a target group attribute. With it on the ALB sends `multiValueHeaders` and
 `multiValueQueryStringParameters` in place of the single-value pair. The router reads both forms, so
@@ -379,6 +399,26 @@ hands `query.page` the number `2` for `?page=2` and `1` when the param is absent
 stripped. A value the handler returns that fails its `responseSchema` answers 500; an explicit HTTP response
 is sent unchanged, without that check.
 
+### Binary bodies
+
+A route that takes bytes says so with `BinaryBody`. It types `request.body` as a `Buffer` and answers 422
+when the request's `Content-Type` is one the router reads as text.
+
+```ts
+import { BinaryBody, defineRoute, Ok } from '@lambda-event-router/alb'
+
+export const uploadLabel = defineRoute({
+  filters: { method: 'PUT', path: '/labels/:labelId' },
+  bodySchema: BinaryBody,
+}).handle(async (request) => Ok({ bytes: request.body.length }))
+```
+
+It is a Standard Schema like any other, so an [annotated handler](#annotated-handlers) works the same way.
+Type its body as `Buffer` and a signature that disagrees with the schema fails the compile.
+
+Leave the `bodySchema` off and `body` is `unknown`, which the compiler makes you narrow with
+`Buffer.isBuffer(request.body)` before you can use it.
+
 ## Responses
 
 Return a value and the router works out the status code, serialises the body and sets a JSON content type
@@ -395,7 +435,12 @@ return { statusCode: 200, body: order }       // Also the same 200
 | An object | 200, with a JSON content type |
 | An array | 200, with a JSON content type |
 | A string, a number or `false` | 200 |
+| A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | 200, base64 encoded with an `application/octet-stream` content type |
 | `undefined`, `null`, `''`, `true` or `{}` | 204 |
+
+**Response headers go back in the form the request arrived in.** A target group with multi-value headers on
+reads only `multiValueHeaders`, so the router sends that form for a request that came in with it and the
+single-value form for one that did not.
 
 ### Response helpers
 
@@ -651,7 +696,7 @@ and request types carry no `ALB` prefix because `APIGatewayRouter` and `VPCLatti
 ones.
 
 The `ALBRouter` class and the `createALBRouter` and `defineRoute` functions come from the same place, along
-with the `Response` class, the response helpers, `HTTP_STATUS_CODES` and `albAdapter`.
+with the `Response` class, the response helpers, `HTTP_STATUS_CODES`, `BinaryBody` and `albAdapter`.
 
 `HTTPRouter`, `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter` are exported for writing
 an adapter of your own and pairing it with a router, and are not something a route needs. An ALB sends

@@ -7,9 +7,9 @@ import {
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
+import { pathWithoutQuery } from './latticeEvent.js';
 import type { VPCLatticeEventBase, VPCLatticeResult } from './vpcLatticeV1Adapter';
 
-// TODO: This needs confirming
 export interface VPCLatticeIdentity {
   sourceVpcArn?: string;
   type?: string;
@@ -23,7 +23,6 @@ export interface VPCLatticeIdentity {
   x509SubjectCn?: string;
 }
 
-// TODO: This needs confirming
 export interface VPCLatticeRequestContextV2 {
   serviceArn: string;
   serviceNetworkArn: string;
@@ -33,7 +32,6 @@ export interface VPCLatticeRequestContextV2 {
   identity?: VPCLatticeIdentity;
 }
 
-// TODO: This needs confirming - Can we use AWS Powertools types here?
 export interface VPCLatticeEventV2 extends VPCLatticeEventBase {
   version: '2.0';
   path: string;
@@ -41,11 +39,11 @@ export interface VPCLatticeEventV2 extends VPCLatticeEventBase {
   queryStringParameters?: Record<string, string[]>;
   isBase64Encoded: boolean;
   requestContext: VPCLatticeRequestContextV2;
+  requestId?: string;
 }
 
 function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
   const { requestContext } = event;
-  // TODO: Deal with auth - what should be included? This is currently a guess and has not been thought about
   if (requestContext.identity?.principal) {
     return { principalId: requestContext.identity?.principal };
   }
@@ -54,7 +52,6 @@ function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
 
 export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResult> = {
   canHandleEvent(event: unknown): event is VPCLatticeEventV2 {
-    // TODO: This needs confirming
     if (!isObject(event)) return false;
     if (typeof event.path !== 'string') return false;
     if (typeof event.method !== 'string') return false;
@@ -75,7 +72,7 @@ export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResul
 
     return {
       method: event.method,
-      path: event.path,
+      path: pathWithoutQuery(event.path),
       headers: headers.flat,
       multiValueHeaders: headers.multiValue,
       query: query.flat,
@@ -91,6 +88,7 @@ export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResul
       statusCode: response.statusCode,
       body: response.body,
       headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
     };
   },
 };

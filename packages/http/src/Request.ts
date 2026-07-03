@@ -2,6 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
 
+import { decodeBody } from './binaryBody.js';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
 import type { ApiRequest, Auth, NormalizedHTTPEvent } from './types.js';
@@ -36,6 +37,14 @@ export class Request {
     return this._body;
   }
 
+  get rawBody(): string | undefined {
+    return this.normalizedEvent.body;
+  }
+
+  get isBase64Encoded(): boolean {
+    return this.normalizedEvent.isBase64Encoded;
+  }
+
   get auth(): Auth | undefined {
     return this.normalizedEvent.auth;
   }
@@ -45,9 +54,9 @@ export class Request {
 
     if (!body) return null;
 
-    const decoded = isBase64Encoded ? Buffer.from(body, 'base64').toString('utf-8') : body;
+    const decoded = decodeBody(body, isBase64Encoded, this.headers['content-type']);
 
-    return safeJsonParse(decoded);
+    return typeof decoded === 'string' ? safeJsonParse(decoded) : decoded;
   }
 
   get queryParams(): Record<string, string | undefined> {
@@ -83,6 +92,8 @@ export class Request {
       multiValueQuery: this.multiValueQueryParams,
       auth: this.auth,
       body,
+      rawBody: this.rawBody,
+      isBase64Encoded: this.isBase64Encoded,
       headers: this.headers,
       multiValueHeaders: this.multiValueHeaders,
       event: this.rawEvent,

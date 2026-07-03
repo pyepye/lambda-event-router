@@ -12,11 +12,15 @@ both are first-class.
 Each router hands your handler one object, typed as `<Source>Request`, and it arrives ready to use:
 
 - JSON bodies and messages are parsed
-- base64 payloads are decoded
+- base64 payloads are decoded, and binary ones reach you as a `Buffer`
 - Message attributes come through as real values, so a number is a number and binary is a `Buffer`
 - HTTP headers are lowercased
 - Schema output is applied, so a `z.coerce.boolean().default(false)` reaches you as a `boolean`
 - The raw `event` or `record` and the Lambda `context` are always there as a fallback
+
+An HTTP body reaches you as a `Buffer` when the request's `Content-Type` is not a text one, so an upload
+arrives as the bytes that were sent. See [binary bodies](/routers/ALBRouter#binary-bodies) for typing a
+route that takes them.
 
 Record based routers call the handler once per record rather than once per batch, so a queue delivering
 ten messages runs your handler ten times and you write code for a single message.

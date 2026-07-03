@@ -108,8 +108,47 @@ suite('vpcLatticeV1Adapter', () => {
       expect(normalized.isBase64Encoded).toBe(true);
     });
 
-    test('auth is always undefined for V1', () => {
+    test('strips the query string VPC Lattice leaves on the path', () => {
+      const event = createVPCLatticeV1Event({ raw_path: '/stock/brk-9?page=2&depot=leeds' });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.path).toBe('/stock/brk-9');
+    });
+
+    test('keeps the path when there is no query string on it', () => {
+      const event = createVPCLatticeV1Event({ raw_path: '/stock/brk-9' });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.path).toBe('/stock/brk-9');
+    });
+
+    test('reads the principal from the identity header', () => {
+      const event = createVPCLatticeV1Event({
+        headers: {
+          'x-amzn-lattice-identity':
+            'Principal=arn:aws:sts::123456789012:assumed-role/Ordering/session; PrincipalOrgID=; SessionName=session; Type=AWS_IAM',
+        },
+      });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.auth).toEqual({ principalId: 'arn:aws:sts::123456789012:assumed-role/Ordering/session' });
+    });
+
+    test('auth is undefined when there is no identity header', () => {
       const event = createVPCLatticeV1Event();
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.auth).toBeUndefined();
+    });
+
+    test('auth is undefined when the identity header names no principal', () => {
+      const event = createVPCLatticeV1Event({
+        headers: { 'x-amzn-lattice-identity': 'Principal=; PrincipalOrgID=; Type=NONE' },
+      });
 
       const normalized = vpcLatticeV1Adapter.normalize(event);
 
@@ -120,7 +159,12 @@ suite('vpcLatticeV1Adapter', () => {
   suite('buildResult', () => {
     test('converts finalized response to VPC Lattice result', () => {
       const event = createVPCLatticeV1Event();
-      const response = { statusCode: 200, body: '{"ok":true}', headers: { 'x-custom': 'value' } };
+      const response = {
+        statusCode: 200,
+        body: '{"ok":true}',
+        headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
+      };
 
       const result = vpcLatticeV1Adapter.buildResult(response, event);
 
@@ -128,7 +172,18 @@ suite('vpcLatticeV1Adapter', () => {
         statusCode: 200,
         body: '{"ok":true}',
         headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
       });
+    });
+
+    test('passes a base64 body through with its flag', () => {
+      const event = createVPCLatticeV1Event();
+      const body = Buffer.from([0x00, 0x01]).toString('base64');
+
+      const result = vpcLatticeV1Adapter.buildResult({ statusCode: 200, body, isBase64Encoded: true }, event);
+
+      expect(result.body).toBe(body);
+      expect(result.isBase64Encoded).toBe(true);
     });
   });
 });

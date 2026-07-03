@@ -264,6 +264,9 @@ SQS takes `bodySchema` and `messageAttributesSchema` while DynamoDB Streams take
 Any [Standard Schema](https://standardschema.dev) library works, so Zod, Valibot and ArkType all fit
 with nothing to adapt.
 
+An HTTP route taking bytes rather than JSON sets its `bodySchema` to `BinaryBody`, which the HTTP
+routers export. See [binary bodies](/routers/ALBRouter#binary-bodies).
+
 ```ts
 sqsRouter.route({
   filters: { eventSourceArn: ORDER_QUEUE_ARN },

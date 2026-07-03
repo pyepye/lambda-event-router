@@ -81,6 +81,14 @@ suite('vpcLatticeV2Adapter', () => {
   });
 
   suite('normalize', () => {
+    test('strips the query string VPC Lattice leaves on the path', () => {
+      const event = createVPCLatticeV2Event({ path: '/stock/brk-9?page=2&depot=leeds&depot=hull' });
+
+      const normalized = vpcLatticeV2Adapter.normalize(event);
+
+      expect(normalized.path).toBe('/stock/brk-9');
+    });
+
     test('extracts method, path, headers, query, body from V2 event', () => {
       const event = createVPCLatticeV2Event({
         method: 'POST',
@@ -178,7 +186,12 @@ suite('vpcLatticeV2Adapter', () => {
   suite('buildResult', () => {
     test('converts finalized response to VPC Lattice result', () => {
       const event = createVPCLatticeV2Event();
-      const response = { statusCode: 200, body: '{"ok":true}', headers: { 'x-custom': 'value' } };
+      const response = {
+        statusCode: 200,
+        body: '{"ok":true}',
+        headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
+      };
 
       const result = vpcLatticeV2Adapter.buildResult(response, event);
 
@@ -186,7 +199,18 @@ suite('vpcLatticeV2Adapter', () => {
         statusCode: 200,
         body: '{"ok":true}',
         headers: { 'x-custom': 'value' },
+        isBase64Encoded: false,
       });
+    });
+
+    test('passes a base64 body through with its flag', () => {
+      const event = createVPCLatticeV2Event();
+      const body = Buffer.from([0x00, 0x01]).toString('base64');
+
+      const result = vpcLatticeV2Adapter.buildResult({ statusCode: 200, body, isBase64Encoded: true }, event);
+
+      expect(result.body).toBe(body);
+      expect(result.isBase64Encoded).toBe(true);
     });
   });
 });

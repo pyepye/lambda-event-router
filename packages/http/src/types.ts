@@ -50,6 +50,7 @@ export interface FinalizedHTTPResponse {
   statusCode: number;
   body: string;
   headers?: Record<string, string>;
+  isBase64Encoded: boolean;
 }
 
 export interface HTTPAdapter<TEvent, TResult> {
@@ -70,6 +71,8 @@ export interface ApiRequest<
   query: TQuery;
   multiValueQuery: Record<string, string[] | undefined>;
   body: TBody;
+  rawBody: string | undefined;
+  isBase64Encoded: boolean;
   auth: Auth | undefined;
   headers: Record<string, string | undefined>;
   multiValueHeaders: Record<string, string[] | undefined>;

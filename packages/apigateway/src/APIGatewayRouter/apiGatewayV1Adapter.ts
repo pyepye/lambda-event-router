@@ -125,6 +125,7 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
       statusCode: response.statusCode,
       body: response.body,
       headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
     };
   },
 };

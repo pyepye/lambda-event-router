@@ -8,6 +8,18 @@ import {
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
+function responseHeaders(
+  headers: Record<string, string> | undefined,
+  event: ALBEvent,
+): Pick<ALBResult, 'headers' | 'multiValueHeaders'> {
+  if (!headers) return {};
+  if (!event.multiValueHeaders) return { headers };
+  // A target group with multi-value headers enabled sends the multi-value form and expects the multi-value form back
+  return {
+    multiValueHeaders: Object.fromEntries(Object.entries(headers).map(([name, value]) => [name, [value]])),
+  };
+}
+
 export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
   canHandleEvent(event: unknown): event is ALBEvent {
     if (!isObject(event)) return false;
@@ -48,11 +60,12 @@ export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
     };
   },
 
-  buildResult(response: FinalizedHTTPResponse): ALBResult {
+  buildResult(response: FinalizedHTTPResponse, event: ALBEvent): ALBResult {
     return {
       statusCode: response.statusCode,
       body: response.body,
-      headers: response.headers,
+      isBase64Encoded: response.isBase64Encoded,
+      ...responseHeaders(response.headers, event),
     };
   },
 };
