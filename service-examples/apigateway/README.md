@@ -71,7 +71,7 @@ failure path each router has. They also cover all three payload formats API Gate
 | Auth from an HTTP API authorizer | `reconcileStock` reads `auth.context.lambda` |
 | Auth from an API key | `getStockLevel` reads `auth.apiKeyId` |
 | Auth from IAM | `getStockAudit` reads `auth.iam` off a SigV4 signed request |
-| Base64 encoded body | `uploadOrderManifest` reads a manifest the router decoded |
+| Base64 encoded body | `uploadOrderManifest` takes a manifest as bytes, typed by a `bodySchema` of `BinaryBody` |
 | `type` filter | `token()` and `request()` split the authorizer's two event types |
 | `method` filter on an authorizer route | PUT and PATCH are routed separately from the read route |
 | `custom` filter on an authorizer route | The read route covers GET and HEAD in one filter |
@@ -196,8 +196,10 @@ The rest of the log is one line per handler:
 - `Order amended on the warehouse floor` is the custom filter winning. `Order amended` is the same
   method and path without the `x-channel` header.
 - `Order line read` proves both path params reach the handler.
-- `Order manifest uploaded` carries `lines` as 3 and `isBase64Encoded` as true. The manifest is three
-  lines of text, so a body the router had not decoded would count as one.
+- `Order manifest uploaded` carries `lines` as 3 and `isBase64Encoded` as true. The content type is
+  one of the API's binary media types, so the router hands the manifest over as a `Buffer`. The
+  manifest is three lines of text, so a body the router had not decoded would count as one. `bytes`
+  is the length of the manifest the caller sent.
 - `Stock levels read` carries the API key's id. The key value is a credential, so the handler logs
   only whether it is there.
 - `Consignment read` carries `depots` and `depotHeaders` both as `['leeds', 'hull']`. Payload format
