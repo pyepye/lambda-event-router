@@ -90,6 +90,11 @@ ownership to `ObjectWriter`. The CDK default turns ACLs off.
 Note: only a browser form post produces `ObjectCreated:Post`. `PutObject` reports `ObjectCreated:Put`
 whatever the payload, so the trigger signs a POST policy and posts a form.
 
+Note: two convenience methods have no route here. `reducedRedundancyLostObject` fires only when S3
+loses an object held in Reduced Redundancy Storage. `intelligentTiering` fires after an object has
+gone unread for at least 30 days under Intelligent-Tiering. Neither can be triggered on demand, so
+the package's unit tests are what cover them.
+
 ## Prerequisites
 
 - AWS account with credentials on the shell
@@ -145,11 +150,14 @@ Five more events land long after the command returns:
 
 - `ObjectRestore:Completed` follows the restore by three to five hours. The trigger asks for a
   Standard retrieval, which is the cheap tier.
-- The two `LifecycleExpiration` events and `LifecycleTransition` follow within 48 hours. S3 runs
-  lifecycle rules once a day, so the wait is up to two of those passes.
+- `LifecycleTransition` and the two `LifecycleExpiration` events follow on the daily lifecycle
+  passes, which run at no fixed hour. The transition rule has an age of zero, so it lands on the
+  first pass. The expiration rules have an age of one day, so they land on the second. That
+  is a little over two days after the write.
 - `ObjectRestore:Delete` follows when the restored copy expires. The trigger asks for one day, and
-  S3 rounds that up to midnight UTC, so it lands up to two days after the restore completes. The
-  `Archive restore finished` line carries the date it chose.
+  S3 rounds the expiry up to a midnight UTC, which the `Archive restore finished` line carries as
+  `lifecycleRestorationExpiryTime`. The notification lands some hours after that timestamp rather
+  than on it.
 
 Leave the stack up and export the log again to see them. The worker's log group keeps seven days.
 
@@ -204,8 +212,10 @@ error field at all. Count the `ERROR` records, which carry `errorType`, `errorMe
 `stackTrace`. Lambda reuses the request id across an asynchronous retry, so counting request ids
 undercounts.
 
-The batch job logs `Handling batch task` nine times, carrying the task id, the job id and the decoded
-key. Eight of those are the eight tasks, and the ninth is the locked enrolment's retry:
+The batch job logs `Handling batch task` at least nine times, carrying the task id, the job id and
+the decoded key. Eight of those are the eight tasks, and the ninth is the locked enrolment's retry.
+S3 Batch retries that task every six minutes until the trigger releases the lock. A slower
+release adds an attempt each time:
 
 - `Enrolment archived` five times. Four are the enrolments that were ready, and the fifth is the
   locked one on its retry. One of the five keys holds a space, so the line proves the router decoded
@@ -258,7 +268,7 @@ noncurrent versions a day later. `archive/cooling/` transitions to Glacier immed
 
 Note: a new bucket sets `TransitionDefaultMinimumObjectSize` to `all_storage_classes_128K`, so a
 lifecycle transition skips any object under 128 KB whatever the storage class. The ledger the trigger
-writes is 200 KB for that reason. Expiration has no such floor.
+writes is 210 KB for that reason. Expiration has no such floor.
 
 ## Iterating
 
