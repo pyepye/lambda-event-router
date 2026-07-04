@@ -27,14 +27,14 @@ const appSyncRouter = createAppSyncRouter({
 })
 ```
 
-`middleware` is the only option, so `createAppSyncRouter()` on its own gives you a router with nothing
-attached to it.
+`createAppSyncRouter()` on its own gives you a router with nothing attached to it.
 
 ### Options
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `middleware` | `AppSyncResolverMiddleware[]` | No | `[]` | Runs for every field this router resolves, before any route middleware. See [Middleware](#middleware) |
+| `batchItemFailures` | `boolean` | No | `false` | Reports a failing entry of a batch on its own instead of failing the whole batch. See [Batched resolvers](#batched-resolvers) |
 
 ## Register routes
 
@@ -310,6 +310,8 @@ A throw lands the same way: the client gets `null` for the field and an entry in
 `errors` array, and the rest of the query still resolves. Where the field is non-null, the `null`
 propagates up to the nearest parent that allows one.
 
+A batched resolver answers differently. See [Batched resolvers](#batched-resolvers).
+
 ## Middleware
 
 Router and route middleware are both typed `AppSyncResolverMiddleware`, and the chain runs once per
@@ -355,6 +357,7 @@ All exported from `@lambda-event-router/appsync`.
 | `AppSyncQueryInput<TArgs>`, `AppSyncMutationInput<TArgs>`, `AppSyncSubscriptionInput<TArgs>` | Aliases of `AppSyncResolverFieldInput<TArgs>`, one per method |
 | `AppSyncResolverMiddleware<TArgs>` | Router and route middleware |
 | `AppSyncRouterOptions` | Options for `createAppSyncRouter` |
+| `AppSyncBatchResult` | One entry of the list a batched resolver returns |
 
 The `AppSyncRouter` class and the `createAppSyncRouter` and `defineRoute` functions come from the same
 place. Most of the type names carry `Resolver`, which is what keeps them apart from the other two
@@ -399,6 +402,56 @@ export async function getOrderLines({ source }: AppSyncResolverRequest): Promise
 
 `info.selectionSetList` is the list of fields the client asked for on this one, which is worth reading
 before a nested resolver goes and fetches all of them.
+
+## Batched resolvers
+
+A nested field resolver runs once per parent object, so a query returning 20 orders invokes it 20
+times. Set `maxBatchSize` above 0 on the resolver and AppSync sends one invocation holding up to that
+many fields.
+
+```ts
+new Resolver(this, 'OrderLinesResolver', {
+  api,
+  dataSource,
+  typeName: 'Order',
+  fieldName: 'lines',
+  maxBatchSize: 10,
+})
+```
+
+The event is then a list of contexts rather than one. The router routes each entry on its own, so
+filters, schemas, middleware and handlers all work as they do for a single field.
+
+AppSync requires the reply to match the request list in size and order, and to carry each value under
+`data`. The router does that wrapping, so a handler still returns the field's value and nothing else.
+
+```ts
+// Two orders in, two results out
+[{ data: [{ id: 'line-1' }] }, { data: [] }]
+```
+
+An entry that throws fails the whole batch by default, and every field in it gets the error. Set
+`batchItemFailures` to report it on its own instead.
+
+```ts
+const appSyncRouter = createAppSyncRouter({ batchItemFailures: true })
+```
+
+The failing entry becomes an error in place, and the rest of the batch resolves as normal. The
+client gets `null` for that one field and an entry in the response's `errors` array.
+
+```ts
+[
+  { data: [{ id: 'line-1' }] },
+  { data: null, errorMessage: 'Order 42 is archived', errorType: 'ArchivedOrderError' },
+]
+```
+
+`errorType` is the thrown error's `name`, so a named error class is what the client sees. A schema
+failure arrives as `SchemaValidationError`, and a field with no route as `Error`.
+
+Note: a non-null field cannot show a per-entry error on its own. The `null` propagates up to the
+nearest parent that allows one, which takes the rest of that parent with it.
 
 ## Pipeline resolvers
 

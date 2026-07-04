@@ -52,9 +52,9 @@ registering twice leaves you with the second handler and nothing warns you. `rou
 router, so a chain compiles and quietly discards everything but its last link.
 
 **When no route is registered, the router throws `No authorizer route registered` and the invocation
-fails.** AppSync reads a failed authorizer invocation as a refusal, so the caller gets an
-`UnauthorizedException` rather than an error. See [nothing matched](/docs/routing#nothing-matched) for
-what the other routers do instead.
+fails.** A failed authorizer answers the caller with 500 and an `AuthorizerFailureException` carrying
+the thrown message, so your error text reaches whoever called the API. See [nothing
+matched](/docs/routing#nothing-matched) for what the other routers do instead.
 
 ## Handler
 
@@ -290,9 +290,10 @@ if (!user) throw Denied()
 thrown `Error` is not one. `isAppSyncAuthorizerResponse` is that check, exported so you can run it
 yourself.
 
-**Anything else thrown fails the invocation, and AppSync reads that as a refusal.** The router rethrows
-it untouched, so Lambda records the error and the caller gets an `UnauthorizedException` all the same.
-A refusal you mean is a `Denied()`, which leaves the error log for the failures you did not expect.
+**Anything else thrown fails the invocation.** The router rethrows it untouched, so Lambda records the
+error and the caller gets 500 with an `AuthorizerFailureException` carrying your message. A `Denied()`
+answers 401 with `UnauthorizedException` and tells the caller nothing, so keep it for a refusal you
+mean and leave the error log for the failures you did not expect.
 
 ## Middleware
 

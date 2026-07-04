@@ -1,10 +1,12 @@
+import type { AppSyncResolverEvent } from 'aws-lambda';
+
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import { createAppSyncResolverEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
-import type { AppSyncResolverRequest } from './types.js';
+import type { AppSyncResolverFilterInput, AppSyncResolverRequest } from './types.js';
 
 type AppSyncNext = (request: AppSyncResolverRequest) => Promise<unknown>;
 
@@ -60,6 +62,20 @@ suite('AppSyncRouter', () => {
 
     test('returns false when fieldName is not a string', () => {
       expect(router.canHandleEvent({ info: { parentTypeName: 'Query', fieldName: 42 } })).toBe(false);
+    });
+
+    test('returns true for a list of resolver events', () => {
+      const events = [createAppSyncResolverEvent(), createAppSyncResolverEvent()];
+      expect(router.canHandleEvent(events)).toBe(true);
+    });
+
+    test('returns false for an empty list', () => {
+      expect(router.canHandleEvent([])).toBe(false);
+    });
+
+    test('returns false when one entry is not a resolver event', () => {
+      const events = [createAppSyncResolverEvent(), { info: { parentTypeName: 'Query' } }];
+      expect(router.canHandleEvent(events)).toBe(false);
     });
   });
 
@@ -828,6 +844,130 @@ suite('AppSyncRouter', () => {
 
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('batched resolvers', () => {
+    function batchEvent(sourceId: string): AppSyncResolverEvent<Record<string, unknown>> {
+      return createAppSyncResolverEvent({
+        info: { parentTypeName: 'Post', fieldName: 'relatedPosts' },
+        source: { id: sourceId },
+      });
+    }
+
+    test('routes every entry and returns the results in order under data', async () => {
+      router.route(
+        defineRoute({ filters: { parentTypeName: 'Post', fieldName: 'relatedPosts' } }).handle(async ({ source }) => [
+          { id: `related-to-${String(source?.id)}` },
+        ]),
+      );
+
+      const results = await router.handleEvent([batchEvent('1'), batchEvent('2')], createMockContext());
+
+      expect(results).toEqual([{ data: [{ id: 'related-to-1' }] }, { data: [{ id: 'related-to-2' }] }]);
+    });
+
+    test('runs middleware once per entry', async () => {
+      const middleware = vi.fn(async (request: AppSyncResolverRequest, next: AppSyncNext) => next(request));
+
+      const router = createAppSyncRouter({ middleware: [middleware] });
+      router.route(defineRoute({ filters: { parentTypeName: 'Post' } }).handle(async () => null));
+
+      await router.handleEvent([batchEvent('1'), batchEvent('2'), batchEvent('3')], createMockContext());
+
+      expect(middleware).toHaveBeenCalledTimes(3);
+    });
+
+    test('sends entries to different routes when a custom filter tells them apart', async () => {
+      router
+        .route(
+          defineRoute({
+            filters: {
+              parentTypeName: 'Post',
+              custom: ({ event }: AppSyncResolverFilterInput) => event.source?.id === '1',
+            },
+          }).handle(async () => 'first'),
+        )
+        .route(defineRoute({ filters: { parentTypeName: 'Post' } }).handle(async () => 'rest'));
+
+      const results = await router.handleEvent([batchEvent('1'), batchEvent('2')], createMockContext());
+
+      expect(results).toEqual([{ data: 'first' }, { data: 'rest' }]);
+    });
+
+    test('fails the whole batch when an entry throws', async () => {
+      router.route(
+        defineRoute({ filters: { parentTypeName: 'Post' } }).handle(async ({ source }) => {
+          if (source?.id === '2') throw new Error('Post 2 is gone');
+          return 'ok';
+        }),
+      );
+
+      await expect(router.handleEvent([batchEvent('1'), batchEvent('2')], createMockContext())).rejects.toThrow(
+        'Post 2 is gone',
+      );
+    });
+
+    test('reports a failing entry on its own when batchItemFailures is on', async () => {
+      const router = createAppSyncRouter({ batchItemFailures: true });
+      router.route(
+        defineRoute({ filters: { parentTypeName: 'Post' } }).handle(async ({ source }) => {
+          if (source?.id === '2') throw new Error('Post 2 is gone');
+          return 'ok';
+        }),
+      );
+
+      const results = await router.handleEvent(
+        [batchEvent('1'), batchEvent('2'), batchEvent('3')],
+        createMockContext(),
+      );
+
+      expect(results).toEqual([
+        { data: 'ok' },
+        { data: null, errorMessage: 'Post 2 is gone', errorType: 'Error' },
+        { data: 'ok' },
+      ]);
+    });
+
+    test('reports an entry that matched no route', async () => {
+      const router = createAppSyncRouter({ batchItemFailures: true });
+      router.route(
+        defineRoute({
+          filters: {
+            parentTypeName: 'Post',
+            custom: ({ event }: AppSyncResolverFilterInput) => event.source?.id === '1',
+          },
+        }).handle(async () => 'ok'),
+      );
+
+      const results = await router.handleEvent([batchEvent('1'), batchEvent('2')], createMockContext());
+
+      expect(results).toEqual([
+        { data: 'ok' },
+        { data: null, errorMessage: 'No route matched for Post.relatedPosts', errorType: 'Error' },
+      ]);
+    });
+
+    test('names the schema in errorType when an entry fails validation', async () => {
+      const argumentsSchema = createMockSchema();
+      validateSchemaSpy.mockImplementationOnce(async (data: unknown) => data);
+      validateSchemaSpy.mockImplementationOnce(async () => {
+        throw new base.SchemaValidationError('Arguments validation failed for Post.relatedPosts', []);
+      });
+
+      const router = createAppSyncRouter({ batchItemFailures: true });
+      router.route(defineRoute({ filters: { parentTypeName: 'Post' }, argumentsSchema }).handle(async () => 'ok'));
+
+      const results = await router.handleEvent([batchEvent('1'), batchEvent('2')], createMockContext());
+
+      expect(results).toEqual([
+        { data: 'ok' },
+        {
+          data: null,
+          errorMessage: 'Arguments validation failed for Post.relatedPosts',
+          errorType: 'SchemaValidationError',
+        },
+      ]);
     });
   });
 });

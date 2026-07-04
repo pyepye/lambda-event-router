@@ -3,9 +3,16 @@ import type { AppSyncResolverEvent, Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
+  AppSyncBatchResult,
   AppSyncMutationInput,
   AppSyncQueryInput,
   AppSyncResolverMiddleware,
@@ -16,6 +23,22 @@ import type {
   AppSyncSubscriptionInput,
   InternalResolverRoute,
 } from './types.js';
+
+type ResolverEvent = AppSyncResolverEvent<Record<string, unknown>>;
+
+// A resolver with `maxBatchSize` above 0 is sent a list of these, one per field AppSync is resolving.
+type ResolverEventInput = ResolverEvent | ResolverEvent[];
+
+function isResolverEvent(event: unknown): event is ResolverEvent {
+  if (!isObject(event)) return false;
+
+  const info = event.info;
+  if (!isObject(info)) return false;
+  if (typeof info.parentTypeName !== 'string') return false;
+  if (typeof info.fieldName !== 'string') return false;
+
+  return true;
+}
 
 export function defineRoute<TArgumentsSchema extends StandardSchemaV1 | undefined = undefined>(
   config: AppSyncResolverRouteInput<TArgumentsSchema>,
@@ -42,25 +65,25 @@ export function defineRoute<TArgumentsSchema extends StandardSchemaV1 | undefine
 
 export interface AppSyncRouterOptions {
   middleware?: AppSyncResolverMiddleware[];
+  batchItemFailures?: boolean;
 }
 
-export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Record<string, unknown>>, unknown> {
+export class AppSyncRouter implements EventTypeRouter<ResolverEventInput, unknown> {
   private routes: InternalResolverRoute[] = [];
   private middleware: AppSyncResolverMiddleware[];
+  private batchItemFailures: boolean;
 
   constructor(options?: AppSyncRouterOptions) {
     this.middleware = options?.middleware ?? [];
+    this.batchItemFailures = options?.batchItemFailures ?? false;
   }
 
-  canHandleEvent(event: unknown): event is AppSyncResolverEvent<Record<string, unknown>> {
-    if (!isObject(event)) return false;
+  canHandleEvent(event: unknown): event is ResolverEventInput {
+    if (Array.isArray(event)) {
+      return event.length > 0 && event.every((item) => isResolverEvent(item));
+    }
 
-    const info = event.info;
-    if (!isObject(info)) return false;
-    if (typeof info.parentTypeName !== 'string') return false;
-    if (typeof info.fieldName !== 'string') return false;
-
-    return true;
+    return isResolverEvent(event);
   }
 
   route<TArgs>(definition: AppSyncResolverRouteDefinition<TArgs>): this {
@@ -113,7 +136,39 @@ export class AppSyncRouter implements EventTypeRouter<AppSyncResolverEvent<Recor
     });
   }
 
-  async handleEvent(event: AppSyncResolverEvent<Record<string, unknown>>, context: Context): Promise<unknown> {
+  async handleEvent(event: ResolverEventInput, context: Context): Promise<unknown> {
+    if (Array.isArray(event)) return this.handleBatch(event, context);
+
+    return this.resolveField(event, context);
+  }
+
+  private async handleBatch(events: ResolverEvent[], context: Context): Promise<AppSyncBatchResult[]> {
+    const settled = await Promise.allSettled(events.map((event) => this.resolveField(event, context)));
+
+    // A batched response has to match the request list in size and order, and each entry has to carry
+    // its value under `data`. AppSync reads nothing else from it.
+    const results: AppSyncBatchResult[] = [];
+    for (const [index, outcome] of settled.entries()) {
+      if (outcome.status === 'fulfilled') {
+        results.push({ data: outcome.value });
+        continue;
+      }
+
+      if (!this.batchItemFailures) throw outcome.reason;
+
+      const error: unknown = outcome.reason;
+      logger.error(`Error processing AppSync batch item ${index}`, { error });
+      results.push({
+        data: null,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorType: error instanceof Error ? error.name : 'Error',
+      });
+    }
+
+    return results;
+  }
+
+  private async resolveField(event: ResolverEvent, context: Context): Promise<unknown> {
     const { parentTypeName, fieldName } = event.info;
 
     const route = await this.matchRoute(parentTypeName, fieldName, event);

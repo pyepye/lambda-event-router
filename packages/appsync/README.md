@@ -169,6 +169,23 @@ defineRoute({
 })
 ```
 
+#### Batched resolvers
+
+A resolver with `maxBatchSize` above 0 is sent a list of contexts rather than one. The router routes
+each entry on its own and wraps the results in the list AppSync expects.
+
+```ts
+const appSyncRouter = createAppSyncRouter({ batchItemFailures: true })
+
+appSyncRouter.route({
+  filters: { parentTypeName: 'Item', fieldName: 'relatedItems' },
+  handler: getRelatedItems,
+})
+```
+
+Handlers still return the field's value. An entry that throws fails the whole batch, unless
+`batchItemFailures` is set, which reports it on its own and lets the rest resolve.
+
 ### AppSyncAuthorizerRouter
 
 #### Inline handlers

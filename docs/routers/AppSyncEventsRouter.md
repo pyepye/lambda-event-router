@@ -275,6 +275,15 @@ export async function onOrderPublish({ events }: AppSyncEventsRequest): Promise<
 | `{ error }` at the top level | Fails the whole publish |
 | A throw | Fails the whole publish |
 
+The publisher is told what the API accepted, not what you broadcast. Dropping a batch still answers
+`successful` for every event sent, and only the Lambda log shows it went nowhere.
+
+An `{ id, error }` entry does reach the publisher. It lands in `failed` under `message`, in your own
+words, with a `code` of `CustomError`.
+
+A throw does not. The publisher gets 502 and a `DependencyFailedException` reading `Unable to process
+request`, so what you threw with reaches the log and nothing else.
+
 **A `SUBSCRIBE` handler decides whether the client may listen.** Returning allows the subscription and
 throwing refuses it, and `events` is empty either way since nothing has been published yet.
 

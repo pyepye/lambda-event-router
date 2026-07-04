@@ -6,6 +6,12 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 
 // ─── Resolver Types ──────────────────────────────────────────────────────────
 
+export interface AppSyncBatchResult {
+  data: unknown;
+  errorMessage?: string;
+  errorType?: string;
+}
+
 export interface AppSyncResolverRequest<TArgs = Record<string, unknown>> {
   arguments: TArgs;
   identity: AppSyncIdentity;

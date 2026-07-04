@@ -1,6 +1,7 @@
 export type { AppSyncRouterOptions } from './AppSyncRouter.js';
 export { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
 export type {
+  AppSyncBatchResult,
   AppSyncMutationInput,
   AppSyncQueryInput,
   AppSyncResolverFieldFilters,

@@ -1,0 +1,36 @@
+type Comment {
+  id: ID!
+  author: String!
+  body: String!
+}
+
+type Ticket {
+  id: ID!
+  subject: String!
+  priority: String!
+  status: String!
+  internalNote: String
+  comments: [Comment!]
+}
+
+type Query {
+  getTicket(id: ID!): Ticket
+  listTickets(status: String): [Ticket!]!
+  listQueues: [String!]!
+}
+
+type Mutation {
+  createTicket(subject: String!, priority: String!): Ticket!
+  escalateTicket(id: ID!): Ticket!
+  closeTicket(id: ID!): Ticket!
+}
+
+type Subscription {
+  onTicketCreated: Ticket @aws_subscribe(mutations: ["createTicket"])
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}
