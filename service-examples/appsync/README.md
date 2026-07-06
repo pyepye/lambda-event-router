@@ -1,8 +1,8 @@
 # Service example: AppSync
 
-A deployable CDK app that exercises all three AppSync routers end to end. It models a support desk.
-A GraphQL API serves tickets, an Event API carries live activity, and a Lambda authorizer guards the
-GraphQL API.
+A deployable CDK app that exercises all four AppSync routers end to end. It models a support desk.
+A GraphQL API serves tickets, an Event API carries live activity, and one Lambda authorizer guards
+both.
 
 ```
 SupportApi (GraphQL, Lambda authorization)
@@ -22,14 +22,22 @@ ActivityApi (Event API, API key)
 ├── trackPresence          (channelNamespace filter: presence, both operations)
 └── archiveAuditEntry      (channelNamespace filter: audit, publish only)
 
-AuthorizerFn
-└── authoriseSupportToken  (one route, no filters)
+AuthorizerFn, GraphQL
+├── authoriseAdminOperation  (operationName filter: AdminAudit, custom filter: an agent token)
+└── authoriseSupportToken    (every other caller)
+
+AuthorizerFn, Event API
+├── admitActivityConnection  (custom filter: the token is known)
+├── refuseUnknownConnection  (every other connect)
+├── authoriseTicketActivity  (publish on /ticket/*)
+├── admitPresenceWatcher     (subscribe on /presence/*)
+└── refuseAuditAccess        (channelNamespace filter: audit)
 ```
 
 ## What it covers
 
 One `trigger` run makes GraphQL calls, opens subscriptions and sends publishes. Together they hit
-every filter the three routers offer, both kinds of failure, and every authorizer response.
+every filter the four routers offer, both kinds of failure, and every authorizer response.
 
 | Feature | Where |
 | --- | --- |
@@ -56,14 +64,25 @@ every filter the three routers offer, both kinds of failure, and every authorize
 | Per-event failure | `recordTicketActivity` rejects an event with no body and broadcasts the rest |
 | No route matched on the Event API | The audit namespace has a subscribe handler and no subscribe route |
 | Handler failure on the Event API | `archiveAuditEntry` throws on an entry that names no actor |
+| `operationName` filter | `authoriseAdminOperation` matches the named admin operation and nothing else |
+| `custom` filter on an authorizer | The same route also requires an agent token, so a customer falls through |
 | `Authorized` | The agent and customer tokens, the second one carrying `deniedFields` |
 | `Denied` | The revoked token is denied by the handler |
 | A thrown response | The expired token is denied by middleware, which throws the response |
 | Authorizer failure | The broken token throws a real error, so the call answers 500 |
-| `canHandleEvent` | Each router is handed the other two event shapes and turns them away |
+| Event API `connect`, `publish` and `subscribe` | The three operations the Event API authorises, each on its own route |
+| `custom` filter on an Event API authorizer | `admitActivityConnection` matches a known token, and the next route takes the rest |
+| `channelNamespace` filter on an Event API authorizer | `refuseAuditAccess` turns away every operation on the audit namespace |
+| `EventsAuthorized` with `handlerContext` | The agent's role reaches the publish handler as `identity.handlerContext` |
+| `EventsDenied` | A customer publishing to a ticket channel, and anything on the audit namespace |
+| No route matched on an Event API authorizer | Nothing authorises a subscribe to a ticket channel |
+| `canHandleEvent` | Each router is handed the other three event shapes and turns them away |
 
 AppSync copies the authorizer's `resolverContext` onto `identity` for every resolver the request
 reaches. It takes string values only, so the role the custom filter reads is a plain string.
+
+The authorizer's `operationName` comes from the request body rather than the query text. The trigger
+sends it alongside `query`, because naming the operation in the query alone leaves the field off.
 
 The publish API takes each event as a JSON string. AppSync parses it before the worker sees it. The
 handler is given an object under `payload`, alongside an id AppSync minted.
@@ -113,8 +132,11 @@ The GraphQL API takes Lambda authorization and nothing else, so every call reach
 Its cache TTL is zero, and every response sets `ttlOverride` to zero as well. A second run of the
 trigger is authorised again rather than served from the cache.
 
-The Event API takes an API key. Its three namespaces send both operations straight to the worker.
-That is what puts a subscribe in front of the router.
+The Event API takes the same authorizer alongside its API key. A request carrying `x-api-key` skips
+the authorizer, and one carrying `Authorization` reaches it. Both are exercised.
+
+The Event API's three namespaces send both operations straight to the worker. That is what puts a
+subscribe in front of the router.
 
 The `Ticket.comments` resolver sets `maxBatchSize` to 5. The comments for a page of tickets then
 reach the worker in one invocation. The field is nullable, because a non-null field would carry a
@@ -164,6 +186,10 @@ so the names change if you deploy with a different `stackName`.
 API is asked about. The GraphQL subscription adds two of its own, because AppSync authorises the
 WebSocket connection and the subscription separately.
 
+`Admin operation authorised` is the filtered route. It runs only for a caller who names the admin
+operation and holds an agent token. A customer naming the same operation falls past it to the route
+below.
+
 The authorizer log then splits four ways:
 
 - `Token accepted` is the agent and customer tokens. Its `role` field is what the resolver custom
@@ -176,6 +202,24 @@ The authorizer log then splits four ways:
 
 The two denials answer 401 with `UnauthorizedException`, and only these log lines tell them apart. A
 failed authorizer answers 500 with `AuthorizerFailureException` and the error's own message.
+
+`Authorising channel request` is the Event API authorizer's router middleware. It has an `operation`
+of `EVENT_CONNECT`, `EVENT_PUBLISH` or `EVENT_SUBSCRIBE`, and a `channelPath` on all but the connect.
+
+The Event API authorizer lines say which route ran:
+
+- `Activity connection admitted` is a connect whose token the custom filter recognised.
+- `Activity connection refused` is a connect from the revoked token, which the next route took.
+- `Ticket publish authorised` is the agent. Its `handlerContext` comes back as `role` on the worker's
+  `Handling events request` line, which is the Event API's answer to `resolverContext`.
+- `Ticket publish refused` is the customer, who may read tickets and not write to them.
+- `Presence watcher authorised` is the only subscribe with a route.
+- `Audit access refused` is the namespace filter, which turns away every operation on the trail.
+- `No authorizer route matched for EVENT_SUBSCRIBE on channel /ticket/*` is the gap. Nothing
+  authorises a ticket subscribe, so the router throws and the client gets an error.
+
+Note: none of the Event API authorizer lines appear for a request carrying `x-api-key`. The API key
+is checked by AppSync and never reaches the function.
 
 `Handling resolver request` is the resolver router middleware, and there is one for every field
 that reached a route. Its `field` field names the route that matched, and `selectionSet` lists the
@@ -244,17 +288,17 @@ The first ticket publish is the one to read for what a healthy batch looks like.
 one invocation, they all come back, and the publish answers with an empty `failed` list.
 
 A per-event error reads differently. It lands in `failed` under `message`, in the handler's own
-words, alongside the event's `index` in the batch and a `code` of `CustomError`.
+words, alongside the event's `index` and a `code` of `CustomError`.
 
 ## APIs and routes
 
 | API | Auth | Routes |
 | --- | --- | --- |
 | `SupportApi` | Lambda authorizer | `getTicketForAgent`, `getTicketForCustomer`, `listWorkItems`, `createTicket`, `escalateTicket`, `resolveTicketComments`, `watchTicketCreated` |
-| `ActivityApi` | API key | `holdTypingNotice`, `recordTicketActivity`, `admitTicketWatcher`, `trackPresence`, `archiveAuditEntry` |
+| `ActivityApi` | API key or the same authorizer | `holdTypingNotice`, `recordTicketActivity`, `admitTicketWatcher`, `trackPresence`, `archiveAuditEntry` |
 
-The worker serves both APIs from one function. `LambdaRouter` picks the router by event shape, and
-the authorizer runs in a function of its own.
+The worker serves both APIs from one function, and the authorizer serves both from another. Each
+function holds two routers, and `LambdaRouter` picks between them by event shape.
 
 The Event API has three namespaces. `ticket` and `presence` have routes for both operations, and
 `audit` has a publish route only.

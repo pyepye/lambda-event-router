@@ -49,6 +49,7 @@ export default defineConfig({
             { text: 'ActiveMQRouter', link: '/routers/ActiveMQRouter' },
             { text: 'ALBRouter', link: '/routers/ALBRouter' },
             { text: 'AppSyncAuthorizerRouter', link: '/routers/AppSyncAuthorizerRouter' },
+            { text: 'AppSyncEventsAuthorizerRouter', link: '/routers/AppSyncEventsAuthorizerRouter' },
             { text: 'AppSyncEventsRouter', link: '/routers/AppSyncEventsRouter' },
             { text: 'AppSyncRouter', link: '/routers/AppSyncRouter' },
             { text: 'CloudWatchLogsRouter', link: '/routers/CloudWatchLogsRouter' },

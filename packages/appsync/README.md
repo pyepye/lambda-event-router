@@ -4,7 +4,7 @@ AppSync routing for resolvers, authorizers and Event API handlers.
 
 **Supported AWS Services:** `AWS AppSync`
 
-**Available Routers:** `AppSyncRouter` | `AppSyncAuthorizerRouter` | `AppSyncEventsRouter`
+**Available Routers:** `AppSyncRouter` | `AppSyncAuthorizerRouter` | `AppSyncEventsRouter` | `AppSyncEventsAuthorizerRouter`
 
 (See [Routers](#routers) for more details)
 
@@ -83,6 +83,7 @@ export async function getItem({ arguments: args }: AppSyncResolverRequest) {
 | AppSync | Resolver | `AppSyncRouter` | [AppSyncRouter](#appsyncrouter) |
 | AppSync | Authorizer | `AppSyncAuthorizerRouter` | [AppSyncAuthorizerRouter](#appsyncauthorizerrouter) |
 | AppSync | Events | `AppSyncEventsRouter` | [AppSyncEventsRouter](#appsynceventsrouter) |
+| AppSync | Events authorizer | `AppSyncEventsAuthorizerRouter` | [AppSyncEventsAuthorizerRouter](#appsynceventsauthorizerrouter) |
 
 
 ## Usage
@@ -203,6 +204,17 @@ authRouter.route(
 )
 ```
 
+Routes match in registration order and the first match wins. A route with no filters takes
+everything, which is the common shape for an API with one authorizer. Filter on `apiId` when one
+function guards several APIs, on `operationName` to give a named operation its own decision, or with
+`custom`.
+
+```ts
+authRouter
+  .route(defineAuthorizerRoute({ filters: { operationName: 'AdminAudit' } }).handle(authoriseAdminAudit))
+  .route(defineAuthorizerRoute().handle(authoriseEveryoneElse))
+```
+
 #### Separate handlers
 
 ```ts
@@ -270,6 +282,36 @@ eventsRouter
   .publish({ channelPath: '/default/*', handler: handlePublish })
   .subscribe({ channelPath: '/default/*', handler: handleSubscribe })
 ```
+
+### AppSyncEventsAuthorizerRouter
+
+An Event API sends its authorizer a different event from a GraphQL API, so it has a router of its
+own. One function can hold both.
+
+```ts
+import {
+  createAppSyncEventsAuthorizerRouter,
+  EventsAuthorized,
+  EventsDenied,
+} from '@lambda-event-router/appsync'
+
+const eventsAuthorizerRouter = createAppSyncEventsAuthorizerRouter()
+
+eventsAuthorizerRouter
+  .connect({ handler: admitConnection })
+  .publish({ channelPath: '/orders/*', handler: authoriseOrderPublish })
+  .subscribe({ channelPath: '/orders/*', handler: authoriseOrderSubscribe })
+
+async function authoriseOrderPublish({ authorizationToken }: AppSyncEventsAuthorizerRequest) {
+  const team = await teams.fromToken(authorizationToken)
+  if (!team) return EventsDenied()
+
+  return EventsAuthorized({ handlerContext: { teamId: team.id } })
+}
+```
+
+An Event API reads `handlerContext` and never `resolverContext`, and there is no `deniedFields`. A
+connect names no channel, so a channel filter cannot match one.
 
 ## Examples
 

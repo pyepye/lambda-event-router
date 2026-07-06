@@ -929,6 +929,19 @@ suite('AppSyncRouter', () => {
       ]);
     });
 
+    test('names a thrown non-error as Error', async () => {
+      const router = createAppSyncRouter({ batchItemFailures: true });
+      router.route(
+        defineRoute({ filters: { parentTypeName: 'Post' } }).handle(async () => {
+          throw 'the shelf fell over';
+        }),
+      );
+
+      const results = await router.handleEvent([batchEvent('1')], createMockContext());
+
+      expect(results).toEqual([{ data: null, errorMessage: 'the shelf fell over', errorType: 'Error' }]);
+    });
+
     test('reports an entry that matched no route', async () => {
       const router = createAppSyncRouter({ batchItemFailures: true });
       router.route(

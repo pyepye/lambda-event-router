@@ -50,6 +50,10 @@ export {
 } from './apiGatewayV2.js';
 export type {
   AppSyncAuthorizerHandlerEvent,
+  AppSyncEventsAuthorizerEvent,
+  AppSyncEventsAuthorizerEventOverrides,
+  AppSyncEventsAuthorizerHandlerEvent,
+  AppSyncEventsAuthorizerOperation,
   AppSyncEventsEvent,
   AppSyncEventsEventOverrides,
   AppSyncEventsHandlerEvent,
@@ -58,12 +62,15 @@ export type {
   AppSyncResolverEventOverrides,
   AppSyncResolverHandlerEvent,
   CreateAppSyncAuthorizerHandlerEventOptions,
+  CreateAppSyncEventsAuthorizerHandlerEventOptions,
   CreateAppSyncEventsHandlerEventOptions,
   CreateAppSyncResolverHandlerEventOptions,
 } from './appSync.js';
 export {
   createAppSyncAuthorizerEvent,
   createAppSyncAuthorizerHandlerEvent,
+  createAppSyncEventsAuthorizerEvent,
+  createAppSyncEventsAuthorizerHandlerEvent,
   createAppSyncEventsEvent,
   createAppSyncEventsHandlerEvent,
   createAppSyncResolverEvent,

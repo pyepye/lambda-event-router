@@ -5,6 +5,7 @@ import {
   createAppSyncAuthorizerRouter,
   defineAuthorizerRoute,
 } from './AppSyncAuthorizerRouter.js';
+import { Authorized, Denied } from './response.js';
 import type { AppSyncAuthorizerRequest, AppSyncAuthorizerResponse } from './types.js';
 
 type AuthorizerNext = (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>;
@@ -137,10 +138,19 @@ suite('AppSyncAuthorizerRouter', () => {
 
   suite('handleEvent', () => {
     test('throws when no route is registered', async () => {
-      const event = createAppSyncAuthorizerEvent();
-      const context = createMockContext();
+      const event = createAppSyncAuthorizerEvent({ requestContext: { apiId: 'test-api-id' } });
 
-      await expect(router.handleEvent(event, context)).rejects.toThrow('No authorizer route registered');
+      await expect(router.handleEvent(event, createMockContext())).rejects.toThrow(
+        'No authorizer route matched for GetUser on test-api-id',
+      );
+    });
+
+    test('names only the api when the caller does not name its operation', async () => {
+      const event = createAppSyncAuthorizerEvent({ requestContext: { operationName: undefined } });
+
+      await expect(router.handleEvent(event, createMockContext())).rejects.toThrow(
+        'No authorizer route matched for test-api-id',
+      );
     });
 
     test('returns the response when handler throws an AppSyncAuthorizerResponse', async () => {
@@ -358,6 +368,81 @@ suite('AppSyncAuthorizerRouter', () => {
       await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+  });
+
+  suite('filters', () => {
+    test('matches on the api id', async () => {
+      const other = vi.fn();
+      router
+        .route(defineAuthorizerRoute({ filters: { apiId: 'other-api' } }).handle(other))
+        .route(defineAuthorizerRoute({ filters: { apiId: 'test-api-id' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+      expect(other).not.toHaveBeenCalled();
+    });
+
+    test('matches an api id by wildcard', async () => {
+      router.route(defineAuthorizerRoute({ filters: { apiId: 'test-*' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+    });
+
+    test('matches on the operation name', async () => {
+      const other = vi.fn();
+      router
+        .route(defineAuthorizerRoute({ filters: { operationName: 'AdminAudit' } }).handle(other))
+        .route(defineAuthorizerRoute({ filters: { operationName: 'GetUser' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+      expect(other).not.toHaveBeenCalled();
+    });
+
+    test('skips an operation name filter when the caller names no operation', async () => {
+      const named = vi.fn();
+      router
+        .route(defineAuthorizerRoute({ filters: { operationName: 'GetUser' } }).handle(named))
+        .route(defineAuthorizerRoute().handle(async () => Authorized()));
+
+      const event = createAppSyncAuthorizerEvent({ requestContext: { operationName: undefined } });
+
+      await expect(router.handleEvent(event, createMockContext())).resolves.toEqual({ isAuthorized: true });
+      expect(named).not.toHaveBeenCalled();
+    });
+
+    test('asks the custom filter with the api and the operation', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(defineAuthorizerRoute({ filters: { custom } }).handle(async () => Authorized()));
+
+      await router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext());
+
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ apiId: 'test-api-id', operationName: 'GetUser' }));
+    });
+
+    test('skips a route whose custom filter says no', async () => {
+      router
+        .route(defineAuthorizerRoute({ filters: { custom: () => false } }).handle(async () => Denied()))
+        .route(defineAuthorizerRoute({ filters: { custom: async () => true } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+    });
+
+    test('keeps every registered route rather than replacing the last', async () => {
+      router
+        .route(defineAuthorizerRoute({ filters: { apiId: 'first-api' } }).handle(async () => Denied()))
+        .route(defineAuthorizerRoute({ filters: { apiId: 'test-api-id' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
     });
   });
 });

@@ -179,6 +179,64 @@ export function createAppSyncEventsHandlerEvent(
   return { event, context };
 }
 
+// ─── Events Authorizer Event ─────────────────────────────────────────────────
+
+export type AppSyncEventsAuthorizerOperation = 'EVENT_CONNECT' | 'EVENT_PUBLISH' | 'EVENT_SUBSCRIBE';
+
+export interface AppSyncEventsAuthorizerEvent {
+  authorizationToken: string;
+  requestContext: {
+    apiId: string;
+    accountId: string;
+    requestId: string;
+    operation: AppSyncEventsAuthorizerOperation;
+    channelNamespaceName?: string;
+    channel?: string;
+  };
+  requestHeaders: Record<string, string | undefined>;
+}
+
+export type AppSyncEventsAuthorizerEventOverrides = DeepPartial<AppSyncEventsAuthorizerEvent>;
+
+export interface AppSyncEventsAuthorizerHandlerEvent {
+  event: AppSyncEventsAuthorizerEvent;
+  context: Context;
+}
+
+export interface CreateAppSyncEventsAuthorizerHandlerEventOptions {
+  event?: AppSyncEventsAuthorizerEventOverrides;
+  context?: Partial<Context>;
+}
+
+// A delivered EVENT_CONNECT leaves `channel` and `channelNamespaceName` off the request context
+// rather than sending them as null, so the connect default omits them too.
+export function createAppSyncEventsAuthorizerEvent(
+  overrides: AppSyncEventsAuthorizerEventOverrides = {},
+): AppSyncEventsAuthorizerEvent {
+  const defaults: AppSyncEventsAuthorizerEvent = {
+    authorizationToken: 'test-token',
+    requestHeaders: {},
+    requestContext: {
+      apiId: 'test-api-id',
+      accountId: '123456789012',
+      requestId: crypto.randomUUID(),
+      operation: 'EVENT_PUBLISH',
+      channelNamespaceName: 'default',
+      channel: '/default/channel',
+    },
+  };
+
+  return deepMerge(defaults, overrides);
+}
+
+export function createAppSyncEventsAuthorizerHandlerEvent(
+  options: CreateAppSyncEventsAuthorizerHandlerEventOptions = {},
+): AppSyncEventsAuthorizerHandlerEvent {
+  const event = createAppSyncEventsAuthorizerEvent(options.event);
+  const context = createMockContext(options.context);
+  return { event, context };
+}
+
 export interface AppSyncFixtures {
   appSyncResolverEvent: (overrides?: AppSyncResolverEventOverrides) => AppSyncResolverEvent<Record<string, unknown>>;
   appSyncResolverHandlerEvent: (options?: CreateAppSyncResolverHandlerEventOptions) => AppSyncResolverHandlerEvent;
@@ -188,6 +246,10 @@ export interface AppSyncFixtures {
   ) => AppSyncAuthorizerHandlerEvent;
   appSyncEventsEvent: (overrides?: AppSyncEventsEventOverrides) => AppSyncEventsEvent;
   appSyncEventsHandlerEvent: (options?: CreateAppSyncEventsHandlerEventOptions) => AppSyncEventsHandlerEvent;
+  appSyncEventsAuthorizerEvent: (overrides?: AppSyncEventsAuthorizerEventOverrides) => AppSyncEventsAuthorizerEvent;
+  appSyncEventsAuthorizerHandlerEvent: (
+    options?: CreateAppSyncEventsAuthorizerHandlerEventOptions,
+  ) => AppSyncEventsAuthorizerHandlerEvent;
 }
 
 export const appSyncFixtures: FixtureMap<AppSyncFixtures> = {
@@ -197,4 +259,6 @@ export const appSyncFixtures: FixtureMap<AppSyncFixtures> = {
   appSyncAuthorizerHandlerEvent: fixture(createAppSyncAuthorizerHandlerEvent),
   appSyncEventsEvent: fixture(createAppSyncEventsEvent),
   appSyncEventsHandlerEvent: fixture(createAppSyncEventsHandlerEvent),
+  appSyncEventsAuthorizerEvent: fixture(createAppSyncEventsAuthorizerEvent),
+  appSyncEventsAuthorizerHandlerEvent: fixture(createAppSyncEventsAuthorizerHandlerEvent),
 };

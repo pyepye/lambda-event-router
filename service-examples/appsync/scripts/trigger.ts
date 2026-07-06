@@ -4,6 +4,7 @@ import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-clo
 import WebSocket from 'ws';
 import { eventsSteps } from '../src/requests/steps.js';
 import {
+  ADMIN_OPERATION,
   AGENT_TOKEN,
   AUDIT_CHANNEL,
   AUDIT_CHANNEL_PATTERN,
@@ -88,11 +89,19 @@ function assertBody(step: string, status: number, body: string, expected: Expect
 // GraphQL over HTTPS
 // =============================================================================
 
-async function callGraphql(step: string, token: string, query: string, expected: Expected): Promise<void> {
+// The authorizer reads `operationName` from the request body. Naming the operation in the query text
+// alone leaves the field off the authorizer event.
+async function callGraphql(
+  step: string,
+  token: string,
+  query: string,
+  expected: Expected,
+  operationName?: string,
+): Promise<void> {
   const response = await fetch(supportApiUrl, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: token },
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, ...(operationName && { operationName }) }),
   });
 
   assertBody(step, response.status, await response.text(), expected);
@@ -138,6 +147,23 @@ await callGraphql('customer is denied the queues field', CUSTOMER_TOKEN, '{ list
   status: 200,
   bodyIncludes: ['Not Authorized to access listQueues on type Query'],
 });
+
+// Naming the operation is what puts these two on different authorizer routes.
+await callGraphql(
+  'agent runs the admin audit',
+  AGENT_TOKEN,
+  `query ${ADMIN_OPERATION} { listQueues }`,
+  { status: 200, bodyIncludes: ['"front-desk"'] },
+  ADMIN_OPERATION,
+);
+
+await callGraphql(
+  'customer naming the admin audit falls through to the ordinary grant',
+  CUSTOMER_TOKEN,
+  `query ${ADMIN_OPERATION} { listQueues }`,
+  { status: 200, bodyIncludes: ['Not Authorized to access listQueues on type Query'] },
+  ADMIN_OPERATION,
+);
 
 await callGraphql(
   'agent creates a ticket',
@@ -292,12 +318,15 @@ const activityAuth = { host: activityHttpDns, 'x-api-key': activityApiKey };
 const activityProtocols = ['aws-appsync-event-ws', `header-${base64Url(JSON.stringify(activityAuth))}`];
 const activityRealtimeUrl = `wss://${activityRealtimeDns}/event/realtime`;
 
-function subscribeToChannel(channel: string): Promise<SocketOutcome> {
+function subscribeToChannel(channel: string, token?: string): Promise<SocketOutcome> {
+  const auth = token ? { host: activityHttpDns, Authorization: token } : activityAuth;
+  const protocols = token ? ['aws-appsync-event-ws', `header-${base64Url(JSON.stringify(auth))}`] : activityProtocols;
+
   return socketExchange(
     activityRealtimeUrl,
-    activityProtocols,
-    { type: 'subscribe', id: randomUUID(), channel, authorization: activityAuth },
-    ['subscribe_success', 'subscribe_error'],
+    protocols,
+    { type: 'subscribe', id: randomUUID(), channel, authorization: auth },
+    ['subscribe_success', 'subscribe_error', 'connection_error'],
   );
 }
 
@@ -328,10 +357,13 @@ async function publish(
   channel: string,
   payloads: Record<string, unknown>[],
   expected: Expected,
+  token?: string,
 ): Promise<void> {
+  const auth = token ? { authorization: token } : { 'x-api-key': activityApiKey };
+
   const response = await fetch(`https://${activityHttpDns}/event`, {
     method: 'POST',
-    headers: { 'content-type': 'application/json', 'x-api-key': activityApiKey },
+    headers: { 'content-type': 'application/json', ...auth },
     body: JSON.stringify({ channel, events: payloads.map((payload) => JSON.stringify(payload)) }),
   });
 
@@ -379,6 +411,49 @@ await publish(
     status: 502,
     bodyIncludes: ['DependencyFailedException'],
   },
+);
+
+// =============================================================================
+// Event API through the authorizer
+// =============================================================================
+
+await publish(
+  'agent publishes ticket activity with a token',
+  TICKET_CHANNEL,
+  payloadsFor('ticket activity is recorded'),
+  { status: 200, bodyIncludes: ['"failed":[]'] },
+  AGENT_TOKEN,
+);
+
+await publish(
+  'customer may not publish ticket activity',
+  TICKET_CHANNEL,
+  payloadsFor('ticket activity is recorded'),
+  { status: 401, bodyIncludes: ['UnauthorizedException'] },
+  CUSTOMER_TOKEN,
+);
+
+await publish(
+  'the audit namespace refuses a publish',
+  AUDIT_CHANNEL,
+  payloadsFor('audit entry is archived'),
+  { status: 401, bodyIncludes: ['UnauthorizedException'] },
+  AGENT_TOKEN,
+);
+
+await assertSocket('agent watches presence with a token', subscribeToChannel(PRESENCE_CHANNEL_PATTERN, AGENT_TOKEN), {
+  type: 'subscribe_success',
+});
+
+await assertSocket('an unknown token may not connect', subscribeToChannel(PRESENCE_CHANNEL_PATTERN, REVOKED_TOKEN), {
+  type: 'connection_error',
+  bodyIncludes: ['UnauthorizedException'],
+});
+
+await assertSocket(
+  'a ticket subscribe matches no authorizer route',
+  subscribeToChannel(TICKET_CHANNEL_PATTERN, AGENT_TOKEN),
+  { type: 'subscribe_error' },
 );
 
 console.log(failures.length === 0 ? '\nEvery step matched.' : `\n${failures.length} step(s) failed.`);

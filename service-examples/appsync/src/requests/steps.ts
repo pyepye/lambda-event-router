@@ -1,4 +1,5 @@
 import {
+  ADMIN_OPERATION,
   AGENT_TOKEN,
   AUDIT_CHANNEL,
   AUDIT_CHANNEL_PATTERN,
@@ -53,6 +54,15 @@ export interface EventsStep {
 export interface AuthorizerStep {
   name: string;
   token: string;
+  operationName?: string;
+  expected: Expected;
+}
+
+export interface EventsAuthorizerStep {
+  name: string;
+  token: string;
+  operation: 'EVENT_CONNECT' | 'EVENT_PUBLISH' | 'EVENT_SUBSCRIBE';
+  channel?: string;
   expected: Expected;
 }
 
@@ -248,6 +258,57 @@ export const eventsSteps: EventsStep[] = [
   },
 ];
 
+// The Event API reads `handlerContext`, and never `resolverContext` or `deniedFields`.
+export const eventsAuthorizerSteps: EventsAuthorizerStep[] = [
+  {
+    name: 'a known token connects',
+    token: AGENT_TOKEN,
+    operation: 'EVENT_CONNECT',
+    expected: { resultIs: '{"isAuthorized":true,"ttlOverride":0}' },
+  },
+  {
+    name: 'an unknown token may not connect',
+    token: REVOKED_TOKEN,
+    operation: 'EVENT_CONNECT',
+    expected: { resultIs: '{"isAuthorized":false,"ttlOverride":0}' },
+  },
+  {
+    name: 'an agent may publish ticket activity',
+    token: AGENT_TOKEN,
+    operation: 'EVENT_PUBLISH',
+    channel: TICKET_CHANNEL,
+    expected: { resultIncludes: ['"handlerContext":{"role":"agent","actorId":"ag-7"}'] },
+  },
+  {
+    name: 'a customer may not publish ticket activity',
+    token: CUSTOMER_TOKEN,
+    operation: 'EVENT_PUBLISH',
+    channel: TICKET_CHANNEL,
+    expected: { resultIs: '{"isAuthorized":false,"ttlOverride":0}' },
+  },
+  {
+    name: 'presence may be watched',
+    token: AGENT_TOKEN,
+    operation: 'EVENT_SUBSCRIBE',
+    channel: PRESENCE_CHANNEL_PATTERN,
+    expected: { resultIs: '{"isAuthorized":true,"ttlOverride":0}' },
+  },
+  {
+    name: 'the audit namespace refuses every operation',
+    token: AGENT_TOKEN,
+    operation: 'EVENT_PUBLISH',
+    channel: AUDIT_CHANNEL,
+    expected: { resultIs: '{"isAuthorized":false,"ttlOverride":0}' },
+  },
+  {
+    name: 'a ticket subscribe matches no authorizer route',
+    token: AGENT_TOKEN,
+    operation: 'EVENT_SUBSCRIBE',
+    channel: TICKET_CHANNEL_PATTERN,
+    expected: { errorIncludes: `No authorizer route matched for EVENT_SUBSCRIBE on channel ${TICKET_CHANNEL_PATTERN}` },
+  },
+];
+
 // The expired and revoked tokens produce the same response. Only the log says which path built it.
 export const authorizerSteps: AuthorizerStep[] = [
   {
@@ -274,5 +335,17 @@ export const authorizerSteps: AuthorizerStep[] = [
     name: 'broken token fails the authorizer',
     token: BROKEN_TOKEN,
     expected: { errorIncludes: 'Token store unreachable' },
+  },
+  {
+    name: 'an agent takes the admin route',
+    token: AGENT_TOKEN,
+    operationName: ADMIN_OPERATION,
+    expected: { resultIncludes: ['"admin":"true"'] },
+  },
+  {
+    name: 'a customer naming the admin operation falls through to the ordinary grant',
+    token: CUSTOMER_TOKEN,
+    operationName: ADMIN_OPERATION,
+    expected: { resultIncludes: ['"deniedFields":["Query.listQueues"]'], resultExcludes: '"admin"' },
   },
 ];

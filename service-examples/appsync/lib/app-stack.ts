@@ -115,7 +115,16 @@ export class AppStack extends Stack {
     const activityApi = new EventApi(this, 'ActivityApi', {
       apiName: `${this.stackName}-activity`,
       authorizationConfig: {
-        authProviders: [{ authorizationType: AppSyncAuthorizationType.API_KEY }],
+        authProviders: [
+          { authorizationType: AppSyncAuthorizationType.API_KEY },
+          {
+            authorizationType: AppSyncAuthorizationType.LAMBDA,
+            lambdaAuthorizerConfig: { handler: authorizerFn, resultsCacheTtl: Duration.seconds(0) },
+          },
+        ],
+        connectionAuthModeTypes: [AppSyncAuthorizationType.API_KEY, AppSyncAuthorizationType.LAMBDA],
+        defaultPublishAuthModeTypes: [AppSyncAuthorizationType.API_KEY, AppSyncAuthorizationType.LAMBDA],
+        defaultSubscribeAuthModeTypes: [AppSyncAuthorizationType.API_KEY, AppSyncAuthorizationType.LAMBDA],
       },
     });
 

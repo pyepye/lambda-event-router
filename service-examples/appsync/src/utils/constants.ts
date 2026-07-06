@@ -21,6 +21,8 @@ export const AUDIT_CHANNEL_PATTERN = `/${AUDIT_NAMESPACE}/*`;
 
 export const TYPING_EVENT = 'typing';
 
+export const ADMIN_OPERATION = 'AdminAudit';
+
 export interface TokenGrant {
   role: string;
   actorId: string;

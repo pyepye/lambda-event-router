@@ -430,8 +430,9 @@ AppSync requires the reply to match the request list in size and order, and to c
 [{ data: [{ id: 'line-1' }] }, { data: [] }]
 ```
 
-An entry that throws fails the whole batch by default, and every field in it gets the error. Set
-`batchItemFailures` to report it on its own instead.
+An entry that throws fails the whole batch by default. Every field in the batch resolves to `null`,
+and every one of them carries the failing entry's message, which reads as though they all failed for
+that reason. Set `batchItemFailures` to report it on its own instead.
 
 ```ts
 const appSyncRouter = createAppSyncRouter({ batchItemFailures: true })

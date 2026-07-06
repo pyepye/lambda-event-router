@@ -292,6 +292,14 @@ export const packages: PackageEntry[] = [
   },
   {
     icons: ['appsync'],
+    name: 'AppSyncEventsAuthorizerRouter',
+    package: '@lambda-event-router/appsync',
+    services: ['appsync'],
+    details: 'AWS AppSync - Event API authorizer',
+    link: '/routers/AppSyncEventsAuthorizerRouter',
+  },
+  {
+    icons: ['appsync'],
     name: 'AppSyncEventsRouter',
     package: '@lambda-event-router/appsync',
     services: ['appsync'],

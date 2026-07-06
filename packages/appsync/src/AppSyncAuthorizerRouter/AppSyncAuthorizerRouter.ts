@@ -1,10 +1,11 @@
 import type { AppSyncAuthorizerEvent, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import { isAppSyncAuthorizerResponse } from './response.js';
 import type {
+  AppSyncAuthorizerHandler,
   AppSyncAuthorizerMiddleware,
   AppSyncAuthorizerRequest,
   AppSyncAuthorizerResponse,
@@ -12,20 +13,19 @@ import type {
   AppSyncAuthorizerRouteDefinition,
   AppSyncAuthorizerRouteInput,
   AppSyncAuthorizerRouterOptions,
+  InternalAuthorizerRoute,
 } from './types.js';
 
 export function defineAuthorizerRoute(config?: AppSyncAuthorizerRouteInput): AppSyncAuthorizerRouteBuilder {
   return {
-    handle(
-      handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>,
-    ): AppSyncAuthorizerRouteDefinition {
-      return { middleware: config?.middleware, handler };
+    handle(handler: AppSyncAuthorizerHandler): AppSyncAuthorizerRouteDefinition {
+      return { filters: config?.filters, middleware: config?.middleware, handler };
     },
   };
 }
 
 export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorizerEvent, AppSyncAuthorizerResponse> {
-  private routeDefinition: AppSyncAuthorizerRouteDefinition | undefined;
+  private routes: InternalAuthorizerRoute[] = [];
   private middleware: AppSyncAuthorizerMiddleware[];
 
   constructor(options?: AppSyncAuthorizerRouterOptions) {
@@ -49,13 +49,20 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
   }
 
   route(definition: AppSyncAuthorizerRouteDefinition): this {
-    this.routeDefinition = definition;
+    this.routes.push({
+      filters: definition.filters ?? {},
+      middleware: definition.middleware,
+      handler: definition.handler,
+    });
     return this;
   }
 
   async handleEvent(event: AppSyncAuthorizerEvent, context: Context): Promise<AppSyncAuthorizerResponse> {
-    if (!this.routeDefinition) {
-      throw new Error('No authorizer route registered');
+    const { apiId, operationName } = event.requestContext;
+
+    const route = await this.matchRoute(apiId, operationName, event);
+    if (!route) {
+      throw new Error(`No authorizer route matched for ${operationName ? `${operationName} on ` : ''}${apiId}`);
     }
 
     const request: AppSyncAuthorizerRequest = {
@@ -71,16 +78,42 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
       context,
     };
 
-    const allMiddleware = [...this.middleware, ...(this.routeDefinition.middleware ?? [])];
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
 
     try {
-      return await handleEventWithMiddleware(allMiddleware, request, this.routeDefinition.handler);
+      return await handleEventWithMiddleware(allMiddleware, request, route.handler);
     } catch (error) {
       if (isAppSyncAuthorizerResponse(error)) {
         return error;
       }
       throw error;
     }
+  }
+
+  private async matchRoute(
+    apiId: string,
+    operationName: string | undefined,
+    event: AppSyncAuthorizerEvent,
+  ): Promise<InternalAuthorizerRoute | undefined> {
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.apiId && !filterStringMatcher(apiId, filters.apiId)) continue;
+
+      // An operation name filter cannot match a request that does not name its operation.
+      if (filters.operationName) {
+        if (operationName === undefined) continue;
+        if (!filterStringMatcher(operationName, filters.operationName)) continue;
+      }
+
+      if (filters.custom) {
+        const match = await filters.custom({ apiId, operationName, event });
+        if (!match) continue;
+      }
+
+      return route;
+    }
+    return undefined;
   }
 }
 

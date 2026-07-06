@@ -1,6 +1,6 @@
 import type { AppSyncAuthorizerEvent, AppSyncAuthorizerResult, Context } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export type AppSyncAuthorizerResponse = AppSyncAuthorizerResult<Record<string, unknown>>;
 
@@ -17,14 +17,30 @@ export interface AppSyncAuthorizerRequest {
   context: Context;
 }
 
+export interface AppSyncAuthorizerFilterInput {
+  apiId: string;
+  operationName: string | undefined;
+  event: AppSyncAuthorizerEvent;
+}
+
+export interface AppSyncAuthorizerFilters {
+  apiId?: FilterStringMatcher;
+  operationName?: FilterStringMatcher;
+  custom?: (input: AppSyncAuthorizerFilterInput) => boolean | Promise<boolean>;
+}
+
+export type AppSyncAuthorizerHandler = (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>;
+
 export type AppSyncAuthorizerMiddleware = Middleware<AppSyncAuthorizerRequest, AppSyncAuthorizerResponse>;
 
 export interface AppSyncAuthorizerRouteDefinition {
+  filters?: AppSyncAuthorizerFilters;
   middleware?: AppSyncAuthorizerMiddleware[];
-  handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>;
+  handler: AppSyncAuthorizerHandler;
 }
 
 export interface AppSyncAuthorizerRouteInput {
+  filters?: AppSyncAuthorizerFilters;
   middleware?: AppSyncAuthorizerMiddleware[];
 }
 
@@ -33,7 +49,11 @@ export interface AppSyncAuthorizerRouterOptions {
 }
 
 export interface AppSyncAuthorizerRouteBuilder {
-  handle(
-    handler: (request: AppSyncAuthorizerRequest) => Promise<AppSyncAuthorizerResponse>,
-  ): AppSyncAuthorizerRouteDefinition;
+  handle(handler: AppSyncAuthorizerHandler): AppSyncAuthorizerRouteDefinition;
+}
+
+export interface InternalAuthorizerRoute {
+  filters: AppSyncAuthorizerFilters;
+  middleware?: AppSyncAuthorizerMiddleware[];
+  handler: AppSyncAuthorizerHandler;
 }

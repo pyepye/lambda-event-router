@@ -1,10 +1,23 @@
-import type { AppSyncEventsEvent } from '@lambda-event-router/appsync';
+import type { AppSyncEventsAuthorizerEvent, AppSyncEventsEvent } from '@lambda-event-router/appsync';
 import type { AppSyncAuthorizerEvent, AppSyncResolverEvent, Context } from 'aws-lambda';
 
 import { authorizerRouter } from '../src/authorizerRouter.js';
+import { eventsAuthorizerRouter } from '../src/eventsAuthorizerRouter.js';
 import { eventsRouter } from '../src/eventsRouter.js';
-import type { AuthorizerStep, EventsStep, Expected, ResolverStep } from '../src/requests/steps.js';
-import { authorizerSteps, eventsSteps, resolverBatchSteps, resolverSteps } from '../src/requests/steps.js';
+import type {
+  AuthorizerStep,
+  EventsAuthorizerStep,
+  EventsStep,
+  Expected,
+  ResolverStep,
+} from '../src/requests/steps.js';
+import {
+  authorizerSteps,
+  eventsAuthorizerSteps,
+  eventsSteps,
+  resolverBatchSteps,
+  resolverSteps,
+} from '../src/requests/steps.js';
 import { resolverRouter } from '../src/resolverRouter.js';
 import { TOKEN_GRANTS } from '../src/utils/constants.js';
 
@@ -76,9 +89,26 @@ function buildAuthorizerEvent(step: AuthorizerStep): AppSyncAuthorizerEvent {
       apiId: API_ID,
       accountId: ACCOUNT,
       requestId: 'check-routes',
-      queryString: 'query GetTicket { getTicket(id: "t-1") { id } }',
-      operationName: 'GetTicket',
+      queryString: `query ${step.operationName ?? 'GetTicket'} { getTicket(id: "t-1") { id } }`,
+      operationName: step.operationName ?? 'GetTicket',
       variables: {},
+    },
+    requestHeaders: { authorization: step.token },
+  };
+}
+
+// A connect carries no channel at all, rather than an empty one.
+function buildEventsAuthorizerEvent(step: EventsAuthorizerStep): AppSyncEventsAuthorizerEvent {
+  const segments = step.channel?.replace(/^\//, '').split('/');
+
+  return {
+    authorizationToken: step.token,
+    requestContext: {
+      apiId: API_ID,
+      accountId: ACCOUNT,
+      requestId: 'check-routes',
+      operation: step.operation,
+      ...(step.channel && { channel: step.channel, channelNamespaceName: segments?.[0] }),
     },
     requestHeaders: { authorization: step.token },
   };
@@ -163,8 +193,16 @@ for (const step of authorizerSteps) {
   );
 }
 
-// Three routers share one AppSync account, and two of them share a Lambda, so each one has to turn
-// the others' events away on shape alone.
+for (const step of eventsAuthorizerSteps) {
+  await run(
+    `events authorizer ${step.name}`,
+    () => eventsAuthorizerRouter.handleEvent(buildEventsAuthorizerEvent(step), context),
+    step.expected,
+  );
+}
+
+// Four routers share one AppSync account, and they share two Lambdas, so each one has to turn the
+// others' events away on shape alone.
 const firstResolverStep = resolverSteps[0];
 const firstEventsStep = eventsSteps[0];
 const firstAuthorizerStep = authorizerSteps[0];
@@ -173,9 +211,13 @@ if (!(firstResolverStep && firstEventsStep && firstAuthorizerStep)) {
   throw new Error('The step lists are empty, so canHandleEvent cannot be checked.');
 }
 
+const firstEventsAuthorizerStep = eventsAuthorizerSteps[0];
+if (!firstEventsAuthorizerStep) throw new Error('The events authorizer step list is empty.');
+
 const resolverEvent = buildResolverEvent(firstResolverStep);
 const eventsEvent = buildEventsEvent(firstEventsStep);
 const authorizerEvent = buildAuthorizerEvent(firstAuthorizerStep);
+const eventsAuthorizerEvent = buildEventsAuthorizerEvent(firstEventsAuthorizerStep);
 
 const claims: [string, boolean][] = [
   ['resolver router takes a resolver event', resolverRouter.canHandleEvent(resolverEvent)],
@@ -189,6 +231,17 @@ const claims: [string, boolean][] = [
   ['authorizer router takes an authorizer event', authorizerRouter.canHandleEvent(authorizerEvent)],
   ['authorizer router turns a resolver event away', !authorizerRouter.canHandleEvent(resolverEvent)],
   ['authorizer router turns an events event away', !authorizerRouter.canHandleEvent(eventsEvent)],
+  ['authorizer router turns an events authorizer event away', !authorizerRouter.canHandleEvent(eventsAuthorizerEvent)],
+  [
+    'events authorizer router takes an events authorizer event',
+    eventsAuthorizerRouter.canHandleEvent(eventsAuthorizerEvent),
+  ],
+  [
+    'events authorizer router turns a GraphQL authorizer event away',
+    !eventsAuthorizerRouter.canHandleEvent(authorizerEvent),
+  ],
+  ['events authorizer router turns a resolver event away', !eventsAuthorizerRouter.canHandleEvent(resolverEvent)],
+  ['events authorizer router turns an events event away', !eventsAuthorizerRouter.canHandleEvent(eventsEvent)],
 ];
 
 for (const [label, held] of claims) {

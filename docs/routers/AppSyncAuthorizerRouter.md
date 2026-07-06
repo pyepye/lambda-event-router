@@ -7,6 +7,9 @@ AppSync calls your function before every query and mutation, hands it the token 
 waits for a yes or no. Your handler returns that decision, along with anything the resolvers behind it
 should know about the caller.
 
+An Event API sends a different event to a different router. See
+[AppSyncEventsAuthorizerRouter](/routers/AppSyncEventsAuthorizerRouter).
+
 ## Install
 
 ```bash
@@ -34,27 +37,55 @@ gives you a router with no shared middleware, see [Middleware](#middleware).
 
 ```ts
 authRouter.route({
-  middleware: [withRequestContext],   // Optional
-  handler: authoriseRequest,
+  filters: { operationName: 'AdminAudit' },   // Optional
+  middleware: [withRequestContext],           // Optional
+  handler: authoriseAdminAudit,
 })
 ```
 
-`handler` is required and `middleware` is optional, and there are no filters. An API set to
-`AWS_LAMBDA` authorisation has a single authorizer function and every query and mutation goes through
-it, so there is nothing to route on. Branching on the caller or the operation happens inside the
-handler instead.
+`handler` is required and the rest is optional. Routes match in registration order and the first
+match wins, so a route with no filters takes everything below it. See [match
+order](/docs/routing#match-order).
 
-A route has no schema key either. An authorizer is given a token and the text of a query someone else
-wrote, rather than a payload you control, so there is nothing to validate.
+A route with no filters is a complete authorizer on its own, and that is the common shape. Filters
+earn their place when one function guards several APIs, or when a named operation deserves a
+different decision.
 
-**A second `route()` call replaces the first.** The router holds one route rather than a list, so
-registering twice leaves you with the second handler and nothing warns you. `route()` still returns the
-router, so a chain compiles and quietly discards everything but its last link.
+A route has no schema key. An authorizer is given a token and the text of a query someone else wrote,
+rather than a payload you control, so there is nothing to validate.
 
-**When no route is registered, the router throws `No authorizer route registered` and the invocation
-fails.** A failed authorizer answers the caller with 500 and an `AuthorizerFailureException` carrying
-the thrown message, so your error text reaches whoever called the API. See [nothing
-matched](/docs/routing#nothing-matched) for what the other routers do instead.
+**A request that matches no route throws `No authorizer route matched for AdminAudit on abc123`.** A
+failed authorizer answers the caller with 500 and an `AuthorizerFailureException` carrying the thrown
+message, so your error text reaches whoever called the API. Register a route with no filters last if
+you want a catch-all. See [nothing matched](/docs/routing#nothing-matched) for what the other routers
+do instead.
+
+## Filters
+
+| Filter | Type | Matches against |
+| --- | --- | --- |
+| `apiId` | `FilterStringMatcher` | The AppSync API being called |
+| `operationName` | `FilterStringMatcher` | The name the client gave its operation |
+| `custom` | `(input) => boolean` | Whatever you decide, from the whole event |
+
+`apiId` and `operationName` take a string, a string with `*` in it, a regular expression, or an array
+of any of those.
+
+**`operationName` comes from the request body, not the query text.** A client sending
+`query AdminAudit { ... }` and nothing else leaves the field off the authorizer event. It arrives only
+when the client also sends `operationName` alongside `query` in the POST body, which is what every
+GraphQL client library does and what a hand-written `fetch` usually forgets.
+
+**An `operationName` filter cannot match an anonymous operation.** A route filtering on it is skipped
+rather than matched against an empty string.
+
+One authorizer function can guard several AppSync APIs, which is what `apiId` is for.
+
+```ts
+authRouter
+  .route({ filters: { apiId: publicApiId }, handler: authorisePublicCaller })
+  .route({ filters: { apiId: internalApiId }, handler: authoriseStaff })
+```
 
 ## Handler
 
@@ -332,6 +363,8 @@ All exported from `@lambda-event-router/appsync`.
 | Type | Description |
 | --- | --- |
 | `AppSyncAuthorizerRequest` | The handler argument |
+| `AppSyncAuthorizerFilters` | The `filters` object |
+| `AppSyncAuthorizerFilterInput` | What `custom` receives |
 | `AppSyncAuthorizerResponse` | The handler return type, `AppSyncAuthorizerResult<Record<string, unknown>>` |
 | `AppSyncAuthorizerMiddleware` | Router and route middleware |
 | `AppSyncAuthorizerRouteDefinition` | A route, which is the `handler` key and optional `middleware` |

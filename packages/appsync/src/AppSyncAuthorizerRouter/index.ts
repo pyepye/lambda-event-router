@@ -6,9 +6,13 @@ export {
 export type { AuthorizedOptions, DeniedOptions } from './response.js';
 export { Authorized, Denied, isAppSyncAuthorizerResponse } from './response.js';
 export type {
+  AppSyncAuthorizerFilterInput,
+  AppSyncAuthorizerFilters,
+  AppSyncAuthorizerHandler,
   AppSyncAuthorizerMiddleware,
   AppSyncAuthorizerRequest,
   AppSyncAuthorizerResponse,
   AppSyncAuthorizerRouteDefinition,
+  AppSyncAuthorizerRouteInput,
   AppSyncAuthorizerRouterOptions,
 } from './types.js';
