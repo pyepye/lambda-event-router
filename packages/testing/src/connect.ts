@@ -5,10 +5,38 @@ import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type ConnectEventOverrides = DeepPartial<ConnectContactFlowEvent>;
+// Connect delivers channels and initiation methods aws-lambda's unions do not carry, so the fixture
+// widens both to the service model. They match the unions @lambda-event-router/connect exports, which
+// cannot be imported here because that package dev-depends on this one.
+type FixtureChannel = 'CHAT' | 'EMAIL' | 'TASK' | 'VOICE';
+
+type FixtureInitiationMethod =
+  | 'AGENT_REPLY'
+  | 'API'
+  | 'CALLBACK'
+  | 'DISCONNECT'
+  | 'EXTERNAL_OUTBOUND'
+  | 'FLOW'
+  | 'INBOUND'
+  | 'MONITOR'
+  | 'OUTBOUND'
+  | 'QUEUE_TRANSFER'
+  | 'TRANSFER'
+  | 'WEBRTC_API';
+
+export type ConnectEventShape = Omit<ConnectContactFlowEvent, 'Details'> & {
+  Details: Omit<ConnectContactFlowEvent['Details'], 'ContactData'> & {
+    ContactData: Omit<ConnectContactFlowEvent['Details']['ContactData'], 'Channel' | 'InitiationMethod'> & {
+      Channel: FixtureChannel;
+      InitiationMethod: FixtureInitiationMethod;
+    };
+  };
+};
+
+export type ConnectEventOverrides = DeepPartial<ConnectEventShape>;
 
 export interface ConnectHandlerEvent {
-  event: ConnectContactFlowEvent;
+  event: ConnectEventShape;
   context: Context;
 }
 
@@ -17,10 +45,10 @@ export interface CreateConnectHandlerEventOptions {
   context?: Partial<Context>;
 }
 
-export function createConnectEvent(overrides: ConnectEventOverrides = {}): ConnectContactFlowEvent {
+export function createConnectEvent(overrides: ConnectEventOverrides = {}): ConnectEventShape {
   const contactId = crypto.randomUUID();
 
-  const defaults: ConnectContactFlowEvent = {
+  const defaults: ConnectEventShape = {
     Name: 'ContactFlowEvent',
     Details: {
       ContactData: {
@@ -57,7 +85,7 @@ export function createConnectHandlerEvent(options: CreateConnectHandlerEventOpti
 }
 
 export interface ConnectFixtures {
-  connectEvent: (overrides?: ConnectEventOverrides) => ConnectContactFlowEvent;
+  connectEvent: (overrides?: ConnectEventOverrides) => ConnectEventShape;
   connectHandlerEvent: (options?: CreateConnectHandlerEventOptions) => ConnectHandlerEvent;
 }
 

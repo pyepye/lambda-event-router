@@ -1,10 +1,11 @@
-import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 'aws-lambda';
+import type { ConnectContactFlowResult, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type {
   ConnectChannelRouteDefinition,
+  ConnectEvent,
   ConnectHandler,
   ConnectInitiationMethodRouteDefinition,
   ConnectMiddleware,
@@ -28,7 +29,7 @@ export function defineRoute(config: {
   };
 }
 
-export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, ConnectContactFlowResult> {
+export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectContactFlowResult> {
   private routes: ConnectRouteDefinition[] = [];
   private middleware: ConnectMiddleware[] = [];
 
@@ -36,7 +37,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     this.middleware = options?.middleware ?? [];
   }
 
-  canHandleEvent(event: unknown): event is ConnectContactFlowEvent {
+  canHandleEvent(event: unknown): event is ConnectEvent {
     if (!isObject(event)) return false;
     if (event.Name !== 'ContactFlowEvent') return false;
 
@@ -70,6 +71,14 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
   email(definition: ConnectChannelRouteDefinition): this {
     return this.route({
       filters: { ...definition.filters, channel: 'EMAIL' },
+      middleware: definition.middleware,
+      handler: definition.handler,
+    });
+  }
+
+  task(definition: ConnectChannelRouteDefinition): this {
+    return this.route({
+      filters: { ...definition.filters, channel: 'TASK' },
       middleware: definition.middleware,
       handler: definition.handler,
     });
@@ -115,7 +124,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     });
   }
 
-  async handleEvent(event: ConnectContactFlowEvent, context: Context): Promise<ConnectContactFlowResult> {
+  async handleEvent(event: ConnectEvent, context: Context): Promise<ConnectContactFlowResult> {
     const { ContactData: contactData, Parameters: parameters } = event.Details;
 
     const route = await this.matchRoute(event);
@@ -131,7 +140,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectContactFlowEvent, C
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private async matchRoute(event: ConnectContactFlowEvent): Promise<ConnectRouteDefinition | undefined> {
+  private async matchRoute(event: ConnectEvent): Promise<ConnectRouteDefinition | undefined> {
     const { ContactData: contactData } = event.Details;
 
     for (const route of this.routes) {

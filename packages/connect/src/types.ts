@@ -2,14 +2,42 @@ import type { ConnectContactFlowEvent, ConnectContactFlowResult, Context } from 
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
-export type ConnectChannel = ConnectContactFlowEvent['Details']['ContactData']['Channel'];
+// The Connect service model, not the narrower unions aws-lambda carries. A contact can arrive on any
+// of these, so a filter has to be able to name them.
+export type ConnectChannel = 'CHAT' | 'EMAIL' | 'TASK' | 'VOICE';
 
-export type ConnectInitiationMethod = ConnectContactFlowEvent['Details']['ContactData']['InitiationMethod'];
+export type ConnectInitiationMethod =
+  | 'AGENT_REPLY'
+  | 'API'
+  | 'CALLBACK'
+  | 'DISCONNECT'
+  | 'EXTERNAL_OUTBOUND'
+  | 'FLOW'
+  | 'INBOUND'
+  | 'MONITOR'
+  | 'OUTBOUND'
+  | 'QUEUE_TRANSFER'
+  | 'TRANSFER'
+  | 'WEBRTC_API';
+
+export type ConnectContactData = Omit<
+  ConnectContactFlowEvent['Details']['ContactData'],
+  'Channel' | 'InitiationMethod'
+> & {
+  Channel: ConnectChannel;
+  InitiationMethod: ConnectInitiationMethod;
+};
+
+export type ConnectEvent = Omit<ConnectContactFlowEvent, 'Details'> & {
+  Details: Omit<ConnectContactFlowEvent['Details'], 'ContactData'> & {
+    ContactData: ConnectContactData;
+  };
+};
 
 export interface ConnectRequest {
-  contactData: ConnectContactFlowEvent['Details']['ContactData'];
-  parameters: ConnectContactFlowEvent['Details']['Parameters'];
-  event: ConnectContactFlowEvent;
+  contactData: ConnectContactData;
+  parameters: ConnectEvent['Details']['Parameters'];
+  event: ConnectEvent;
   context: Context;
 }
 
@@ -22,7 +50,7 @@ export type ConnectHandler = (request: ConnectRequest) => Promise<ConnectRespons
 export interface ConnectFilterInput {
   channel: ConnectChannel;
   initiationMethod: ConnectInitiationMethod;
-  event: ConnectContactFlowEvent;
+  event: ConnectEvent;
 }
 
 export interface ConnectFilters {

@@ -161,6 +161,7 @@ export {
 } from './config.js';
 export type {
   ConnectEventOverrides,
+  ConnectEventShape,
   ConnectHandlerEvent,
   CreateConnectHandlerEventOptions,
 } from './connect.js';

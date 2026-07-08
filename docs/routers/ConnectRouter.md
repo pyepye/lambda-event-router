@@ -91,6 +91,7 @@ connectRouter.route({
 | `voice` | `channel: 'VOICE'` |
 | `chat` | `channel: 'CHAT'` |
 | `email` | `channel: 'EMAIL'` |
+| `task` | `channel: 'TASK'` |
 | `inbound` | `initiationMethod: 'INBOUND'` |
 | `outbound` | `initiationMethod: 'OUTBOUND'` |
 | `transfer` | `initiationMethod: 'TRANSFER'` |
@@ -111,7 +112,7 @@ ones that pick out the contacts you want and leave the rest off.
 ```ts
 connectRouter.route({
   filters: {
-    channel: ['VOICE', 'CHAT', 'EMAIL'],
+    channel: ['VOICE', 'CHAT', 'EMAIL', 'TASK'],
     initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
     instanceArn: CONNECT_INSTANCE_ARN, // Or a pattern: /:instance\//
     custom: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
@@ -122,8 +123,8 @@ connectRouter.route({
 
 | Filter | Type | Description |
 | --- | --- | --- |
-| `channel` | `ConnectChannel \| ConnectChannel[]` | Exact match against the contact's channel, one of `VOICE`, `CHAT` or `EMAIL`. Not a pattern, so list every channel you want |
-| `initiationMethod` | `ConnectInitiationMethod \| ConnectInitiationMethod[]` | Exact match against how the contact started: `INBOUND`, `OUTBOUND`, `TRANSFER`, `CALLBACK` or `API` |
+| `channel` | `ConnectChannel \| ConnectChannel[]` | Exact match against the contact's channel, one of `VOICE`, `CHAT`, `EMAIL` or `TASK`. Not a pattern, so list every channel you want |
+| `initiationMethod` | `ConnectInitiationMethod \| ConnectInitiationMethod[]` | Exact match against how the contact started, such as `INBOUND`, `API` or `WEBRTC_API`. See [Types](#types) for all twelve |
 | `instanceArn` | `FilterStringMatcher` | Matches the ARN of the Connect instance the contact belongs to |
 | `custom` | `(input: ConnectFilterInput) => boolean \| Promise<boolean>` | Given the channel, the initiation method and the raw event. Anything the other filters cannot express. Can be async |
 
@@ -131,9 +132,16 @@ connectRouter.route({
 ones listed. Only `instanceArn` is a `FilterStringMatcher`, which is `string | RegExp | Array<string |
 RegExp>`. See [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
+**Both unions are declared by this package rather than taken from `aws-lambda`.** The `aws-lambda`
+types are narrower than the Connect service model: they omit the `TASK` channel and seven initiation
+methods, so a contact that arrives on one of those could not be named in a filter. `ConnectChannel`
+and `ConnectInitiationMethod` follow the service model instead. `ConnectRequest.contactData` and
+`ConnectRequest.event` are retyped to match, so a handler reading `contactData.Channel` sees the same
+four values a filter can name.
+
 **`custom` is the only filter that reaches the whole event.** Its `event` is the typed
-`ConnectContactFlowEvent`, so use it to match on the queue, customer endpoint or a contact attribute
-that no built-in key covers. See [`custom`](/docs/routing#custom) for where it sits in the
+`ConnectEvent`, so use it to match on the queue, customer endpoint or a contact attribute that no
+built-in key covers. See [`custom`](/docs/routing#custom) for where it sits in the
 filter order.
 
 ## Handler
@@ -154,13 +162,13 @@ export async function greetInboundCaller({ contactData }: ConnectRequest): Promi
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `contactData` | `ConnectContactFlowEvent['Details']['ContactData']` | The contact: its channel, initiation method, queue, customer endpoint, saved attributes and the rest |
+| `contactData` | `ConnectContactData` | The contact: its channel, initiation method, queue, customer endpoint, saved attributes and the rest |
 | `parameters` | `Record<string, string>` | The key/value parameters set on the Invoke AWS Lambda function block for this call |
-| `event` | `ConnectContactFlowEvent` | The untouched event from AWS |
+| `event` | `ConnectEvent` | The event from AWS, with the channel and initiation method widened |
 | `context` | `Context` | The Lambda context |
 
-`ConnectContactFlowEvent` and `Context` come from `aws-lambda`, not this package. `contactData` and
-`parameters` are the `Details.ContactData` and `Details.Parameters` off that event.
+`Context` comes from `aws-lambda`, not this package. `contactData` and `parameters` are the
+`Details.ContactData` and `Details.Parameters` off `event`.
 
 ### Response type
 
@@ -242,7 +250,8 @@ Connect exposes each pair to the flow. Reference a value directly as `$.External
 
 Keep the object flat and every value a string when the block validates the response as a `STRING_MAP`,
 which is the shape `ConnectContactFlowResult` describes. Nested objects and arrays only reach the flow
-when the block is set to JSON validation instead. The returned data has to be under 32 KB.
+when the block is set to JSON validation instead. The returned data has to be under 32 KB, and Connect
+documents the values as alphanumeric, dash and underscore only.
 
 **Throwing from a handler, timing out or returning something Connect cannot read sends the contact down
 the Error branch of the block.** An unmatched contact throws, so it lands there too.
@@ -285,8 +294,10 @@ All exported from `@lambda-event-router/connect`.
 | `ConnectHandler` | The handler function, `(request: ConnectRequest) => Promise<ConnectResponse>` |
 | `ConnectFilters` | The `filters` object |
 | `ConnectFilterInput` | What `custom` receives |
-| `ConnectChannel` | `'VOICE' \| 'CHAT' \| 'EMAIL'` |
-| `ConnectInitiationMethod` | `'INBOUND' \| 'OUTBOUND' \| 'TRANSFER' \| 'CALLBACK' \| 'API'` |
+| `ConnectChannel` | `'CHAT' \| 'EMAIL' \| 'TASK' \| 'VOICE'` |
+| `ConnectInitiationMethod` | `'AGENT_REPLY' \| 'API' \| 'CALLBACK' \| 'DISCONNECT' \| 'EXTERNAL_OUTBOUND' \| 'FLOW' \| 'INBOUND' \| 'MONITOR' \| 'OUTBOUND' \| 'QUEUE_TRANSFER' \| 'TRANSFER' \| 'WEBRTC_API'` |
+| `ConnectEvent` | The contact flow event, with `Channel` and `InitiationMethod` widened |
+| `ConnectContactData` | `Details.ContactData` off `ConnectEvent` |
 | `ConnectMiddleware` | Router and route middleware |
 | `ConnectRouteDefinition` | A full route passed to `route()` |
 | `ConnectChannelRouteDefinition` | A route passed to a channel method |

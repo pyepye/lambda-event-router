@@ -3,6 +3,8 @@ export type {
   ConnectChannel,
   ConnectChannelFilters,
   ConnectChannelRouteDefinition,
+  ConnectContactData,
+  ConnectEvent,
   ConnectFilterInput,
   ConnectFilters,
   ConnectHandler,

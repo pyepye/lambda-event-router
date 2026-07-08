@@ -115,6 +115,7 @@ async function handleInboundCall({ contactData }: ConnectRequest) {
 connectRouter.voice()
 connectRouter.chat()
 connectRouter.email()
+connectRouter.task()
 
 // Initiation methods
 connectRouter.inbound()
@@ -129,7 +130,7 @@ connectRouter.api()
 ```ts
 defineRoute({
   filters: {
-    channel: ['VOICE', 'CHAT', 'EMAIL'],
+    channel: ['VOICE', 'CHAT', 'EMAIL', 'TASK'],
     initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
     custom: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
   },

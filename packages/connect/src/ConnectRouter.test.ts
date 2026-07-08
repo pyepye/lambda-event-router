@@ -1,7 +1,7 @@
 import { createConnectEvent, test } from '@lambda-event-router/testing';
 
 import { ConnectRouter, createConnectRouter, defineRoute } from './ConnectRouter.js';
-import type { ConnectRequest, ConnectResponse } from './types.js';
+import type { ConnectEvent, ConnectRequest, ConnectResponse } from './types.js';
 
 type ConnectNext = (request: ConnectRequest) => Promise<ConnectResponse>;
 
@@ -388,6 +388,65 @@ suite('channel convenience methods', () => {
 
     expect(result).toBeDefined();
     expect(result?.handler).toBe(handler);
+  });
+
+  test('task sets the TASK channel filter', async ({ connectEvent }) => {
+    const handler = vi.fn();
+    router.task({ filters: {}, handler });
+
+    const event = connectEvent({ Details: { ContactData: { Channel: 'TASK' } } });
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeDefined();
+    expect(result?.handler).toBe(handler);
+  });
+});
+
+suite('delivered channels and initiation methods', () => {
+  // The fixture declares the same unions as types.ts, and cannot import them. This fails to compile
+  // if the two drift apart.
+  test('a fixture event satisfies ConnectEvent', ({ connectEvent }) => {
+    const event: ConnectEvent = connectEvent({
+      Details: { ContactData: { Channel: 'TASK', InitiationMethod: 'WEBRTC_API' } },
+    });
+
+    expect(event.Details.ContactData.Channel).toBe('TASK');
+  });
+
+  test('routes on a channel aws-lambda does not carry', async ({ connectHandlerEvent }) => {
+    const handler = vi.fn().mockResolvedValue({ queued: 'true' });
+    router.route({ filters: { channel: 'TASK' }, handler });
+    const { event, context } = connectHandlerEvent({
+      event: { Details: { ContactData: { Channel: 'TASK' } } },
+    });
+
+    const result = await router.handleEvent(event, context);
+
+    expect(result).toEqual({ queued: 'true' });
+  });
+
+  test('routes on an initiation method aws-lambda does not carry', async ({ connectHandlerEvent }) => {
+    const handler = vi.fn().mockResolvedValue({ connected: 'true' });
+    router.route({ filters: { initiationMethod: ['WEBRTC_API', 'QUEUE_TRANSFER'] }, handler });
+    const { event, context } = connectHandlerEvent({
+      event: { Details: { ContactData: { InitiationMethod: 'QUEUE_TRANSFER' } } },
+    });
+
+    const result = await router.handleEvent(event, context);
+
+    expect(result).toEqual({ connected: 'true' });
+  });
+
+  test('names the delivered channel when no route matches', async ({ connectHandlerEvent }) => {
+    router.chat({ filters: {}, handler: vi.fn() });
+    const { event, context } = connectHandlerEvent({
+      event: { Details: { ContactData: { Channel: 'TASK', InitiationMethod: 'API' } } },
+    });
+
+    await expect(router.handleEvent(event, context)).rejects.toThrow(
+      'No route matched for Amazon Connect event (channel: TASK, initiationMethod: API)',
+    );
   });
 });
 
