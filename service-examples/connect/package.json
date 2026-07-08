@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-s3",
+  "name": "@lambda-event-router/service-example-connect",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -7,6 +7,7 @@
     "build": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "check": "tsx scripts/checkRoutes.ts",
     "trigger": "tsx scripts/trigger.ts",
     "synth": "cdk synth",
     "diff": "cdk diff",
@@ -15,13 +16,11 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/s3": "workspace:*",
     "@aws-sdk/client-cloudformation": "^3.1034.0",
-    "@aws-sdk/client-cloudwatch-logs": "catalog:",
-    "@aws-sdk/client-s3": "^3.1034.0",
-    "@aws-sdk/client-s3-control": "^3.1034.0",
-    "@aws-sdk/s3-presigned-post": "^3.1034.0"
+    "@aws-sdk/client-connect": "^3.1034.0",
+    "@aws-sdk/client-connectparticipant": "^3.1077.0",
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/connect": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",
