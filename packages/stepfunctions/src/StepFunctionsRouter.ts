@@ -165,10 +165,9 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.taskToken === true) {
-        if (!isObject(event) || typeof event.TaskToken !== 'string') {
-          continue;
-        }
+      if (filters.taskToken !== undefined) {
+        const hasTaskToken = isObject(event) && typeof event.TaskToken === 'string';
+        if (hasTaskToken !== filters.taskToken) continue;
       }
 
       if (filters.custom) {

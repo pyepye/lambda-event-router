@@ -119,10 +119,24 @@ async function processOrder({ event }) {
 
 #### Filters
 
+`custom` reads the raw event and may return a promise.
+
 ```ts
 defineRoute({
   filters: {
     custom: ({ event }) => isObject(event) && event.taskType === 'validate-input',
+  },
+})
+```
+
+`taskToken` matches on a `TaskToken` in the event. `true` takes callback payloads only, `false` takes
+payloads without one. Leave it out to take either.
+
+```ts
+defineRoute({
+  filters: {
+    taskToken: true,
+    custom: ({ event }) => isObject(event) && event.taskType === 'approve-order',
   },
 })
 ```

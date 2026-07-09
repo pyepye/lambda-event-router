@@ -254,6 +254,46 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('does not match a taskToken false route when the event carries a TaskToken', async () => {
+      router.route(
+        defineRoute({
+          filters: { taskToken: false },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ TaskToken: 'token-abc', data: 'payload' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches a taskToken false route when the event carries no TaskToken', async () => {
+      router.route(
+        defineRoute({
+          filters: { taskToken: false },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ data: 'no-token' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('passes a callback payload to a later route when an earlier one sets taskToken false', async () => {
+      const regular = vi.fn();
+      const callback = vi.fn();
+
+      router
+        .route(defineRoute({ filters: { taskToken: false } }).handle(regular))
+        .route(defineRoute({ filters: { taskToken: true } }).handle(callback));
+
+      await router.handleEvent({ TaskToken: 'token-abc', orderId: 'AB-1029' }, context);
+
+      expect(regular).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledOnce();
+    });
+
     test('matches a route by custom', async () => {
       router.route(
         defineRoute({
