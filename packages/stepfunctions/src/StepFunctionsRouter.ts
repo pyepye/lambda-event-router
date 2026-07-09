@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, NoRouteMatchedError, validateSchema } from '@lambda-event-router/base';
+import {
+  handleEventWithMiddleware,
+  isKnownEventSource,
+  isObject,
+  NoRouteMatchedError,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   StepFunctionsFilters,
@@ -87,44 +93,8 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
 
   canHandleEvent(event: unknown): event is unknown {
     if (!isObject(event)) return false;
-    if (this.isKnownEventSource(event)) return false;
+    if (isKnownEventSource(event)) return false;
     return true;
-  }
-
-  private isKnownEventSource(event: Record<string, unknown>): boolean {
-    // Records-based events (SQS, SNS, S3, DynamoDB, Kinesis)
-    if (Array.isArray(event.Records) && event.Records.length > 0) {
-      const firstRecord = event.Records[0];
-      if (isObject(firstRecord)) {
-        if (typeof firstRecord.eventSource === 'string') {
-          const knownSources = ['aws:sqs', 'aws:s3', 'aws:dynamodb', 'aws:kinesis'];
-          if (knownSources.includes(firstRecord.eventSource)) {
-            return true;
-          }
-        }
-        // SNS uses PascalCase
-        if (firstRecord.EventSource === 'aws:sns') {
-          return true;
-        }
-      }
-    }
-
-    // API Gateway V2
-    if (typeof event.rawPath === 'string' && isObject(event.requestContext)) {
-      return true;
-    }
-
-    // Cognito
-    if (typeof event.triggerSource === 'string' && typeof event.userPoolId === 'string') {
-      return true;
-    }
-
-    // Standard EventBridge events
-    if (typeof event.source === 'string' && typeof event['detail-type'] === 'string' && isObject(event.detail)) {
-      return true;
-    }
-
-    return false;
   }
 
   route<TInput>(

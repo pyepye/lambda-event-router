@@ -99,6 +99,22 @@ suite('StepFunctionsRouter', () => {
       expect(router.canHandleEvent(event)).toBe(false);
     });
 
+    test('returns false for a Connect contact flow event', () => {
+      expect(router.canHandleEvent({ Name: 'ContactFlowEvent', Details: {} })).toBe(false);
+    });
+
+    test('returns false for a Lex event', () => {
+      expect(router.canHandleEvent({ sessionState: {}, bot: { name: 'orders' } })).toBe(false);
+    });
+
+    test('returns false for a CloudWatch Logs event', () => {
+      expect(router.canHandleEvent({ awslogs: { data: 'H4sIA' } })).toBe(false);
+    });
+
+    test('returns false for a Firehose event', () => {
+      expect(router.canHandleEvent({ deliveryStreamArn: 'arn:aws:firehose:::x', records: [] })).toBe(false);
+    });
+
     test('returns true for an empty Records array', () => {
       expect(router.canHandleEvent({ Records: [] })).toBe(true);
     });
