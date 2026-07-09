@@ -1192,6 +1192,43 @@ importers:
         specifier: ^8.18.0
         version: 8.21.0
 
+  service-examples/cloudwatch:
+    dependencies:
+      '@aws-sdk/client-cloudwatch-logs':
+        specifier: 'catalog:'
+        version: 3.1069.0
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../../packages/base
+      '@lambda-event-router/cloudwatch':
+        specifier: workspace:*
+        version: link:../../packages/cloudwatch
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      aws-cdk:
+        specifier: ^2.1000.0
+        version: 2.1120.0
+      aws-cdk-lib:
+        specifier: ^2.190.0
+        version: 2.251.0(constructs@10.6.0)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   service-examples/cognito:
     dependencies:
       '@aws-crypto/decrypt-node':
