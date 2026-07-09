@@ -90,10 +90,12 @@ cloudWatchLogsRouter.route({
 | `controlMessage()` | `messageType: 'CONTROL_MESSAGE'` | The same |
 
 Each drops the `messageType` key from the filters you pass and sets it itself, so putting a
-`messageType` in the object is a type error. CloudWatch sends a `CONTROL_MESSAGE` once to check the
-subscription is reachable and it carries no log events, so `controlMessage()` is where you handle or
-ignore that. See [convenience methods](/docs/routing#convenience-methods) for how the other routers
-use them.
+`messageType` in the object is a type error. See
+[convenience methods](/docs/routing#convenience-methods) for how the other routers use them.
+
+Note: a subscription filter with a Lambda destination only delivers `DATA_MESSAGE`. A
+`controlMessage()` route therefore only runs if something else invokes the function with that
+payload.
 
 ## Filters
 
