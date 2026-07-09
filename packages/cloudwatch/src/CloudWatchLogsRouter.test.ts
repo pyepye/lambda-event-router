@@ -1,3 +1,4 @@
+import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData } from 'aws-lambda';
 
 import { createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
@@ -183,6 +184,20 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toHaveProperty('subscriptionFilters');
       expect(result).toHaveProperty('messageType');
       expect(result).toHaveProperty('logEvents');
+    });
+
+    test('throws when the payload is not gzipped', () => {
+      const data = Buffer.from(JSON.stringify({ logGroup: '/aws/lambda/my-function' })).toString('base64');
+
+      // @ts-expect-error - testing private method directly
+      expect(() => router.decodeLogData(data)).toThrow('incorrect header check');
+    });
+
+    test('throws when the decompressed payload is not JSON', () => {
+      const data = gzipSync(Buffer.from('not json')).toString('base64');
+
+      // @ts-expect-error - testing private method directly
+      expect(() => router.decodeLogData(data)).toThrow(SyntaxError);
     });
   });
 
@@ -490,6 +505,16 @@ suite('CloudWatchLogsRouter', () => {
     test('throws when no route matches', async ({ cloudWatchLogsHandlerEvent }) => {
       const { event, context } = cloudWatchLogsHandlerEvent();
       await expect(router.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('throws before matching a route when the payload will not decode', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const event = { awslogs: { data: gzipSync(Buffer.from('not json')).toString('base64') } };
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow(SyntaxError);
+      expect(handler).not.toHaveBeenCalled();
     });
 
     test('propagates handler errors', async ({ cloudWatchLogsHandlerEvent }) => {
