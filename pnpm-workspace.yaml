@@ -11,6 +11,7 @@ catalog:
   '@aws-sdk/client-codepipeline': ^3.0.0
   '@aws-sdk/client-dynamodb': ^3.1075.0
   '@aws-sdk/client-kinesis': ^3.0.0
+  '@aws-sdk/client-sfn': ^3.0.0
   '@aws-sdk/lib-dynamodb': ^3.1075.0
   '@aws-sdk/util-dynamodb': ^3.0.0
   '@smithy/types': ^4.14.3
