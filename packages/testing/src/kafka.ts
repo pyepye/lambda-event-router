@@ -17,7 +17,7 @@ export interface KafkaHandlerEvent {
 }
 
 export interface CreateKafkaHandlerEventOptions {
-  recordsByTopic?: Record<string, MSKRecord[]>;
+  recordsByTopicPartition?: Record<string, MSKRecord[]>;
   eventType?: 'msk' | 'self-managed';
   context?: Partial<Context>;
 }
@@ -72,40 +72,45 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKReco
   return deepMerge(defaults, restOverrides);
 }
 
+// Lambda keys `records` by topic and partition together, such as `orders-0`, and each entry holds
+// only that partition's records. The router checkpoints a partition at a time, so a key that names a
+// topic alone describes an event Lambda never sends.
 export function createMSKEvent(
-  recordsByTopic: Record<string, MSKRecord[]> = { 'test-topic': [createKafkaRecord()] },
+  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
 ): MSKEvent {
   return {
     eventSource: 'aws:kafka',
     eventSourceArn: 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123',
     bootstrapServers: 'broker1.example.com:9092,broker2.example.com:9092',
-    records: recordsByTopic,
+    records: recordsByTopicPartition,
   };
 }
 
 export function createSelfManagedKafkaEvent(
-  recordsByTopic: Record<string, MSKRecord[]> = { 'test-topic': [createKafkaRecord()] },
+  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
 ): SelfManagedKafkaEvent {
   return {
     eventSource: 'SelfManagedKafka',
     bootstrapServers: 'broker1.example.com:9092,broker2.example.com:9092',
-    records: recordsByTopic,
+    records: recordsByTopicPartition,
   };
 }
 
 export function createKafkaHandlerEvent(options: CreateKafkaHandlerEventOptions = {}): KafkaHandlerEvent {
   const eventType = options.eventType ?? 'msk';
   const event =
-    eventType === 'msk' ? createMSKEvent(options.recordsByTopic) : createSelfManagedKafkaEvent(options.recordsByTopic);
+    eventType === 'msk'
+      ? createMSKEvent(options.recordsByTopicPartition)
+      : createSelfManagedKafkaEvent(options.recordsByTopicPartition);
   const context = createMockContext(options.context);
   return { event, context };
 }
 
 export interface KafkaFixtures {
   kafkaRecord: (overrides?: KafkaRecordOverrides) => ReturnType<typeof createKafkaRecord>;
-  kafkaMSKEvent: (recordsByTopic?: Parameters<typeof createMSKEvent>[0]) => ReturnType<typeof createMSKEvent>;
+  kafkaMSKEvent: (recordsByTopicPartition?: Parameters<typeof createMSKEvent>[0]) => ReturnType<typeof createMSKEvent>;
   kafkaSelfManagedEvent: (
-    recordsByTopic?: Parameters<typeof createSelfManagedKafkaEvent>[0],
+    recordsByTopicPartition?: Parameters<typeof createSelfManagedKafkaEvent>[0],
   ) => ReturnType<typeof createSelfManagedKafkaEvent>;
   kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
 }

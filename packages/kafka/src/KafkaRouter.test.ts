@@ -86,7 +86,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders' });
-      const event = kafkaMSKEvent({ orders: [record] });
+      const event = kafkaMSKEvent({ 'orders-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -97,7 +97,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { topic: ['orders', 'refunds'] } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders' });
-      const event = kafkaMSKEvent({ orders: [record] });
+      const event = kafkaMSKEvent({ 'orders-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -108,7 +108,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'users' });
-      const event = kafkaMSKEvent({ users: [record] });
+      const event = kafkaMSKEvent({ 'users-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -120,7 +120,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { eventSourceArn: arn } }).handle(async () => {}));
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -133,7 +133,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { eventSourceArn: [arn, arn2] } }).handle(async () => {}));
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -148,7 +148,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -177,7 +177,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { bootstrapServer: 'broker1.example.com:9092' } }).handle(async () => {}));
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -192,7 +192,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -205,7 +205,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -220,7 +220,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -235,7 +235,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -256,7 +256,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ topic: 'my-topic', headers: [{ 'x-custom': 'value' }] });
-      const event = kafkaMSKEvent({ 'my-topic': [record] });
+      const event = kafkaMSKEvent({ 'my-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const decodedHeaders = router.decodeHeaders(record.headers);
@@ -278,7 +278,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ topic: 'users' });
-      const event = kafkaMSKEvent({ users: [record] });
+      const event = kafkaMSKEvent({ 'users-0': [record] });
 
       // @ts-expect-error testing private method
       await router.matchRoute(record, event, []);
@@ -290,7 +290,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: {} }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'anything' });
-      const event = kafkaMSKEvent({ anything: [record] });
+      const event = kafkaMSKEvent({ 'anything-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -304,7 +304,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: {} }).handle(secondHandler));
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -324,7 +324,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
@@ -338,7 +338,7 @@ suite('KafkaRouter', () => {
       const recordB = kafkaRecord({ topic: 'topic-b' });
       const recordC = kafkaRecord({ topic: 'topic-a' });
 
-      const event = kafkaMSKEvent({ 'topic-a': [recordA, recordC], 'topic-b': [recordB] });
+      const event = kafkaMSKEvent({ 'topic-a-0': [recordA, recordC], 'topic-b-0': [recordB] });
 
       // @ts-expect-error testing private method
       const result = router.flattenRecords(event);
@@ -351,7 +351,7 @@ suite('KafkaRouter', () => {
     test('handles single topic', ({ kafkaRecord, kafkaMSKEvent }) => {
       const record = kafkaRecord();
 
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       // @ts-expect-error testing private method
       const result = router.flattenRecords(event);
@@ -416,7 +416,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ key: null, value: { action: 'test' } });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -437,7 +437,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ key: 'my-key', value: null });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -458,7 +458,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ headers: null });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -478,7 +478,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ key: null, value: null, headers: null });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -490,7 +490,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: {}, valueSchema }).handle(async () => {}));
 
       const record = kafkaRecord({ value: null });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await expect(router.handleEvent(event, context())).rejects.toThrow('Value validation failed');
     });
@@ -507,7 +507,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ key: 'my-key', value: { action: 'test' }, topic: 'orders' });
-      const event = kafkaMSKEvent({ orders: [record] });
+      const event = kafkaMSKEvent({ 'orders-0': [record] });
       const ctx = context();
 
       await router.handleEvent(event, ctx);
@@ -533,7 +533,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ key: 'decoded-key', value: 'decoded-value' });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -550,7 +550,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ value: { name: 'test', count: 42 } });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -566,7 +566,7 @@ suite('KafkaRouter', () => {
       );
 
       const record = kafkaRecord({ value: 'plain text message' });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -577,7 +577,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { topic: 'orders' } }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'users', partition: 0, offset: 0 });
-      const event = kafkaMSKEvent({ users: [record] });
+      const event = kafkaMSKEvent({ 'users-0': [record] });
 
       await expect(router.handleEvent(event, context())).rejects.toThrow(
         'No route matched for record on topic users partition 0',
@@ -618,7 +618,7 @@ suite('KafkaRouter', () => {
 
       const recordA = kafkaRecord({ offset: 0 });
       const recordB = kafkaRecord({ offset: 1 });
-      const event = kafkaMSKEvent({ 'test-topic': [recordA, recordB] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [recordA, recordB] });
 
       await router.handleEvent(event, context());
 
@@ -648,7 +648,7 @@ suite('KafkaRouter', () => {
         }),
       );
 
-      const event = kafkaMSKEvent({ orders: [failingRecord] });
+      const event = kafkaMSKEvent({ 'orders-2': [failingRecord] });
 
       const result = await router.handleEvent(event, context());
 
@@ -684,7 +684,7 @@ suite('KafkaRouter', () => {
         }),
       );
 
-      const event = kafkaMSKEvent({ orders: [recordA, failingRecord, recordC, recordD] });
+      const event = kafkaMSKEvent({ 'orders-0': [recordA, failingRecord, recordC, recordD] });
 
       const result = await router.handleEvent(event, context());
 
@@ -740,7 +740,7 @@ suite('KafkaRouter', () => {
       );
 
       const records = [kafkaRecord({ offset: 0 }), kafkaRecord({ offset: 1 }), kafkaRecord({ offset: 2 })];
-      const event = kafkaMSKEvent({ 'test-topic': records });
+      const event = kafkaMSKEvent({ 'test-topic-0': records });
 
       await router.handleEvent(event, context());
 
@@ -757,7 +757,7 @@ suite('KafkaRouter', () => {
 
       const value = { action: 'process', id: '123' };
       const record = kafkaRecord({ value });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
       await router.handleEvent(event, context());
 
       expect(validateSchemaSpy).toHaveBeenCalledWith(value, valueSchema, expect.any(String));
@@ -769,7 +769,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: {}, valueSchema }).handle(async () => {}));
 
       const record = kafkaRecord({ value: { bad: 'data' } });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
       await expect(router.handleEvent(event, context())).rejects.toThrow('Value validation failed');
     });
 
@@ -783,7 +783,7 @@ suite('KafkaRouter', () => {
       batchRouter.route(defineRoute({ filters: {}, valueSchema }).handle(async () => {}));
 
       const record = kafkaRecord({ topic: 'orders', partition: 0, offset: 5 });
-      const event = kafkaMSKEvent({ orders: [record] });
+      const event = kafkaMSKEvent({ 'orders-0': [record] });
       const result = await batchRouter.handleEvent(event, context());
 
       expect(result).toEqual({
@@ -798,7 +798,7 @@ suite('KafkaRouter', () => {
 
       const rawValue = JSON.stringify({ action: 'test' });
       const record = kafkaRecord({ value: rawValue });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
       await router.handleEvent(event, context());
 
       expect(safeJsonParseSpy).toHaveBeenCalledWith(rawValue);
@@ -810,7 +810,7 @@ suite('KafkaRouter', () => {
 
       const value = { action: 'process', id: '123' };
       const record = kafkaRecord({ value });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ value }));
@@ -825,7 +825,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: {} }).handle(handler));
 
       const record = kafkaRecord({ value: 'plain text message' });
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ value: 'plain text message' }));
@@ -842,7 +842,7 @@ suite('KafkaRouter', () => {
 
       const orderRecord = kafkaRecord({ topic: 'orders' });
       const userRecord = kafkaRecord({ topic: 'users' });
-      const event = kafkaMSKEvent({ orders: [orderRecord], users: [userRecord] });
+      const event = kafkaMSKEvent({ 'orders-0': [orderRecord], 'users-0': [userRecord] });
 
       await router.handleEvent(event, context());
 
@@ -857,7 +857,7 @@ suite('KafkaRouter', () => {
       router.route(defineRoute({ filters: { eventSourceArn: arn } }).handle(handler));
 
       const record = kafkaRecord();
-      const event = kafkaMSKEvent({ 'test-topic': [record] });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
 
       await router.handleEvent(event, context());
 
@@ -887,7 +887,7 @@ suite('KafkaRouter', () => {
       const recordA = kafkaRecord({ topic: 'orders' });
       const recordB = kafkaRecord({ topic: 'users' });
       const recordC = kafkaRecord({ topic: 'events' });
-      const event = kafkaMSKEvent({ orders: [recordA], users: [recordB], events: [recordC] });
+      const event = kafkaMSKEvent({ 'orders-0': [recordA], 'users-0': [recordB], 'events-0': [recordC] });
 
       await router.handleEvent(event, context());
 
@@ -903,7 +903,7 @@ suite('KafkaRouter', () => {
       const orderA = kafkaRecord({ topic: 'orders' });
       const orderB = kafkaRecord({ topic: 'orders' });
       const userRecord = kafkaRecord({ topic: 'users' });
-      const event = kafkaMSKEvent({ orders: [orderA, orderB], users: [userRecord] });
+      const event = kafkaMSKEvent({ 'orders-0': [orderA, orderB], 'users-0': [userRecord] });
 
       await router.handleEvent(event, context());
 
