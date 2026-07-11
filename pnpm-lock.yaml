@@ -1232,6 +1232,49 @@ importers:
         specifier: 'catalog:'
         version: 5.9.3
 
+  service-examples/codepipeline:
+    dependencies:
+      '@aws-sdk/client-codepipeline':
+        specifier: 'catalog:'
+        version: 3.1000.0
+      '@aws-sdk/client-s3':
+        specifier: ^3.1034.0
+        version: 3.1075.0
+      '@lambda-event-router/base':
+        specifier: workspace:*
+        version: link:../../packages/base
+      '@lambda-event-router/codepipeline':
+        specifier: workspace:*
+        version: link:../../packages/codepipeline
+      zod:
+        specifier: ^4.3.5
+        version: 4.3.6
+    devDependencies:
+      '@types/aws-lambda':
+        specifier: 'catalog:'
+        version: 8.10.160
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.13
+      aws-cdk:
+        specifier: ^2.1000.0
+        version: 2.1120.0
+      aws-cdk-lib:
+        specifier: ^2.190.0
+        version: 2.251.0(constructs@10.6.0)
+      constructs:
+        specifier: ^10.4.2
+        version: 10.6.0
+      esbuild:
+        specifier: ^0.25.0
+        version: 0.25.12
+      tsx:
+        specifier: ^4.19.2
+        version: 4.21.0
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   service-examples/cognito:
     dependencies:
       '@aws-crypto/decrypt-node':
@@ -2439,10 +2482,6 @@ packages:
 
   '@aws-sdk/signature-v4-multi-region@3.996.35':
     resolution: {integrity: sha512-6L/VWs+Wch2stHemCGTmUNqKLMzURxQDK5boNG3Jn3kAOp71meDUuS5sbObpEvFxHDq0uWeSLFDNSYsjNt+Dlg==}
-    engines: {node: '>=20.0.0'}
-
-  '@aws-sdk/signature-v4-multi-region@3.996.37':
-    resolution: {integrity: sha512-u8qd064XsHzM0Mk+yH4IPKn/ZC9rdniEKs+neBHNlsPZirw3rcLvmrH4ImoKC4yF7A0I/MbcC3dseARnJLiAhg==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/signature-v4-multi-region@3.996.38':

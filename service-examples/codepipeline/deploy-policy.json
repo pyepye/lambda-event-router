@@ -1,0 +1,59 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "AssumeCdkBootstrapRoles",
+      "Effect": "Allow",
+      "Action": "sts:AssumeRole",
+      "Resource": "arn:aws:iam::*:role/cdk-hnb659fds-*"
+    },
+    {
+      "Sid": "ReadCdkBootstrapVersion",
+      "Effect": "Allow",
+      "Action": "ssm:GetParameter",
+      "Resource": "arn:aws:ssm:*:*:parameter/cdk-bootstrap/hnb659fds/version"
+    },
+    {
+      "Sid": "ReadStackState",
+      "Effect": "Allow",
+      "Action": ["cloudformation:DescribeStacks", "cloudformation:DescribeStackEvents", "cloudformation:GetTemplate"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "HotswapFunctionCode",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
+        "lambda:UpdateFunctionCode",
+        "lambda:UpdateFunctionConfiguration"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "UploadReleaseBundle",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"],
+      "Resource": "*"
+    },
+    {
+      "Sid": "RunTestExecutions",
+      "Effect": "Allow",
+      "Action": [
+        "codepipeline:GetPipeline",
+        "codepipeline:GetPipelineState",
+        "codepipeline:GetPipelineExecution",
+        "codepipeline:ListPipelineExecutions",
+        "codepipeline:ListActionExecutions",
+        "codepipeline:StartPipelineExecution"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ReadWorkerLogs",
+      "Effect": "Allow",
+      "Action": ["logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:FilterLogEvents", "logs:GetLogEvents"],
+      "Resource": "*"
+    }
+  ]
+}
