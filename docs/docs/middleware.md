@@ -315,8 +315,7 @@ Most packages name it `<Source>Middleware`, so `SQSMiddleware`, `DynamoDBMiddlew
 | `StepFunctionsRouter` | `StepFunctionsMiddleware`, and `StepFunctionsTaskTokenMiddleware` on a callback route | `@lambda-event-router/stepfunctions` |
 
 **`S3Router` keeps its two middleware types apart.** `middleware` runs for notification records and
-`batchMiddleware` runs for Batch tasks, at both the router and the route level, so neither side sees the
-other's.
+`batchMiddleware` runs for Batch tasks. That holds at both the router and the route level.
 
 ## Full example
 

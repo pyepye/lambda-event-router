@@ -434,8 +434,10 @@ s3Router.objectCreatedPut({
 ```
 
 The two never cross. `middleware` runs for notification records and `batchMiddleware` runs for batch
-tasks, because a batch task is not a record and the handler returns a result rather than nothing. If you
-want the same behaviour on both sides, write it twice against the two request types. See
+tasks. They cannot share a list. A batch task is not a record, and its handler returns a result rather than
+nothing.
+
+To get the same behaviour on both sides, write it twice against the two request types. See
 [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
