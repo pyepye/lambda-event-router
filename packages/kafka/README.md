@@ -111,6 +111,11 @@ async function processMessage({ value, key, topic, partition, offset }) {
 `headers`, with every entry in order on `headerList` for a name a producer sends twice. The message
 value is not on it, since that is only parsed once a route has matched.
 
+`tombstone: true` takes only records with no value, which on a compacted topic are deletes. `false`
+takes only records carrying a value. Leave it off to take both.
+
+A record with an empty value is not a tombstone. An empty payload is data, not a delete.
+
 Lambda sends a batch reported through `batchItemFailures` back as its `records` alone, with no
 `eventSourceArn` and no `bootstrapServers`. Those two filters have nothing to test on a redelivered
 record and let it through, so a retry reaches the same route as the first attempt.

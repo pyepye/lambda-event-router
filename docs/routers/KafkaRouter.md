@@ -93,9 +93,10 @@ kafkaRouter.route({
 | Filter | Type | Description |
 | --- | --- | --- |
 | `topic` | `FilterStringMatcher` | Matches the topic the record came from |
+| `tombstone` | `boolean` | `true` takes only tombstones, `false` takes only records carrying a value. Leave it off to take both. See [Tombstones](#tombstones) |
 | `eventSourceArn` | `FilterStringMatcher` | Matches the MSK cluster ARN on the event. A self-managed event carries no ARN, so nothing from one matches this |
 | `bootstrapServer` | `FilterStringMatcher` | Matches if any one of the event's brokers matches. AWS sends them as a comma separated list and the router splits it for you |
-| `custom` | `(input: KafkaFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the decoded `headers` and `headerList`, the `topic` and the raw `record`. Can be async |
+| `custom` | `(input: KafkaFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the decoded `headers` and `headerList`, the `topic`, the `tombstone` flag and the raw `record`. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
@@ -135,7 +136,7 @@ export async function onStockMoved(
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `value` | `TValue` | The record value, base64 decoded and JSON parsed. A value that is not valid JSON reaches you as the decoded string, and a record carrying no value at all as `undefined` |
+| `value` | `TValue` | The record value, base64 decoded and JSON parsed. A value that is not valid JSON reaches you as the decoded string, and a record carrying no value at all as `undefined`. An empty value arrives as `undefined` too, so use `tombstone` to tell a delete from an empty payload |
 | `key` | `string \| undefined` | The record key, base64 decoded to text. Kafka partitions on this, so every record with the same key lands on the same partition. A producer can publish without a key, and then this is `undefined` and the broker spreads those records round robin |
 | `topic` | `string` | The topic the record came from |
 | `partition` | `number` | The partition within that topic |
@@ -143,13 +144,13 @@ export async function onStockMoved(
 | `timestamp` | `number` | A Unix timestamp in milliseconds. `record.timestampType` says whether the producer or the broker set it |
 | `headers` | `KafkaHeaders` | The record headers keyed by name, values decoded to text, and empty where the record carries none. A repeated name holds the last value sent. See [Message headers](#message-headers) |
 | `headerList` | `KafkaDecodedHeader[]` | Every header entry in the order Kafka sent them, so a repeated name keeps both values |
+| `tombstone` | `boolean` | Whether the record carries no value, which on a compacted topic means its key is deleted. See [Tombstones](#tombstones) |
 | `record` | `KafkaRecord` | The untouched record from AWS, so `key` and `value` are still base64 |
 | `context` | `Context` | The Lambda context |
 
-**`record.key`, `record.value` and `record.headers` can each be absent.** A producer can publish without
-a key, a tombstone carries no value, and a record can carry no headers, so all three are typed
-`null | undefined` and need narrowing before you read them. The decoded `key`, `value` and `headers` on
-the request handle that for you.
+**`record.key`, `record.value` and `record.headers` can each be absent.** All three are typed
+`null | undefined`, so narrow before you read them. The decoded `key`, `value` and `headers` on the
+request do that for you.
 
 `KafkaRecord`, `KafkaRecordHeader` and `KafkaDecodedHeader` are declared by this package. `Context`
 comes from `aws-lambda`.
@@ -389,6 +390,39 @@ middleware that only reads the topic, the offset or the headers.
 
 You only need this for [annotated handlers](#annotated-handlers). Inference covers it.
 
+## Tombstones
+
+A tombstone is a record with a key and no value. It means that key is deleted.
+
+Log compaction is why they exist. A topic set to `cleanup.policy=compact` keeps only the newest record
+per key. That makes it a table of key to latest value. Producing nothing would leave the old value in
+place, so you produce a null value instead.
+
+Change-data-capture connectors send a tombstone for every deleted row.
+
+`tombstone` on the request says whether a record is one. The filter key sends deletes to their own
+route.
+
+```ts
+kafkaRouter.route({
+  filters: { topic: ORDERS_TOPIC, tombstone: true },
+  handler: async ({ key }) => forgetOrder(key),
+})
+
+kafkaRouter.route({
+  filters: { topic: ORDERS_TOPIC },
+  valueSchema: OrderSchema,
+  handler: upsertOrder,
+})
+```
+
+Leave the filter off to take both, as the second route does. `tombstone: false` takes only records
+carrying a value.
+
+**A record with an empty value is not a tombstone.** An empty payload is data, not a delete, so
+`tombstone` is `false`. Both reach the handler as `value: undefined`, so `tombstone` is what tells them
+apart.
+
 ## Message headers
 
 Kafka lets a producer attach any number of headers to a record, and it sends the values as bytes rather
@@ -408,15 +442,14 @@ kafkaRouter.route({
 ```
 
 **A repeated header name collapses in `headers`, keeping the last value sent.** Kafka allows a producer
-to send the same name twice, and `headerList` keeps every entry in the order it arrived, so reach for
-that when a name can repeat.
+to send the same name twice. `headerList` keeps every entry in the order it arrived, so use that when a
+name can repeat.
 
 ```ts
 const allTags = headerList.filter((header) => 'tag' in header).map((header) => header.tag)
 ```
 
-Both are empty where the record carries no headers at all, so neither needs a guard before you read
-it.
+Both are empty when the record carries no headers, so neither needs a guard.
 
 Headers are the one piece of record metadata with no filter key of its own, so a `custom` is
 where a route picks on them.

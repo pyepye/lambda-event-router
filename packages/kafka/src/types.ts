@@ -54,11 +54,13 @@ export interface KafkaFilterInput {
   headers: KafkaHeaders;
   headerList: KafkaDecodedHeader[];
   topic: string;
+  tombstone: boolean;
   record: KafkaRecord;
 }
 
 export interface KafkaFilters {
   topic?: FilterStringMatcher;
+  tombstone?: boolean;
   eventSourceArn?: FilterStringMatcher;
   bootstrapServer?: FilterStringMatcher;
   custom?: (input: KafkaFilterInput) => boolean | Promise<boolean>;
@@ -73,6 +75,7 @@ export interface KafkaRequest<TValue = unknown> {
   timestamp: number;
   headers: KafkaHeaders;
   headerList: KafkaDecodedHeader[];
+  tombstone: boolean;
   record: KafkaRecord;
   context: Context;
 }

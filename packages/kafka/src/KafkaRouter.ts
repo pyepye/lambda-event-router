@@ -187,11 +187,16 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return Object.assign({}, ...headerList) as KafkaHeaders;
   }
 
+  private isTombstone(record: KafkaRecord): boolean {
+    return record.value === null || record.value === undefined;
+  }
+
   private async processRecord(record: KafkaRecord, event: KafkaEvent, context: Context): Promise<void> {
     const headerList = this.decodeHeaders(record.headers);
     const headers = this.flattenHeaders(headerList);
+    const tombstone = this.isTombstone(record);
 
-    const route = await this.matchRoute(record, event, headers, headerList);
+    const route = await this.matchRoute(record, event, headers, headerList, tombstone);
     if (!route) {
       throw new Error(`No route matched for record on topic ${record.topic} partition ${record.partition}`);
     }
@@ -215,6 +220,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       timestamp: record.timestamp,
       headers,
       headerList,
+      tombstone,
       record,
       context,
     };
@@ -228,6 +234,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     event: KafkaEvent,
     headers: KafkaHeaders,
     headerList: KafkaDecodedHeader[],
+    tombstone: boolean,
   ): Promise<InternalRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
@@ -236,6 +243,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
         const topicMatch = filterStringMatcher(record.topic, filters.topic);
         if (!topicMatch) continue;
       }
+
+      if (filters.tombstone !== undefined && filters.tombstone !== tombstone) continue;
 
       const retryDelivery = this.isRetryDelivery(event);
 
@@ -254,7 +263,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       }
 
       if (filters.custom) {
-        const match = await filters.custom({ headers, headerList, topic: record.topic, record });
+        const match = await filters.custom({ headers, headerList, topic: record.topic, tombstone, record });
         if (!match) continue;
       }
 

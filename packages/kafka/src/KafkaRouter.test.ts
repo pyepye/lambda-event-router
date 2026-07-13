@@ -533,6 +533,112 @@ suite('KafkaRouter', () => {
     });
   });
 
+  suite('tombstones', () => {
+    test('marks a record with no value as a tombstone', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ key: 'order-1', value: null });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.tombstone).toBe(true);
+    });
+
+    test('does not mark a record with an empty value as a tombstone', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ key: 'order-1', value: '' });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.tombstone).toBe(false);
+      expect(receivedRequest?.value).toBeUndefined();
+    });
+
+    test('does not mark a record carrying a value as a tombstone', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ value: { action: 'test' } });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.tombstone).toBe(false);
+    });
+
+    test('routes only tombstones on a tombstone filter', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      const deletes = vi.fn();
+      const writes = vi.fn();
+      router.route(defineRoute({ filters: { tombstone: true } }).handle(deletes));
+      router.route(defineRoute({ filters: {} }).handle(writes));
+
+      const records = [kafkaRecord({ key: 'a', value: null }), kafkaRecord({ key: 'b', value: { action: 'test' } })];
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': records }), context());
+
+      expect(deletes).toHaveBeenCalledTimes(1);
+      expect(writes).toHaveBeenCalledTimes(1);
+    });
+
+    test('a false tombstone filter rejects a tombstone rather than matching everything', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: { tombstone: false } }).handle(handler));
+
+      const record = kafkaRecord({ key: 'a', value: null });
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
+
+      await expect(router.handleEvent(event, context())).rejects.toThrow('No route matched');
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('a route with no tombstone filter takes both', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: { topic: 'test-topic' } }).handle(handler));
+
+      const records = [kafkaRecord({ key: 'a', value: null }), kafkaRecord({ key: 'b', value: { action: 'test' } })];
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': records }), context());
+
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
+    test('gives a custom filter the tombstone flag', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedInput: KafkaFilterInput | undefined;
+      router.route(
+        defineRoute({
+          filters: {
+            custom: (input: KafkaFilterInput): boolean => {
+              receivedInput = input;
+              return true;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = kafkaRecord({ key: 'a', value: null });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedInput?.tombstone).toBe(true);
+    });
+  });
+
   suite('records with absent fields', () => {
     test('gives the handler an undefined key when the record has no key', async ({
       kafkaRecord,
