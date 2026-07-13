@@ -72,6 +72,18 @@ suite('KafkaRouter', () => {
     test('returns false for non-object input', () => {
       expect(router.canHandleEvent('string')).toBe(false);
     });
+
+    test('returns true for a re-delivered batch, which names no event source', ({ kafkaRetryEvent }) => {
+      expect(router.canHandleEvent(kafkaRetryEvent())).toBe(true);
+    });
+
+    test('returns false when records hold nothing that looks like a Kafka record', () => {
+      expect(router.canHandleEvent({ records: { 'test-topic-0': [{ body: 'hello' }] } })).toBe(false);
+    });
+
+    test('returns false when records is empty and no event source names it', () => {
+      expect(router.canHandleEvent({ records: {} })).toBe(false);
+    });
   });
 
   suite('route', () => {
@@ -153,6 +165,38 @@ suite('KafkaRouter', () => {
       // @ts-expect-error testing private method
       const result = await router.matchRoute(record, event, []);
       expect(result).toBeUndefined();
+    });
+
+    test('matches an eventSourceArn filter on a re-delivered batch, which carries no ARN', async ({
+      kafkaRecord,
+      kafkaRetryEvent,
+    }) => {
+      router.route(
+        defineRoute({ filters: { eventSourceArn: 'arn:aws:kafka:us-east-1:123456789012:cluster/Any/abc-123' } }).handle(
+          async () => {},
+        ),
+      );
+
+      const record = kafkaRecord();
+      const event = kafkaRetryEvent({ 'test-topic-0': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
+    });
+
+    test('matches a bootstrapServer filter on a re-delivered batch, which carries no brokers', async ({
+      kafkaRecord,
+      kafkaRetryEvent,
+    }) => {
+      router.route(defineRoute({ filters: { bootstrapServer: 'broker1.example.com:9092' } }).handle(async () => {}));
+
+      const record = kafkaRecord();
+      const event = kafkaRetryEvent({ 'test-topic-0': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+      expect(result).toBeDefined();
     });
 
     test('does not match eventSourceArn filter for SelfManagedKafka event', async ({

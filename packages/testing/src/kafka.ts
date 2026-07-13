@@ -96,6 +96,14 @@ export function createSelfManagedKafkaEvent(
   };
 }
 
+// Lambda re-delivers a batch reported through `batchItemFailures` as its records alone, with no
+// `eventSource`, `eventSourceArn` or `bootstrapServers`.
+export function createKafkaRetryEvent(
+  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
+): { records: Record<string, MSKRecord[]> } {
+  return { records: recordsByTopicPartition };
+}
+
 export function createKafkaHandlerEvent(options: CreateKafkaHandlerEventOptions = {}): KafkaHandlerEvent {
   const eventType = options.eventType ?? 'msk';
   const event =
@@ -112,6 +120,9 @@ export interface KafkaFixtures {
   kafkaSelfManagedEvent: (
     recordsByTopicPartition?: Parameters<typeof createSelfManagedKafkaEvent>[0],
   ) => ReturnType<typeof createSelfManagedKafkaEvent>;
+  kafkaRetryEvent: (
+    recordsByTopicPartition?: Parameters<typeof createKafkaRetryEvent>[0],
+  ) => ReturnType<typeof createKafkaRetryEvent>;
   kafkaHandlerEvent: (options?: CreateKafkaHandlerEventOptions) => KafkaHandlerEvent;
 }
 
@@ -119,5 +130,6 @@ export const kafkaFixtures: FixtureMap<KafkaFixtures> = {
   kafkaRecord: fixture(createKafkaRecord),
   kafkaMSKEvent: fixture(createMSKEvent),
   kafkaSelfManagedEvent: fixture(createSelfManagedKafkaEvent),
+  kafkaRetryEvent: fixture(createKafkaRetryEvent),
   kafkaHandlerEvent: fixture(createKafkaHandlerEvent),
 };

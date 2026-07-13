@@ -110,6 +110,10 @@ async function processMessage({ value, key, topic, partition, offset }) {
 `custom` is given the decoded headers, the topic and the raw record. The message value is not on
 it, since that is only parsed once a route has matched.
 
+Lambda sends a batch reported through `batchItemFailures` back as its `records` alone, with no
+`eventSourceArn` and no `bootstrapServers`. Those two filters have nothing to test on a redelivered
+record and let it through, so a retry reaches the same route as the first attempt.
+
 ```ts
 defineRoute({
   filters: {

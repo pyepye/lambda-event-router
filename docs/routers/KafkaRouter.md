@@ -100,6 +100,12 @@ kafkaRouter.route({
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
+**A redelivered batch carries no ARN and no brokers.** Lambda sends a batch reported through
+`batchItemFailures` back as its `records` alone, which the AWS event documentation does not show. The
+mapping has already pinned those records to a cluster the function consumes, so `eventSourceArn` and
+`bootstrapServer` have nothing left to test and let the record through. A retried record therefore
+reaches the same route as its first attempt.
+
 The record key, the partition and the headers are all reachable through `custom` and nowhere
 else. Headers arrive decoded, the partition is a plain number on `record`, and `record.key` is still
 the base64 AWS sent, or missing entirely on a record published without one. See [Message
@@ -294,6 +300,10 @@ the offset. `KafkaBatchResponse` is the shape the router hands back.
 
 You also need to set the `ReportBatchItemFailures` response type on the event source mapping. Without
 it, AWS ignores what the router returns.
+
+A redelivered batch is thinner than the first delivery. `KafkaRetryEvent` is that shape: `records` and
+nothing else. The router recognises it by its records, because there is no `eventSource` to name it
+by.
 
 ## Middleware
 

@@ -13,7 +13,15 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 
 export type KafkaRecord = MSKRecord | SelfManagedKafkaRecord;
 
-export type KafkaEvent = MSKEvent | SelfManagedKafkaEvent;
+// Lambda re-delivers a batch reported through `batchItemFailures` as its records alone, with no
+// `eventSource`, `eventSourceArn` or `bootstrapServers`.
+export interface KafkaRetryEvent {
+  // Absent, and declared so the union stays discriminated on it.
+  eventSource?: undefined;
+  records: Record<string, KafkaRecord[]>;
+}
+
+export type KafkaEvent = MSKEvent | SelfManagedKafkaEvent | KafkaRetryEvent;
 
 export type KafkaDecodedHeader = Record<string, string>;
 

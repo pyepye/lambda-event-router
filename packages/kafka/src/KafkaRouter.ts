@@ -20,6 +20,7 @@ import type {
   KafkaRecord,
   KafkaRecordHeader,
   KafkaRequest,
+  KafkaRetryEvent,
   KafkaRouteDefinition,
   KafkaRouterOptions,
 } from './types.js';
@@ -56,7 +57,11 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     if (!isObject(event.records)) return false;
 
     const eventSource = event.eventSource;
-    return eventSource === 'aws:kafka' || eventSource === 'SelfManagedKafka';
+    if (eventSource === 'aws:kafka' || eventSource === 'SelfManagedKafka') return true;
+
+    // A re-delivered batch names no source, so the records themselves are the only thing left to
+    // recognise it by.
+    return eventSource === undefined && this.holdsKafkaRecords(event.records);
   }
 
   route<TValue>(definition: KafkaRouteDefinition<TValue>): this {
@@ -132,6 +137,33 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return event.eventSource === 'aws:kafka';
   }
 
+  // A re-delivered batch carries neither the cluster ARN nor the broker list. The event source
+  // mapping has already pinned those records to a cluster this function consumes, so a filter on
+  // either has nothing left to decide.
+  private isRetryDelivery(event: KafkaEvent): event is KafkaRetryEvent {
+    return event.eventSource === undefined;
+  }
+
+  // Every entry of a Kafka `records` map is one partition's records, and each record carries the
+  // topic, partition and offset the router reads.
+  private holdsKafkaRecords(records: Record<string, unknown>): boolean {
+    const partitions = Object.values(records);
+    if (partitions.length === 0) return false;
+
+    return partitions.every(
+      (partitionRecords) =>
+        Array.isArray(partitionRecords) &&
+        partitionRecords.length > 0 &&
+        partitionRecords.every(
+          (record) =>
+            isObject(record) &&
+            typeof record.topic === 'string' &&
+            typeof record.partition === 'number' &&
+            typeof record.offset === 'number',
+        ),
+    );
+  }
+
   private decodeHeaders(headers: KafkaRecordHeader[] | null | undefined): KafkaDecodedHeader[] {
     if (!headers) return [];
 
@@ -196,14 +228,16 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
         if (!topicMatch) continue;
       }
 
-      if (filters.eventSourceArn) {
+      const retryDelivery = this.isRetryDelivery(event);
+
+      if (filters.eventSourceArn && !retryDelivery) {
         if (!this.isMSKEvent(event)) continue;
 
         const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.bootstrapServer) {
+      if (filters.bootstrapServer && !retryDelivery) {
         const { bootstrapServer } = filters; // Needed here due to TS having different scope for  separate function closure
         const bootstrapServers = event.bootstrapServers.split(',');
         const bootstrapServerMatch = bootstrapServers.some((server) => filterStringMatcher(server, bootstrapServer));

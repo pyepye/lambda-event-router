@@ -10,6 +10,7 @@ export type {
   KafkaRecord,
   KafkaRequest,
   KafkaResponse,
+  KafkaRetryEvent,
   KafkaRouteDefinition,
   KafkaRouterOptions,
 } from './types.js';

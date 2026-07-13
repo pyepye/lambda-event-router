@@ -219,7 +219,13 @@ export type {
   KafkaHandlerEvent,
   KafkaRecordOverrides,
 } from './kafka.js';
-export { createKafkaHandlerEvent, createKafkaRecord, createMSKEvent, createSelfManagedKafkaEvent } from './kafka.js';
+export {
+  createKafkaHandlerEvent,
+  createKafkaRecord,
+  createKafkaRetryEvent,
+  createMSKEvent,
+  createSelfManagedKafkaEvent,
+} from './kafka.js';
 export type { CreateKinesisHandlerEventOptions, KinesisHandlerEvent, KinesisRecordOverrides } from './kinesis.js';
 export { createKinesisEvent, createKinesisHandlerEvent, createKinesisRecord } from './kinesis.js';
 export type {
