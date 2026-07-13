@@ -15,7 +15,7 @@ export function filterStringMatcher(testString: string, matcher: FilterStringMat
 
   // Escape special regex characters except for '*'
   // Then replace '*' with '.*' to match anything
-  const escaped = matcher.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const escaped = matcher.replace(/[.+?^${}()|[\]\\]/g, '\\$&');
   const regexSource = escaped.replace(/\*/g, '.*');
 
   const regex = new RegExp(`^${regexSource}$`);

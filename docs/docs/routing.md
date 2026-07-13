@@ -127,8 +127,9 @@ and `detailType`. Each [router page](/packages) lists its own.
 - Missing data is a miss rather than a pass, so a `messageAttributes` key the message does not carry
   fails the filter
 - String keys take `FilterStringMatcher` from base, which is `string | RegExp | Array<string | RegExp>`
-- A plain string has to match the whole value, with `*` as its one wildcard. A `RegExp` is used exactly
-  as you wrote it, anchors and all
+- A plain string has to match the whole value, with `*` as its one wildcard. Every other character is
+  literal, so the `?` and `.` in `report?.csv` match those characters and nothing else
+- A `RegExp` is used exactly as you wrote it, anchors and all
 - Not everything is compared as a string. SQS `Number` message attributes compare as numbers, and
   DynamoDB partition and sort keys take numbers too
 

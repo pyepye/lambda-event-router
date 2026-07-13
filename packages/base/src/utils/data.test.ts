@@ -35,6 +35,9 @@ suite('filterStringMatcher', () => {
       expect(filterStringMatcher('a|b', 'a|b')).toBe(true);
       expect(filterStringMatcher('a', 'a|b')).toBe(false);
       expect(filterStringMatcher('path\\to', 'path\\to')).toBe(true);
+      expect(filterStringMatcher('report?.csv', 'report?.csv')).toBe(true);
+      expect(filterStringMatcher('repor.csv', 'report?.csv')).toBe(false);
+      expect(filterStringMatcher('report.csv', 'report?.csv')).toBe(false);
     });
   });
 
