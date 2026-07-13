@@ -96,9 +96,11 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
   private batchRoute: S3BatchRouteDefinition | undefined;
   private testEventRoute: S3TestEventRouteDefinition | undefined;
   private middleware: S3Middleware[] = [];
+  private batchMiddleware: S3BatchMiddleware[] = [];
 
   constructor(options?: S3RouterOptions) {
     this.middleware = options?.middleware ?? [];
+    this.batchMiddleware = options?.batchMiddleware ?? [];
   }
   // ===========================================================================
   // Event Detection
@@ -474,7 +476,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
 
   private async processBatchTask(route: S3BatchRouteDefinition, request: S3BatchRequest): Promise<S3BatchResponse> {
     try {
-      const batchMiddleware: S3BatchMiddleware[] = route.middleware ?? [];
+      const batchMiddleware: S3BatchMiddleware[] = [...this.batchMiddleware, ...(route.middleware ?? [])];
       if (batchMiddleware.length > 0) {
         return await handleEventWithMiddleware(batchMiddleware, request, route.handler);
       }

@@ -28,13 +28,14 @@ const s3Router = createS3Router({
 })
 ```
 
-`middleware` is the only option, so `createS3Router()` on its own is what you want most of the time.
+Both options are optional, so `createS3Router()` on its own is what you want most of the time.
 
 ### Options
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `middleware` | `S3Middleware[]` | No | `[]` | Runs for every notification record this router handles, before any route middleware. Batch routes do not get it. See [Middleware](#middleware) |
+| `middleware` | `S3Middleware[]` | No | `[]` | Runs for every notification record this router handles, before any route middleware. Batch tasks do not get it. See [Middleware](#middleware) |
+| `batchMiddleware` | `S3BatchMiddleware[]` | No | `[]` | Runs for every batch task this router handles, before any batch route middleware. Notification records do not get it. See [Middleware](#middleware) |
 
 ## Register routes
 
@@ -420,7 +421,10 @@ export const logBatchTask: S3BatchMiddleware = async (request, next) => {
 ```
 
 ```ts
-const s3Router = createS3Router({ middleware: [logInvocation] })
+const s3Router = createS3Router({
+  middleware: [logInvocation],
+  batchMiddleware: [logBatchTask],
+})
 
 s3Router.objectCreatedPut({
   filters: { bucket: UPLOADS_BUCKET },
@@ -429,9 +433,10 @@ s3Router.objectCreatedPut({
 })
 ```
 
-**Router middleware does not reach a batch route.** It is typed for a notification request, so a batch
-task would never satisfy it, and anything you need on both sides goes on each route rather than on the
-router. See [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
+The two never cross. `middleware` runs for notification records and `batchMiddleware` runs for batch
+tasks, because a batch task is not a record and the handler returns a result rather than nothing. If you
+want the same behaviour on both sides, write it twice against the two request types. See
+[middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
 

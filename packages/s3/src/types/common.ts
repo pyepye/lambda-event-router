@@ -2,6 +2,8 @@ import type { Context, S3EventRecord } from 'aws-lambda';
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
+import type { S3BatchMiddleware } from './batch.js';
+
 // =============================================================================
 // Filter Types
 // =============================================================================
@@ -44,4 +46,5 @@ export type S3Middleware = Middleware<S3BaseRequest, void>;
 
 export interface S3RouterOptions {
   middleware?: S3Middleware[];
+  batchMiddleware?: S3BatchMiddleware[];
 }

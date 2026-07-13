@@ -1204,6 +1204,69 @@ suite('S3Router', () => {
       expect(result?.results[0]?.resultString).toBe('modified by middleware');
     });
 
+    test('executes router-level batch middleware before the handler', async ({ s3BatchHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('router-mw');
+        return await next(request);
+      }
+      const router = createS3Router({ batchMiddleware: [routerMiddleware] });
+      router.batchOperation({
+        handler: async () => {
+          callOrder.push('handler');
+          return { resultCode: 'Succeeded' as const };
+        },
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'handler']);
+    });
+
+    test('executes router batch middleware before route batch middleware', async ({ s3BatchHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routerMiddleware(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('router-mw');
+        return await next(request);
+      }
+      async function routeMiddleware(request: S3BatchRequest, next: S3BatchNext): Promise<S3BatchResponse> {
+        callOrder.push('route-mw');
+        return await next(request);
+      }
+      const router = createS3Router({ batchMiddleware: [routerMiddleware] });
+      router.batchOperation({
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+          return { resultCode: 'Succeeded' as const };
+        },
+      });
+
+      const { event, context } = s3BatchHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
+    });
+
+    test('router-level batch middleware can short-circuit the handler', async ({ s3BatchHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' as const });
+
+      async function blockingMiddleware(_request: S3BatchRequest, _next: S3BatchNext): Promise<S3BatchResponse> {
+        return { resultCode: 'PermanentFailure' as const, resultString: 'blocked by router middleware' };
+      }
+      const router = createS3Router({ batchMiddleware: [blockingMiddleware] });
+      router.batchOperation({ handler });
+
+      const { event, context } = s3BatchHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+      expect(result?.results[0]?.resultString).toBe('blocked by router middleware');
+    });
+
     test('router-level middleware does not apply to batch routes', async ({ s3BatchHandlerEvent }) => {
       const routerMiddleware = vi.fn();
 
