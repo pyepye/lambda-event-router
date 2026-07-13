@@ -1,17 +1,38 @@
-import type {
-  Context,
-  MSKEvent,
-  MSKRecord,
-  MSKRecordHeader,
-  SelfManagedKafkaEvent,
-  SelfManagedKafkaRecord,
-} from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
-export type KafkaRecord = MSKRecord | SelfManagedKafkaRecord;
+export interface KafkaRecordHeader {
+  [headerKey: string]: number[];
+}
+
+// A record produced without a key arrives with a null key, a tombstone with a null value, and a record
+// produced with no headers with null headers.
+export interface KafkaRecord {
+  topic: string;
+  partition: number;
+  offset: number;
+  timestamp: number;
+  timestampType: 'CREATE_TIME' | 'LOG_APPEND_TIME';
+  key?: string | null;
+  value?: string | null;
+  headers?: KafkaRecordHeader[] | null;
+}
+
+export interface KafkaMSKEvent {
+  eventSource: 'aws:kafka';
+  eventSourceArn: string;
+  bootstrapServers: string;
+  records: Record<string, KafkaRecord[]>;
+}
+
+export interface KafkaSelfManagedEvent {
+  eventSource: 'SelfManagedKafka';
+  bootstrapServers: string;
+  records: Record<string, KafkaRecord[]>;
+}
 
 // Lambda re-delivers a batch reported through `batchItemFailures` as its records alone, with no
 // `eventSource`, `eventSourceArn` or `bootstrapServers`.
@@ -21,7 +42,7 @@ export interface KafkaRetryEvent {
   records: Record<string, KafkaRecord[]>;
 }
 
-export type KafkaEvent = MSKEvent | SelfManagedKafkaEvent | KafkaRetryEvent;
+export type KafkaEvent = KafkaMSKEvent | KafkaSelfManagedEvent | KafkaRetryEvent;
 
 export type KafkaDecodedHeader = Record<string, string>;
 
@@ -74,5 +95,3 @@ export interface KafkaBatchItemIdentifier {
 export interface KafkaBatchResponse {
   batchItemFailures: Array<{ itemIdentifier: KafkaBatchItemIdentifier }>;
 }
-
-export type KafkaRecordHeader = MSKRecordHeader;

@@ -1,4 +1,4 @@
-import type { Context, MSKEvent } from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
@@ -17,6 +17,7 @@ import type {
   KafkaBatchResponse,
   KafkaDecodedHeader,
   KafkaEvent,
+  KafkaMSKEvent,
   KafkaRecord,
   KafkaRecordHeader,
   KafkaRequest,
@@ -133,7 +134,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return failures;
   }
 
-  private isMSKEvent(event: KafkaEvent): event is MSKEvent {
+  private isMSKEvent(event: KafkaEvent): event is KafkaMSKEvent {
     return event.eventSource === 'aws:kafka';
   }
 

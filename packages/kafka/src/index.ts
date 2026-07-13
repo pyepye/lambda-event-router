@@ -7,10 +7,13 @@ export type {
   KafkaFilterInput,
   KafkaFilters,
   KafkaMiddleware,
+  KafkaMSKEvent,
   KafkaRecord,
+  KafkaRecordHeader,
   KafkaRequest,
   KafkaResponse,
   KafkaRetryEvent,
   KafkaRouteDefinition,
   KafkaRouterOptions,
+  KafkaSelfManagedEvent,
 } from './types.js';

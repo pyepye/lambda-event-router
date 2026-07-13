@@ -108,7 +108,7 @@ reaches the same route as its first attempt.
 
 The record key, the partition and the headers are all reachable through `custom` and nowhere
 else. Headers arrive decoded, the partition is a plain number on `record`, and `record.key` is still
-the base64 AWS sent, or missing entirely on a record published without one. See [Message
+the base64 AWS sent, or null on a record published without one. See [Message
 headers](#message-headers) for the shape `headers` takes.
 
 **`custom` gets no parsed value.** The value is only decoded and validated once a route has
@@ -145,11 +145,16 @@ export async function onStockMoved(
 | `record` | `KafkaRecord` | The untouched record from AWS, so `key` and `value` are still base64 |
 | `context` | `Context` | The Lambda context |
 
-`KafkaRecord` is this package's alias for `MSKRecord | SelfManagedKafkaRecord`, both of which come from
-`aws-lambda` along with `Context`. `KafkaDecodedHeader` is declared by this package.
+**`record.key`, `record.value` and `record.headers` can each be absent.** A producer can publish without
+a key, a tombstone carries no value, and a record can carry no headers, so all three are typed
+`null | undefined` and need narrowing before you read them. The decoded `key`, `value` and `headers` on
+the request handle that for you.
 
-The two record types are identical, so nothing in a handler has to know which cluster it is reading
-from. Only `eventSourceArn` differs, and that sits on the event rather than the record.
+`KafkaRecord`, `KafkaRecordHeader` and `KafkaDecodedHeader` are declared by this package. `Context`
+comes from `aws-lambda`.
+
+MSK and self-managed records are identical, so nothing in a handler has to know which cluster it is
+reading from. Only `eventSourceArn` differs, and that sits on the event rather than the record.
 
 ### Response type
 
@@ -361,8 +366,10 @@ All exported from `@lambda-event-router/kafka`.
 | `KafkaDecodedHeader` | One decoded header entry, `Record<string, string>` |
 | `KafkaBatchResponse` | What the router returns with `batchItemFailures` on |
 | `KafkaBatchItemIdentifier` | One failed record, `{ partition, offset }` |
-| `KafkaRecord` | Alias for `MSKRecord \| SelfManagedKafkaRecord` |
-| `KafkaEvent` | Alias for `MSKEvent \| SelfManagedKafkaEvent` |
+| `KafkaRecord` | One record as AWS sends it, with `key`, `value` and `headers` each able to be absent |
+| `KafkaRecordHeader` | One raw header entry, `Record<string, number[]>` |
+| `KafkaMSKEvent`, `KafkaSelfManagedEvent` | The two delivered event shapes |
+| `KafkaEvent` | Either of those, or `KafkaRetryEvent` for a re-delivered batch |
 
 The `KafkaRouter` class and the `createKafkaRouter` and `defineRoute` functions come from the same
 place.

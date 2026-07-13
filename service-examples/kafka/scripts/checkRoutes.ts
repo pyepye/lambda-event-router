@@ -1,4 +1,5 @@
-import type { Context, MSKEvent, MSKRecord, MSKRecordHeader } from 'aws-lambda';
+import type { KafkaMSKEvent, KafkaRecord, KafkaRecordHeader } from '@lambda-event-router/kafka';
+import type { Context } from 'aws-lambda';
 
 import {
   CAPTURE_KIND,
@@ -39,7 +40,7 @@ const context = {
 
 // Kafka carries bytes. Lambda base64 encodes the key and the value, and sends each header as its own
 // object of raw bytes.
-function encodeHeaders(headers: Record<string, string>): MSKRecordHeader[] {
+function encodeHeaders(headers: Record<string, string>): KafkaRecordHeader[] {
   return Object.entries(headers).map(([key, value]) => ({ [key]: Array.from(Buffer.from(value, 'utf-8')) }));
 }
 
@@ -56,15 +57,14 @@ interface RecordOptions {
   headers?: Record<string, string>;
 }
 
-function record(options: RecordOptions): MSKRecord {
+function record(options: RecordOptions): KafkaRecord {
   return {
     topic: options.topic,
     partition: options.partition,
     offset: options.offset,
     timestamp: 1_745_000_000_000,
     timestampType: 'CREATE_TIME',
-    // A record produced without a key arrives with a null one, which the aws-lambda types call a string.
-    key: options.key === undefined ? (null as unknown as string) : encode(options.key),
+    key: options.key === undefined ? null : encode(options.key),
     value: encode(options.value),
     headers: encodeHeaders(options.headers ?? {}),
   };
@@ -73,12 +73,12 @@ function record(options: RecordOptions): MSKRecord {
 interface EventOptions {
   topic: string;
   partition: number;
-  records: MSKRecord[];
+  records: KafkaRecord[];
   eventSourceArn?: string;
   bootstrapServers?: string;
 }
 
-function event(options: EventOptions): MSKEvent {
+function event(options: EventOptions): KafkaMSKEvent {
   return {
     eventSource: 'aws:kafka',
     eventSourceArn: options.eventSourceArn ?? CLUSTER_ARN,
@@ -109,7 +109,7 @@ interface Expectation {
 
 interface Check {
   name: string;
-  event: MSKEvent;
+  event: KafkaMSKEvent;
   expected: Expectation;
 }
 
@@ -352,7 +352,7 @@ const checks: Check[] = [
   },
 ];
 
-async function runCapturingLogs(kafkaEvent: MSKEvent): Promise<{ logged: string; failures: string }> {
+async function runCapturingLogs(kafkaEvent: KafkaMSKEvent): Promise<{ logged: string; failures: string }> {
   const lines: string[] = [];
   const collect = (...args: unknown[]): void => {
     lines.push(JSON.stringify(args));
@@ -411,7 +411,7 @@ for (const check of checks) {
   report(check.name, problemsWith(logged, failures, check.expected));
 }
 
-const anyOrder = checks[0]?.event as MSKEvent;
+const anyOrder = checks[0]?.event as KafkaMSKEvent;
 
 const claims: [string, boolean][] = [
   ['the router takes an MSK event', kafkaRouter.canHandleEvent(anyOrder)],

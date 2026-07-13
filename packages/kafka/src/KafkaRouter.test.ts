@@ -4,7 +4,7 @@ import * as base from '@lambda-event-router/base';
 import { createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
-import type { KafkaFilterInput, KafkaRequest } from './types.js';
+import type { KafkaEvent, KafkaFilterInput, KafkaRecord, KafkaRecordHeader, KafkaRequest } from './types.js';
 
 type KafkaNext = (request: KafkaRequest) => Promise<void>;
 
@@ -527,6 +527,27 @@ suite('KafkaRouter', () => {
       await router.handleEvent(event, context());
 
       expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    test('types the raw record fields as able to be absent', ({ kafkaRecord }) => {
+      const record: KafkaRecord = kafkaRecord({ key: null, value: null, headers: null });
+
+      // @ts-expect-error a record produced without a key arrives with a null one
+      const key: string = record.key;
+      // @ts-expect-error a tombstone arrives with a null value
+      const value: string = record.value;
+      // @ts-expect-error a record produced without headers arrives with null headers
+      const headers: KafkaRecordHeader[] = record.headers;
+
+      expect([key, value, headers]).toEqual([null, null, null]);
+    });
+
+    // The fixture declares the record shape itself and cannot import this package. This fails to
+    // compile if the two drift apart.
+    test('a fixture event satisfies KafkaEvent', ({ kafkaRecord, kafkaMSKEvent }) => {
+      const event: KafkaEvent = kafkaMSKEvent({ 'test-topic-0': [kafkaRecord({ key: null })] });
+
+      expect(Object.keys(event.records)).toEqual(['test-topic-0']);
     });
 
     test('fails a record with no value against a valueSchema', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
