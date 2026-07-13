@@ -17,6 +17,7 @@ import type {
   KafkaBatchResponse,
   KafkaDecodedHeader,
   KafkaEvent,
+  KafkaHeaders,
   KafkaMSKEvent,
   KafkaRecord,
   KafkaRecordHeader,
@@ -182,10 +183,15 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     return Buffer.from(value, 'base64').toString('utf-8');
   }
 
-  private async processRecord(record: KafkaRecord, event: KafkaEvent, context: Context): Promise<void> {
-    const decodedHeaders = this.decodeHeaders(record.headers);
+  private flattenHeaders(headerList: KafkaDecodedHeader[]): KafkaHeaders {
+    return Object.assign({}, ...headerList) as KafkaHeaders;
+  }
 
-    const route = await this.matchRoute(record, event, decodedHeaders);
+  private async processRecord(record: KafkaRecord, event: KafkaEvent, context: Context): Promise<void> {
+    const headerList = this.decodeHeaders(record.headers);
+    const headers = this.flattenHeaders(headerList);
+
+    const route = await this.matchRoute(record, event, headers, headerList);
     if (!route) {
       throw new Error(`No route matched for record on topic ${record.topic} partition ${record.partition}`);
     }
@@ -207,7 +213,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       partition: record.partition,
       offset: record.offset,
       timestamp: record.timestamp,
-      headers: decodedHeaders,
+      headers,
+      headerList,
       record,
       context,
     };
@@ -219,7 +226,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
   private async matchRoute(
     record: KafkaRecord,
     event: KafkaEvent,
-    decodedHeaders: KafkaDecodedHeader[],
+    headers: KafkaHeaders,
+    headerList: KafkaDecodedHeader[],
   ): Promise<InternalRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
@@ -246,7 +254,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       }
 
       if (filters.custom) {
-        const match = await filters.custom({ headers: decodedHeaders, topic: record.topic, record });
+        const match = await filters.custom({ headers, headerList, topic: record.topic, record });
         if (!match) continue;
       }
 

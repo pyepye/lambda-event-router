@@ -35,7 +35,7 @@ kafkaRouter.route({
 
 // Route with custom filter on headers
 function hasCorrelationId({ headers }: KafkaFilterInput): boolean {
-  return headers.some((header) => Object.hasOwn(header, 'correlationId'));
+  return headers.correlationId !== undefined;
 }
 
 kafkaRouter.route({

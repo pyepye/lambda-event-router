@@ -83,7 +83,7 @@ kafkaRouter.route({
     bootstrapServer: 'broker1.eu-west-2.example.com:9092', // Or a pattern: /^broker1\./
     custom: ({ headers }) => {
       // Only a custom reaches the headers, the key or the partition
-      return headers.some((header) => header.source === 'warehouse-scanner')
+      return headers.source === 'warehouse-scanner'
     },
   },
   handler: onStockMoved,
@@ -95,7 +95,7 @@ kafkaRouter.route({
 | `topic` | `FilterStringMatcher` | Matches the topic the record came from |
 | `eventSourceArn` | `FilterStringMatcher` | Matches the MSK cluster ARN on the event. A self-managed event carries no ARN, so nothing from one matches this |
 | `bootstrapServer` | `FilterStringMatcher` | Matches if any one of the event's brokers matches. AWS sends them as a comma separated list and the router splits it for you |
-| `custom` | `(input: KafkaFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the decoded `headers`, the `topic` and the raw `record`. Can be async |
+| `custom` | `(input: KafkaFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the decoded `headers` and `headerList`, the `topic` and the raw `record`. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
@@ -141,7 +141,8 @@ export async function onStockMoved(
 | `partition` | `number` | The partition within that topic |
 | `offset` | `number` | Where the record sits in its partition. Unique per partition and increasing, so it makes a good idempotency key |
 | `timestamp` | `number` | A Unix timestamp in milliseconds. `record.timestampType` says whether the producer or the broker set it |
-| `headers` | `KafkaDecodedHeader[]` | The record headers with their values decoded to text, or an empty list where the record carries none. See [Message headers](#message-headers) |
+| `headers` | `KafkaHeaders` | The record headers keyed by name, values decoded to text, and empty where the record carries none. A repeated name holds the last value sent. See [Message headers](#message-headers) |
+| `headerList` | `KafkaDecodedHeader[]` | Every header entry in the order Kafka sent them, so a repeated name keeps both values |
 | `record` | `KafkaRecord` | The untouched record from AWS, so `key` and `value` are still base64 |
 | `context` | `Context` | The Lambda context |
 
@@ -363,7 +364,8 @@ All exported from `@lambda-event-router/kafka`.
 | `KafkaRouteDefinition<TValue>` | A full route passed to `route()` |
 | `KafkaRouterOptions` | Options for `createKafkaRouter` |
 | `KafkaMiddleware<TValue>` | Router and route middleware |
-| `KafkaDecodedHeader` | One decoded header entry, `Record<string, string>` |
+| `KafkaHeaders` | Headers keyed by name, `Record<string, string>` |
+| `KafkaDecodedHeader` | One entry of `headerList`, `Record<string, string>` |
 | `KafkaBatchResponse` | What the router returns with `batchItemFailures` on |
 | `KafkaBatchItemIdentifier` | One failed record, `{ partition, offset }` |
 | `KafkaRecord` | One record as AWS sends it, with `key`, `value` and `headers` each able to be absent |
@@ -393,20 +395,28 @@ Kafka lets a producer attach any number of headers to a record, and it sends the
 than text. AWS passes them through as a list, one object per header, whose single key is the header
 name, and leaves the field off a record with no headers at all.
 
-The router decodes every value to UTF-8 and gives you an empty list where there were none, so `headers`
-is always a list of `Record<string, string>`. Reading one means finding the entry that carries it.
+The router decodes every value to UTF-8 and gives you both shapes. `headers` is keyed by header name,
+which is what you want almost every time.
 
 ```ts
-import type { KafkaDecodedHeader } from '@lambda-event-router/kafka'
-
-export function readHeader(headers: KafkaDecodedHeader[], name: string): string | undefined {
-  return headers.find((header) => name in header)?.[name]
-}
+kafkaRouter.route({
+  filters: { topic: AUDIT_TOPIC },
+  handler: async ({ headers }) => {
+    if (headers.auditType === 'COMPLIANCE') await archive(headers.correlationId)
+  },
+})
 ```
 
-The list is a list because Kafka allows the same header name twice, which is how a producer sends
-repeated values under one name. `find` gives you the first, and there is nothing clever to reach for if
-you want them all.
+**A repeated header name collapses in `headers`, keeping the last value sent.** Kafka allows a producer
+to send the same name twice, and `headerList` keeps every entry in the order it arrived, so reach for
+that when a name can repeat.
+
+```ts
+const allTags = headerList.filter((header) => 'tag' in header).map((header) => header.tag)
+```
+
+Both are empty where the record carries no headers at all, so neither needs a guard before you read
+it.
 
 Headers are the one piece of record metadata with no filter key of its own, so a `custom` is
 where a route picks on them.
@@ -415,7 +425,7 @@ where a route picks on them.
 kafkaRouter.route({
   filters: {
     topic: STOCK_TOPIC,
-    custom: ({ headers }) => headers.some((header) => header.source === 'warehouse-scanner'),
+    custom: ({ headers }) => headers.source === 'warehouse-scanner',
   },
   handler: onScannedMovement,
 })

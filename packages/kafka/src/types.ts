@@ -46,8 +46,13 @@ export type KafkaEvent = KafkaMSKEvent | KafkaSelfManagedEvent | KafkaRetryEvent
 
 export type KafkaDecodedHeader = Record<string, string>;
 
+// Kafka allows the same header name twice, so `headerList` keeps every entry in order while `headers`
+// holds one value per name, the last one sent.
+export type KafkaHeaders = Record<string, string>;
+
 export interface KafkaFilterInput {
-  headers: KafkaDecodedHeader[];
+  headers: KafkaHeaders;
+  headerList: KafkaDecodedHeader[];
   topic: string;
   record: KafkaRecord;
 }
@@ -66,7 +71,8 @@ export interface KafkaRequest<TValue = unknown> {
   partition: number;
   offset: number;
   timestamp: number;
-  headers: KafkaDecodedHeader[];
+  headers: KafkaHeaders;
+  headerList: KafkaDecodedHeader[];
   record: KafkaRecord;
   context: Context;
 }

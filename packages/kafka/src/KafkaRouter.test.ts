@@ -446,6 +446,93 @@ suite('KafkaRouter', () => {
     });
   });
 
+  suite('header access', () => {
+    test('gives the handler the headers as a record keyed by name', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ headers: [{ auditType: 'COMPLIANCE' }, { correlationId: 'abc-123' }] });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.headers).toEqual({ auditType: 'COMPLIANCE', correlationId: 'abc-123' });
+    });
+
+    test('keeps the last value when a header name repeats', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ headers: [{ tag: 'first' }, { tag: 'second' }] });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.headers.tag).toBe('second');
+    });
+
+    test('keeps every entry of a repeated header name on headerList', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ headers: [{ tag: 'first' }, { tag: 'second' }] });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.headerList).toEqual([{ tag: 'first' }, { tag: 'second' }]);
+    });
+
+    test('gives a custom filter the same two shapes', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
+      let receivedInput: KafkaFilterInput | undefined;
+      router.route(
+        defineRoute({
+          filters: {
+            custom: (input: KafkaFilterInput): boolean => {
+              receivedInput = input;
+              return input.headers.auditType === 'COMPLIANCE';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = kafkaRecord({ headers: [{ auditType: 'COMPLIANCE' }] });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedInput?.headers).toEqual({ auditType: 'COMPLIANCE' });
+      expect(receivedInput?.headerList).toEqual([{ auditType: 'COMPLIANCE' }]);
+    });
+
+    test('gives an empty record and an empty list when the record carries no headers', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+      context,
+    }) => {
+      let receivedRequest: KafkaRequest | undefined;
+      router.route(
+        defineRoute({ filters: {} }).handle(async (request) => {
+          receivedRequest = request;
+        }),
+      );
+
+      const record = kafkaRecord({ headers: null });
+      await router.handleEvent(kafkaMSKEvent({ 'test-topic-0': [record] }), context());
+
+      expect(receivedRequest?.headers).toEqual({});
+      expect(receivedRequest?.headerList).toEqual([]);
+    });
+  });
+
   suite('records with absent fields', () => {
     test('gives the handler an undefined key when the record has no key', async ({
       kafkaRecord,
@@ -489,26 +576,6 @@ suite('KafkaRouter', () => {
       expect(receivedRequest?.value).toBeUndefined();
     });
 
-    test('gives the handler an empty headers array when the record has no headers', async ({
-      kafkaRecord,
-      kafkaMSKEvent,
-      context,
-    }) => {
-      let receivedRequest: KafkaRequest | undefined;
-      router.route(
-        defineRoute({ filters: {} }).handle(async (request) => {
-          receivedRequest = request;
-        }),
-      );
-
-      const record = kafkaRecord({ headers: null });
-      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
-
-      await router.handleEvent(event, context());
-
-      expect(receivedRequest?.headers).toEqual([]);
-    });
-
     test('matches a custom on a record with no key, value or headers', async ({
       kafkaRecord,
       kafkaMSKEvent,
@@ -517,7 +584,7 @@ suite('KafkaRouter', () => {
       const handler = vi.fn();
       router.route(
         defineRoute({
-          filters: { custom: ({ headers }: KafkaFilterInput): boolean => headers.length === 0 },
+          filters: { custom: ({ headerList }: KafkaFilterInput): boolean => headerList.length === 0 },
         }).handle(handler),
       );
 
@@ -584,7 +651,8 @@ suite('KafkaRouter', () => {
       expect(receivedRequest?.partition).toBe(0);
       expect(receivedRequest?.offset).toBe(0);
       expect(receivedRequest?.timestamp).toBeTypeOf('number');
-      expect(receivedRequest?.headers).toEqual([{ 'content-type': 'application/json' }]);
+      expect(receivedRequest?.headers).toEqual({ 'content-type': 'application/json' });
+      expect(receivedRequest?.headerList).toEqual([{ 'content-type': 'application/json' }]);
       expect(receivedRequest?.record).toBe(record);
       expect(receivedRequest?.context).toBe(ctx);
     });

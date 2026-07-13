@@ -107,8 +107,9 @@ async function processMessage({ value, key, topic, partition, offset }) {
 
 #### Filters
 
-`custom` is given the decoded headers, the topic and the raw record. The message value is not on
-it, since that is only parsed once a route has matched.
+`custom` is given the decoded headers, the topic and the raw record. Headers arrive keyed by name on
+`headers`, with every entry in order on `headerList` for a name a producer sends twice. The message
+value is not on it, since that is only parsed once a route has matched.
 
 Lambda sends a batch reported through `batchItemFailures` back as its `records` alone, with no
 `eventSourceArn` and no `bootstrapServers`. Those two filters have nothing to test on a redelivered
@@ -120,7 +121,7 @@ defineRoute({
     topic: ['order-events', 'order-retries'],
     eventSourceArn: 'arn:aws:kafka:us-east-1:123456789:cluster/my-cluster',
     bootstrapServer: 'broker1:9092',
-    custom: ({ headers }) => headers.some((header) => header.priority === 'HIGH'),
+    custom: ({ headers }) => headers.priority === 'HIGH',
   },
 })
 ```

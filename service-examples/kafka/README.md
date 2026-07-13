@@ -43,10 +43,6 @@ CDK injects the cluster ARN and the broker list as env vars, and `src/environmen
 
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing.
 
-Note: Lambda sends each Kafka header as its own object of raw bytes. A record with two headers
-arrives as two objects in `headers`, not one object with two keys. The custom filters read them with
-`headers.some(...)` for that reason.
-
 Note: `event.records` is keyed by topic and partition together, such as `orders-1`, and each entry
 holds only that partition's records. A re-delivered batch is thinner still. It carries `records`
 alone, with no `eventSource`, `eventSourceArn` or `bootstrapServers`, so a filter on the cluster ARN

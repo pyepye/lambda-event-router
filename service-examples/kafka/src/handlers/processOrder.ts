@@ -12,7 +12,7 @@ export const processOrder = defineRoute({
   filters: {
     topic: ORDERS_TOPIC,
     eventSourceArn: CLUSTER_ARN,
-    custom: ({ headers }) => headers.some((header) => header[EVENT_TYPE_HEADER] === ORDER_CREATED),
+    custom: ({ headers }) => headers[EVENT_TYPE_HEADER] === ORDER_CREATED,
   },
   valueSchema: OrderSchema,
   middleware: [withOrderContext],

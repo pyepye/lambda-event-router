@@ -13,13 +13,7 @@ const AuditValueSchema = z.object({
 
 // Custom filter that routes based on a Kafka record header
 function isComplianceAudit({ headers }: KafkaFilterInput): boolean {
-  const auditTypeHeader = headers.find((header) => Object.hasOwn(header, 'auditType'));
-  if (!auditTypeHeader) {
-    return false;
-  }
-
-  // header values should be decoded by the router
-  return auditTypeHeader.auditType === 'COMPLIANCE';
+  return headers.auditType === 'COMPLIANCE';
 }
 
 export const auditRoute = defineRoute({

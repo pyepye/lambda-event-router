@@ -4,13 +4,12 @@ import { defineRoute } from '@lambda-event-router/kafka';
 import { ORDERS_TOPIC, PRIORITY_HEADER, URGENT_PRIORITY } from '../config.js';
 import { OrderSchema } from '../utils/schemas.js';
 
-// An urgent order skips the normal path. The custom filter reads the decoded headers, which arrive as
-// one object per header rather than one object holding them all.
+// An urgent order skips the normal path.
 // Registered before processOrder so an urgent order wins here rather than there.
 export const escalateUrgentOrder = defineRoute({
   filters: {
     topic: ORDERS_TOPIC,
-    custom: ({ headers }) => headers.some((header) => header[PRIORITY_HEADER] === URGENT_PRIORITY),
+    custom: ({ headers }) => headers[PRIORITY_HEADER] === URGENT_PRIORITY,
   },
   valueSchema: OrderSchema,
 }).handle(async (request) => {

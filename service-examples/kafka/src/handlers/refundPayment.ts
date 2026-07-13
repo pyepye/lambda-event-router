@@ -10,7 +10,7 @@ import { PaymentSchema } from '../utils/schemas.js';
 export const refundPayment = defineRoute({
   filters: {
     topic: PAYMENTS_TOPIC,
-    custom: ({ headers }) => headers.some((header) => header[PAYMENT_KIND_HEADER] === REFUND_KIND),
+    custom: ({ headers }) => headers[PAYMENT_KIND_HEADER] === REFUND_KIND,
   },
   valueSchema: PaymentSchema,
 }).handle(async (request) => {
