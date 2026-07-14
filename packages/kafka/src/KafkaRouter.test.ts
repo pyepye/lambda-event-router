@@ -723,6 +723,19 @@ suite('KafkaRouter', () => {
       expect(Object.keys(event.records)).toEqual(['test-topic-0']);
     });
 
+    test('types a fixture record the same way as a delivered one', ({ kafkaRecord }) => {
+      const record = kafkaRecord({ key: null, value: null, headers: null });
+
+      // @ts-expect-error a fixture record can carry a null key
+      const key: string = record.key;
+      // @ts-expect-error a fixture record can carry a null value
+      const value: string = record.value;
+      // @ts-expect-error a fixture record can carry null headers
+      const headers: KafkaRecordHeader[] = record.headers;
+
+      expect([key, value, headers]).toEqual([null, null, null]);
+    });
+
     test('fails a record with no value against a valueSchema', async ({ kafkaRecord, kafkaMSKEvent, context }) => {
       const valueSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
       router.route(defineRoute({ filters: {}, valueSchema }).handle(async () => {}));

@@ -372,7 +372,8 @@ All exported from `@lambda-event-router/kafka`.
 | `KafkaRecord` | One record as AWS sends it, with `key`, `value` and `headers` each able to be absent |
 | `KafkaRecordHeader` | One raw header entry, `Record<string, number[]>` |
 | `KafkaMSKEvent`, `KafkaSelfManagedEvent` | The two delivered event shapes |
-| `KafkaEvent` | Either of those, or `KafkaRetryEvent` for a re-delivered batch |
+| `KafkaRetryEvent` | A re-delivered batch, which carries `records` and nothing else |
+| `KafkaEvent` | Any of the three event shapes |
 
 The `KafkaRouter` class and the `createKafkaRouter` and `defineRoute` functions come from the same
 place.

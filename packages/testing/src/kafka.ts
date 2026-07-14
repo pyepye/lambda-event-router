@@ -1,23 +1,53 @@
-import type { Context, MSKEvent, MSKRecord, MSKRecordHeader, SelfManagedKafkaEvent } from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 
 import { createMockContext } from './context.js';
 import { deepMerge } from './deepMerge.js';
 import type { DeepPartial } from './deepPartial.js';
 import { type FixtureMap, fixture } from './fixtureHelper.js';
 
-export type KafkaRecordOverrides = Omit<DeepPartial<MSKRecord>, 'key' | 'value' | 'headers'> & {
+// A record produced without a key arrives with a null key, a tombstone with a null value, and a record
+// produced with no headers with null headers.
+export interface KafkaTestRecordHeader {
+  [headerKey: string]: number[];
+}
+
+export interface KafkaTestRecord {
+  topic: string;
+  partition: number;
+  offset: number;
+  timestamp: number;
+  timestampType: 'CREATE_TIME' | 'LOG_APPEND_TIME';
+  key?: string | null;
+  value?: string | null;
+  headers?: KafkaTestRecordHeader[] | null;
+}
+
+export interface KafkaTestMSKEvent {
+  eventSource: 'aws:kafka';
+  eventSourceArn: string;
+  bootstrapServers: string;
+  records: Record<string, KafkaTestRecord[]>;
+}
+
+export interface KafkaTestSelfManagedEvent {
+  eventSource: 'SelfManagedKafka';
+  bootstrapServers: string;
+  records: Record<string, KafkaTestRecord[]>;
+}
+
+export type KafkaRecordOverrides = Omit<DeepPartial<KafkaTestRecord>, 'key' | 'value' | 'headers'> & {
   key?: string | null;
   value?: string | object | null;
   headers?: Record<string, string>[] | null;
 };
 
 export interface KafkaHandlerEvent {
-  event: MSKEvent | SelfManagedKafkaEvent;
+  event: KafkaTestMSKEvent | KafkaTestSelfManagedEvent;
   context: Context;
 }
 
 export interface CreateKafkaHandlerEventOptions {
-  recordsByTopicPartition?: Record<string, MSKRecord[]>;
+  recordsByTopicPartition?: Record<string, KafkaTestRecord[]>;
   eventType?: 'msk' | 'self-managed';
   context?: Partial<Context>;
 }
@@ -39,11 +69,11 @@ function resolveRecordValue(value: string | object | null | undefined): string |
   return typeof value === 'object' ? JSON.stringify(value) : value;
 }
 
-function encodeHeaders(headers: Record<string, string>[] | null | undefined): MSKRecordHeader[] | null {
+function encodeHeaders(headers: Record<string, string>[] | null | undefined): KafkaTestRecordHeader[] | null {
   if (headers === null) return null;
 
   return (headers ?? defaultHeaders).map((header) => {
-    const encoded: MSKRecordHeader = {};
+    const encoded: KafkaTestRecordHeader = {};
     for (const [headerKey, headerValue] of Object.entries(header)) {
       encoded[headerKey] = encodeHeaderValue(headerValue);
     }
@@ -51,22 +81,18 @@ function encodeHeaders(headers: Record<string, string>[] | null | undefined): MS
   });
 }
 
-export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKRecord {
+export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): KafkaTestRecord {
   const { key, value, headers, ...restOverrides } = overrides;
 
-  const encodedKey = encodeBase64(key === undefined ? 'test-key' : key);
-  const encodedValue = encodeBase64(resolveRecordValue(value));
-  const encodedHeaders = encodeHeaders(headers);
-
-  const defaults: MSKRecord = {
+  const defaults: KafkaTestRecord = {
     topic: 'test-topic',
     partition: 0,
     offset: 0,
     timestamp: Date.now(),
     timestampType: 'CREATE_TIME',
-    key: encodedKey as string,
-    value: encodedValue as string,
-    headers: encodedHeaders as MSKRecordHeader[],
+    key: encodeBase64(key === undefined ? 'test-key' : key),
+    value: encodeBase64(resolveRecordValue(value)),
+    headers: encodeHeaders(headers),
   };
 
   return deepMerge(defaults, restOverrides);
@@ -76,8 +102,8 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): MSKReco
 // only that partition's records. The router checkpoints a partition at a time, so a key that names a
 // topic alone describes an event Lambda never sends.
 export function createMSKEvent(
-  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
-): MSKEvent {
+  recordsByTopicPartition: Record<string, KafkaTestRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
+): KafkaTestMSKEvent {
   return {
     eventSource: 'aws:kafka',
     eventSourceArn: 'arn:aws:kafka:us-east-1:123456789012:cluster/TestCluster/abc-123',
@@ -87,8 +113,8 @@ export function createMSKEvent(
 }
 
 export function createSelfManagedKafkaEvent(
-  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
-): SelfManagedKafkaEvent {
+  recordsByTopicPartition: Record<string, KafkaTestRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
+): KafkaTestSelfManagedEvent {
   return {
     eventSource: 'SelfManagedKafka',
     bootstrapServers: 'broker1.example.com:9092,broker2.example.com:9092',
@@ -99,8 +125,8 @@ export function createSelfManagedKafkaEvent(
 // Lambda re-delivers a batch reported through `batchItemFailures` as its records alone, with no
 // `eventSource`, `eventSourceArn` or `bootstrapServers`.
 export function createKafkaRetryEvent(
-  recordsByTopicPartition: Record<string, MSKRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
-): { records: Record<string, MSKRecord[]> } {
+  recordsByTopicPartition: Record<string, KafkaTestRecord[]> = { 'test-topic-0': [createKafkaRecord()] },
+): { records: Record<string, KafkaTestRecord[]> } {
   return { records: recordsByTopicPartition };
 }
 
