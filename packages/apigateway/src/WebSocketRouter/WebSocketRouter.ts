@@ -30,17 +30,23 @@ export interface WebSocketRouterOptions {
   middleware?: WebSocketMiddleware[];
 }
 
+// eventType drives the queryStringParameters branch of WebSocketRequest, and routeKey the literal
+// type, so both are re-declared generically over the WebSocketFilters base
+type WebSocketRouteInputFilters<
+  TEventType extends WebSocketEventType | undefined,
+  TRouteKey extends string | undefined,
+> = Omit<WebSocketFilters, 'eventType' | 'routeKey'> & {
+  eventType?: TEventType;
+  routeKey?: TRouteKey;
+};
+
 interface RouteInput<
   TEventType extends WebSocketEventType | undefined = undefined,
   TRouteKey extends string | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
 > {
-  filters: {
-    eventType?: TEventType;
-    routeKey?: TRouteKey;
-    custom?: (input: WebSocketFilterInput) => boolean | Promise<boolean>;
-  };
+  filters: WebSocketRouteInputFilters<TEventType, TRouteKey>;
   bodySchema?: TBodySchema;
   middleware?: WebSocketMiddleware<TBody>[];
 }
@@ -68,17 +74,19 @@ export function defineWebSocketRoute<
 }
 
 export interface WebSocketConnectInput {
+  filters?: Omit<WebSocketFilters, 'eventType'>;
   middleware?: WebSocketMiddleware[];
   handler: (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
 }
 
 export interface WebSocketDisconnectInput {
+  filters?: Omit<WebSocketFilters, 'eventType'>;
   middleware?: WebSocketMiddleware[];
   handler: (request: WebSocketRequest) => Promise<void>;
 }
 
 export interface WebSocketMessageInput<TBody = unknown> {
-  routeKey?: string;
+  filters?: Omit<WebSocketFilters, 'eventType'>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   middleware?: WebSocketMiddleware<TBody>[];
   handler: (request: WebSocketRequest<TBody>) => Promise<void>;
@@ -113,7 +121,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
     TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
   >(definition: {
-    filters: { eventType?: TEventType; routeKey?: TRouteKey };
+    filters: WebSocketRouteInputFilters<TEventType, TRouteKey>;
     bodySchema?: TBodySchema;
     middleware?: WebSocketMiddleware<TBody>[];
     handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<WebSocketConnectResponse>;
@@ -126,14 +134,14 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
     TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
   >(definition: {
-    filters: { eventType?: TEventType; routeKey?: TRouteKey };
+    filters: WebSocketRouteInputFilters<TEventType, TRouteKey>;
     bodySchema?: TBodySchema;
     middleware?: WebSocketMiddleware<TBody>[];
     handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<void>;
   }): this;
 
   route(definition: {
-    filters: { eventType?: WebSocketEventType; routeKey?: string };
+    filters: WebSocketFilters;
     bodySchema?: StandardSchemaV1;
     middleware?: WebSocketMiddleware[];
     handler: (...args: never[]) => Promise<unknown>;
@@ -147,27 +155,27 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     return this;
   }
 
-  connect({ middleware, handler }: WebSocketConnectInput): this {
+  connect({ filters, middleware, handler }: WebSocketConnectInput): this {
     this.routes.push({
-      filters: { eventType: 'CONNECT' },
+      filters: { ...filters, eventType: 'CONNECT' },
       middleware,
       handler: handler as WebSocketHandler,
     });
     return this;
   }
 
-  disconnect({ middleware, handler }: WebSocketDisconnectInput): this {
+  disconnect({ filters, middleware, handler }: WebSocketDisconnectInput): this {
     this.routes.push({
-      filters: { eventType: 'DISCONNECT' },
+      filters: { ...filters, eventType: 'DISCONNECT' },
       middleware,
       handler: handler as WebSocketHandler,
     });
     return this;
   }
 
-  message<TBody>({ routeKey, bodySchema, middleware, handler }: WebSocketMessageInput<TBody>): this {
+  message<TBody>({ filters, bodySchema, middleware, handler }: WebSocketMessageInput<TBody>): this {
     this.routes.push({
-      filters: { eventType: 'MESSAGE', routeKey },
+      filters: { ...filters, eventType: 'MESSAGE' },
       bodySchema,
       // @ts-expect-error Contravariance: body-typed route middleware is safe at runtime because the schema validates the body before the chain runs
       middleware,

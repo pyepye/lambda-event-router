@@ -15,7 +15,7 @@ webSocketRouter
   .connect({ handler: openAlertStream })
   .disconnect({ handler: closeAlertStream })
   .message({
-    routeKey: 'sendAlert',
+    filters: { routeKey: 'sendAlert' },
     bodySchema: StockAlertSchema,
     middleware: [withAlertContext],
     handler: broadcastAlert,

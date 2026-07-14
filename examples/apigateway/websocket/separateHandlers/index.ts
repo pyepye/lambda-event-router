@@ -22,7 +22,7 @@ webSocketRouter.disconnect({
 
 // .message() accepts an optional routeKey filter
 webSocketRouter.message({
-  routeKey: 'sendMessage',
+  filters: { routeKey: 'sendMessage' },
   bodySchema: SendMessageBodySchema,
   handler: onMessage,
 });

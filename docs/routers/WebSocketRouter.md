@@ -77,7 +77,7 @@ or add a catch-all.
 ```ts
 // Both of these register the same route
 wsRouter.message({
-  routeKey: 'sendMessage',
+  filters: { routeKey: 'sendMessage' },
   bodySchema: SendMessageSchema,
   handler: sendMessage,
 })
@@ -91,17 +91,14 @@ wsRouter.route({
 
 | Method | Sets | Also takes | Handler returns |
 | --- | --- | --- | --- |
-| `connect()` | `eventType: 'CONNECT'` | `handler` | A status code, or nothing |
-| `disconnect()` | `eventType: 'DISCONNECT'` | `handler` | Nothing |
-| `message()` | `eventType: 'MESSAGE'` | `routeKey`, `bodySchema`, `handler` | Nothing |
+| `connect()` | `eventType: 'CONNECT'` | `filters`, `middleware`, `handler` | A status code, or nothing |
+| `disconnect()` | `eventType: 'DISCONNECT'` | `filters`, `middleware`, `handler` | Nothing |
+| `message()` | `eventType: 'MESSAGE'` | `filters`, `bodySchema`, `middleware`, `handler` | Nothing |
 
-`message()` is the only one that narrows further, and its `routeKey` and `bodySchema` sit at the top
-level rather than inside `filters`. `connect()` and `disconnect()` take a `handler` and nothing else,
-so a connect route that needs a schema goes through `route()`. See [convenience
+Each one takes the same `filters` object `route()` does, minus the `eventType` it fills in for you, so
+`routeKey` and `custom` work here exactly as they do on `route()`. `message()` is the only one that
+also takes a `bodySchema`, so a connect route that needs one goes through `route()`. See [convenience
 methods](/docs/routing#convenience-methods) for how the other routers use them.
-
-**None of the three takes a `custom`,** and neither does `route()`. See [Filters](#filters) for
-the one form that does.
 
 ## Filters
 
@@ -132,20 +129,14 @@ are two registrations while `routeKey.startsWith('admin:')` is one.
 `routeKey` and a `custom` reading the route key are two ways of picking the same message, so a
 route wants one or the other rather than both.
 
-**`route()` and the convenience methods reject a `custom`.** Only `defineWebSocketRoute` accepts
-one, and it takes the handler inline or passed in, so wrap the definition and hand that to `route()`.
-
 ```ts
-import { defineWebSocketRoute } from '@lambda-event-router/apigateway'
-
-wsRouter.route(
-  defineWebSocketRoute({
-    filters: {
-      eventType: 'MESSAGE',
-      custom: ({ routeKey }) => routeKey.startsWith('admin:'),
-    },
-  }).handle(adminAction),
-)
+wsRouter.route({
+  filters: {
+    eventType: 'MESSAGE',
+    custom: ({ routeKey }) => routeKey.startsWith('admin:'),
+  },
+  handler: adminAction,
+})
 ```
 
 `custom` also gets the parsed frame as `body` and the raw event, so it can route on a field inside
@@ -154,14 +145,12 @@ the message. The body reaches it before any `bodySchema` runs, so it is `unknown
 ```ts
 import { isObject } from '@lambda-event-router/base'
 
-wsRouter.route(
-  defineWebSocketRoute({
-    filters: {
-      eventType: 'MESSAGE',
-      custom: ({ body }) => isObject(body) && body.priority === 'urgent',
-    },
-  }).handle(urgentAction),
-)
+wsRouter.message({
+  filters: {
+    custom: ({ body }) => isObject(body) && body.priority === 'urgent',
+  },
+  handler: urgentAction,
+})
 ```
 
 See [`custom`](/docs/routing#custom) for where it sits in the filter order.
@@ -319,7 +308,7 @@ import { sendMessage, SendMessageSchema } from './handlers/rooms.js'
 const wsRouter = createWebSocketRouter()
 
 wsRouter.message({
-  routeKey: 'sendMessage',
+  filters: { routeKey: 'sendMessage' },
   bodySchema: SendMessageSchema,
   handler: sendMessage,
 })
@@ -591,17 +580,17 @@ wsRouter
   .connect({ handler: onConnect })
   .disconnect({ handler: onDisconnect })
   .message({
-    routeKey: 'joinRoom',
+    filters: { routeKey: 'joinRoom' },
     bodySchema: JoinRoomSchema,
     handler: joinRoom,
   })
   .message({
-    routeKey: 'sendMessage',
+    filters: { routeKey: 'sendMessage' },
     bodySchema: SendMessageSchema,
     handler: sendMessage,
   })
   .message({
-    routeKey: '$default',
+    filters: { routeKey: '$default' },
     handler: unknownAction,
   })`,
   },

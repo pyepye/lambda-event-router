@@ -296,7 +296,8 @@ no simple response shape for the other event types to send it as.
 ### WebSocketRouter
 
 A WebSocket API invokes the Lambda three ways over a connection's life, so routes filter on `eventType`
-and on the `routeKey` API Gateway picked.
+and on the `routeKey` API Gateway picked. `connect()`, `disconnect()` and `message()` fill in the
+`eventType` and take the rest of the filters themselves.
 
 #### Inline handlers
 
@@ -343,7 +344,7 @@ wsRouter.disconnect({
 })
 
 wsRouter.message({
-  routeKey: 'sendMessage',
+  filters: { routeKey: 'sendMessage' },
   bodySchema: SendMessageSchema,
   handler: onSendMessage,
 })

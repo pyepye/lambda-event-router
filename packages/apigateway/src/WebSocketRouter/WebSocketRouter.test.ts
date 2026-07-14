@@ -381,7 +381,7 @@ suite('WebSocketRouter', () => {
     });
 
     test('matches route with matching routeKey', async () => {
-      router.message({ routeKey: 'sendMessage', handler: async () => {} });
+      router.message({ filters: { routeKey: 'sendMessage' }, handler: async () => {} });
 
       // @ts-expect-error - testing private method
       const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'sendMessage' });
@@ -390,7 +390,7 @@ suite('WebSocketRouter', () => {
     });
 
     test('does not match route with different routeKey', async () => {
-      router.message({ routeKey: 'sendMessage', handler: async () => {} });
+      router.message({ filters: { routeKey: 'sendMessage' }, handler: async () => {} });
 
       // @ts-expect-error - testing private method
       const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'otherAction' });
@@ -587,6 +587,117 @@ suite('WebSocketRouter', () => {
       router.matchRoute({ eventType: 'MESSAGE', routeKey: '$default' });
 
       expect(custom).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('custom on every registration path', () => {
+    test('route() takes a custom without wrapping in defineWebSocketRoute', async () => {
+      router.route({
+        filters: {
+          eventType: 'MESSAGE',
+          custom: ({ routeKey }: WebSocketFilterInput): boolean => routeKey === 'sendMessage',
+        },
+        handler: async () => undefined,
+      });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'sendMessage' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('route() does not match when its custom returns false', async () => {
+      router.route({
+        filters: { eventType: 'MESSAGE', custom: (): boolean => false },
+        handler: async () => undefined,
+      });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'sendMessage' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('connect() takes a custom alongside its pinned eventType', async ({ context }) => {
+      const tokenHandler = vi.fn().mockResolvedValue(undefined);
+      const anonymousHandler = vi.fn().mockResolvedValue(undefined);
+
+      router
+        .connect({
+          filters: {
+            custom: ({ event }: WebSocketFilterInput): boolean => Boolean(event.queryStringParameters?.token),
+          },
+          handler: tokenHandler,
+        })
+        .connect({ handler: anonymousHandler });
+
+      const withToken = createWebSocketEvent({
+        requestContext: { eventType: 'CONNECT', routeKey: '$connect' },
+        queryStringParameters: { token: 'abc' },
+      });
+      const withoutToken = createWebSocketEvent({
+        requestContext: { eventType: 'CONNECT', routeKey: '$connect' },
+      });
+
+      await router.handleEvent(withToken, context());
+      await router.handleEvent(withoutToken, context());
+
+      expect(tokenHandler).toHaveBeenCalledTimes(1);
+      expect(anonymousHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('disconnect() takes a custom alongside its pinned eventType', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.disconnect({ filters: { custom }, handler: async () => {} });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'DISCONNECT', routeKey: '$disconnect' });
+
+      expect(result).toBeDefined();
+      expect(custom).toHaveBeenCalled();
+    });
+
+    test('message() takes routeKey and custom together inside filters', async ({ context }) => {
+      const urgentHandler = vi.fn().mockResolvedValue(undefined);
+      const routineHandler = vi.fn().mockResolvedValue(undefined);
+
+      router
+        .message({
+          filters: {
+            routeKey: 'send',
+            custom: ({ body }: WebSocketFilterInput): boolean => base.isObject(body) && body.priority === 'urgent',
+          },
+          handler: urgentHandler,
+        })
+        .message({ filters: { routeKey: 'send' }, handler: routineHandler });
+
+      const urgent = createWebSocketEvent({
+        requestContext: { eventType: 'MESSAGE', routeKey: 'send' },
+        body: JSON.stringify({ priority: 'urgent' }),
+      });
+      const routine = createWebSocketEvent({
+        requestContext: { eventType: 'MESSAGE', routeKey: 'send' },
+        body: JSON.stringify({ priority: 'routine' }),
+      });
+
+      await router.handleEvent(urgent, context());
+      await router.handleEvent(routine, context());
+
+      expect(urgentHandler).toHaveBeenCalledTimes(1);
+      expect(routineHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('message() routeKey inside filters still narrows to that route key', async () => {
+      const handler = vi.fn();
+      router.message({ filters: { routeKey: 'sendMessage' }, handler });
+
+      // @ts-expect-error - testing private method
+      const matched = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'sendMessage' });
+      // @ts-expect-error - testing private method
+      const unmatched = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'other' });
+
+      expect(matched?.handler).toBe(handler);
+      expect(unmatched).toBeUndefined();
     });
   });
 
