@@ -5,14 +5,16 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
 
-import { isWebSocketResponse } from './response.js';
+import { isHTTPShapedResponse, isWebSocketResponse } from './response.js';
 import type {
   WebSocketConnectResponse,
+  WebSocketConnectRouteDefinition,
+  WebSocketDisconnectRouteDefinition,
   WebSocketEvent,
   WebSocketEventType,
   WebSocketFilterInput,
   WebSocketFilters,
-  WebSocketHandler,
+  WebSocketMessageRouteDefinition,
   WebSocketMiddleware,
   WebSocketRequest,
   WebSocketResult,
@@ -23,15 +25,19 @@ interface InternalRoute {
   filters: WebSocketFilters;
   bodySchema?: StandardSchemaV1;
   middleware?: WebSocketMiddleware[];
-  handler: WebSocketHandler;
+  handler: (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
 }
 
 export interface WebSocketRouterOptions {
   middleware?: WebSocketMiddleware[];
 }
 
-// eventType drives the queryStringParameters branch of WebSocketRequest, and routeKey the literal
-// type, so both are re-declared generically over the WebSocketFilters base
+type FiltersToRequest<TEventType extends WebSocketEventType | undefined, TBody> = TEventType extends WebSocketEventType
+  ? Extract<WebSocketRequest<TBody>, { eventType: TEventType }>
+  : WebSocketRequest<TBody>;
+
+// eventType picks the request branch and routeKey the literal type, so both are re-declared
+// generically over the WebSocketFilters base
 type WebSocketRouteInputFilters<
   TEventType extends WebSocketEventType | undefined,
   TRouteKey extends string | undefined,
@@ -51,11 +57,10 @@ interface RouteInput<
   middleware?: WebSocketMiddleware<TBody>[];
 }
 
-interface RouteBuilder<TBody, TQueryString> {
+interface RouteBuilder<TRequest, TBody> {
   handle(
-    handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<WebSocketConnectResponse>,
+    handler: (request: TRequest) => Promise<WebSocketConnectResponse> | Promise<void>,
   ): WebSocketRouteDefinition<TBody>;
-  handle(handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<void>): WebSocketRouteDefinition<TBody>;
 }
 
 export function defineWebSocketRoute<
@@ -63,33 +68,13 @@ export function defineWebSocketRoute<
   TRouteKey extends string | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-  TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
->(config: RouteInput<TEventType, TRouteKey, TBodySchema>): RouteBuilder<TBody, TQueryString> {
+>(config: RouteInput<TEventType, TRouteKey, TBodySchema>): RouteBuilder<FiltersToRequest<TEventType, TBody>, TBody> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler): WebSocketRouteDefinition<TBody> {
-      return { ...config, handler } as WebSocketRouteDefinition<TBody>;
+      return { ...config, handler } as unknown as WebSocketRouteDefinition<TBody>;
     },
   };
-}
-
-export interface WebSocketConnectInput {
-  filters?: Omit<WebSocketFilters, 'eventType'>;
-  middleware?: WebSocketMiddleware[];
-  handler: (request: WebSocketRequest) => Promise<WebSocketConnectResponse>;
-}
-
-export interface WebSocketDisconnectInput {
-  filters?: Omit<WebSocketFilters, 'eventType'>;
-  middleware?: WebSocketMiddleware[];
-  handler: (request: WebSocketRequest) => Promise<void>;
-}
-
-export interface WebSocketMessageInput<TBody = unknown> {
-  filters?: Omit<WebSocketFilters, 'eventType'>;
-  bodySchema?: StandardSchemaV1<unknown, TBody>;
-  middleware?: WebSocketMiddleware<TBody>[];
-  handler: (request: WebSocketRequest<TBody>) => Promise<void>;
 }
 
 export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocketResult> {
@@ -119,67 +104,46 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     TRouteKey extends string | undefined = undefined,
     TBodySchema extends StandardSchemaV1 | undefined = undefined,
     TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-    TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
   >(definition: {
     filters: WebSocketRouteInputFilters<TEventType, TRouteKey>;
     bodySchema?: TBodySchema;
     middleware?: WebSocketMiddleware<TBody>[];
-    handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<WebSocketConnectResponse>;
-  }): this;
-
-  route<
-    TEventType extends WebSocketEventType | undefined = undefined,
-    TRouteKey extends string | undefined = undefined,
-    TBodySchema extends StandardSchemaV1 | undefined = undefined,
-    TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-    TQueryString = TEventType extends 'CONNECT' ? Record<string, string> | undefined : undefined,
-  >(definition: {
-    filters: WebSocketRouteInputFilters<TEventType, TRouteKey>;
-    bodySchema?: TBodySchema;
-    middleware?: WebSocketMiddleware<TBody>[];
-    handler: (request: WebSocketRequest<TBody, TQueryString>) => Promise<void>;
-  }): this;
-
-  route(definition: {
-    filters: WebSocketFilters;
-    bodySchema?: StandardSchemaV1;
-    middleware?: WebSocketMiddleware[];
-    handler: (...args: never[]) => Promise<unknown>;
+    handler: (request: FiltersToRequest<TEventType, TBody>) => Promise<WebSocketConnectResponse> | Promise<void>;
   }): this {
     this.routes.push({
       filters: definition.filters,
       bodySchema: definition.bodySchema,
-      middleware: definition.middleware,
-      handler: definition.handler as WebSocketHandler,
+      middleware: definition.middleware as WebSocketMiddleware[] | undefined,
+      handler: definition.handler as InternalRoute['handler'],
     });
     return this;
   }
 
-  connect({ filters, middleware, handler }: WebSocketConnectInput): this {
+  connect({ filters, middleware, handler }: WebSocketConnectRouteDefinition): this {
     this.routes.push({
       filters: { ...filters, eventType: 'CONNECT' },
       middleware,
-      handler: handler as WebSocketHandler,
+      handler: handler as InternalRoute['handler'],
     });
     return this;
   }
 
-  disconnect({ filters, middleware, handler }: WebSocketDisconnectInput): this {
+  disconnect({ filters, middleware, handler }: WebSocketDisconnectRouteDefinition): this {
     this.routes.push({
       filters: { ...filters, eventType: 'DISCONNECT' },
       middleware,
-      handler: handler as WebSocketHandler,
+      handler: handler as InternalRoute['handler'],
     });
     return this;
   }
 
-  message<TBody>({ filters, bodySchema, middleware, handler }: WebSocketMessageInput<TBody>): this {
+  message<TBody>({ filters, bodySchema, middleware, handler }: WebSocketMessageRouteDefinition<TBody>): this {
     this.routes.push({
       filters: { ...filters, eventType: 'MESSAGE' },
       bodySchema,
       // @ts-expect-error Contravariance: body-typed route middleware is safe at runtime because the schema validates the body before the chain runs
       middleware,
-      handler: handler as WebSocketHandler,
+      handler: handler as InternalRoute['handler'],
     });
     return this;
   }
@@ -226,6 +190,12 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       return this.buildResult(response);
     } catch (error) {
       if (isWebSocketResponse(error)) {
+        if (isHTTPShapedResponse(error)) {
+          logger.warn(
+            'An HTTP response was thrown from a WebSocket handler. Its body and headers are dropped, since a WebSocket answer is a status code alone. Use the WebSocket helpers, for example WebSocketUnauthorised()',
+            { statusCode: error.statusCode },
+          );
+        }
         return { statusCode: error.statusCode };
       }
       throw error;

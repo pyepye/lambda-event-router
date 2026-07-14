@@ -10,22 +10,20 @@ export type {
   WebSocketBaseRequest,
   WebSocketConnectRequest,
   WebSocketConnectResponse,
+  WebSocketConnectRouteDefinition,
   WebSocketDisconnectRequest,
+  WebSocketDisconnectRouteDefinition,
   WebSocketEvent,
   WebSocketEventType,
   WebSocketFilterInput,
   WebSocketFilters,
   WebSocketHandler,
   WebSocketMessageRequest,
+  WebSocketMessageRouteDefinition,
   WebSocketMiddleware,
   WebSocketRequest,
   WebSocketResult,
   WebSocketRouteDefinition,
 } from './types.js';
-export type {
-  WebSocketConnectInput,
-  WebSocketDisconnectInput,
-  WebSocketMessageInput,
-  WebSocketRouterOptions,
-} from './WebSocketRouter.js';
+export type { WebSocketRouterOptions } from './WebSocketRouter.js';
 export { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';

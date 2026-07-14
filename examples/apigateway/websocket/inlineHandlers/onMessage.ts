@@ -11,7 +11,7 @@ const SendMessageBodySchema = z.object({
 // MESSAGE handlers have no return value - AWS ignores responses for messages.
 // Use postToConnection() (API Gateway Management API) to send data to clients.
 export const onSendMessageRoute = defineWebSocketRoute({
-  filters: { routeKey: 'sendMessage' },
+  filters: { eventType: 'MESSAGE', routeKey: 'sendMessage' },
   bodySchema: SendMessageBodySchema,
 }).handle(async (request) => {
   const { connectionId, domainName, stage, body } = request;

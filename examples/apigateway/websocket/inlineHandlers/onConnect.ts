@@ -1,7 +1,7 @@
-import { defineWebSocketRoute, Unauthorised } from '@lambda-event-router/apigateway';
+import { defineWebSocketRoute, WebSocketUnauthorised } from '@lambda-event-router/apigateway';
 
 // CONNECT is invoked when a client first connects to the WebSocket API.
-// Throwing Unauthorised() returns { statusCode: 401 } and rejects the connection.
+// Throwing WebSocketUnauthorised() returns { statusCode: 401 } and rejects the connection.
 // Returning void signals success - the router auto-sends { statusCode: 200 }.
 export const onConnectRoute = defineWebSocketRoute({
   filters: { eventType: 'CONNECT' },
@@ -10,7 +10,7 @@ export const onConnectRoute = defineWebSocketRoute({
   const token = queryStringParameters?.token;
 
   if (!token) {
-    throw Unauthorised();
+    throw WebSocketUnauthorised();
   }
 
   console.log(`Connection ${connectionId} authenticated`);

@@ -373,7 +373,8 @@ wsRouter.disconnect()
 wsRouter.message()
 ```
 
-Only `defineWebSocketRoute` accepts a `custom`. `route()` and the three methods above do not.
+Each method fills in the `eventType` and takes the rest of the filters, so a `custom` works on all four
+registration paths.
 
 #### Responses
 
@@ -382,6 +383,10 @@ return WebSocketOk()          // 200
 throw WebSocketUnauthorised() // 401
 throw WebSocketForbidden()    // 403
 ```
+
+Use the `WebSocket` prefixed helpers here, not the HTTP ones this package also exports. A WebSocket
+answer is a status code alone, so returning `Unauthorised()` does not compile and throwing it logs a
+warning.
 
 Only a `$connect` does anything with the status code, where a non-2xx refuses the handshake. Nothing a
 message handler returns reaches the client, so send data back with `postToConnection`.

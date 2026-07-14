@@ -40,31 +40,60 @@ export interface WebSocketBaseRequest {
   context: Context;
 }
 
+// Each request pins its own eventType, so Extract<WebSocketRequest, { eventType }> narrows the union
+// and a handler can discriminate on the field
 export interface WebSocketConnectRequest extends WebSocketBaseRequest {
+  eventType: 'CONNECT';
   queryStringParameters: Record<string, string> | undefined;
 }
 
 export interface WebSocketMessageRequest<TBody = unknown> extends WebSocketBaseRequest {
+  eventType: 'MESSAGE';
   body: TBody;
 }
 
-export type WebSocketDisconnectRequest = WebSocketBaseRequest;
+export interface WebSocketDisconnectRequest extends WebSocketBaseRequest {
+  eventType: 'DISCONNECT';
+}
 
-export type WebSocketConnectResponse = { statusCode: number } | undefined;
+export type WebSocketRequest<TBody = unknown> =
+  | WebSocketConnectRequest
+  | WebSocketMessageRequest<TBody>
+  | WebSocketDisconnectRequest;
+
+// body and headers are never sent: the router hands Lambda a WebSocketResult, which is the status code
+// alone. Typing them out is what stops an HTTP response helper being returned here
+export type WebSocketConnectResponse = { statusCode: number; body?: never; headers?: never } | undefined;
 
 export interface WebSocketResult {
   statusCode: number;
 }
 
-export interface WebSocketRequest<TBody = unknown, TQueryString = Record<string, string> | undefined>
-  extends WebSocketBaseRequest {
-  body: TBody;
-  queryStringParameters: TQueryString;
-}
-
-export type WebSocketHandler<TBody = unknown> = (request: WebSocketRequest<TBody>) => Promise<WebSocketConnectResponse>;
+// A connect handler answers with a status code; message and disconnect handlers answer with nothing
+export type WebSocketHandler<TBody = unknown> = (
+  request: WebSocketRequest<TBody>,
+) => Promise<WebSocketConnectResponse> | Promise<void>;
 
 export type WebSocketMiddleware<TBody = unknown> = Middleware<WebSocketRequest<TBody>, WebSocketConnectResponse>;
+
+export interface WebSocketConnectRouteDefinition {
+  filters?: Omit<WebSocketFilters, 'eventType'>;
+  middleware?: WebSocketMiddleware[];
+  handler: (request: WebSocketConnectRequest) => Promise<WebSocketConnectResponse>;
+}
+
+export interface WebSocketMessageRouteDefinition<TBody = unknown> {
+  filters?: Omit<WebSocketFilters, 'eventType'>;
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
+  middleware?: WebSocketMiddleware<TBody>[];
+  handler: (request: WebSocketMessageRequest<TBody>) => Promise<void>;
+}
+
+export interface WebSocketDisconnectRouteDefinition {
+  filters?: Omit<WebSocketFilters, 'eventType'>;
+  middleware?: WebSocketMiddleware[];
+  handler: (request: WebSocketDisconnectRequest) => Promise<void>;
+}
 
 export interface WebSocketRouteDefinition<TBody = unknown> {
   filters: WebSocketFilters;

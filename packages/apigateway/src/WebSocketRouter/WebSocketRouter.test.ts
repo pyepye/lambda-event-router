@@ -1,8 +1,10 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
+import { Unauthorised } from '@lambda-event-router/http';
 import { createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
 
+import { WebSocketForbidden } from './response.js';
 import type { WebSocketConnectResponse, WebSocketFilterInput, WebSocketRequest } from './types.js';
 import { createWebSocketRouter, defineWebSocketRoute, WebSocketRouter } from './WebSocketRouter.js';
 
@@ -326,6 +328,39 @@ suite('WebSocketRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result).toEqual({ statusCode: 403 });
+    });
+
+    test('catches a thrown WebSocket helper without warning', async ({ webSocketHandlerEvent }) => {
+      const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
+      router.message({
+        handler: async () => {
+          throw WebSocketForbidden();
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ statusCode: 403 });
+      expect(warnSpy).not.toHaveBeenCalled();
+      warnSpy.mockRestore();
+    });
+
+    test('catches a thrown HTTP helper, keeps its status code and warns', async ({ webSocketHandlerEvent }) => {
+      const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
+      router.message({
+        handler: async () => {
+          throw Unauthorised();
+        },
+      });
+
+      const { event, context } = webSocketHandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ statusCode: 401 });
+      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnSpy.mock.calls[0]?.[0]).toContain('WebSocketUnauthorised');
+      warnSpy.mockRestore();
     });
 
     test('re-throws errors without statusCode', async ({ webSocketHandlerEvent }) => {

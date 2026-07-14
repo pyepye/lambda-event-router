@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import type { WebSocketRequest } from '@lambda-event-router/apigateway';
+import type { WebSocketMessageRequest } from '@lambda-event-router/apigateway';
 import { postToConnection } from '@lambda-event-router/apigateway';
 
 export const SendMessageBodySchema = z.object({
@@ -13,7 +13,7 @@ type SendMessageBody = z.infer<typeof SendMessageBodySchema>;
 
 // MESSAGE handlers have no return value - AWS ignores responses for messages.
 // Use postToConnection() (API Gateway Management API) to send data to clients.
-export async function onMessage(request: WebSocketRequest<SendMessageBody>): Promise<void> {
+export async function onMessage(request: WebSocketMessageRequest<SendMessageBody>): Promise<void> {
   const { connectionId, domainName, stage, body } = request;
   const { roomId, content } = body;
 

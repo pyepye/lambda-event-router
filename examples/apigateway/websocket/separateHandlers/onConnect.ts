@@ -1,16 +1,16 @@
-import type { WebSocketConnectResponse, WebSocketRequest } from '@lambda-event-router/apigateway';
-import { Unauthorised, WebSocketForbidden, WebSocketOk } from '@lambda-event-router/apigateway';
+import type { WebSocketConnectRequest, WebSocketConnectResponse } from '@lambda-event-router/apigateway';
+import { WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from '@lambda-event-router/apigateway';
 
 // CONNECT handler as a standalone function.
 // Return WebSocketOk() for { statusCode: 200 }, or void (router auto-sends 200).
 // Return WebSocketForbidden() for { statusCode: 403 } to reject the connection.
-// Throw Unauthorised() for { statusCode: 401 }.
-export async function onConnect(request: WebSocketRequest): Promise<WebSocketConnectResponse> {
+// Throw WebSocketUnauthorised() for { statusCode: 401 }.
+export async function onConnect(request: WebSocketConnectRequest): Promise<WebSocketConnectResponse> {
   const { connectionId, queryStringParameters } = request;
   const token = queryStringParameters?.token;
 
   if (!token) {
-    throw Unauthorised();
+    throw WebSocketUnauthorised();
   }
 
   // e.g. verify token and look up user permissions

@@ -199,17 +199,25 @@ export async function sendMessage(request: WebSocketMessageRequest<SendMessage>)
 
 ### Request object
 
+Every request carries these.
+
 | Field | Type | Description |
 | --- | --- | --- |
 | `connectionId` | `string` | The connection this event came from. Store it, and post back through it |
 | `domainName` | `string` | The API's domain name |
 | `stage` | `string` | The API stage |
-| `eventType` | `WebSocketEventType` | `'CONNECT'`, `'MESSAGE'` or `'DISCONNECT'` |
+| `eventType` | `'CONNECT'`, `'MESSAGE'` or `'DISCONNECT'` | Pinned to one value on each request type, so you can narrow on it |
 | `routeKey` | `string` | The route key API Gateway matched |
-| `body` | `TBody` | The parsed message body. Only a message carries one |
-| `queryStringParameters` | `TQueryString` | The query string the client connected with. Only a `CONNECT` carries one |
 | `event` | `WebSocketEvent` | The untouched event from AWS, for `requestContext` and anything else you need |
 | `context` | `Context` | The Lambda context |
+
+On top of those, each event type carries the one field that belongs to it.
+
+| Request | Extra field | Type |
+| --- | --- | --- |
+| `WebSocketConnectRequest` | `queryStringParameters` | `Record<string, string> \| undefined` |
+| `WebSocketMessageRequest<TBody>` | `body` | `TBody` |
+| `WebSocketDisconnectRequest` | none | |
 
 `Context` comes from `aws-lambda`, not from this package. `WebSocketEvent` types `event` and is
 exported from here.
@@ -217,10 +225,10 @@ exported from here.
 A body that is not valid JSON arrives as the raw string, and no body at all as `undefined`, so a client
 sending plain text is something a handler can still read.
 
-**The query string only arrives on the connect event.** API Gateway carries it on `$connect` and
-nowhere else, and the types follow: a route filtered to `CONNECT` gets
-`Record<string, string> | undefined` and every other route gets `undefined`. A token you need later
-belongs on whatever you store the connection in.
+**The query string only arrives on the connect event,** and `body` only on a message. API Gateway
+carries each on one event type and nowhere else, so the field is absent from the other request types
+rather than present and empty. A message handler reaching for `queryStringParameters` does not compile.
+A token you need later belongs on whatever you store the connection in.
 
 `domainName` and `stage` are on the request so a handler can post back without knowing how the API is
 deployed. Every connection on the same stage shares both, so the pair off the event you are handling
@@ -228,8 +236,9 @@ works for any connection id you have stored.
 
 ### Response type
 
-`WebSocketConnectResponse` is `{ statusCode: number } | undefined`. A connect handler returns one of
-those to accept or refuse the handshake, and a message or disconnect handler returns nothing. See
+`WebSocketConnectResponse` is a bare `{ statusCode: number }` or nothing. A connect handler returns one
+of those to accept or refuse the handshake, and a message or disconnect handler returns nothing. It
+types out `body` and `headers`, so an HTTP response helper does not assign to it. See
 [Responses](#responses) for what the router does with it.
 
 ### Inferred handlers
@@ -257,12 +266,11 @@ export const connectRoute = defineWebSocketRoute({
 wsRouter.route(connectRoute)
 ```
 
-**The `eventType` filter is what types the query string, so the two forms do not match here.** An
-inferred route filtered to `CONNECT` gets `queryStringParameters` as
-`Record<string, string> | undefined` and every other inferred route gets `undefined`, while an
-annotated `WebSocketRequest` or `WebSocketConnectRequest` gets the populated type whichever filters the
-route carries. Registering through `connect()` also gets the populated type, since the method sets the
-filter itself.
+The `eventType` filter is what picks the request type. A route filtered to `CONNECT` hands the handler
+a `WebSocketConnectRequest`, `MESSAGE` a `WebSocketMessageRequest` and `DISCONNECT` a
+`WebSocketDisconnectRequest`. Leave `eventType` out and the handler gets all three, so narrow on
+`request.eventType` before reaching for `body` or `queryStringParameters`. `connect()`, `message()` and
+`disconnect()` set the filter themselves, so they hand you the narrowed request without you asking.
 
 Inference pays off most in a Lambda taking several event sources, since you never have to know any of
 their request shapes. See [inferred handlers](/docs/handlers#inferred-handlers), where the same queue
@@ -270,8 +278,8 @@ is written both ways to compare.
 
 ### Annotated handlers
 
-Annotating the request yourself splits route setup from business logic, using
-[`WebSocketRequest`](#generic-parameters) and your own types.
+Annotating the request yourself splits route setup from business logic, using the request type for the
+event you are handling and your own types.
 
 ```ts
 // handlers/rooms.ts
@@ -318,13 +326,14 @@ Derive the type from the schema with `z.infer` rather than hand-writing an inter
 [Annotated handlers](/docs/handlers#annotated-handlers) has the worked version.
 
 One request type per event type saves you naming the parameters at all, so
-`WebSocketMessageRequest<SendMessage>` above rather than `WebSocketRequest<SendMessage, undefined>`.
+`WebSocketMessageRequest<SendMessage>` above rather than the `WebSocketRequest` union.
 [Types](#types) lists all four.
 
-**`WebSocketRouteDefinition` cannot annotate a route whose handler returns nothing.** Its `handler`
-field is typed to return a `WebSocketConnectResponse`, so a message or disconnect handler will not
-assign to it even though `route()` takes the same handler happily. Pass the object literal straight to
-`route()`, or build it with `defineWebSocketRoute`.
+Annotate a route you write in its own file with the type for its event type:
+`WebSocketConnectRouteDefinition`, `WebSocketMessageRouteDefinition<TBody>` or
+`WebSocketDisconnectRouteDefinition`. Each pins the filters, the request and the return type, so a
+connect handler will not assign to a message route. `WebSocketRouteDefinition<TBody>` covers a route
+that handles more than one event type, and its handler takes all three requests.
 
 ## Schema validation
 
@@ -367,7 +376,7 @@ Whatever a handler returns, the router turns it into a `{ statusCode }` for Lamb
 | You return | You get |
 | --- | --- |
 | Nothing | 200 |
-| An object with a numeric `statusCode` | That status code |
+| An object with a numeric `statusCode` and nothing else | That status code |
 | Anything else | 200, the value is dropped and a warning is logged |
 
 ### Response helpers
@@ -407,10 +416,15 @@ if (!user) throw WebSocketForbidden()
 **Anything else thrown fails the invocation.** The router rethrows it untouched, so Lambda records the
 error and API Gateway refuses the handshake on a `$connect`.
 
-**Throwing an HTTP helper gets you its status code and drops everything else.** This package exports
-`Unauthorised`, `Forbidden` and the rest for [`APIGatewayRouter`](/routers/APIGatewayRouter), and this
-router catches anything carrying a numeric `statusCode`, so `throw Unauthorised()` answers 401 with its
-body and headers thrown away. The three `WebSocket` prefixed helpers are the ones for this router.
+**Reach for the `WebSocket` prefixed helpers, not the HTTP ones.** This package exports `Unauthorised`,
+`Forbidden` and the rest for [`APIGatewayRouter`](/routers/APIGatewayRouter), so autocomplete offers you
+both families.
+
+Returning an HTTP helper does not compile, because `WebSocketConnectResponse` types out the `body` and
+`headers` it carries. Throwing one still answers with its status code, which is the same code the
+matching `WebSocket` helper would give you, and logs a warning naming the helper you wanted. Nothing
+reaches the client either way: a WebSocket answer is a status code alone, so the body and headers had
+nowhere to go.
 
 ## Sending messages to a client
 
@@ -504,20 +518,20 @@ All exported from `@lambda-event-router/apigateway`.
 
 | Type | Description |
 | --- | --- |
-| `WebSocketRequest<TBody, TQueryString>` | The handler argument |
-| `WebSocketConnectRequest` | The same, with the query string typed and no body worth reading |
-| `WebSocketMessageRequest<TBody>` | The same, with a body and no query string |
-| `WebSocketDisconnectRequest` | The same, with neither |
-| `WebSocketBaseRequest` | The fields all four share |
-| `WebSocketConnectResponse` | Handler return type, `{ statusCode: number } \| undefined` |
+| `WebSocketConnectRequest` | A connect handler's argument, carrying the query string |
+| `WebSocketMessageRequest<TBody>` | A message handler's argument, carrying the body |
+| `WebSocketDisconnectRequest` | A disconnect handler's argument, carrying neither |
+| `WebSocketRequest<TBody>` | The union of those three, for a handler serving more than one |
+| `WebSocketBaseRequest` | The fields all three share |
+| `WebSocketConnectResponse` | Handler return type, a bare `{ statusCode: number }` or `undefined` |
 | `WebSocketResult` | `{ statusCode: number }`, what the router hands back to Lambda |
-| `WebSocketHandler<TBody>` | The `handler` function, returning `Promise<WebSocketConnectResponse>` |
+| `WebSocketHandler<TBody>` | The `handler` function, returning a status code or nothing |
 | `WebSocketMiddleware<TBody>` | Router and route middleware |
-| `WebSocketRouteDefinition<TBody>` | A full route, as `defineWebSocketRoute` builds it |
+| `WebSocketConnectRouteDefinition` | A full connect route, and the argument to `connect()` |
+| `WebSocketMessageRouteDefinition<TBody>` | A full message route, and the argument to `message()` |
+| `WebSocketDisconnectRouteDefinition` | A full disconnect route, and the argument to `disconnect()` |
+| `WebSocketRouteDefinition<TBody>` | A full route for any event type, as `defineWebSocketRoute` builds it |
 | `WebSocketRouterOptions` | Options for `createWebSocketRouter` |
-| `WebSocketConnectInput` | The argument to `connect()` |
-| `WebSocketMessageInput<TBody>` | The argument to `message()` |
-| `WebSocketDisconnectInput` | The argument to `disconnect()` |
 | `PostToConnectionInput` | The argument to `postToConnection` |
 | `WebSocketFilters` | The `filters` key |
 | `WebSocketFilterInput` | What a `custom` is given |
@@ -537,11 +551,10 @@ from the same place, along with the three response helpers, `isWebSocketResponse
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TBody` | `request.body` | `unknown` |
-| `TQueryString` | `request.queryStringParameters` | `Record<string, string> \| undefined` |
 
-`WebSocketRequest` takes both in that order. `WebSocketMessageRequest`, `WebSocketRouteDefinition` and
-`WebSocketMiddleware` take `TBody` alone, and `WebSocketConnectRequest` and `WebSocketDisconnectRequest`
-take neither because each fixes both fields.
+`TBody` is the only one. `WebSocketRequest`, `WebSocketMessageRequest`, `WebSocketMessageRouteDefinition`,
+`WebSocketRouteDefinition`, `WebSocketHandler` and `WebSocketMiddleware` all take it.
+`WebSocketConnectRequest` and `WebSocketDisconnectRequest` take nothing, since neither carries a body.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers both.
 

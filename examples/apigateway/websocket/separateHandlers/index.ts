@@ -29,7 +29,7 @@ webSocketRouter.message({
 
 // .route() for custom route keys
 webSocketRouter.route({
-  filters: { routeKey: '$default' },
+  filters: { eventType: 'MESSAGE', routeKey: '$default' },
   handler: async ({ connectionId, body }) => {
     console.log(`Unrecognised action from ${connectionId}: ${body}`);
   },
