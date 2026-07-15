@@ -162,8 +162,8 @@ package.
 
 ### Response type
 
-`CodePipelineResponse` is `CodePipelineSuccessResult | undefined`. Return nothing and the router
-reports the job succeeded. Return a result to hand values back to the pipeline.
+`CodePipelineResponse` is `CodePipelineSuccessResult | void`. Return nothing and the router reports
+the job succeeded. Return a result to hand values back to the pipeline.
 
 ```ts
 return {
@@ -175,10 +175,6 @@ return {
 Both keys are optional. `outputVariables` become available to later actions in the pipeline, and a
 `continuationToken` tells CodePipeline to invoke the action again rather than treat it as done. See
 [Responses](#responses) for what the router does with the return value and how a throw is reported.
-
-**To return nothing from a handler you pass to `route()`, write an explicit `return`.** An async
-handler with no return statement is typed `Promise<void>`, which `route()` rejects. A handler you
-build with `defineRoute().handle()` can leave the return off, since `handle()` accepts a void body.
 
 ### Inferred handlers
 
@@ -333,7 +329,7 @@ All exported from `@lambda-event-router/codepipeline`.
 | Type | Description |
 | --- | --- |
 | `CodePipelineRequest<TUserParameters>` | The handler argument |
-| `CodePipelineResponse` | Handler return type, `CodePipelineSuccessResult \| undefined` |
+| `CodePipelineResponse` | Handler return type, `CodePipelineSuccessResult \| void` |
 | `CodePipelineSuccessResult` | The success shape, `{ outputVariables?, continuationToken? }` |
 | `CodePipelineHandler<TUserParameters>` | The handler function type |
 | `CodePipelineFilters` | The `filters` object |

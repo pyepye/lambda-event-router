@@ -14,7 +14,7 @@ import type {
 
 import { createMockSchema } from '@lambda-event-router/testing';
 
-import { defineRoute } from './CognitoRouter.js';
+import { createCognitoRouter, defineRoute } from './CognitoRouter.js';
 import type {
   CognitoFilterInput,
   CognitoTriggerSource,
@@ -447,5 +447,41 @@ suite('defineRoute type inference', () => {
 
       expectTypeOf<Request['userAttributes']>().toEqualTypeOf<CustomAttributes>();
     });
+  });
+});
+
+suite('route', () => {
+  test('takes a trigger-pinned defineRoute result', () => {
+    const definition = defineRoute({
+      filters: { triggerSource: 'PreSignUp_SignUp' },
+    }).handle(async ({ event }) => event);
+
+    const router = createCognitoRouter().route(definition);
+
+    expect(router).toBeDefined();
+  });
+
+  test('takes a handler annotated for one trigger', () => {
+    async function onPreSignUp({ event }: PreSignUpRequest): Promise<PreSignUpTriggerEvent> {
+      return event;
+    }
+
+    const router = createCognitoRouter().route({
+      filters: { triggerSource: 'PreSignUp_SignUp' },
+      handler: onPreSignUp,
+    });
+
+    expect(router).toBeDefined();
+  });
+
+  test('rejects a handler annotated for one trigger when no filter pins it', () => {
+    async function onPreSignUp({ event }: PreSignUpRequest): Promise<PreSignUpTriggerEvent> {
+      return event;
+    }
+
+    // @ts-expect-error - nothing tells route() which trigger this handler is for
+    const router = createCognitoRouter().route({ handler: onPreSignUp });
+
+    expect(router).toBeDefined();
   });
 });

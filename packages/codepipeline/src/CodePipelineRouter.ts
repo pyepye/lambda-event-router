@@ -48,9 +48,6 @@ interface RouteInput<
 
 interface RouteBuilder<TUserParameters> {
   handle(handler: CodePipelineHandler<TUserParameters>): CodePipelineRouteDefinition<TUserParameters>;
-  handle(
-    handler: (request: CodePipelineRequest<TUserParameters>) => Promise<void>,
-  ): CodePipelineRouteDefinition<TUserParameters>;
 }
 
 export function defineRoute<

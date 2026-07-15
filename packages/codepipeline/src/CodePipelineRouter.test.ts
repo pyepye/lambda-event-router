@@ -150,6 +150,15 @@ suite('CodePipelineRouter', () => {
 
       expect(result).toBe(router);
     });
+
+    test('takes an inline handler that returns nothing', () => {
+      const result = router.route({
+        filters: { functionName: 'my-function' },
+        handler: async () => {},
+      });
+
+      expect(result).toBe(router);
+    });
   });
 
   suite('continuation', () => {

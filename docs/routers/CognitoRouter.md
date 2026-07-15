@@ -52,8 +52,11 @@ cognitoRouter.preSignUp({
 `handler` is the only required key.
 
 `route()` is the general form beneath the family methods. It takes the same keys plus a `triggerSource`
-filter, and types its handler against the wide `CognitoRequest` union, so reach for it to match across
-families or as a catch-all. Leave `filters` off and it matches every Cognito event.
+filter, so reach for it to match across families or as a catch-all. Leave `filters` off and it matches
+every Cognito event.
+
+An inline handler on `route()` is typed against the wide `CognitoRequest` union. Pin `triggerSource`
+to one source and a handler annotated for that trigger assigns too.
 
 ```ts
 cognitoRouter.route({
@@ -253,11 +256,11 @@ const cognitoRouter = createCognitoRouter()
 cognitoRouter.preSignUp({ handler: allowSignUp })
 ```
 
-A handler typed `PreSignUpRequest` fits the `preSignUp()` method, not `route()`. `route()` types its
-handler against the wide `CognitoRequest` union, so a function narrowed to one trigger will not assign
-to it. Register an annotated handler through the convenience method for its family, or annotate against
-`CognitoRequest` and narrow on `triggerSource` inside. When you validate attributes, derive the type
-with `z.infer` and pass it as `PreSignUpRequest<Attributes>` rather than hand-writing one. See
+A handler typed `PreSignUpRequest` fits the `preSignUp()` method. It also fits `route()`, as long as
+`filters.triggerSource` names the trigger it is written for. Without that filter nothing tells `route()`
+which trigger the handler expects, so annotate against `CognitoRequest` and narrow on `triggerSource`
+inside. When you validate attributes, derive the type with `z.infer` and pass it as
+`PreSignUpRequest<Attributes>` rather than hand-writing one. See
 [annotated handlers](/docs/handlers#annotated-handlers) for the worked version.
 
 ## Schema validation
@@ -359,6 +362,7 @@ All exported from `@lambda-event-router/cognito`.
 | `CognitoFilters` | The `filters` object |
 | `CognitoFilterInput` | What `custom` receives |
 | `CognitoRouteDefinition<TUserAttributes>` | A full route passed to `route()` |
+| `TypedRouteDefinition<TTrigger, TUserAttributes>` | A route pinned to one trigger, which `route()` also takes |
 | `CognitoRouterOptions` | Options for `createCognitoRouter` |
 | `CognitoMiddleware<TUserAttributes>` | Router and route middleware |
 | `CognitoTriggerSource` | The union of every trigger source |

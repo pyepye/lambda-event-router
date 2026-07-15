@@ -198,7 +198,13 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
 
   // Generic route method
   // Handlers receive a cloned event, modify it, and return it
-  route<TUserAttributes extends UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this {
+  route<TUserAttributes extends UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this;
+  route<TTrigger extends CognitoTriggerSource, TUserAttributes extends UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  route(
+    definition: CognitoRouteDefinition<UserAttributes> | TypedRouteDefinition<CognitoTriggerSource, UserAttributes>,
+  ): this {
     this.routes.push({
       filters: definition.filters ?? {},
       userAttributesSchema: definition.userAttributesSchema,

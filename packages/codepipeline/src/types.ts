@@ -22,7 +22,8 @@ export interface CodePipelineSuccessResult {
   continuationToken?: string;
 }
 
-export type CodePipelineResponse = CodePipelineSuccessResult | undefined;
+// biome-ignore lint/suspicious/noConfusingVoidType: a handler may return nothing, meaning no output variables
+export type CodePipelineResponse = CodePipelineSuccessResult | void;
 
 export type CodePipelineMiddleware<TUserParameters = unknown> = Middleware<
   CodePipelineRequest<TUserParameters>,

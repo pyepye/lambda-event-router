@@ -198,6 +198,31 @@ suite('StepFunctionsRouter', () => {
 
       expect(result).toBe(router);
     });
+
+    test('types an inline handler on a taskToken route', () => {
+      const result = router.route({
+        filters: { taskToken: true },
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        handler: async ({ taskToken, input }) => {
+          expectTypeOf(taskToken).toEqualTypeOf<string>();
+          expectTypeOf(input).toEqualTypeOf<unknown>();
+        },
+      });
+
+      expect(result).toBe(router);
+    });
+
+    test('types an inline handler on a regular route', () => {
+      const result = router.route({
+        filters: {},
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        handler: async ({ event }) => {
+          expectTypeOf(event).toEqualTypeOf<unknown>();
+        },
+      });
+
+      expect(result).toBe(router);
+    });
   });
 
   suite('matchRoute', () => {

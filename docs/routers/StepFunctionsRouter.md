@@ -109,9 +109,8 @@ stepFunctionsRouter.route(approvalRoute)
 | `taskToken` | `boolean` | Set to `true` to match only events carrying a string `TaskToken`, and switch the handler to the [callback request shape](#task-tokens) |
 | `custom` | `(input: StepFunctionsFilterInput) => boolean \| Promise<boolean>` | Given the raw event as `unknown`. This is how a route recognises its own task. Can be async |
 
-This route is built with `defineRoute` rather than passed straight to `route()`. An inline `taskToken`
-handler needs `defineRoute` to pick up the callback request type; through `route()` the same inline
-handler infers `any`. A handler written in its own file and annotated fits either.
+This route is built with `defineRoute`, but `route()` takes the same shape. Both pick the callback
+request type off `taskToken: true`, so an inline handler is typed either way.
 
 **`custom` is the only way a route recognises its task**, and its `event` is `unknown`, so narrow
 it with `isObject` from `@lambda-event-router/base` before reading a field off it. See
@@ -297,9 +296,9 @@ export async function requestApproval(
 | `event` | `unknown` | The untouched payload, `TaskToken` included |
 | `context` | `Context` | The Lambda context |
 
-A `defineRoute` with `taskToken: true` infers this shape for an inline handler, and
-`StepFunctionsTaskTokenRequest<TInput>` types an annotated one. Returning from the handler does not
-resolve the task; only the callback does.
+Setting `taskToken: true` infers this shape for an inline handler, on `route()` and `defineRoute`
+alike. `StepFunctionsTaskTokenRequest<TInput>` types an annotated one. Returning from the handler
+does not resolve the task; only the callback does.
 
 ## Middleware
 

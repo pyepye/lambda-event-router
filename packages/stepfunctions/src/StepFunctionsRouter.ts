@@ -97,6 +97,8 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     return true;
   }
 
+  route<TInput>(definition: StepFunctionsTaskTokenRouteDefinition<TInput>): this;
+  route<TInput>(definition: StepFunctionsRouteDefinition<TInput>): this;
   route<TInput>(
     definition: StepFunctionsRouteDefinition<TInput> | StepFunctionsTaskTokenRouteDefinition<TInput>,
   ): this {
