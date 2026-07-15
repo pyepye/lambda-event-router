@@ -4,12 +4,12 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Middleware } from '../middleware';
 
-export interface EventFilterInput<TPayload = unknown> {
-  event: TPayload;
+export interface EventFilterInput {
+  event: unknown;
 }
 
-export interface EventFilters<TPayload = unknown> {
-  custom?: (input: EventFilterInput<TPayload>) => boolean | Promise<boolean>;
+export interface EventFilters {
+  custom?: (input: EventFilterInput) => boolean | Promise<boolean>;
 }
 
 export type EventRouterMiddleware<TPayload = unknown, TResponse = unknown> = Middleware<
@@ -23,7 +23,7 @@ export interface EventRequest<TPayload = unknown> {
 }
 
 export interface EventRouteDefinition<TPayload = unknown, TResponse = unknown> {
-  filters: EventFilters<TPayload>;
+  filters: EventFilters;
   eventSchema?: StandardSchemaV1<unknown, TPayload>;
   middleware?: EventRouterMiddleware<TPayload, TResponse>[];
   handler: EventHandler<TPayload, TResponse>;

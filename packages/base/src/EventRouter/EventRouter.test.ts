@@ -318,7 +318,7 @@ suite('EventRouter', () => {
       });
     });
 
-    test('custom receives typed event when eventSchema is provided', () => {
+    test('custom receives an unknown event when eventSchema is provided', () => {
       const eventSchema = createMockSchema<{ taskId: string }>();
       const isTaskEvent = (event: unknown): event is { taskId: string } =>
         typeof event === 'object' &&
@@ -328,8 +328,7 @@ suite('EventRouter', () => {
 
       const definition = defineEventRoute({
         filters: {
-          custom: ({ event }: EventFilterInput<{ taskId: string }>) =>
-            isTaskEvent(event) && event.taskId === 'task-123',
+          custom: ({ event }: EventFilterInput) => isTaskEvent(event) && event.taskId === 'task-123',
         },
         eventSchema,
       }).handle(async () => {});
@@ -337,7 +336,20 @@ suite('EventRouter', () => {
       expect(definition.filters.custom).toBeDefined();
     });
 
-    test('custom event defaults to unknown when no eventSchema is provided', () => {
+    test('rejects a custom that reads the schema output without narrowing', () => {
+      const definition = defineEventRoute({
+        filters: {
+          // @ts-expect-error - the filter runs before the schema, so event is unknown
+          // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+          custom: ({ event }) => event.taskId === 'task-123',
+        },
+        eventSchema: createMockSchema<{ taskId: string }>(),
+      }).handle(async () => {});
+
+      expect(definition.filters.custom).toBeDefined();
+    });
+
+    test('custom event is unknown when no eventSchema is provided', () => {
       const custom = vi.fn().mockReturnValue(true);
       const definition = defineEventRoute({
         filters: { custom },

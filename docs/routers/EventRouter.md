@@ -75,7 +75,7 @@ eventRouter.route({ filters: {}, handler: generateReport })
 ```ts
 eventRouter.route({
   filters: {
-    custom: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: ReportSchema,  // Optional
   middleware: [withReportContext],  // Optional
@@ -106,46 +106,29 @@ for what leaving it off costs.
 `custom` is the only filter key, because there is no envelope to pick fields out of. It is also
 optional, so an empty `filters` object is a deliberate catch-all.
 
-With an `eventSchema` on the route, `event` is typed as the schema output and you read its fields
-directly.
-
-```ts
-eventRouter.route({
-  filters: {
-    custom: ({ event }) =>
-      event.command === 'generate-report' && event.tenantId === ACME_TENANT_ID,
-  },
-  eventSchema: ReportSchema,
-  handler: generateReport,
-})
-```
-
-Without one, `event` is `unknown`, so narrow it with `isObject` from `@lambda-event-router/base` before
-reading anything.
+`event` is `unknown`, so narrow it with `isObject` from `@lambda-event-router/base` before reading
+anything. An `eventSchema` makes no difference here, because filters pick the route and the schema
+only runs once one has matched.
 
 ```ts
 import { isObject } from '@lambda-event-router/base'
 
 eventRouter.route({
   filters: {
-    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
+    custom: ({ event }) =>
+      isObject(event) && event.command === 'generate-report' && event.tenantId === ACME_TENANT_ID,
   },
+  eventSchema: ReportSchema,
   handler: generateReport,
 })
 ```
 
 | Filter | Type | Description |
 | --- | --- | --- |
-| `custom` | `(input: EventFilterInput) => boolean \| Promise<boolean>` | Given the raw event. Return `true` to take it. Can be async, and is awaited |
+| `custom` | `(input: EventFilterInput) => boolean \| Promise<boolean>` | Given the raw event as `unknown`. Return `true` to take it. Can be async, and is awaited |
 
-**`custom` is handed the raw event while being typed as the schema output.** A field your schema
-coerces or defaults arrives in the form it was sent, so `pages: z.coerce.number()` reads as a `number`
-here and arrives as the string `'3'`. Test it against what the caller sends rather than against what
-the schema promises.
-
-**Where the payload is typed, a filter can only read fields it declares.** Anything else fails to
-compile, so a field you want to filter on belongs in the schema even when validating it is not the
-point. A `z.literal()` is the cheapest way to add one.
+**`custom` sees every field as the caller sent it.** A field your schema coerces or defaults arrives
+in its original form, so test it against what arrives rather than against what the schema promises.
 
 See [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
@@ -331,7 +314,7 @@ export const withJobContext: EventRouterMiddleware = async (request, next) => {
 const eventRouter = createEventRouter({ middleware: [withJobContext] })
 
 eventRouter.route({
-  filters: { custom: ({ event }) => event.command === 'generate-report' },
+  filters: { custom: ({ event }) => isObject(event) && event.command === 'generate-report' },
   eventSchema: ReportSchema,
   middleware: [withReportContext],
   handler: generateReport,
@@ -341,7 +324,7 @@ eventRouter.route({
 **On a route with an `eventSchema`, type route middleware with the payload.** The route works out its
 payload type from `filters`, `eventSchema`, `middleware` and `handler` together, so the bare
 `EventRouterMiddleware` alias defaults its payload to `unknown` and drags the whole route down with it.
-Nothing fails, and `custom` quietly loses its types.
+Nothing fails, and the handler quietly loses its types.
 
 ```ts
 import type { EventRouterMiddleware } from '@lambda-event-router/base'
@@ -369,8 +352,8 @@ All exported from `@lambda-event-router/base`.
 | Type | Description |
 | --- | --- |
 | `EventRequest<TPayload>` | The handler argument |
-| `EventFilters<TPayload>` | The `filters` object |
-| `EventFilterInput<TPayload>` | What `custom` receives |
+| `EventFilters` | The `filters` object |
+| `EventFilterInput` | What `custom` receives, `{ event: unknown }` |
 | `EventRouteDefinition<TPayload, TResponse>` | A full route passed to `route()` |
 | `EventHandler<TPayload, TResponse>` | The `handler` function |
 | `EventRouterMiddleware<TPayload, TResponse>` | Router and route middleware |
@@ -385,16 +368,14 @@ place.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
-| `TPayload` | `request.event`, and the `event` a `custom` is typed to receive | `unknown` |
+| `TPayload` | `request.event` | `unknown` |
 | `TResponse` | What the handler returns | `unknown` |
 
 `EventRouter` and `createEventRouter` take `TResponse` on its own, so `createEventRouter<void>()` types
 every handler on the router as returning nothing.
 
-`defineEventRoute` takes them in the order `TPayload`, `TResponse`, and an explicit `TPayload` reaches
-the handler but not the filter. Its `filters` are typed from `eventSchema` alone, so
-`defineEventRoute<Report>({ filters: ... })` with no schema hands the handler a `Report` and the filter
-an `unknown`, which still needs `isObject`. Setting the schema types both.
+`defineEventRoute` takes them in the order `TPayload`, `TResponse`, and `TPayload` types the handler.
+Filters take neither parameter, since `custom` is always handed an `unknown` event.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers both.
 
@@ -422,7 +403,7 @@ export const handler: Handler = lambdaRouter.handler()`,
   },
   {
     path: 'events.ts',
-    code: `import { createEventRouter } from '@lambda-event-router/base'
+    code: `import { createEventRouter, isObject } from '@lambda-event-router/base'
 
 import { generateReport, purgeCache, reindex } from './handlers/operations.js'
 import { PurgeSchema, ReindexSchema, ReportSchema } from './schemas/operations.js'
@@ -432,17 +413,17 @@ export const eventRouter = createEventRouter()
 // Each route tests a different command, so no event matches two and the order does not matter
 eventRouter
   .route({
-    filters: { custom: ({ event }) => event.command === 'generate-report' },
+    filters: { custom: ({ event }) => isObject(event) && event.command === 'generate-report' },
     eventSchema: ReportSchema,
     handler: generateReport,
   })
   .route({
-    filters: { custom: ({ event }) => event.command === 'reindex' },
+    filters: { custom: ({ event }) => isObject(event) && event.command === 'reindex' },
     eventSchema: ReindexSchema,
     handler: reindex,
   })
   .route({
-    filters: { custom: ({ event }) => event.command === 'purge-cache' },
+    filters: { custom: ({ event }) => isObject(event) && event.command === 'purge-cache' },
     eventSchema: PurgeSchema,
     handler: purgeCache,
   })`,

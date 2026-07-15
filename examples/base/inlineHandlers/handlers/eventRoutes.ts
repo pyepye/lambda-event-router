@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-import { defineEventRoute } from '@lambda-event-router/base';
+import { defineEventRoute, isObject } from '@lambda-event-router/base';
 
 // --- EventBridge Scheduler: templated input for scheduled cleanup ---
 
@@ -14,7 +14,7 @@ const ScheduledCleanupSchema = z.object({
 
 export const scheduledCleanupRoute = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.action === 'scheduled-cleanup',
+    custom: ({ event }) => isObject(event) && event.action === 'scheduled-cleanup',
   },
   eventSchema: ScheduledCleanupSchema,
 }).handle(async ({ event }) => {
@@ -39,7 +39,7 @@ const ProcessOrderSchema = z.object({
 
 export const processOrderRoute = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.taskType === 'process-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
   },
   eventSchema: ProcessOrderSchema,
 }).handle(async ({ event }) => {
@@ -62,7 +62,7 @@ const TemperatureReadingSchema = z.object({
 
 export const temperatureReadingRoute = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.sensorType === 'temperature',
+    custom: ({ event }) => isObject(event) && event.sensorType === 'temperature',
   },
   eventSchema: TemperatureReadingSchema,
 }).handle(async ({ event }) => {
@@ -83,7 +83,7 @@ const GenerateReportSchema = z.object({
 
 export const generateReportRoute = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: GenerateReportSchema,
 }).handle(async ({ event }) => {

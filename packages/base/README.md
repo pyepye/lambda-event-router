@@ -21,7 +21,7 @@ This example is for the EventRouter. See [Usage](#usage) for examples of the oth
 
 ```ts
 // main handler
-import { createEventRouter, defineEventRoute, LambdaRouter, logger } from '@lambda-event-router/base'
+import { createEventRouter, defineEventRoute, isObject, LambdaRouter, logger } from '@lambda-event-router/base'
 import { z } from 'zod'
 
 const eventRouter = createEventRouter()
@@ -29,7 +29,7 @@ const eventRouter = createEventRouter()
 // Inline functions allows Typescript to automatic infer types
 const processOrder = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.action === 'process-order',
+    custom: ({ event }) => isObject(event) && event.action === 'process-order',
   },
   eventSchema: z.object({
     action: z.literal('process-order'),
@@ -48,7 +48,7 @@ export const handler = lambdaRouter.handler()
 OR use a the separate syntax to split router and handlers across files:
 
 ```ts
-import { createEventRouter, logger } from '@lambda-event-router/base'
+import { createEventRouter, isObject, logger } from '@lambda-event-router/base'
 import type { EventRequest } from '@lambda-event-router/base'
 import { z } from 'zod'
 
@@ -63,7 +63,7 @@ type Order = z.infer<typeof OrderSchema>
 // Separate handler to define routes and handlers in different places
 eventRouter.route({
   filters: {
-    custom: ({ event }) => event.action === 'process-order',
+    custom: ({ event }) => isObject(event) && event.action === 'process-order',
   },
   eventSchema: OrderSchema,
   handler: processOrder,
@@ -76,7 +76,7 @@ export async function processOrder({ event }: EventRequest<Order>) {
 }
 ```
 
-`custom` is given the **raw** event even though `eventSchema` types it as the schema output, so a coerced or defaulted field arrives in the form the caller sent it. Where a route has no `eventSchema` the event is `unknown`, so narrow it with `isObject` before reading anything.
+`custom` is given the **raw** event, typed `unknown`, so narrow it with `isObject` before reading anything. Filters pick the route and `eventSchema` only runs once one has matched, so a coerced or defaulted field arrives in the form the caller sent it.
 
 Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
 
@@ -171,7 +171,7 @@ It refuses any event it recognises as a known AWS source, so adding one cannot t
 #### Inline handlers
 
 ```ts
-import { createEventRouter, defineEventRoute, logger } from '@lambda-event-router/base'
+import { createEventRouter, defineEventRoute, isObject, logger } from '@lambda-event-router/base'
 import { z } from 'zod'
 
 const eventRouter = createEventRouter()
@@ -184,7 +184,7 @@ const ReportSchema = z.object({
 
 const generateReport = defineEventRoute({
   filters: {
-    custom: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
 }).handle(async ({ event }) => {
@@ -198,7 +198,7 @@ eventRouter.route(generateReport)
 #### Separate handlers
 
 ```ts
-import { createEventRouter, logger } from '@lambda-event-router/base'
+import { createEventRouter, isObject, logger } from '@lambda-event-router/base'
 import type { EventRequest } from '@lambda-event-router/base'
 import { z } from 'zod'
 
@@ -213,7 +213,7 @@ type Report = z.infer<typeof ReportSchema>
 
 eventRouter.route({
   filters: {
-    custom: ({ event }) => event.command === 'generate-report',
+    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
   eventSchema: ReportSchema,
   handler: generateReport,

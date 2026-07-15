@@ -22,7 +22,7 @@ interface InternalEventRoute {
 }
 
 interface EventRouteInput<TEventSchema extends StandardSchemaV1 | undefined = undefined, TResponse = unknown> {
-  filters: EventFilters<TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown>;
+  filters: EventFilters;
   middleware?: EventRouterMiddleware<
     TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : unknown,
     TResponse
@@ -58,7 +58,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
   route<TPayload>(definition: EventRouteDefinition<TPayload, TResponse>): this {
     // Casts needed: storing typed route in general storage (contravariance)
     const handler = definition.handler as EventHandler<unknown, unknown>;
-    const filters = definition.filters as InternalEventRoute['filters'];
+    const { filters } = definition;
     // @ts-expect-error - storing typed middleware in untyped internal collection (contravariance)
     const middleware: EventRouterMiddleware<unknown, unknown>[] = definition.middleware ?? [];
     this.routes.push({
