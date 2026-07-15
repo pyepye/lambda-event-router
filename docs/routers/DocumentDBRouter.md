@@ -97,8 +97,10 @@ documentDBRouter.route({
 
 Each method drops what it cannot use, so `insert()` rejects an `operationType` in its filters and a
 `fullDocumentBeforeChangeSchema` outright, and `delete()` rejects a `fullDocumentSchema`. `route()`
-still takes everything. See [convenience methods](/docs/routing#convenience-methods) for how the other
-routers use them.
+still takes everything, and reads the `operationType` filter to work out which request your handler
+gets, so a route filtered to `insert` is handed a `DocumentDBInsertRequest` and one with no
+`operationType` filter is handed all four to narrow. See [convenience
+methods](/docs/routing#convenience-methods) for how the other routers use them.
 
 ## Filters
 
@@ -425,7 +427,7 @@ All exported from `@lambda-event-router/documentdb`.
 | `DocumentDBFullDocumentBeforeChangeOption` | The change stream's `fullDocumentBeforeChange` settings, `'off'` through `'required'` |
 | `DocumentDBFilters` | The `filters` object |
 | `DocumentDBFilterInput` | What `custom` receives |
-| `DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>` | The `handler` function |
+| `DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>` | The `handler` function, taking every operation its route can match |
 | `DocumentDBRouteDefinition<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>` | A full route passed to `route()` |
 | `DocumentDBInsertRouteDefinition<TDocumentKey, TFullDocument>` | A route passed to `insert()` |
 | `DocumentDBUpdateRouteDefinition<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>` | A route passed to `update()` |

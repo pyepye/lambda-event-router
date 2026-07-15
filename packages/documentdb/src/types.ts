@@ -105,16 +105,13 @@ export type DocumentDBMiddleware<
   TFullDocumentBeforeChange = Record<string, unknown>,
 > = Middleware<DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>, void>;
 
+// Takes the whole union, so a handler written for one operationType will not assign to a route whose
+// filters can deliver another. Narrow on request.operationType inside the handler
 export type DocumentDBRecordHandler<
   TDocumentKey = Record<string, unknown>,
   TFullDocument = Record<string, unknown>,
   TFullDocumentBeforeChange = Record<string, unknown>,
-> =
-  | ((request: DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
-  | ((request: DocumentDBInsertRequest<TDocumentKey, TFullDocument>) => Promise<void>)
-  | ((request: DocumentDBUpdateRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
-  | ((request: DocumentDBReplaceRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>)
-  | ((request: DocumentDBDeleteRequest<TDocumentKey, TFullDocumentBeforeChange>) => Promise<void>);
+> = (request: DocumentDBRequest<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>) => Promise<void>;
 
 // Filter types
 

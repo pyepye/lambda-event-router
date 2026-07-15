@@ -1,11 +1,16 @@
 import type { ConfigOversizedRequest, ConfigRequest } from '@lambda-event-router/config';
 
-export async function handleIamRoleCompliance({
-  configurationItem,
-  ruleParameters,
-  resultToken,
-  configRuleName,
-}: ConfigRequest): Promise<void> {
+// A rule's filters cannot tell a normal change from an oversized one, so every handler is given both
+// and narrows on configurationItem, which only the normal shape carries
+type ConfigChangeRequest = ConfigRequest | ConfigOversizedRequest;
+
+export async function handleIamRoleCompliance(request: ConfigChangeRequest): Promise<void> {
+  const { configurationItem, ruleParameters, resultToken, configRuleName } = request;
+  if (!configurationItem) {
+    console.log(`Rule ${configRuleName}: change too large to inline, fetch it from the Config API`);
+    return;
+  }
+
   const { resourceType, resourceId, configuration, tags } = configurationItem;
 
   const requiredTagsParam = ruleParameters.requiredTags ?? '[]';
@@ -20,7 +25,13 @@ export async function handleIamRoleCompliance({
   console.log(`Result token: ${resultToken}`);
 }
 
-export async function handleRdsEncryptionCheck({ configurationItem, resultToken }: ConfigRequest): Promise<void> {
+export async function handleRdsEncryptionCheck(request: ConfigChangeRequest): Promise<void> {
+  const { configurationItem, resultToken } = request;
+  if (!configurationItem) {
+    console.log(`Change too large to inline, fetch it from the Config API. Result token: ${resultToken}`);
+    return;
+  }
+
   const { resourceId, configuration } = configurationItem;
 
   const isEncrypted = configuration.storageEncrypted === true;
@@ -30,23 +41,26 @@ export async function handleRdsEncryptionCheck({ configurationItem, resultToken 
   console.log(`Result token: ${resultToken}`);
 }
 
-export async function handleResourceDeleted({
-  configurationItem,
-  configRuleName,
-  resultToken,
-}: ConfigRequest): Promise<void> {
+export async function handleResourceDeleted(request: ConfigChangeRequest): Promise<void> {
+  const { configurationItem, configRuleName, resultToken } = request;
+  if (!configurationItem) {
+    console.log(`Rule ${configRuleName}: deletion too large to inline, fetch it from the Config API`);
+    return;
+  }
+
   const { resourceType, resourceId } = configurationItem;
   console.log(`Rule ${configRuleName}: ${resourceType} ${resourceId} was deleted`);
   console.log(`Result token: ${resultToken}`);
 }
 
-// OversizedConfigurationItemChangeNotification handler
-// configurationItemSummary is provided instead of full configurationItem
-export async function handleOversizedLambdaCompliance({
-  configurationItemSummary,
-  ruleParameters,
-  resultToken,
-}: ConfigOversizedRequest): Promise<void> {
+// The oversized notification carries configurationItemSummary in place of the full configurationItem
+export async function handleOversizedLambdaCompliance(request: ConfigChangeRequest): Promise<void> {
+  const { configurationItemSummary, ruleParameters, resultToken } = request;
+  if (!configurationItemSummary) {
+    console.log(`Change small enough to inline, read it off configurationItem. Result token: ${resultToken}`);
+    return;
+  }
+
   const { resourceType, resourceId, configurationItemStatus } = configurationItemSummary;
 
   console.log(`Oversized config for ${resourceType} ${resourceId} (status: ${configurationItemStatus})`);

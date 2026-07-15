@@ -45,6 +45,8 @@ const evaluateResource = defineRoute({
     configRuleName: 'my-custom-rule',
   },
 }).handle(async ({ configurationItem, ruleParameters }) => {
+  // A rule's filters cannot tell a normal change from an oversized one, so narrow first
+  if (!configurationItem) return
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
 })
 configRouter.route(evaluateResource)
@@ -65,7 +67,8 @@ configRouter.route({
 })
 
 // Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function evaluateResource({ configurationItem, ruleParameters }) {
+export async function evaluateResource({ configurationItem, ruleParameters }: ConfigRequest | ConfigOversizedRequest) {
+  if (!configurationItem) return
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
 }
 ```
@@ -97,6 +100,8 @@ const evaluateResource = defineRoute({
     configRuleName: 'my-custom-rule',
   },
 }).handle(async ({ configurationItem, ruleParameters }) => {
+  // A rule's filters cannot tell a normal change from an oversized one, so narrow first
+  if (!configurationItem) return
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
 })
 
@@ -117,7 +122,8 @@ configRouter.route({
   handler: evaluateResource,
 })
 
-async function evaluateResource({ configurationItem, ruleParameters }) {
+async function evaluateResource({ configurationItem, ruleParameters }: ConfigRequest | ConfigOversizedRequest) {
+  if (!configurationItem) return
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
 }
 ```

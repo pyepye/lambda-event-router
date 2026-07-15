@@ -84,9 +84,11 @@ export type ConfigMiddleware<TConfig = Record<string, unknown>, TParams = Record
   void
 >;
 
-export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Record<string, string>> =
-  | ((request: ConfigRequest<TConfig, TParams>) => Promise<void>)
-  | ((request: ConfigOversizedRequest<TParams>) => Promise<void>);
+// Takes both shapes, so a handler written for one will not assign to a route whose filters can
+// deliver the other. Narrow on request.configurationItem inside the handler
+export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Record<string, string>> = (
+  request: ConfigRequest<TConfig, TParams> | ConfigOversizedRequest<TParams>,
+) => Promise<void>;
 
 export interface ConfigChangeFilterInput {
   configRuleName: string;

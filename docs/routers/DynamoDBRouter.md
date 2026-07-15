@@ -97,8 +97,10 @@ dynamoRouter.route({
 | `remove()` | `eventName: 'REMOVE'` | `keysSchema`, `oldImageSchema` |
 
 Each method drops what it cannot use, so `insert()` rejects an `eventName` in its filters and an
-`oldImageSchema` outright. `route()` still takes everything. See [convenience
-methods](/docs/routing#convenience-methods) for how the other routers use them.
+`oldImageSchema` outright. `route()` still takes everything, and reads the `eventName` filter to work
+out which request your handler gets, so a route filtered to `INSERT` is handed a
+`DynamoDBInsertRequest` and one with no `eventName` filter is handed all three to narrow. See
+[convenience methods](/docs/routing#convenience-methods) for how the other routers use them.
 
 ## Filters
 
@@ -394,7 +396,7 @@ All exported from `@lambda-event-router/dynamodb`.
 | `DynamoDBFilters` | The `filters` object |
 | `DynamoDBFilterInput` | What `custom` receives |
 | `DynamoDBKeyValue` | A partition or sort key value, `string \| number` |
-| `DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>` | The `handler` function |
+| `DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>` | The `handler` function, taking every event its route can match |
 | `DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>` | A full route passed to `route()` |
 | `DynamoDBInsertRouteDefinition<TKeys, TNewItem>` | A route passed to `insert()` |
 | `DynamoDBModifyRouteDefinition<TKeys, TNewItem, TOldItem>` | A route passed to `modify()` |

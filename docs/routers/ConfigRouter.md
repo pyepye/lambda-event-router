@@ -201,23 +201,32 @@ source is written both ways to compare.
 ### Annotated handlers
 
 Annotating the request yourself splits route setup from business logic, using
-[`ConfigRequest<TConfig, TParams>`](#generic-parameters) for a normal change or
-[`ConfigOversizedRequest<TParams>`](#generic-parameters) for an oversized one. Derive the parameter
-types from your schemas with `z.infer` rather than hand-writing them.
+[`ConfigRequest<TConfig, TParams> | ConfigOversizedRequest<TParams>`](#generic-parameters). Derive the
+parameter types from your schemas with `z.infer` rather than hand-writing them.
+
+**Annotate the union, not one half of it.** No filter tells a normal change from an oversized one, so
+every route can be handed either. A handler typed `ConfigRequest` alone does not compile, which is the
+compiler stopping you writing a handler that throws the first time AWS sends a large item.
 
 ```ts
 // handlers/evaluateEncryption.ts
 import { logger } from '@lambda-event-router/base'
-import type { ConfigRequest } from '@lambda-event-router/config'
+import type { ConfigOversizedRequest, ConfigRequest } from '@lambda-event-router/config'
 import type { z } from 'zod'
 import type { configurationSchema } from '../schemas/rules'
 
 type RdsConfig = z.infer<typeof configurationSchema>
 
 export async function evaluateEncryption(
-  request: ConfigRequest<RdsConfig>,
+  request: ConfigRequest<RdsConfig> | ConfigOversizedRequest,
 ): Promise<void> {
-  logger.info(`Encrypted: ${request.configurationItem.configuration.storageEncrypted}`)
+  const { configurationItem } = request
+  if (!configurationItem) {
+    logger.info('Change too large to inline, fetching the item from the Config API')
+    return
+  }
+
+  logger.info(`Encrypted: ${configurationItem.configuration.storageEncrypted}`)
 }
 ```
 
@@ -235,13 +244,6 @@ configRouter.route({
   handler: evaluateEncryption,
 })
 ```
-
-**`route()` accepts a handler typed to only one shape, but the filters do not pin the notification
-type.** A handler typed `ConfigRequest` still runs for an oversized change if its filters match one,
-and `configurationItem` arrives `undefined`, so reading it throws. Type the handler
-`ConfigRequest | ConfigOversizedRequest` and guard on `configurationItem`, or use an inferred handler,
-which is handed the union and forces the check. See
-[annotated handlers](/docs/handlers#annotated-handlers) for the worked version.
 
 ## Schema validation
 
@@ -372,7 +374,7 @@ All exported from `@lambda-event-router/config`.
 | `ConfigChangeFilterInput` | What a `custom` receives |
 | `ConfigMessageType` | The notification message types |
 | `ConfigMiddleware<TConfig, TParams>` | Router and route middleware |
-| `ConfigChangeHandler` | The `handler` function |
+| `ConfigChangeHandler` | The `handler` function, taking both notification shapes |
 | `ConfigRouteDefinition` | A full route passed to `route()` |
 | `ConfigRouterOptions` | Options for `createConfigRouter` |
 | `ConfigurationItem` | The changed resource on a normal change |

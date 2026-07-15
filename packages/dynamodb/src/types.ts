@@ -57,15 +57,13 @@ export type DynamoDBMiddleware<
   TOldItem = Record<string, unknown>,
 > = Middleware<DynamoDBRequest<TKeys, TNewItem, TOldItem>, void>;
 
+// Takes the whole union, so a handler written for one eventName will not assign to a route whose
+// filters can deliver another. Narrow on request.eventName inside the handler
 export type DynamoDBRecordHandler<
   TKeys = Record<string, unknown>,
   TNewItem = Record<string, unknown>,
   TOldItem = Record<string, unknown>,
-> =
-  | ((request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>)
-  | ((request: DynamoDBInsertRequest<TKeys, TNewItem>) => Promise<void>)
-  | ((request: DynamoDBModifyRequest<TKeys, TNewItem, TOldItem>) => Promise<void>)
-  | ((request: DynamoDBRemoveRequest<TKeys, TOldItem>) => Promise<void>);
+> = (request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>;
 
 export interface DynamoDBFilterInput<TNewItem = Record<string, unknown>, TOldItem = Record<string, unknown>> {
   eventName: DynamoDBEventName;

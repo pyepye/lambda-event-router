@@ -81,10 +81,35 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     return event.eventSource === 'aws:docdb';
   }
 
+  // An inline definition narrows its handler from the operationType filter, the way defineRoute does
+  route<
+    TDocumentKeySchema extends StandardSchemaV1 | undefined = undefined,
+    TFullDocumentSchema extends StandardSchemaV1 | undefined = undefined,
+    TFullDocumentBeforeChangeSchema extends StandardSchemaV1 | undefined = undefined,
+    const TFilters extends DocumentDBFilters = DocumentDBFilters,
+    TDocumentKey = TDocumentKeySchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TDocumentKeySchema>
+      : Record<string, unknown>,
+    TFullDocument = TFullDocumentSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TFullDocumentSchema>
+      : Record<string, unknown>,
+    TFullDocumentBeforeChange = TFullDocumentBeforeChangeSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TFullDocumentBeforeChangeSchema>
+      : Record<string, unknown>,
+  >(
+    definition: RouteInput<TDocumentKeySchema, TFullDocumentSchema, TFullDocumentBeforeChangeSchema, TFilters> & {
+      handler: (
+        request: FiltersToRequest<TFilters, TDocumentKey, TFullDocument, TFullDocumentBeforeChange>,
+      ) => Promise<void>;
+    },
+  ): this;
+
   route<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>(
     definition: DocumentDBRouteDefinition<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>,
-  ): this {
-    return this.addRoute(definition as InternalRoute);
+  ): this;
+
+  route(definition: { filters: DocumentDBFilters; handler: (...args: never[]) => Promise<void> }): this {
+    return this.addRoute(definition as unknown as InternalRoute);
   }
 
   insert<TDocumentKey, TFullDocument>(definition: DocumentDBInsertRouteDefinition<TDocumentKey, TFullDocument>): this {

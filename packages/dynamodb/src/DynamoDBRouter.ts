@@ -166,7 +166,36 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     return firstRecord.eventSource === 'aws:dynamodb';
   }
 
-  route<TKeys, TNewItem, TOldItem>(definition: DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>): this {
+  // An inline definition narrows its handler from the eventName filter, the way defineRoute does
+  route<
+    TKeysSchema extends StandardSchemaV1 | undefined = undefined,
+    TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
+    TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
+    const TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined = undefined,
+    const TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined = undefined,
+    TKeys = TKeysSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TKeysSchema> : Record<string, unknown>,
+    TNewItem = TNewImageSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TNewImageSchema>
+      : Record<string, unknown>,
+    TOldItem = TOldImageSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TOldImageSchema>
+      : Record<string, unknown>,
+  >(
+    definition: RouteInput<TKeysSchema, TNewImageSchema, TOldImageSchema, TEventNames, TViewTypes> & {
+      handler: (request: FiltersToRequest<TEventNames, TKeys, TNewItem, TOldItem>) => Promise<void>;
+    },
+  ): this;
+
+  route<TKeys, TNewItem, TOldItem>(definition: DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>): this;
+
+  route(definition: {
+    filters: DynamoDBFilters;
+    keysSchema?: StandardSchemaV1;
+    newImageSchema?: StandardSchemaV1;
+    oldImageSchema?: StandardSchemaV1;
+    middleware?: unknown;
+    handler: (...args: never[]) => Promise<void>;
+  }): this {
     return this.addRoute({
       filters: definition.filters,
       keysSchema: definition.keysSchema,
