@@ -160,10 +160,6 @@ here where they would be a filter key on another router.
 it, and prefer the [request object](#request-object) for anything you only want once a route has matched. See
 [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
-**On a convenience method, `custom` is typed `(input: unknown)`.** Annotating the parameter does not
-compile either, so use `route()` or [`defineRoute`](#inferred-handlers) for any route whose filter needs to
-read its input.
-
 ### Path patterns
 
 A `:name` segment matches one segment and gives your handler that value under `name`. `PathParams` reads the

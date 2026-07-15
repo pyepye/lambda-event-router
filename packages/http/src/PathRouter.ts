@@ -2,7 +2,15 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Middleware } from '@lambda-event-router/base';
 
-import type { ApiHandler, ApiRequest, HandlerResponse, HttpMethod, PathParams, RouteDefinition } from './types.js';
+import type {
+  ApiHandler,
+  ApiRequest,
+  HandlerResponse,
+  HTTPFilterInput,
+  HttpMethod,
+  PathParams,
+  RouteDefinition,
+} from './types.js';
 
 type BodyMethod = 'POST' | 'PUT' | 'PATCH';
 type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
@@ -14,7 +22,7 @@ export interface InternalRoute {
   pathParamNames: string[]; // path param names in order, mapped to the pattern's capture groups
   pathParamMask: boolean[]; // true where a segment is a path param, walked left to right to rank specificity
   matchShape: string; // method + path with params flattened to ':'; equal shapes match the same requests
-  custom?: (input: unknown) => boolean | Promise<boolean>;
+  custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
   middleware: Middleware<ApiRequest, HandlerResponse>[];
   querySchema?: StandardSchemaV1;
@@ -24,7 +32,7 @@ export interface InternalRoute {
 
 interface PathRouterFilters<TPathString extends string> {
   path: TPathString;
-  custom?: (input: unknown) => boolean | Promise<boolean>;
+  custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
 }
 
 // Base config shared by all route types
@@ -120,7 +128,7 @@ export class PathRouter {
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
   route: RouteMethodFn<this> = (definition) => {
     const method = definition.filters.method.toUpperCase() as HttpMethod;
-    // @ts-expect-error - RouteDefinition uses HTTPFilterInput for custom, but addRoute stores as unknown to decouple from HTTP types
+    // @ts-expect-error - Generic handler types narrow TPath beyond addRoute's default Record<string, string>
     return this.addRoute(method, definition);
   };
 
@@ -227,7 +235,7 @@ export class PathRouter {
     return methods;
   }
 
-  async match(method: string, path: string, filterInput?: unknown): Promise<RouteMatch | null> {
+  async match(method: string, path: string, filterInput?: HTTPFilterInput): Promise<RouteMatch | null> {
     this.sortRoutes();
     const normalizedPath = normalizePath(path);
     for (const route of this.routes) {
@@ -236,7 +244,7 @@ export class PathRouter {
       const match = normalizedPath.match(route.pattern);
       if (!match) continue;
 
-      if (route.custom && !(await route.custom(filterInput))) {
+      if (route.custom && !(await route.custom(filterInput as HTTPFilterInput))) {
         continue;
       }
 

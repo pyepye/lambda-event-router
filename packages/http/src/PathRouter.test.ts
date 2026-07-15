@@ -1,6 +1,22 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
 import { PathRouter } from './PathRouter.js';
+import type { HTTPFilterInput } from './types.js';
+
+function buildFilterInput(overrides: Partial<HTTPFilterInput> = {}): HTTPFilterInput {
+  return {
+    method: 'GET',
+    path: '/items',
+    headers: {},
+    multiValueHeaders: {},
+    query: {},
+    multiValueQuery: {},
+    body: undefined,
+    auth: undefined,
+    event: undefined,
+    ...overrides,
+  };
+}
 
 suite('PathRouter', () => {
   let router: PathRouter;
@@ -287,7 +303,7 @@ suite('PathRouter', () => {
         handler: vi.fn(),
       });
 
-      const result = await router.match('GET', '/items', {});
+      const result = await router.match('GET', '/items', buildFilterInput());
 
       expect(result).toBeNull();
     });
@@ -302,7 +318,7 @@ suite('PathRouter', () => {
         handler,
       });
 
-      const result = await router.match('GET', '/items', {});
+      const result = await router.match('GET', '/items', buildFilterInput());
 
       expect(result).not.toBeNull();
       expect(result?.route.handler).toBe(handler);
@@ -315,7 +331,7 @@ suite('PathRouter', () => {
         handler: vi.fn(),
       });
 
-      const filterInput = { method: 'GET', path: '/items', headers: { authorization: 'Bearer token' } };
+      const filterInput = buildFilterInput({ headers: { authorization: 'Bearer token' } });
       await router.match('GET', '/items', filterInput);
 
       expect(custom).toHaveBeenCalledWith(filterInput);
@@ -337,7 +353,7 @@ suite('PathRouter', () => {
         handler: secondHandler,
       });
 
-      const result = await router.match('GET', '/items', {});
+      const result = await router.match('GET', '/items', buildFilterInput());
 
       expect(result).not.toBeNull();
       expect(result?.route.handler).toBe(secondHandler);
@@ -350,7 +366,7 @@ suite('PathRouter', () => {
         handler: vi.fn(),
       });
 
-      await router.match('POST', '/items', {});
+      await router.match('POST', '/items', buildFilterInput());
 
       expect(custom).not.toHaveBeenCalled();
     });
@@ -362,7 +378,7 @@ suite('PathRouter', () => {
         handler: vi.fn(),
       });
 
-      await router.match('GET', '/other', {});
+      await router.match('GET', '/other', buildFilterInput());
 
       expect(custom).not.toHaveBeenCalled();
     });
@@ -444,14 +460,16 @@ suite('PathRouter', () => {
 
       expect(() => {
         router.get({
-          filters: { path: '/items/:id', custom: (input: unknown) => input === 'guarded' },
+          filters: { path: '/items/:id', custom: (input: HTTPFilterInput) => input.headers['x-route'] === 'guarded' },
           handler: guarded,
         });
         router.get({ filters: { path: '/items/:slug' }, handler: fallback });
       }).not.toThrow();
 
-      expect((await router.match('GET', '/items/1', 'guarded'))?.route.handler).toBe(guarded);
-      expect((await router.match('GET', '/items/1', 'other'))?.route.handler).toBe(fallback);
+      const guardedInput = buildFilterInput({ headers: { 'x-route': 'guarded' } });
+
+      expect((await router.match('GET', '/items/1', guardedInput))?.route.handler).toBe(guarded);
+      expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(fallback);
     });
   });
 
