@@ -369,6 +369,23 @@ suite('EventRouter', () => {
 
       expect(result).toBe(router);
     });
+
+    test('a void router takes a bare defineEventRoute', () => {
+      const voidRouter = createEventRouter<void>();
+
+      const result = voidRouter.route(defineEventRoute({ filters: {} }).handle(async () => {}));
+
+      expect(result).toBe(voidRouter);
+    });
+
+    test('a void router rejects a handler that returns a value', () => {
+      const voidRouter = createEventRouter<void>();
+
+      // @ts-expect-error - every handler on this router returns nothing
+      const result = voidRouter.route(defineEventRoute({ filters: {} }).handle(async () => 'done'));
+
+      expect(result).toBe(voidRouter);
+    });
   });
 
   suite('matchRoute', () => {

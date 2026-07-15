@@ -76,7 +76,7 @@ export async function processOrder({ event }: EventRequest<Order>) {
 }
 ```
 
-`custom` is given the **raw** event, typed `unknown`, so narrow it with `isObject` before reading anything. Filters pick the route and `eventSchema` only runs once one has matched, so a coerced or defaulted field arrives in the form the caller sent it.
+`custom` is given the raw event, typed `unknown`. Narrow it with `isObject` before reading anything. Filters pick the route, and `eventSchema` runs only once one has matched. A coerced or defaulted field therefore arrives in the form the caller sent it.
 
 Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
 
@@ -85,8 +85,6 @@ const eventRouter = createEventRouter<void>()
 
 eventRouter.route({ filters: {}, handler: onSchedule })
 ```
-
-`defineEventRoute` defaults its response to `unknown`, which a `void` router rejects, so register with `route()` as above or pass both parameters as `defineEventRoute<unknown, void>({ ... })`.
 
 
 ## Routers
@@ -225,7 +223,7 @@ async function generateReport({ event }: EventRequest<Report>) {
 }
 ```
 
-Route middleware on a route carrying an `eventSchema` needs the payload type, so `EventRouterMiddleware<Report>` rather than the bare alias. The bare one defaults its payload to `unknown` and quietly loosens the rest of the route.
+Route middleware on a route carrying an `eventSchema` needs the payload type. Use `EventRouterMiddleware<Report>` rather than the bare alias. The bare one defaults its payload to `unknown`, which leaves `request.event` unreadable inside the middleware.
 
 ## Examples
 

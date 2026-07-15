@@ -60,10 +60,6 @@ const eventRouter = createEventRouter<void>()
 eventRouter.route({ filters: {}, handler: generateReport })
 ```
 
-**A `void` router does not take a bare `defineEventRoute`.** That helper defaults its response to
-`unknown`, which a `void` router rejects, so pass both parameters as `defineEventRoute<unknown, void>({
-... })` or register with `route()` as above.
-
 ### Options
 
 | Option | Type | Required | Default | Description |
@@ -107,8 +103,8 @@ for what leaving it off costs.
 optional, so an empty `filters` object is a deliberate catch-all.
 
 `event` is `unknown`, so narrow it with `isObject` from `@lambda-event-router/base` before reading
-anything. An `eventSchema` makes no difference here, because filters pick the route and the schema
-only runs once one has matched.
+anything. An `eventSchema` makes no difference here. Filters pick the route, and the schema runs
+only once one has matched.
 
 ```ts
 import { isObject } from '@lambda-event-router/base'
@@ -128,7 +124,7 @@ eventRouter.route({
 | `custom` | `(input: EventFilterInput) => boolean \| Promise<boolean>` | Given the raw event as `unknown`. Return `true` to take it. Can be async, and is awaited |
 
 **`custom` sees every field as the caller sent it.** A field your schema coerces or defaults arrives
-in its original form, so test it against what arrives rather than against what the schema promises.
+in its original form. Test it against what arrives, not against what the schema promises.
 
 See [`custom`](/docs/routing#custom) for where it sits in the filter order.
 
@@ -321,10 +317,10 @@ eventRouter.route({
 })
 ```
 
-**On a route with an `eventSchema`, type route middleware with the payload.** The route works out its
-payload type from `filters`, `eventSchema`, `middleware` and `handler` together, so the bare
-`EventRouterMiddleware` alias defaults its payload to `unknown` and drags the whole route down with it.
-Nothing fails, and the handler quietly loses its types.
+**On a route with an `eventSchema`, type route middleware with the payload.** The bare
+`EventRouterMiddleware` alias defaults its payload to `unknown`. Inside the middleware
+`request.event` is then `unknown`, so you cannot read the fields the schema guarantees. The route
+around it keeps its own types either way.
 
 ```ts
 import type { EventRouterMiddleware } from '@lambda-event-router/base'
@@ -337,9 +333,6 @@ export const withReportContext: EventRouterMiddleware<Report> = async (request, 
   return next(request)
 }
 ```
-
-Where the handler is annotated as well, the bare alias is a compile error rather than a quiet
-loosening, so the two forms disagree about how loudly they fail.
 
 One event per invocation means `appendKeys` is safe here, unlike on the record based routers where a
 batch runs in parallel. See [middleware](/docs/middleware) for the execution order and the three levels
@@ -374,7 +367,7 @@ place.
 `EventRouter` and `createEventRouter` take `TResponse` on its own, so `createEventRouter<void>()` types
 every handler on the router as returning nothing.
 
-`defineEventRoute` takes them in the order `TPayload`, `TResponse`, and `TPayload` types the handler.
+`defineEventRoute` takes them in the order `TPayload`, `TResponse`. `TPayload` types the handler.
 Filters take neither parameter, since `custom` is always handed an `unknown` event.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers both.

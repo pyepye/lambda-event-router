@@ -31,7 +31,9 @@ interface EventRouteInput<TEventSchema extends StandardSchemaV1 | undefined = un
 }
 
 interface EventRouteBuilder<TPayload, TResponse = unknown> {
-  handle(handler: EventHandler<TPayload, TResponse>): EventRouteDefinition<TPayload, TResponse>;
+  handle<TActualResponse extends TResponse>(
+    handler: EventHandler<TPayload, TActualResponse>,
+  ): EventRouteDefinition<TPayload, TActualResponse>;
 }
 
 export interface EventRouterOptions<TResponse = unknown> {
@@ -55,7 +57,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     return matched !== undefined;
   }
 
-  route<TPayload>(definition: EventRouteDefinition<TPayload, TResponse>): this {
+  route<TPayload, TRouteResponse extends TResponse>(definition: EventRouteDefinition<TPayload, TRouteResponse>): this {
     // Casts needed: storing typed route in general storage (contravariance)
     const handler = definition.handler as EventHandler<unknown, unknown>;
     const { filters } = definition;
@@ -115,13 +117,15 @@ export function defineEventRoute<
 > {
   type ResolvedPayload = TEventSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TEventSchema> : TPayload;
   return {
-    handle(handler: EventHandler<ResolvedPayload, TResponse>): EventRouteDefinition<ResolvedPayload, TResponse> {
+    handle<TActualResponse extends TResponse>(
+      handler: EventHandler<ResolvedPayload, TActualResponse>,
+    ): EventRouteDefinition<ResolvedPayload, TActualResponse> {
       // Cast needed: generic type narrowing from builder input to route definition
-      const eventSchema = config.eventSchema as EventRouteDefinition<ResolvedPayload, TResponse>['eventSchema'];
+      const eventSchema = config.eventSchema as EventRouteDefinition<ResolvedPayload, TActualResponse>['eventSchema'];
       return {
         filters: config.filters,
         eventSchema,
-        middleware: config.middleware as EventRouterMiddleware<ResolvedPayload, TResponse>[] | undefined,
+        middleware: config.middleware as EventRouterMiddleware<ResolvedPayload, TActualResponse>[] | undefined,
         handler,
       };
     },
