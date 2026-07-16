@@ -100,17 +100,17 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.messageType) {
+      if (filters.messageType !== undefined) {
         const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
         if (!messageTypes.includes(input.messageType as CloudWatchLogsMessageType)) continue;
       }
 
-      if (filters.logGroup) {
+      if (filters.logGroup !== undefined) {
         const logGroupMatch = filterStringMatcher(input.logGroup, filters.logGroup);
         if (!logGroupMatch) continue;
       }
 
-      if (filters.subscriptionFilter) {
+      if (filters.subscriptionFilter !== undefined) {
         const { subscriptionFilter } = filters; // Needed here due to TS having different scope for  separate function closure
         const hasMatchingFilter = input.subscriptionFilters.some((subFilter) =>
           filterStringMatcher(subFilter, subscriptionFilter),

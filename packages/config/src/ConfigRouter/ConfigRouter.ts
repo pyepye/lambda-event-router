@@ -165,24 +165,24 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.configRuleName) {
+      if (filters.configRuleName !== undefined) {
         const configRuleNameMatch = filterStringMatcher(input.configRuleName, filters.configRuleName);
         if (!configRuleNameMatch) continue;
       }
 
-      if (filters.resourceType) {
+      if (filters.resourceType !== undefined) {
         if (!input.resourceType) continue;
         const resourceTypeMatch = filterStringMatcher(input.resourceType, filters.resourceType);
         if (!resourceTypeMatch) continue;
       }
 
-      if (filters.resourceId) {
+      if (filters.resourceId !== undefined) {
         if (!input.resourceId) continue;
         const resourceIdMatch = filterStringMatcher(input.resourceId, filters.resourceId);
         if (!resourceIdMatch) continue;
       }
 
-      if (filters.configurationItemStatus) {
+      if (filters.configurationItemStatus !== undefined) {
         if (!input.configurationItemStatus) continue;
         const configurationItemStatusMatch = filterStringMatcher(
           input.configurationItemStatus,

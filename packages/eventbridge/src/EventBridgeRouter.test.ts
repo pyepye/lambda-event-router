@@ -102,6 +102,20 @@ suite('EventBridgeRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when source is an empty string', async ({ eventBridgeEvent }) => {
+      router.route(
+        defineRoute({
+          filters: { source: '' },
+        }).handle(async () => {}),
+      );
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by source filter array', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({

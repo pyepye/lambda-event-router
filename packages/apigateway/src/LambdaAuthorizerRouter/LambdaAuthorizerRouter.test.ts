@@ -629,6 +629,18 @@ suite('LambdaAuthorizerRouter', () => {
       expect(result).toBeUndefined();
     });
 
+    test('does not match when the method filter is an empty string', async () => {
+      router.request({
+        method: '',
+        handler: async () => generatePolicy('user', 'Allow', 'arn:...'),
+      });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route with matching method filter', async () => {
       router.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
 

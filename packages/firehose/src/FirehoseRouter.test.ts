@@ -126,6 +126,22 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when deliveryStreamArn is an empty string', async ({ firehoseRecord }) => {
+      const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
+      router.route(
+        defineRoute({
+          filters: { deliveryStreamArn: '' },
+        }).handle(async () => Ok()),
+      );
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record], { deliveryStreamArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, record, {});
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches by deliveryStreamArn array', async ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       const deliveryStreamArn2 = 'arn:aws:firehose:eu-west-2:987654321098:deliverystream/other-stream';

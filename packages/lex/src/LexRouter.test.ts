@@ -158,6 +158,17 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
+  test('does not match when intentName is an empty string', async ({ lexEvent }) => {
+    const handler = vi.fn();
+    router.route({ filters: { intentName: '' }, handler });
+
+    const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeUndefined();
+  });
+
   test('matches when intentName is in the intentName filter array', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { intentName: ['CheckBalance', 'UpdateBalance'] }, handler });

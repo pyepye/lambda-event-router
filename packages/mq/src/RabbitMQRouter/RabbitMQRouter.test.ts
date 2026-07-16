@@ -161,6 +161,22 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when queue is an empty string', async ({ rabbitMQMessage }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { queue: '' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by queue array', async ({ rabbitMQMessage }) => {
       router.route(
         defineRabbitMQRoute({

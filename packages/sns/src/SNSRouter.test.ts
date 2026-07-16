@@ -133,6 +133,21 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when topicArn is an empty string', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      router.route(
+        defineRoute({
+          filters: { topicArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
     test('does not match route when topicArn does not match', async ({ snsRecord }) => {
       router.route(
         defineRoute({

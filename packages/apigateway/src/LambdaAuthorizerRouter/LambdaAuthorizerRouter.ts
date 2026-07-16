@@ -255,11 +255,11 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.type && filters.type !== filterInput.type) {
+      if (filters.type !== undefined && filters.type !== filterInput.type) {
         continue;
       }
 
-      if (filters.method && filters.method !== filterInput.method) {
+      if (filters.method !== undefined && filters.method !== filterInput.method) {
         continue;
       }
 

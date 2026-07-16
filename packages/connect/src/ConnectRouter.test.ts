@@ -186,6 +186,17 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
+  test('does not match when instanceArn is an empty string', async ({ connectEvent }) => {
+    const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
+    router.route({ filters: { instanceArn: '' }, handler: vi.fn() });
+
+    const event = connectEvent({ Details: { ContactData: { InstanceARN: instanceArn } } });
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result).toBeUndefined();
+  });
+
   test('matches when instance ARN is in the instanceArn filter array', async ({ connectEvent }) => {
     const instanceArn = 'arn:aws:connect:us-east-1:123456789012:instance/abc-def-123';
     const instanceArn2 = 'arn:aws:connect:us-east-1:123456789012:instance/zyx-wvu-987';

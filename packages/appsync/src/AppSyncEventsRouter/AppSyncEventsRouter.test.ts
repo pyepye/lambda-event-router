@@ -200,6 +200,17 @@ suite('AppSyncEventsRouter', () => {
       expect(matched).toBeDefined();
     });
 
+    test('does not match when channelPath is an empty string', async () => {
+      const handler = vi.fn();
+      router.route({ filters: { channelPath: '' }, handler });
+
+      const event = createAppSyncEventsEvent();
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+      expect(matched).toBeUndefined();
+    });
+
     test('matches channelPath with prefix wildcard /foo/*', async () => {
       const handler = vi.fn();
       router.route({ filters: { channelPath: '/default/*' }, handler });

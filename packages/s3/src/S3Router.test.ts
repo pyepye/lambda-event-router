@@ -306,6 +306,20 @@ suite('S3Router', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when bucket is an empty string', async ({ s3Record }) => {
+      router.route(
+        defineRoute({
+          filters: { bucket: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by bucket name array', async ({ s3Record }) => {
       router.route(
         defineRoute({

@@ -146,18 +146,18 @@ export class AppSyncEventsAuthorizerRouter
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.operation) {
+      if (filters.operation !== undefined) {
         const operations = Array.isArray(filters.operation) ? filters.operation : [filters.operation];
         if (!operations.includes(operation)) continue;
       }
 
       // A channel filter cannot match a connect, which names no channel.
-      if (filters.channelPath) {
+      if (filters.channelPath !== undefined) {
         if (channelPath === undefined) continue;
         if (!filterStringMatcher(channelPath, filters.channelPath)) continue;
       }
 
-      if (filters.channelNamespace) {
+      if (filters.channelNamespace !== undefined) {
         if (channelNamespace === undefined) continue;
         if (!filterStringMatcher(channelNamespace, filters.channelNamespace)) continue;
       }

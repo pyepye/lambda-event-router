@@ -126,14 +126,14 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerEvent
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.secretId) {
+      if (filters.secretId !== undefined) {
         // The event carries the ARN, so a filter written as the secret name has to match as well.
         const secretIdMatch =
           filterStringMatcher(secretId, filters.secretId) || filterStringMatcher(secretName, filters.secretId);
         if (!secretIdMatch) continue;
       }
 
-      if (filters.step) {
+      if (filters.step !== undefined) {
         const steps = Array.isArray(filters.step) ? filters.step : [filters.step];
         if (!steps.includes(step)) continue;
       }

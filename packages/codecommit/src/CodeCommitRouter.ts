@@ -124,20 +124,20 @@ export class CodeCommitRouter implements EventTypeRouter<CodeCommitEvent, undefi
     }
 
     const { eventSourceArn } = filters;
-    if (eventSourceArn) {
+    if (eventSourceArn !== undefined) {
       const eventSourceArnMatch = filterStringMatcher(record.eventSourceARN, eventSourceArn);
       if (!eventSourceArnMatch) return undefined;
     }
 
     const { repositoryName } = filters;
-    if (repositoryName) {
+    if (repositoryName !== undefined) {
       const sourceRepositoryName = extractRepositoryNameFromArn(record.eventSourceARN);
       const repositoryNameMatch = filterStringMatcher(sourceRepositoryName, repositoryName);
       if (!repositoryNameMatch) return undefined;
     }
 
     const { branch } = filters;
-    if (branch) {
+    if (branch !== undefined) {
       const hasMatchingBranch = effectiveReferences.some((ref) => {
         const branchName = extractBranchNameFromRef(ref.ref);
         return filterStringMatcher(branchName, branch);

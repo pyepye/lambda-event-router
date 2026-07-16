@@ -163,7 +163,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.functionName) {
+      if (filters.functionName !== undefined) {
         const functionNameMatch = filterStringMatcher(input.functionName, filters.functionName);
         if (!functionNameMatch) continue;
       }
@@ -176,7 +176,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
         continue;
       }
 
-      // if (filters.userParameters) {
+      // if (filters.userParameters !== undefined) {
       //   const functionNameMatch = filterStringMatcher(input.userParameters, filters.userParameters);
       //   if (!functionNameMatch) continue;
       // }

@@ -117,19 +117,19 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
 
       const operationTyped = operation as AppSyncEventsEvent['info']['operation'];
 
-      if (filters.operation) {
+      if (filters.operation !== undefined) {
         const operations = Array.isArray(filters.operation) ? filters.operation : [filters.operation];
         if (!operations.includes(operationTyped)) {
           continue;
         }
       }
 
-      if (filters.channelPath) {
+      if (filters.channelPath !== undefined) {
         const channelPathMatch = filterStringMatcher(channelPath, filters.channelPath);
         if (!channelPathMatch) continue;
       }
 
-      if (filters.channelNamespace) {
+      if (filters.channelNamespace !== undefined) {
         const channelNamespaceMatch = filterStringMatcher(channelNamespace, filters.channelNamespace);
         if (!channelNamespaceMatch) continue;
       }

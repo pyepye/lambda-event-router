@@ -105,6 +105,17 @@ suite('KafkaRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when topic is an empty string', async ({ kafkaRecord, kafkaMSKEvent }) => {
+      router.route(defineRoute({ filters: { topic: '' } }).handle(async () => {}));
+
+      const record = kafkaRecord({ topic: 'orders' });
+      const event = kafkaMSKEvent({ 'orders-0': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+      expect(result).toBeUndefined();
+    });
+
     test('matches by topic filter array', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(defineRoute({ filters: { topic: ['orders', 'refunds'] } }).handle(async () => {}));
 

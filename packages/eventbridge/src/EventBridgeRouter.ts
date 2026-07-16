@@ -132,23 +132,23 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.source) {
+      if (filters.source !== undefined) {
         const sourceMatch = filterStringMatcher(event.source, filters.source);
         if (!sourceMatch) continue;
       }
-      if (filters.detailType) {
+      if (filters.detailType !== undefined) {
         const detailTypeMatch = filterStringMatcher(event['detail-type'], filters.detailType);
         if (!detailTypeMatch) continue;
       }
-      if (filters.account) {
+      if (filters.account !== undefined) {
         const accountMatch = filterStringMatcher(event.account, filters.account);
         if (!accountMatch) continue;
       }
-      if (filters.region) {
+      if (filters.region !== undefined) {
         const regionMatch = filterStringMatcher(event.region, filters.region);
         if (!regionMatch) continue;
       }
-      if (filters.resource) {
+      if (filters.resource !== undefined) {
         const { resource } = filters; // Needed here due to TS having different scope for  separate function closure
         const resourceMatch = event.resources.some((res) => filterStringMatcher(res, resource));
         if (!resourceMatch) continue;

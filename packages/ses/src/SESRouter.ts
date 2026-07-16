@@ -89,46 +89,46 @@ export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.recipient) {
+      if (filters.recipient !== undefined) {
         const { recipient: recipientFilter } = filters; // Needed here due to TS having different scope for  separate function closure
         const recipientMatch = receipt.recipients.some((recipient) => filterStringMatcher(recipient, recipientFilter));
         if (!recipientMatch) continue;
       }
 
-      if (filters.sender) {
+      if (filters.sender !== undefined) {
         const senderMatch = filterStringMatcher(mail.source, filters.sender);
         if (!senderMatch) continue;
       }
 
-      if (filters.spamVerdict) {
+      if (filters.spamVerdict !== undefined) {
         const spamVerdicts = Array.isArray(filters.spamVerdict) ? filters.spamVerdict : [filters.spamVerdict];
         if (!spamVerdicts.includes(receipt.spamVerdict.status)) {
           continue;
         }
       }
 
-      if (filters.virusVerdict) {
+      if (filters.virusVerdict !== undefined) {
         const virusVerdicts = Array.isArray(filters.virusVerdict) ? filters.virusVerdict : [filters.virusVerdict];
         if (!virusVerdicts.includes(receipt.virusVerdict.status)) {
           continue;
         }
       }
 
-      if (filters.spfVerdict) {
+      if (filters.spfVerdict !== undefined) {
         const spfVerdicts = Array.isArray(filters.spfVerdict) ? filters.spfVerdict : [filters.spfVerdict];
         if (!spfVerdicts.includes(receipt.spfVerdict.status)) {
           continue;
         }
       }
 
-      if (filters.dkimVerdict) {
+      if (filters.dkimVerdict !== undefined) {
         const dkimVerdicts = Array.isArray(filters.dkimVerdict) ? filters.dkimVerdict : [filters.dkimVerdict];
         if (!dkimVerdicts.includes(receipt.dkimVerdict.status)) {
           continue;
         }
       }
 
-      if (filters.dmarcVerdict) {
+      if (filters.dmarcVerdict !== undefined) {
         const dmarcVerdicts = Array.isArray(filters.dmarcVerdict) ? filters.dmarcVerdict : [filters.dmarcVerdict];
         if (!dmarcVerdicts.includes(receipt.dmarcVerdict.status)) {
           continue;

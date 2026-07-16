@@ -292,6 +292,24 @@ suite('AppSyncRouter', () => {
       expect(matched).toBeDefined();
     });
 
+    test('does not match when parentTypeName is an empty string', async () => {
+      const handler = vi.fn();
+      router.route({
+        filters: {
+          parentTypeName: '',
+          fieldName: 'getUser',
+          custom: () => true,
+        },
+        handler,
+      });
+
+      const event = createAppSyncResolverEvent({ info: { parentTypeName: 'Query', fieldName: 'getUser' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('Query', 'getUser', event);
+      expect(matched).toBeUndefined();
+    });
+
     test('does not match when combined filters pass but custom fails', async () => {
       router.route({
         filters: {

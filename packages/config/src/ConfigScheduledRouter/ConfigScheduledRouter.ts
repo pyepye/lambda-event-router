@@ -97,12 +97,12 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.configRuleName) {
+      if (filters.configRuleName !== undefined) {
         const configRuleNameMatch = filterStringMatcher(input.configRuleName, filters.configRuleName);
         if (!configRuleNameMatch) continue;
       }
 
-      if (filters.accountId) {
+      if (filters.accountId !== undefined) {
         const accountIdMatch = filterStringMatcher(input.accountId, filters.accountId);
         if (!accountIdMatch) continue;
       }

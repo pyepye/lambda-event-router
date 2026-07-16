@@ -101,12 +101,12 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.intentName) {
+      if (filters.intentName !== undefined) {
         const intentNameMatch = filterStringMatcher(event.sessionState.intent.name, filters.intentName);
         if (!intentNameMatch) continue;
       }
 
-      if (filters.invocationSource) {
+      if (filters.invocationSource !== undefined) {
         const { invocationSource: filterSource } = filters;
         const invocationSources = Array.isArray(filterSource) ? filterSource : [filterSource];
         if (!invocationSources.includes(event.invocationSource)) {
@@ -114,12 +114,12 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
         }
       }
 
-      if (filters.botId) {
+      if (filters.botId !== undefined) {
         const botIdMatch = filterStringMatcher(event.bot.id, filters.botId);
         if (!botIdMatch) continue;
       }
 
-      if (filters.inputMode) {
+      if (filters.inputMode !== undefined) {
         const inputModes = Array.isArray(filters.inputMode) ? filters.inputMode : [filters.inputMode];
         if (!inputModes.includes(event.inputMode)) {
           continue;

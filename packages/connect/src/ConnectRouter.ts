@@ -146,14 +146,14 @@ export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectConta
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.channel) {
+      if (filters.channel !== undefined) {
         const channels = Array.isArray(filters.channel) ? filters.channel : [filters.channel];
         if (!channels.includes(contactData.Channel)) {
           continue;
         }
       }
 
-      if (filters.initiationMethod) {
+      if (filters.initiationMethod !== undefined) {
         const { initiationMethod: filterMethod } = filters;
         const initiationMethods = Array.isArray(filterMethod) ? filterMethod : [filterMethod];
         if (!initiationMethods.includes(contactData.InitiationMethod)) {
@@ -161,7 +161,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectConta
         }
       }
 
-      if (filters.instanceArn) {
+      if (filters.instanceArn !== undefined) {
         const instanceArnMatch = filterStringMatcher(contactData.InstanceARN, filters.instanceArn);
         if (!instanceArnMatch) continue;
       }

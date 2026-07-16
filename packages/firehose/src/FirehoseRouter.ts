@@ -178,12 +178,12 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.deliveryStreamArn) {
+      if (filters.deliveryStreamArn !== undefined) {
         const deliveryStreamArnMatch = filterStringMatcher(event.deliveryStreamArn, filters.deliveryStreamArn);
         if (!deliveryStreamArnMatch) continue;
       }
 
-      if (filters.sourceKinesisStreamArn) {
+      if (filters.sourceKinesisStreamArn !== undefined) {
         if (!event.sourceKinesisStreamArn) continue;
         const sourceKinesisStreamArnMatch = filterStringMatcher(
           event.sourceKinesisStreamArn,

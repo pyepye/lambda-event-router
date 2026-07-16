@@ -126,6 +126,7 @@ and `detailType`. Each [router page](/packages) lists its own.
 - An array at a single key is an OR, so `eventSourceArn: [ORDER_QUEUE_ARN, ORDER_DLQ_ARN]` takes either
 - Missing data is a miss rather than a pass, so a `messageAttributes` key the message does not carry
   fails the filter
+- An empty string is a filter nothing matches, so leave a key off rather than setting it to `''`
 - String keys take `FilterStringMatcher` from base, which is `string | RegExp | Array<string | RegExp>`
 - A plain string has to match the whole value, with `*` as its one wildcard
 - Every other character is literal, so the `?` and `.` in `report?.csv` match those characters alone

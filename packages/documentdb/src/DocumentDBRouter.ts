@@ -215,24 +215,24 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.operationType) {
+      if (filters.operationType !== undefined) {
         const operationTypes = Array.isArray(filters.operationType) ? filters.operationType : [filters.operationType];
         if (!operationTypes.includes(changeEvent.operationType)) {
           continue;
         }
       }
 
-      if (filters.eventSourceArn) {
+      if (filters.eventSourceArn !== undefined) {
         const eventSourceArnMatch = filterStringMatcher(eventSourceArn, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.database) {
+      if (filters.database !== undefined) {
         const databaseMatch = filterStringMatcher(changeEvent.ns.db, filters.database);
         if (!databaseMatch) continue;
       }
 
-      if (filters.collection) {
+      if (filters.collection !== undefined) {
         const collectionMatch = filterStringMatcher(changeEvent.ns.coll, filters.collection);
         if (!collectionMatch) continue;
       }

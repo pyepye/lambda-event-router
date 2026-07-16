@@ -271,6 +271,20 @@ suite('DocumentDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when database is an empty string', async () => {
+      router.route(
+        defineRoute({
+          filters: { database: '' },
+        }).handle(async () => {}),
+      );
+
+      const changeEvent = createDocumentDBInsertEntry({ ns: { db: 'test-db' } }).event;
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by database array', async () => {
       router.route(
         defineRoute({

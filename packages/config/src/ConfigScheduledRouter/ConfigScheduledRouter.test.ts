@@ -100,6 +100,15 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when configRuleName is an empty string', async () => {
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: '' } }).handle(async () => {}));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule', accountId: '123456789012' });
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches by configRuleName filter array', async () => {
       router.route(
         defineConfigScheduledRoute({ filters: { configRuleName: ['my-rule', 'other-rule'] } }).handle(async () => {}),

@@ -229,6 +229,14 @@ suite('CodePipelineRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when functionName is an empty string', async () => {
+      router.route(defineRoute({ filters: { functionName: '' } }).handle(async () => undefined));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(filterInput);
+      expect(result).toBeUndefined();
+    });
+
     test('matches by functionName array', async () => {
       router.route(
         defineRoute({ filters: { functionName: ['my-function', 'other-function'] } }).handle(async () => undefined),

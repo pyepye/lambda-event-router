@@ -239,7 +239,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.topic) {
+      if (filters.topic !== undefined) {
         const topicMatch = filterStringMatcher(record.topic, filters.topic);
         if (!topicMatch) continue;
       }
@@ -248,14 +248,14 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
 
       const retryDelivery = this.isRetryDelivery(event);
 
-      if (filters.eventSourceArn && !retryDelivery) {
+      if (filters.eventSourceArn !== undefined && !retryDelivery) {
         if (!this.isMSKEvent(event)) continue;
 
         const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.bootstrapServer && !retryDelivery) {
+      if (filters.bootstrapServer !== undefined && !retryDelivery) {
         const { bootstrapServer } = filters; // Needed here due to TS having different scope for  separate function closure
         const bootstrapServers = event.bootstrapServers.split(',');
         const bootstrapServerMatch = bootstrapServers.some((server) => filterStringMatcher(server, bootstrapServer));

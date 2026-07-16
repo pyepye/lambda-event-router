@@ -114,6 +114,21 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when eventSourceArn is an empty string', async ({ kinesisRecord }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {});
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by eventSourceArn array', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       const eventSourceArn2 = 'arn:aws:kinesis:eu-west-2:987654321098:stream/other-stream';

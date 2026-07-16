@@ -384,6 +384,12 @@ suite('AppSyncAuthorizerRouter', () => {
       expect(other).not.toHaveBeenCalled();
     });
 
+    test('does not match when the apiId filter is an empty string', async () => {
+      router.route(defineAuthorizerRoute({ filters: { apiId: '' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).rejects.toThrow();
+    });
+
     test('matches an api id by wildcard', async () => {
       router.route(defineAuthorizerRoute({ filters: { apiId: 'test-*' } }).handle(async () => Authorized()));
 

@@ -313,6 +313,22 @@ suite('CodeCommitRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when repositoryName is an empty string', async ({ codeCommitRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { repositoryName: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = codeCommitRecord({ eventSourceARN: 'arn:aws:codecommit:us-east-1:123456789012:my-repo' });
+      // @ts-expect-error - testing private method directly
+      const route = router.routes[0];
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(route, record);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by repositoryName array', async ({ codeCommitRecord }) => {
       router.route(
         defineRoute({

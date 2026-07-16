@@ -524,17 +524,17 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventName) {
+      if (filters.eventName !== undefined) {
         const eventNameMatch = filterStringMatcher(eventName, filters.eventName);
         if (!eventNameMatch) continue;
       }
 
-      if (filters.bucket) {
+      if (filters.bucket !== undefined) {
         const bucketMatch = filterStringMatcher(bucket, filters.bucket);
         if (!bucketMatch) continue;
       }
 
-      if (filters.key) {
+      if (filters.key !== undefined) {
         const keyMatch = filterStringMatcher(key, filters.key);
         if (!keyMatch) continue;
       }

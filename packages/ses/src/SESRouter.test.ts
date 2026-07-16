@@ -243,6 +243,20 @@ suite('SESRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when recipient is an empty string', async ({ sesRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { recipient: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = sesRecord({ ses: { receipt: { recipients: ['user@example.com'] } } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by recipient wildcard array', async ({ sesRecord }) => {
       router.route(
         defineRoute({

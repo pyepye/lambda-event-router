@@ -209,6 +209,19 @@ suite('CognitoRouter', () => {
         expect(result).toBeDefined();
       });
 
+      test('does not match when userPoolId is an empty string', async ({ cognitoPreSignUpEvent }) => {
+        router.route({
+          filters: { userPoolId: '' },
+          handler: vi.fn(),
+        });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(event, event.triggerSource);
+
+        expect(result).toBeUndefined();
+      });
+
       test('matches when userPoolId array', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: { userPoolId: ['us-east-1_TestPool', 'us-east-1_OtherPool'] },
@@ -901,9 +914,7 @@ suite('CognitoRouter', () => {
       }
 
       const route = defineRoute({
-        filters: {
-          userPoolId: '',
-        },
+        filters: {},
         middleware: [routeMiddleware],
       }).handle(async (request) => {
         callOrder.push('handler');

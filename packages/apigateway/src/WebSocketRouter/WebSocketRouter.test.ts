@@ -424,6 +424,15 @@ suite('WebSocketRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when routeKey is an empty string', async () => {
+      router.message({ filters: { routeKey: '' }, handler: async () => {} });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: 'sendMessage' });
+
+      expect(result).toBeUndefined();
+    });
+
     test('does not match route with different routeKey', async () => {
       router.message({ filters: { routeKey: 'sendMessage' }, handler: async () => {} });
 

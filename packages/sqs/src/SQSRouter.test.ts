@@ -132,6 +132,21 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when eventSourceArn is an empty string', async ({ sqsRecord }) => {
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, {});
+
+      expect(result).toBeUndefined();
+    });
+
     test('does not match route when eventSourceArn does not match', async ({ sqsRecord }) => {
       router.route(
         defineRoute({

@@ -121,18 +121,18 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       const { filters } = route;
       const sns = record.Sns;
 
-      if (filters.topicArn) {
+      if (filters.topicArn !== undefined) {
         const topicArnMatch = filterStringMatcher(sns.TopicArn, filters.topicArn);
         if (!topicArnMatch) continue;
       }
 
-      if (filters.subject) {
+      if (filters.subject !== undefined) {
         if (!sns.Subject) continue;
         const subjectMatch = filterStringMatcher(sns.Subject, filters.subject);
         if (!subjectMatch) continue;
       }
 
-      if (filters.messageAttributes) {
+      if (filters.messageAttributes !== undefined) {
         let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
           const attr = messageAttributes[key];

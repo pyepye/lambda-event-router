@@ -189,6 +189,21 @@ suite('SecretsManagerRouter', () => {
         expect(result).toBeDefined();
       });
 
+      test('does not match when secretId is an empty string', async () => {
+        const secretId = 'arn:aws:secretsmanager:us-east-1:123456789012:secret:my-secret-abc123';
+        router.route(defineRoute({ filters: { secretId: '' } }).handle(async () => {}));
+
+        const request: SecretsManagerFilterInput = {
+          secretId,
+          secretName: 'my-secret',
+          clientRequestToken: 'token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+        expect(result).toBeUndefined();
+      });
+
       test('does not match when secretId', async () => {
         router.route(
           defineRoute({

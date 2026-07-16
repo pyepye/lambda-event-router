@@ -98,10 +98,10 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.apiId && !filterStringMatcher(apiId, filters.apiId)) continue;
+      if (filters.apiId !== undefined && !filterStringMatcher(apiId, filters.apiId)) continue;
 
       // An operation name filter cannot match a request that does not name its operation.
-      if (filters.operationName) {
+      if (filters.operationName !== undefined) {
         if (operationName === undefined) continue;
         if (!filterStringMatcher(operationName, filters.operationName)) continue;
       }

@@ -206,11 +206,11 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventType && filters.eventType !== filterInput.eventType) {
+      if (filters.eventType !== undefined && filters.eventType !== filterInput.eventType) {
         continue;
       }
 
-      if (filters.routeKey && filters.routeKey !== filterInput.routeKey) {
+      if (filters.routeKey !== undefined && filters.routeKey !== filterInput.routeKey) {
         continue;
       }
 

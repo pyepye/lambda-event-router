@@ -180,6 +180,14 @@ suite('AppSyncEventsAuthorizerRouter', () => {
       );
     });
 
+    test('does not match when the channelPath filter is an empty string', async () => {
+      router.publish({ channelPath: '', handler: async () => EventsAuthorized() });
+
+      await expect(router.handleEvent(createAppSyncEventsAuthorizerEvent(), createMockContext())).rejects.toThrow(
+        'No authorizer route matched for EVENT_PUBLISH on channel /default/channel',
+      );
+    });
+
     test('names no channel in the error when a connect matches nothing', async () => {
       await expect(router.handleEvent(connectEvent, createMockContext())).rejects.toThrow(
         'No authorizer route matched for EVENT_CONNECT',

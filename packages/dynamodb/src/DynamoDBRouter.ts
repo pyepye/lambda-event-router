@@ -352,19 +352,19 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventName) {
+      if (filters.eventName !== undefined) {
         const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
         if (!eventNames.includes(eventName)) {
           continue;
         }
       }
 
-      if (filters.eventSourceArn && record.eventSourceARN) {
+      if (filters.eventSourceArn !== undefined && record.eventSourceARN) {
         const eventSourceARNMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
         if (!eventSourceARNMatch) continue;
       }
 
-      if (filters.streamViewType && streamViewType) {
+      if (filters.streamViewType !== undefined && streamViewType) {
         const { streamViewType: filterStreamViewType } = filters;
         const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
         if (!streamViewTypes.includes(streamViewType)) {
@@ -372,7 +372,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         }
       }
 
-      if (filters.partitionKey) {
+      if (filters.partitionKey !== undefined) {
         const { partitionKeyName } = this.resolveKeyNames(keys);
         if (!partitionKeyName) continue;
         const partitionKey = this.getKeyValue(partitionKeyName, keys, newImage, oldImage);
@@ -380,7 +380,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
         if (!filterStringMatcher(String(partitionKey), this.toKeyMatchers(filters.partitionKey))) continue;
       }
 
-      if (filters.sortKey) {
+      if (filters.sortKey !== undefined) {
         const { sortKeyName } = this.resolveKeyNames(keys);
         if (!sortKeyName) continue;
         const sortKey = this.getKeyValue(sortKeyName, keys, newImage, oldImage);

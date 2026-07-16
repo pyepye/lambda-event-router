@@ -262,6 +262,21 @@ suite('DynamoDBRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when eventSourceArn is an empty string', async ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by eventSourceArn array', async ({ dynamoDBInsertRecord }) => {
       const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
       const tableArn2 = 'arn:aws:dynamodb:us-east-1:987654321098:table/refunds/stream/2025-01-01T00:00:00.000';

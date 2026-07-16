@@ -125,17 +125,17 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventSourceArn) {
+      if (filters.eventSourceArn !== undefined) {
         const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.messageType) {
+      if (filters.messageType !== undefined) {
         const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
         if (!messageTypes.includes(message.messageType)) continue;
       }
 
-      if (filters.destination) {
+      if (filters.destination !== undefined) {
         // Is calling this destination and not physicalName correct?
         const destinationMatch = filterStringMatcher(message.destination.physicalName, filters.destination);
         if (!destinationMatch) continue;

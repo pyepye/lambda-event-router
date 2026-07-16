@@ -306,6 +306,19 @@ suite('CloudWatchLogsRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when logGroup is an empty string', async () => {
+      router.route(
+        defineRoute({
+          filters: { logGroup: '' },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(decodedData);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by logGroup wilcard array', async () => {
       router.route(
         defineRoute({

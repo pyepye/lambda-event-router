@@ -562,19 +562,19 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.triggerSource) {
+      if (filters.triggerSource !== undefined) {
         const triggerSources = Array.isArray(filters.triggerSource) ? filters.triggerSource : [filters.triggerSource];
         if (!triggerSources.includes(triggerSource)) {
           continue;
         }
       }
 
-      if (filters.userPoolId) {
+      if (filters.userPoolId !== undefined) {
         const userPoolIdMatch = filterStringMatcher(event.userPoolId, filters.userPoolId);
         if (!userPoolIdMatch) continue;
       }
 
-      if (filters.clientId) {
+      if (filters.clientId !== undefined) {
         // Cognito omits clientId on an admin confirmation, though the event type declares a string.
         // Without this guard the absent value stringifies and a wildcard filter matches it.
         const { clientId } = event.callerContext;
@@ -583,7 +583,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
         if (!clientIdMatch) continue;
       }
 
-      if (filters.userAttributes) {
+      if (filters.userAttributes !== undefined) {
         if (!userAttributes) continue;
         let matched = true;
         for (const [key, allowed] of Object.entries(filters.userAttributes)) {

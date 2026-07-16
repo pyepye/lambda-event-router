@@ -106,24 +106,24 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventSourceArn) {
+      if (filters.eventSourceArn !== undefined) {
         const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.queue) {
+      if (filters.queue !== undefined) {
         const queueMatch = filterStringMatcher(queueName, filters.queue);
         if (!queueMatch) continue;
       }
 
-      if (filters.virtualHost) {
+      if (filters.virtualHost !== undefined) {
         // A key with no "::" carries no virtual host, so a virtualHost filter cannot match it
         if (virtualHost === undefined) continue;
         const virtualHostMatch = filterStringMatcher(virtualHost, filters.virtualHost);
         if (!virtualHostMatch) continue;
       }
 
-      if (filters.contentType) {
+      if (filters.contentType !== undefined) {
         // A message with no content type cannot match a contentType filter, so skip it
         const { contentType } = message.basicProperties;
         if (contentType === undefined) continue;

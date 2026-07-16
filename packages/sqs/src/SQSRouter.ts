@@ -224,12 +224,12 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     for (const route of this.routes) {
       const { filters } = route;
 
-      if (filters.eventSourceArn) {
+      if (filters.eventSourceArn !== undefined) {
         const eventSourceArnMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
         if (!eventSourceArnMatch) continue;
       }
 
-      if (filters.messageAttributes) {
+      if (filters.messageAttributes !== undefined) {
         let matched = true;
         for (const [key, allowed] of Object.entries(filters.messageAttributes)) {
           const attr = messageAttributes[key];

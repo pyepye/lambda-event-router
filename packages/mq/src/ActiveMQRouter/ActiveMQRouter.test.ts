@@ -307,6 +307,22 @@ suite('ActiveMQRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('does not match when destination is an empty string', async ({ activeMQMessage }) => {
+      router.route(
+        defineActiveMQRoute({
+          filters: { destination: '' },
+        }).handle(async () => {}),
+      );
+
+      const event = createActiveMQEvent();
+      const message = activeMQMessage({ destination: { physicalName: 'orders-queue' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, message);
+
+      expect(result).toBeUndefined();
+    });
+
     test('matches route by destination array', async ({ activeMQMessage }) => {
       router.route(
         defineActiveMQRoute({

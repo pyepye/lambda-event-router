@@ -206,12 +206,12 @@ export class AppSyncRouter implements EventTypeRouter<ResolverEventInput, unknow
   ): Promise<InternalResolverRoute | undefined> {
     for (const route of this.routes) {
       const { filters } = route;
-      if (filters.parentTypeName) {
+      if (filters.parentTypeName !== undefined) {
         const parentTypeNameMatch = filterStringMatcher(parentTypeName, filters.parentTypeName);
         if (!parentTypeNameMatch) continue;
       }
 
-      if (filters.fieldName) {
+      if (filters.fieldName !== undefined) {
         const fieldNameMatch = filterStringMatcher(fieldName, filters.fieldName);
         if (!fieldNameMatch) continue;
       }
