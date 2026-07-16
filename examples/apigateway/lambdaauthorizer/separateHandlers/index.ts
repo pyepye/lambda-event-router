@@ -14,13 +14,14 @@ lambdaAuthorizerRouter.token({
   handler: onTokenAuth,
 });
 
-lambdaAuthorizerRouter.request({
-  handler: onRequestAuth,
-});
-
+// The GET route is narrower, so it goes above the request route that matches every method
 lambdaAuthorizerRouter.request({
   method: 'GET',
   handler: onRequestAuthSimple,
+});
+
+lambdaAuthorizerRouter.request({
+  handler: onRequestAuth,
 });
 
 const lambdaRouter = new LambdaRouter({

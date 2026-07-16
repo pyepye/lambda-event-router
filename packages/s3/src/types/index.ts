@@ -22,6 +22,14 @@ export type {
   S3RouterOptions,
 } from './common.js';
 export type {
+  S3IntelligentTieringEventName,
+  S3IntelligentTieringHandler,
+  S3IntelligentTieringRequest,
+  S3IntelligentTieringRouteDefinition,
+} from './intelligentTiering.js';
+// Intelligent Tiering types
+export { INTELLIGENT_TIERING_EVENT_NAMES } from './intelligentTiering.js';
+export type {
   S3LifecycleExpirationEventName,
   S3LifecycleExpirationHandler,
   S3LifecycleExpirationRequest,
@@ -75,21 +83,16 @@ export type {
 // ObjectTagging types
 export { OBJECT_TAGGING_EVENT_NAMES } from './objectTagging.js';
 export type {
-  S3IntelligentTieringEventName,
-  S3IntelligentTieringHandler,
-  S3IntelligentTieringRequest,
-  S3IntelligentTieringRouteDefinition,
   S3ReducedRedundancyLostObjectEventName,
   S3ReducedRedundancyLostObjectHandler,
   S3ReducedRedundancyLostObjectRequest,
   S3ReducedRedundancyLostObjectRouteDefinition,
+} from './reducedRedundancyLostObject.js';
+// Reduced Redundancy types
+export { REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES } from './reducedRedundancyLostObject.js';
+export type {
   S3TestEvent,
   S3TestEventHandler,
   S3TestEventRequest,
   S3TestEventRouteDefinition,
-} from './replication.js';
-// Replication and misc types
-export {
-  INTELLIGENT_TIERING_EVENT_NAMES,
-  REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES,
-} from './replication.js';
+} from './testEvent.js';

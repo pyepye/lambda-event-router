@@ -304,7 +304,7 @@ works. It arrives before any real object event and carries no `Records`, so none
 routes match it.
 
 Register a handler with `testEvent()` to react to it, for example to log the setup or prime something
-the later events depend on. There is only ever one, and calling `testEvent()` again replaces it.
+the later events depend on. There is only ever one, and calling `testEvent()` a second time throws.
 
 ```ts
 s3Router.testEvent({
@@ -331,7 +331,7 @@ the invocation succeeds rather than failing with no matching route.
 
 An S3 Batch Operations job works through a manifest and invokes your function once per object. The job
 already decided which objects it is sending, so a batch route takes no filters. There is only ever one
-of them, and calling `batchOperation()` again replaces the route rather than adding a second.
+of them, and calling `batchOperation()` a second time throws.
 
 An invocation can carry more than one task. The router runs the handler for each and returns a result
 per task, so one task failing does not stop the rest.

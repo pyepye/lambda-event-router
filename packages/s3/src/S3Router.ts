@@ -362,6 +362,9 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
   }
 
   testEvent(definition: S3TestEventRouteDefinition): this {
+    if (this.testEventRoute) {
+      throw new Error('A test event route is already registered: a bucket sends one test event, so a router takes one');
+    }
     this.testEventRoute = definition;
     return this;
   }
@@ -371,6 +374,9 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
   // ===========================================================================
 
   batchOperation(definition: S3BatchRouteDefinition): this {
+    if (this.batchRoute) {
+      throw new Error('A batch route is already registered: a job sends one task shape, so a router takes one');
+    }
     this.batchRoute = definition;
     return this;
   }

@@ -236,24 +236,26 @@ suite('APIGatewayRouter', () => {
       );
     });
 
-    // test('catches a thrown HTTPResponse and returns it as the response', async ({ apiGatewayV2HandlerEvent }) => {
-    //   router.get({
-    //     path: '/',
-    //     handler: async () => {
-    //       throw Response.Unauthorised();
-    //     },
-    //   });
+    test('catches a thrown HTTPResponse and returns it as the response', async ({ apiGatewayV2HandlerEvent }) => {
+      router.get({
+        filters: {
+          path: '/',
+        },
+        handler: async () => {
+          throw Response.Unauthorised();
+        },
+      });
 
-    //   const { event, context } = apiGatewayV2HandlerEvent();
-    //   const result = await router.handleEvent(event, context);
+      const { event, context } = apiGatewayV2HandlerEvent();
+      const result = await router.handleEvent(event, context);
 
-    //   expect(result).toEqual(
-    //     expect.objectContaining({
-    //       statusCode: 401,
-    //       body: JSON.stringify({ error: 'Unauthorised' }),
-    //     }),
-    //   );
-    // });
+      expect(result).toEqual(
+        expect.objectContaining({
+          statusCode: 401,
+          body: JSON.stringify({ error: 'Unauthorised' }),
+        }),
+      );
+    });
 
     test('catches a generic Error and returns 500 with the error message', async ({ apiGatewayV2HandlerEvent }) => {
       router.get({

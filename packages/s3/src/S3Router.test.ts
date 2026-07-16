@@ -123,6 +123,14 @@ suite('S3Router', () => {
 
       expect(result).toBe(router);
     });
+
+    test('throws when a second batch route is registered', () => {
+      router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const }) });
+
+      expect(() => router.batchOperation({ handler: async () => ({ resultCode: 'Succeeded' as const }) })).toThrow(
+        'A batch route is already registered',
+      );
+    });
   });
 
   suite('testEvent', () => {
@@ -139,6 +147,12 @@ suite('S3Router', () => {
       const result = router.testEvent({ handler: async () => {} });
 
       expect(result).toBe(router);
+    });
+
+    test('throws when a second test event route is registered', () => {
+      router.testEvent({ handler: async () => {} });
+
+      expect(() => router.testEvent({ handler: async () => {} })).toThrow('A test event route is already registered');
     });
 
     test('calls the registered handler with the mapped request', async ({ context }) => {
