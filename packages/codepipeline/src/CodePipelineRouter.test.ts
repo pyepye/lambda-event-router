@@ -54,7 +54,7 @@ suite('CodePipelineRouter', () => {
       expect(router).toBeInstanceOf(CodePipelineRouter);
     });
 
-    test('ucodePipeline custom CodePipelineClient when provided', async ({ codePipelineHandlerEvent }) => {
+    test('uses custom CodePipelineClient when provided', async ({ codePipelineHandlerEvent }) => {
       const customSend = vi.fn().mockResolvedValue({});
       const customClient = { send: customSend };
 

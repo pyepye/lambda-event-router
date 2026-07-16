@@ -437,7 +437,7 @@ suite('ConfigRouter', () => {
       );
     });
 
-    test('uconfig configurationItem.configuration when no schema and configuration is undefined', async ({
+    test('uses configurationItem.configuration when no schema and configuration is undefined', async ({
       configEvent,
       context,
     }) => {
@@ -489,7 +489,7 @@ suite('ConfigRouter', () => {
       );
     });
 
-    test('parconfig ruleParameters from JSON string', async ({ configEvent, context }) => {
+    test('parses ruleParameters from JSON string', async ({ configEvent, context }) => {
       const handler = vi.fn();
       router.route(defineRoute({ filters: {} }).handle(handler));
 
