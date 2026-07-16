@@ -1,5 +1,7 @@
 import type { APIGatewayAuthorizerResult } from 'aws-lambda';
 
+import type { LambdaAuthorizerContext, LambdaAuthorizerSimpleResult } from './types.js';
+
 export function isAuthorizerResponse(value: unknown): value is APIGatewayAuthorizerResult {
   if (typeof value !== 'object' || value === null) return false;
   if (!('principalId' in value && 'policyDocument' in value)) return false;
@@ -46,4 +48,20 @@ export function Deny(principalId: string, resource: string): APIGatewayAuthorize
       ],
     },
   };
+}
+
+export function Authorized<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>(
+  context?: TContext,
+): LambdaAuthorizerSimpleResult<TContext> {
+  const result: LambdaAuthorizerSimpleResult<TContext> = { isAuthorized: true };
+
+  if (context) {
+    result.context = context;
+  }
+
+  return result;
+}
+
+export function Denied(): LambdaAuthorizerSimpleResult {
+  return { isAuthorized: false };
 }

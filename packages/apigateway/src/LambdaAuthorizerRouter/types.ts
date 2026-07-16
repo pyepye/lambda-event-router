@@ -7,7 +7,7 @@ import type {
   Context,
 } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { JsonValue, Middleware } from '@lambda-event-router/base';
 
 export type LambdaAuthorizerEvent =
   | APIGatewayTokenAuthorizerEvent
@@ -50,16 +50,31 @@ export interface LambdaAuthorizerRequest extends LambdaAuthorizerBaseRequest {
 
 export type LambdaAuthorizerFilterInput = Omit<LambdaAuthorizerRequest, 'context'>;
 
-export type LambdaAuthorizerResult = APIGatewayAuthorizerResult | APIGatewaySimpleAuthorizerResult;
+export type LambdaAuthorizerContext = Record<string, JsonValue>;
 
-export type LambdaAuthorizerHandler = (request: LambdaAuthorizerRequest) => Promise<LambdaAuthorizerResult | boolean>;
+// aws-lambda splits this across two interfaces, and the context-free one absorbs any context, leaving
+// its shape unchecked. API Gateway documents one shape with an optional context.
+export interface LambdaAuthorizerSimpleResult<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>
+  extends APIGatewaySimpleAuthorizerResult {
+  context?: TContext;
+}
 
+export type LambdaAuthorizerResult<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> =
+  | APIGatewayAuthorizerResult
+  | LambdaAuthorizerSimpleResult<TContext>;
+
+export type LambdaAuthorizerHandler<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> = (
+  request: LambdaAuthorizerRequest,
+) => Promise<LambdaAuthorizerResult<TContext> | boolean>;
+
+// Middleware is invariant in its result and also registers router-wide, where no route's context
+// applies, so it stays on the widest result.
 export type LambdaAuthorizerMiddleware = Middleware<LambdaAuthorizerRequest, LambdaAuthorizerResult | boolean>;
 
-export interface LambdaAuthorizerRouteDefinition {
+export interface LambdaAuthorizerRouteDefinition<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> {
   filters: LambdaAuthorizerFilters;
   middleware?: LambdaAuthorizerMiddleware[];
-  handler: LambdaAuthorizerHandler;
+  handler: LambdaAuthorizerHandler<TContext>;
 }
 
 export interface LambdaAuthorizerRouterOptions {

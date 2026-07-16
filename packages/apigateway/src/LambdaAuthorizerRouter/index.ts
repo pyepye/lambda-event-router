@@ -5,10 +5,11 @@ export {
   generatePolicy,
   LambdaAuthorizerRouter,
 } from './LambdaAuthorizerRouter.js';
-export { Allow, Deny, isAuthorizerResponse } from './response.js';
+export { Allow, Authorized, Denied, Deny, isAuthorizerResponse } from './response.js';
 export type {
   AuthorizerType,
   LambdaAuthorizerBaseRequest,
+  LambdaAuthorizerContext,
   LambdaAuthorizerEvent,
   LambdaAuthorizerFilterInput,
   LambdaAuthorizerFilters,
@@ -19,5 +20,6 @@ export type {
   LambdaAuthorizerResult,
   LambdaAuthorizerRouteDefinition,
   LambdaAuthorizerRouterOptions,
+  LambdaAuthorizerSimpleResult,
   LambdaAuthorizerTokenRequest,
 } from './types.js';

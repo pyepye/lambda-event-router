@@ -1,4 +1,5 @@
-import { Allow, Deny, isAuthorizerResponse } from './response.js';
+import { Allow, Authorized, Denied, Deny, isAuthorizerResponse } from './response.js';
+import type { LambdaAuthorizerResult } from './types.js';
 
 suite('lambdaAuthorizerResponse', () => {
   suite('isAuthorizerResponse', () => {
@@ -81,6 +82,71 @@ suite('lambdaAuthorizerResponse', () => {
           ],
         },
       });
+    });
+  });
+
+  suite('Authorized', () => {
+    test('generates an allowing simple response', () => {
+      expect(Authorized()).toEqual({ isAuthorized: true });
+    });
+
+    test('omits context when not provided', () => {
+      expect(Authorized()).not.toHaveProperty('context');
+    });
+
+    test('includes context when provided', () => {
+      const result = Authorized({ tenantId: 'acme', plan: 'pro' });
+
+      expect(result).toEqual({ isAuthorized: true, context: { tenantId: 'acme', plan: 'pro' } });
+    });
+
+    test('carries arrays and nested maps', () => {
+      const context = {
+        stringKey: 'value',
+        numberKey: 1,
+        booleanKey: true,
+        arrayKey: ['value1', 'value2'],
+        mapKey: { value1: 'value2' },
+      };
+
+      expect(Authorized(context)).toEqual({ isAuthorized: true, context });
+    });
+  });
+
+  suite('Denied', () => {
+    test('generates a refusing simple response', () => {
+      expect(Denied()).toEqual({ isAuthorized: false });
+    });
+  });
+
+  suite('LambdaAuthorizerResult', () => {
+    test('accepts a simple response carrying a context', () => {
+      const result: LambdaAuthorizerResult = {
+        isAuthorized: true,
+        context: { tenantId: 'acme', limits: { rpm: 60 } },
+      };
+
+      expect(result).toEqual({ isAuthorized: true, context: { tenantId: 'acme', limits: { rpm: 60 } } });
+    });
+
+    test('checks the context against a declared shape', () => {
+      // @ts-expect-error tenantId is the declared key, so the typo does not compile
+      const result: LambdaAuthorizerResult<{ tenantId: string }> = {
+        isAuthorized: true,
+        context: { tenntId: 'acme' },
+      };
+
+      expect(result).toEqual({ isAuthorized: true, context: { tenntId: 'acme' } });
+    });
+
+    test('rejects a context value JSON cannot carry', () => {
+      const result: LambdaAuthorizerResult = {
+        isAuthorized: true,
+        // @ts-expect-error a Date is not a JsonValue
+        context: { since: new Date('2026-09-17') },
+      };
+
+      expect(result).toEqual({ isAuthorized: true, context: { since: new Date('2026-09-17') } });
     });
   });
 });

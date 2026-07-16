@@ -215,8 +215,9 @@ export async function authoriseToken(request: LambdaAuthorizerTokenRequest): Pro
 `Context` comes from `aws-lambda`, not from this package. `LambdaAuthorizerEvent` types `event` and is
 exported from here, as a union of that package's three authorizer event types.
 
-**Header names arrive lowercased.** The router lowercases a REST API's and an HTTP API sends them that
-way already, so `headers.authorization` and `headers['x-api-key']` are the spellings to read.
+**Header names arrive lowercased.** The router lowercases them whichever authorizer sent them, so
+`headers.authorization` and `headers['x-api-key']` are the spellings to read. Query string names are
+left alone, because API Gateway treats those as case-sensitive.
 
 Which of the optional fields you actually get is fixed by the authorizer type, and the request types
 say so, so a handler registered through [`token()` or `request()`](#convenience-methods) reads them
@@ -224,10 +225,24 @@ without a check.
 
 ### Response type
 
-A handler returns `LambdaAuthorizerResult`, a union of `APIGatewayAuthorizerResult` and
-`APIGatewaySimpleAuthorizerResult`. A `boolean` works as shorthand for the second. Both come from
-`aws-lambda`, and [`Allow` and `Deny`](#policy-helpers) build the first. See [Responses](#responses)
-for what the router does with each.
+A handler returns `LambdaAuthorizerResult`, a union of `APIGatewayAuthorizerResult` from `aws-lambda`
+and `LambdaAuthorizerSimpleResult` from this package. [`Allow` and `Deny`](#policy-helpers) build the
+first, [`Authorized` and `Denied`](#simple-responses) build the second, and a `boolean` is shorthand for
+the second. See [Responses](#responses) for what the router does with each.
+
+`LambdaAuthorizerSimpleResult` is `{ isAuthorized, context? }`. Its context takes anything JSON carries,
+so strings, numbers, booleans, arrays and nested objects all go through. Name the shape and the compiler
+checks what you build against it.
+
+```ts
+const result: LambdaAuthorizerResult<{ tenantId: string; plan: string }> = {
+  isAuthorized: true,
+  context: { tenantId: 'acme', plan: 'pro' },
+}
+```
+
+Leave the shape off and the context is `LambdaAuthorizerContext`, which still turns away a value JSON
+cannot carry such as a `Date`.
 
 ### Inferred handlers
 
@@ -317,7 +332,8 @@ handlers](/docs/handlers#annotated-handlers) has the worked version.
 ## Responses
 
 Whatever a handler returns goes back to API Gateway as the result of the invocation. An IAM policy
-works everywhere, and a boolean works on one of the four authorizer configurations.
+works everywhere. A simple response, either a boolean or `{ isAuthorized, context }`, works on one of
+the four authorizer configurations.
 
 ### Policy helpers
 
@@ -365,6 +381,34 @@ as `{ isAuthorized }`.
 return true   // { isAuthorized: true }
 return false  // { isAuthorized: false }
 ```
+
+`Authorized` and `Denied` build the same response, and `Authorized` takes a context to hand on to your
+API.
+
+```ts
+import { Authorized, Denied } from '@lambda-event-router/apigateway'
+
+return Authorized()                                   // { isAuthorized: true }
+return Authorized({ tenantId: 'acme', plan: 'pro' })  // with a context
+return Denied()                                       // { isAuthorized: false }
+```
+
+| Helper | `isAuthorized` | Argument |
+| --- | --- | --- |
+| `Authorized(context?)` | `true` | Any JSON object. The key is left off the response when you pass nothing |
+| `Denied()` | `false` | None |
+
+This context takes arrays and nested objects, unlike the [policy context](#policy-helpers), which API
+Gateway holds to flat values.
+
+**A refusal here is a 403, not a 401.** `{ isAuthorized: false }` is an authorisation failure, and API
+Gateway answers it with `403 Forbidden`. A 401 comes from a different response, `{ errorMessage:
+'Unauthorized' }` returned from an authorizer with no identity sources configured.
+
+**`Authorized()` and `Denied()` are not checked the way a boolean is.** The router turns away a boolean
+from the wrong authorizer type and hands an object straight back whatever the event was, so a simple
+response returned from a REST API authorizer reaches API Gateway and the caller gets a 500. Return a
+policy there.
 
 **Returning a boolean from anything else throws and fails the invocation.** A REST API authorizer and
 an HTTP API on payload format 1.0 both expect a policy, so the router refuses the boolean rather than
@@ -438,6 +482,8 @@ All exported from `@lambda-event-router/apigateway`.
 | `LambdaAuthorizerRequestRequest` | The same for a REQUEST authorizer, with `method`, `path`, `headers` and `query` required |
 | `LambdaAuthorizerBaseRequest` | The four fields all three share |
 | `LambdaAuthorizerResult` | What the router hands back to Lambda |
+| `LambdaAuthorizerSimpleResult` | The simple response half of it, `{ isAuthorized, context? }` |
+| `LambdaAuthorizerContext` | What a simple response context holds, `Record<string, JsonValue>` |
 | `LambdaAuthorizerHandler` | A handler, as `route()` types it |
 | `LambdaAuthorizerMiddleware` | Router and route middleware |
 | `LambdaAuthorizerRouteDefinition` | A full route, as `defineLambdaAuthorizerRoute` builds it |
@@ -450,16 +496,25 @@ All exported from `@lambda-event-router/apigateway`.
 | `AuthorizerType` | `'TOKEN' \| 'REQUEST'` |
 
 `Context` on the request comes from `aws-lambda`, and so do the three events `LambdaAuthorizerEvent`
-unions together and both halves of `LambdaAuthorizerResult`. `Allow`, `Deny` and `generatePolicy` all
-return that package's `APIGatewayAuthorizerResult`, which is what to annotate a handler's return type
-with.
+unions together and the policy half of `LambdaAuthorizerResult`. `Allow`, `Deny` and `generatePolicy`
+all return that package's `APIGatewayAuthorizerResult`, which is what to annotate a policy handler's
+return type with. `Authorized` and `Denied` return `LambdaAuthorizerSimpleResult`, which is this
+package's own, because API Gateway documents one simple response with an optional context and
+`aws-lambda` splits it across two interfaces.
 
-None of these takes a generic parameter. A route carries no schema, so there is nothing for a type to
-pass through, and the request shape comes from the `type` filter instead.
+`LambdaAuthorizerResult`, `LambdaAuthorizerSimpleResult`, `LambdaAuthorizerHandler`,
+`LambdaAuthorizerRouteDefinition`, `LambdaAuthorizerTokenInput` and `LambdaAuthorizerRequestInput` take
+the context shape as a type parameter, defaulting to `LambdaAuthorizerContext`. The rest take none: a
+route carries no schema, so there is nothing for a type to pass through, and the request shape comes
+from the `type` filter instead.
+
+`LambdaAuthorizerMiddleware` stays on the default. Middleware registers on the router as well as on a
+route, where no single route's context applies.
 
 The `LambdaAuthorizerRouter` class and the `createLambdaAuthorizerRouter` and
 `defineLambdaAuthorizerRoute` functions come from the same place, along with `Allow`, `Deny`,
-`generatePolicy` and `isAuthorizerResponse`.
+`Authorized`, `Denied`, `generatePolicy` and `isAuthorizerResponse`. `JsonValue` comes from
+`@lambda-event-router/base`.
 
 ## Code example
 

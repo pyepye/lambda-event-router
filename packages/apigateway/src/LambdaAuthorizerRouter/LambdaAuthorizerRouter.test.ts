@@ -340,6 +340,18 @@ suite('LambdaAuthorizerRouter', () => {
       expect(result).toEqual({ isAuthorized: false });
     });
 
+    test('returns a simple response with a context untouched for V2', async ({
+      apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue({ isAuthorized: true, context: { tenantId: 'acme' } });
+      router.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
+      const result = await router.handleEvent(event, context);
+
+      expect(result).toEqual({ isAuthorized: true, context: { tenantId: 'acme' } });
+    });
+
     test('throws when no route matches', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
       const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
 
@@ -547,6 +559,18 @@ suite('LambdaAuthorizerRouter', () => {
           query: { limit: '5' },
         }),
       );
+    });
+
+    test('builds V2 request with lowercased headers', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event({
+        headers: { 'X-Api-Key': 'valid-key', Authorization: 'Bearer token' },
+      });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = router.buildRequest(event, mockContext);
+
+      expect(result.headers).toEqual({ 'x-api-key': 'valid-key', authorization: 'Bearer token' });
     });
 
     test('includes event and context in all request types', ({ context }) => {

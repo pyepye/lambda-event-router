@@ -8,10 +8,12 @@ import type {
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { buildValueMaps } from '@lambda-event-router/http';
 
 import { isAuthorizerResponse } from './response.js';
 import type {
   AuthorizerType,
+  LambdaAuthorizerContext,
   LambdaAuthorizerEvent,
   LambdaAuthorizerFilterInput,
   LambdaAuthorizerFilters,
@@ -46,17 +48,20 @@ interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType |
   middleware?: LambdaAuthorizerMiddleware[];
 }
 
-interface RouteBuilder<TRequest> {
-  handle(handler: (request: TRequest) => Promise<LambdaAuthorizerResult | boolean>): LambdaAuthorizerRouteDefinition;
+interface RouteBuilder<TRequest, TContext extends LambdaAuthorizerContext> {
+  handle(
+    handler: (request: TRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>,
+  ): LambdaAuthorizerRouteDefinition<TContext>;
 }
 
-export function defineLambdaAuthorizerRoute<TType extends AuthorizerType | undefined = undefined>(
-  config: RouteInput<TType>,
-): RouteBuilder<InferRequest<TType>> {
+export function defineLambdaAuthorizerRoute<
+  TType extends AuthorizerType | undefined = undefined,
+  TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext,
+>(config: RouteInput<TType>): RouteBuilder<InferRequest<TType>, TContext> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
     handle(handler) {
-      return { ...config, handler } as LambdaAuthorizerRouteDefinition;
+      return { ...config, handler } as LambdaAuthorizerRouteDefinition<TContext>;
     },
   };
 }
@@ -84,15 +89,15 @@ export function generatePolicy(
   };
 }
 
-export interface LambdaAuthorizerTokenInput {
+export interface LambdaAuthorizerTokenInput<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> {
   middleware?: LambdaAuthorizerMiddleware[];
-  handler: (request: LambdaAuthorizerTokenRequest) => Promise<LambdaAuthorizerResult | boolean>;
+  handler: (request: LambdaAuthorizerTokenRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>;
 }
 
-export interface LambdaAuthorizerRequestInput {
+export interface LambdaAuthorizerRequestInput<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> {
   method?: string;
   middleware?: LambdaAuthorizerMiddleware[];
-  handler: (request: LambdaAuthorizerRequestRequest) => Promise<LambdaAuthorizerResult | boolean>;
+  handler: (request: LambdaAuthorizerRequestRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>;
 }
 
 function isTokenEvent(event: LambdaAuthorizerEvent): event is APIGatewayTokenAuthorizerEvent {
@@ -105,19 +110,6 @@ function isRequestV1Event(event: LambdaAuthorizerEvent): event is APIGatewayRequ
 
 function isRequestV2Event(event: LambdaAuthorizerEvent): event is APIGatewayRequestAuthorizerEventV2 {
   return event.type === 'REQUEST' && 'routeArn' in event;
-}
-
-// TODO: This is basically a copy again of ALB and API Gateway REST API (v1)
-function lowercaseHeaders(
-  headers: Record<string, string | undefined> | null | undefined,
-): Record<string, string | undefined> {
-  if (!headers) return {};
-
-  const lowered: Record<string, string | undefined> = {};
-  for (const [key, value] of Object.entries(headers)) {
-    lowered[key.toLowerCase()] = value;
-  }
-  return lowered;
 }
 
 export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerEvent, LambdaAuthorizerResult> {
@@ -150,16 +142,21 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     return false;
   }
 
-  route(definition: LambdaAuthorizerRouteDefinition): this {
+  route<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>(
+    definition: LambdaAuthorizerRouteDefinition<TContext>,
+  ): this {
     this.routes.push({
       filters: definition.filters,
       middleware: definition.middleware,
-      handler: definition.handler,
+      handler: definition.handler as LambdaAuthorizerHandler,
     });
     return this;
   }
 
-  token({ middleware, handler }: LambdaAuthorizerTokenInput): this {
+  token<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>({
+    middleware,
+    handler,
+  }: LambdaAuthorizerTokenInput<TContext>): this {
     this.routes.push({
       filters: { type: 'TOKEN' },
       middleware,
@@ -168,7 +165,11 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     return this;
   }
 
-  request({ method, middleware, handler }: LambdaAuthorizerRequestInput): this {
+  request<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>({
+    method,
+    middleware,
+    handler,
+  }: LambdaAuthorizerRequestInput<TContext>): this {
     this.routes.push({
       filters: { type: 'REQUEST', method },
       middleware,
@@ -228,7 +229,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
         resourceArn: event.methodArn,
         method: event.httpMethod,
         path: event.path,
-        headers: lowercaseHeaders(event.headers),
+        headers: buildValueMaps({ single: event.headers, lowercaseKeys: true }).flat,
         query: event.queryStringParameters ?? {},
         event,
         context,
@@ -241,7 +242,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
         resourceArn: event.routeArn,
         method: event.requestContext.http.method,
         path: event.rawPath,
-        headers: event.headers ?? {},
+        headers: buildValueMaps({ single: event.headers, lowercaseKeys: true }).flat,
         query: event.queryStringParameters ?? {},
         event,
         context,

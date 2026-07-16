@@ -2,6 +2,8 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import { SchemaValidationError } from '../errors/SchemaValidationError.js';
 
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
 export type FilterStringMatcher = string | RegExp | Array<string | RegExp>;
 
 export function filterStringMatcher(testString: string, matcher: FilterStringMatcher): boolean {

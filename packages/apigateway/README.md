@@ -283,15 +283,25 @@ return Allow(principalId, resource)
 return Allow(principalId, resource, context) // with additional context
 return Deny(principalId, resource)
 return generatePolicy(principalId, 'Allow', resource) // effect as an argument
-return true  // simple response mode (HTTP API v2 request authorizers only)
-return false // simple response mode (HTTP API v2 request authorizers only)
+
+// Simple response mode (HTTP API v2 request authorizers only)
+return Authorized()
+return Authorized({ tenantId: 'acme', limits: { rpm: 60 } }) // the context takes nested JSON
+return Denied()
+return true  // shorthand for Authorized()
+return false // shorthand for Denied()
 
 // A policy can be thrown as well, from any depth
 throw Deny(principalId, resource)
 ```
 
 Returning a boolean from anything other than an HTTP API v2 request authorizer throws, because there is
-no simple response shape for the other event types to send it as.
+no simple response shape for the other event types to send it as. `Authorized()` and `Denied()` are not
+checked that way. The router hands an object back whatever the event was, so a simple response returned
+from a REST API authorizer reaches API Gateway and the caller gets a 500.
+
+`Denied()` is a `403 Forbidden`. A 401 is a different response, `{ errorMessage: 'Unauthorized' }` from
+an authorizer with no identity sources configured.
 
 ### WebSocketRouter
 

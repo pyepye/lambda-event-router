@@ -1,6 +1,7 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
 import { SchemaValidationError } from '../errors/SchemaValidationError.js';
+import type { JsonValue } from './data.js';
 import { filterStringMatcher, isObject, safeJsonParse, validateSchema, validateSchemaResult } from './data.js';
 
 suite('filterStringMatcher', () => {
@@ -245,5 +246,33 @@ suite('validateSchemaResult', () => {
 
     const result = await validateSchemaResult({}, schema);
     expect(result).toEqual({ success: false, issues });
+  });
+});
+
+suite('JsonValue', () => {
+  test('accepts every value type JSON can carry', () => {
+    const value: Record<string, JsonValue> = {
+      stringKey: 'value',
+      numberKey: 1,
+      booleanKey: true,
+      nullKey: null,
+      arrayKey: ['value1', 'value2'],
+      mapKey: { value1: 'value2' },
+    };
+
+    expect(JSON.parse(JSON.stringify(value))).toEqual(value);
+  });
+
+  test('accepts nesting to any depth', () => {
+    const value: JsonValue = { limits: { rate: { rpm: 60, burst: [10, 20] } } };
+
+    expect(JSON.parse(JSON.stringify(value))).toEqual(value);
+  });
+
+  test('rejects a value JSON cannot carry', () => {
+    // @ts-expect-error a Date is not a JsonValue: JSON.stringify turns it into a string
+    const value: Record<string, JsonValue> = { since: new Date('2026-09-17') };
+
+    expect(JSON.stringify(value)).toBe('{"since":"2026-09-17T00:00:00.000Z"}');
   });
 });
