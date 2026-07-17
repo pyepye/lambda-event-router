@@ -143,13 +143,20 @@ s3Router.route({
 
 | Filter | Type | Description |
 | --- | --- | --- |
-| `eventName` | `FilterStringMatcher` | Matches the record's event name, `ObjectCreated:Put` and so on |
+| `eventName` | `S3EventName \| S3EventName[]` | Matches the record's event name, `ObjectCreated:Put` and so on |
 | `bucket` | `FilterStringMatcher` | Matches the name of the bucket the event came from |
 | `key` | `FilterStringMatcher` | Matches the object key, URL-decoded and matched whole |
 | `custom` | `(input: S3FilterInput) => boolean \| Promise<boolean>` | Anything the other filters cannot express, given `bucket`, `key`, `eventName` and `record`. Can be async |
 
-`FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
-[filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
+`bucket`, `key` and `custom` take a `FilterStringMatcher`, which is
+`string | RegExp | Array<string | RegExp>`. See [filters](/docs/routing#filters) for how each form
+matches, including the `*` wildcard.
+
+**`eventName` is the exception, and takes only names S3 uses.** `S3EventName` is the union of all
+nine families, so `eventName: 'ObjectCreated:Putt'` is a compile error rather than a route that
+matches nothing. Each family's wildcard is one of the names, so `'ObjectCreated:*'` still works.
+A pattern S3 never publishes, such as `'Object*'`, does not. Reach for `custom` when you need to
+match across families.
 
 **The event name arrives without the `s3:` prefix.** You write `s3:ObjectCreated:Put` when you
 configure the bucket notification, and the record carries `ObjectCreated:Put`, which is what the filter
@@ -491,6 +498,7 @@ Event names, as a type and a matching array of the values:
 
 | Type | Constant |
 | --- | --- |
+| `S3EventName` | The union of all nine below, and what the `eventName` filter takes |
 | `S3ObjectCreatedEventName` | `OBJECT_CREATED_EVENT_NAMES` |
 | `S3ObjectRemovedEventName` | `OBJECT_REMOVED_EVENT_NAMES` |
 | `S3ObjectRestoreEventName` | `OBJECT_RESTORE_EVENT_NAMES` |
@@ -501,10 +509,10 @@ Event names, as a type and a matching array of the values:
 | `S3IntelligentTieringEventName` | `INTELLIGENT_TIERING_EVENT_NAMES` |
 | `S3ReducedRedundancyLostObjectEventName` | `REDUCED_REDUNDANCY_LOST_OBJECT_EVENT_NAMES` |
 
-The `eventName` filter takes any `FilterStringMatcher`, so these are for your own code rather than
-something the router asks for. `isS3BatchResponse`, the `Succeeded`, `TemporaryFailure` and
-`PermanentFailure` helpers, the `S3Router` class and the `createS3Router` and `defineRoute` functions
-all come from the same place.
+The `eventName` filter takes `S3EventName`, so a name outside it is a compile error. The per-family
+types narrow that further, for a helper or a variable you want held to one family.
+`isS3BatchResponse`, the `Succeeded`, `TemporaryFailure` and `PermanentFailure` helpers, the
+`S3Router` class and the `createS3Router` and `defineRoute` functions all come from the same place.
 
 ## Code example
 

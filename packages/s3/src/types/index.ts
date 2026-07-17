@@ -15,6 +15,7 @@ export type {
 } from './batch.js';
 export type {
   S3BaseRequest,
+  S3EventName,
   S3FilterInput,
   S3Filters,
   S3FiltersWithoutEventNames,

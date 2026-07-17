@@ -11,6 +11,7 @@ import type {
   S3BaseRequest,
   S3BatchRequest,
   S3BatchRouteDefinition,
+  S3EventName,
   S3FilterInput,
   S3Filters,
   S3IntelligentTieringRouteDefinition,
@@ -421,7 +422,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
   // ===========================================================================
 
   private addRoute(
-    eventName: string,
+    eventName: S3EventName,
     filters: S3Filters | undefined,
     middleware: S3Middleware[],
     handler: InternalHandler,

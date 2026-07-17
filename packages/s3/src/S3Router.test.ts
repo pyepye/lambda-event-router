@@ -2,7 +2,7 @@ import { createS3BatchEvent, createS3BatchTask, createS3Event, test } from '@lam
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { createS3Router, defineRoute, S3Router } from './S3Router.js';
-import type { S3BaseRequest, S3BatchRequest, S3FilterInput } from './types/index.js';
+import type { S3BaseRequest, S3BatchRequest, S3FilterInput, S3Filters } from './types/index.js';
 
 type S3Next = (request: S3BaseRequest) => Promise<void>;
 type S3BatchNext = (request: S3BatchRequest) => Promise<S3BatchResponse>;
@@ -267,7 +267,7 @@ suite('S3Router', () => {
     test('matches route by exact eventName array', async ({ s3Record }) => {
       router.route(
         defineRoute({
-          filters: { eventName: ['ObjectCreated:Put', 'ObjectCreated:Get'] },
+          filters: { eventName: ['ObjectCreated:Put', 'ObjectCreated:Copy'] },
         }).handle(async () => {}),
       );
 
@@ -1307,6 +1307,34 @@ suite('S3Router', () => {
       await router.handleEvent(event, context);
 
       expect(routerMiddleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('eventName filter typing', () => {
+    test('accepts a known event name', () => {
+      const filters: S3Filters = { eventName: 'ObjectCreated:Put' };
+
+      expect(filters.eventName).toBe('ObjectCreated:Put');
+    });
+
+    test('accepts the wildcard a family declares', () => {
+      const filters: S3Filters = { eventName: ['ObjectCreated:*', 'ObjectRemoved:Delete'] };
+
+      expect(filters.eventName).toEqual(['ObjectCreated:*', 'ObjectRemoved:Delete']);
+    });
+
+    test('rejects a misspelled event name', () => {
+      // @ts-expect-error ObjectCreated:Putt is not an S3 event name
+      const filters: S3Filters = { eventName: 'ObjectCreated:Putt' };
+
+      expect(filters.eventName).toBe('ObjectCreated:Putt');
+    });
+
+    test('rejects a pattern S3 never sends', () => {
+      // @ts-expect-error only the wildcards the event name families declare are matchable
+      const filters: S3Filters = { eventName: 'Object*' };
+
+      expect(filters.eventName).toBe('Object*');
     });
   });
 });
