@@ -1,8 +1,30 @@
 import type { Context } from 'aws-lambda';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { FilterStringMatcher, JsonValue, Middleware } from '@lambda-event-router/base';
 
 export type AppSyncEventsOperation = 'PUBLISH' | 'SUBSCRIBE';
+
+// AppSync refuses a publish whose event is not a stringified JSON value, so a handler is only ever
+// given one it has already parsed.
+export interface AppSyncEventsPublishedEvent<TPayload = JsonValue> {
+  id: string;
+  payload: TPayload;
+}
+
+// An entry carrying both is accepted and AppSync drops the payload, and one carrying neither answers
+// 502, so the two arms are kept apart.
+export type AppSyncEventsOutgoingEvent =
+  | { id: string; payload: JsonValue; error?: never }
+  | { id: string; payload?: never; error: string };
+
+// A result carrying neither answers 502, and a top level error is returned to the publisher as a 403.
+export type AppSyncEventsPublishResult =
+  | { events: AppSyncEventsOutgoingEvent[]; error?: never }
+  | { events?: never; error: string };
+
+export type AppSyncEventsSubscribeResult = { error: string } | null;
 
 export interface AppSyncEventsIdentity {
   sub?: string;
@@ -31,19 +53,19 @@ export interface AppSyncEventsEvent {
     operation: AppSyncEventsOperation;
   };
   stash: Record<string, unknown>;
-  events: Record<string, unknown>[] | null;
+  events: AppSyncEventsPublishedEvent[] | null;
   prev: { result: Record<string, unknown> } | null;
   result: unknown;
   error: unknown;
   outErrors: unknown[];
 }
 
-export interface AppSyncEventsRequest {
+export interface AppSyncEventsRequest<TPayload = JsonValue> {
   channelPath: string;
   channelNamespace: string;
   operation: AppSyncEventsOperation;
   identity: AppSyncEventsIdentity | null | undefined;
-  events: Record<string, unknown>[];
+  events: AppSyncEventsPublishedEvent<TPayload>[];
   info: AppSyncEventsEvent['info'];
   request: AppSyncEventsEvent['request'];
   stash: Record<string, unknown>;
@@ -66,28 +88,39 @@ export interface AppSyncEventsFilters {
   custom?: (input: AppSyncEventsFilterInput) => boolean | Promise<boolean>;
 }
 
+// Middleware is invariant in its request and also registers router-wide, where no route's schema
+// applies, so it sees the unvalidated payload.
 export type AppSyncEventsMiddleware = Middleware<AppSyncEventsRequest, unknown>;
 
-export interface AppSyncEventsRouteDefinition {
+export interface AppSyncEventsRouteDefinition<TPayload = JsonValue> {
   filters: AppSyncEventsFilters;
+  payloadSchema?: StandardSchemaV1;
   middleware?: AppSyncEventsMiddleware[];
-  handler: (request: AppSyncEventsRequest) => Promise<unknown>;
+  handler: (request: AppSyncEventsRequest<TPayload>) => Promise<unknown>;
 }
+
+export type PayloadOf<TPayloadSchema> = TPayloadSchema extends StandardSchemaV1
+  ? StandardSchemaV1.InferOutput<TPayloadSchema>
+  : JsonValue;
 
 export type AppSyncEventsOperationFilters = Pick<AppSyncEventsFilters, 'custom'>;
 
-export interface AppSyncEventsChannelInput {
+export interface AppSyncEventsChannelInput<TPayloadSchema extends StandardSchemaV1 | undefined = undefined> {
   channelPath: FilterStringMatcher;
   filters?: AppSyncEventsOperationFilters;
+  payloadSchema?: TPayloadSchema;
   middleware?: AppSyncEventsMiddleware[];
-  handler: (request: AppSyncEventsRequest) => Promise<unknown>;
+  handler: (request: AppSyncEventsRequest<PayloadOf<TPayloadSchema>>) => Promise<unknown>;
 }
 
-export type AppSyncPublishInput = AppSyncEventsChannelInput;
-export type AppSyncSubscribeInput = AppSyncEventsChannelInput;
+export type AppSyncPublishInput<TPayloadSchema extends StandardSchemaV1 | undefined = undefined> =
+  AppSyncEventsChannelInput<TPayloadSchema>;
+export type AppSyncSubscribeInput<TPayloadSchema extends StandardSchemaV1 | undefined = undefined> =
+  AppSyncEventsChannelInput<TPayloadSchema>;
 
-export interface AppSyncEventsRouteInput {
+export interface AppSyncEventsRouteInput<TPayloadSchema extends StandardSchemaV1 | undefined = undefined> {
   filters?: AppSyncEventsFilters;
+  payloadSchema?: TPayloadSchema;
   middleware?: AppSyncEventsMiddleware[];
 }
 
@@ -95,12 +128,15 @@ export interface AppSyncEventsRouterOptions {
   middleware?: AppSyncEventsMiddleware[];
 }
 
-export interface AppSyncEventsRouteBuilder {
-  handle(handler: (request: AppSyncEventsRequest) => Promise<unknown>): AppSyncEventsRouteDefinition;
+export interface AppSyncEventsRouteBuilder<TPayload = JsonValue> {
+  handle(
+    handler: (request: AppSyncEventsRequest<TPayload>) => Promise<unknown>,
+  ): AppSyncEventsRouteDefinition<TPayload>;
 }
 
 export interface InternalEventsRoute {
   filters: AppSyncEventsFilters;
+  payloadSchema?: StandardSchemaV1;
   middleware?: AppSyncEventsMiddleware[];
   handler: (request: AppSyncEventsRequest) => Promise<unknown>;
 }

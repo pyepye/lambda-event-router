@@ -1,7 +1,12 @@
-import { createAppSyncEventsEvent, createMockContext, test } from '@lambda-event-router/testing';
+import { createAppSyncEventsEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
-import type { AppSyncEventsRequest } from './types.js';
+import type {
+  AppSyncEventsOutgoingEvent,
+  AppSyncEventsPublishResult,
+  AppSyncEventsRequest,
+  AppSyncEventsSubscribeResult,
+} from './types.js';
 
 type EventsNext = (request: AppSyncEventsRequest) => Promise<unknown>;
 
@@ -439,7 +444,7 @@ suite('AppSyncEventsRouter', () => {
           channel: { path: '/chat/room1', segments: ['chat', 'room1'] },
           channelNamespace: { name: 'chat' },
         },
-        events: [{ message: 'hello' }],
+        events: [{ id: 'e-1', payload: { message: 'hello' } }],
         request: { headers: { authorization: 'Bearer token' } },
       });
       const context = createMockContext();
@@ -455,7 +460,7 @@ suite('AppSyncEventsRouter', () => {
           channelNamespace: 'chat',
           operation: 'PUBLISH',
           identity: null,
-          events: [{ message: 'hello' }],
+          events: [{ id: 'e-1', payload: { message: 'hello' } }],
           info: event.info,
           request: event.request,
           stash: {},
@@ -757,5 +762,120 @@ suite('AppSyncEventsRouter', () => {
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
+  });
+});
+
+suite('published events', () => {
+  test('types each entry as an id and a payload', async () => {
+    const handler = vi.fn().mockResolvedValue({ events: [] });
+    router.publish({ channelPath: '/orders/*', handler });
+
+    const event = createAppSyncEventsEvent({
+      info: { channel: { path: '/orders/new', segments: ['orders', 'new'] } },
+      events: [{ id: 'e-1', payload: { orderId: 'o-1' } }],
+    });
+    await router.handleEvent(event, createMockContext());
+
+    const [{ events }] = handler.mock.calls[0] as [AppSyncEventsRequest];
+    const ids: string[] = events.map(({ id }) => id);
+
+    expect(ids).toEqual(['e-1']);
+  });
+
+  test('carries a payload that is not an object', async () => {
+    const handler = vi.fn().mockResolvedValue({ events: [] });
+    router.publish({ channelPath: '/orders/*', handler });
+
+    const event = createAppSyncEventsEvent({
+      info: { channel: { path: '/orders/new', segments: ['orders', 'new'] } },
+      events: [{ id: 'e-1', payload: 42 }],
+    });
+    await router.handleEvent(event, createMockContext());
+
+    const [{ events }] = handler.mock.calls[0] as [AppSyncEventsRequest];
+
+    expect(events[0]?.payload).toBe(42);
+  });
+});
+
+suite('payloadSchema', () => {
+  test('hands the handler the schema output', async () => {
+    const payloadSchema = createMockSchema({ value: { orderId: 'o-1', total: 42 } });
+    const handler = vi.fn().mockResolvedValue({ events: [] });
+    router.route(defineEventsRoute({ filters: { operation: 'PUBLISH' }, payloadSchema }).handle(handler));
+
+    const event = createAppSyncEventsEvent({ events: [{ id: 'e-1', payload: { orderId: 'o-1' } }] });
+    await router.handleEvent(event, createMockContext());
+
+    const [{ events }] = handler.mock.calls[0] as [AppSyncEventsRequest];
+
+    expect(events[0]?.payload).toEqual({ orderId: 'o-1', total: 42 });
+  });
+
+  test('throws when a payload fails its schema', async () => {
+    const payloadSchema = createMockSchema({ issues: [{ message: 'orderId is required' }] });
+    router.route(defineEventsRoute({ filters: { operation: 'PUBLISH' }, payloadSchema }).handle(vi.fn()));
+
+    const event = createAppSyncEventsEvent({ events: [{ id: 'e-1', payload: {} }] });
+
+    await expect(router.handleEvent(event, createMockContext())).rejects.toThrow(
+      'Payload validation failed for event e-1',
+    );
+  });
+
+  test('leaves the payload alone when no schema is given', async () => {
+    const handler = vi.fn().mockResolvedValue({ events: [] });
+    router.route(defineEventsRoute({ filters: { operation: 'PUBLISH' } }).handle(handler));
+
+    const event = createAppSyncEventsEvent({ events: [{ id: 'e-1', payload: { untouched: true } }] });
+    await router.handleEvent(event, createMockContext());
+
+    const [{ events }] = handler.mock.calls[0] as [AppSyncEventsRequest];
+
+    expect(events[0]?.payload).toEqual({ untouched: true });
+  });
+});
+
+suite('result types', () => {
+  test('an outgoing entry carries a payload or an error', () => {
+    const broadcast: AppSyncEventsOutgoingEvent = { id: 'e-1', payload: { ok: true } };
+    const refused: AppSyncEventsOutgoingEvent = { id: 'e-2', error: 'no body' };
+
+    expect([broadcast, refused]).toHaveLength(2);
+  });
+
+  test('rejects an entry carrying both, because AWS drops the payload', () => {
+    // @ts-expect-error AWS discards the payload when an entry also carries an error
+    const entry: AppSyncEventsOutgoingEvent = { id: 'e-1', payload: { ok: true }, error: 'no body' };
+
+    expect(entry.id).toBe('e-1');
+  });
+
+  test('rejects an entry with neither, because AWS answers 502', () => {
+    // @ts-expect-error an entry needs a payload or an error
+    const entry: AppSyncEventsOutgoingEvent = { id: 'e-1' };
+
+    expect(entry.id).toBe('e-1');
+  });
+
+  test('a publish result carries events or a top level error', () => {
+    const broadcast: AppSyncEventsPublishResult = { events: [{ id: 'e-1', payload: null }] };
+    const refused: AppSyncEventsPublishResult = { error: 'the whole publish failed' };
+
+    expect([broadcast, refused]).toHaveLength(2);
+  });
+
+  test('rejects an empty publish result, because AWS answers 502', () => {
+    // @ts-expect-error a publish result needs events or an error
+    const result: AppSyncEventsPublishResult = {};
+
+    expect(result).toEqual({});
+  });
+
+  test('a subscribe result is null or an error', () => {
+    const admitted: AppSyncEventsSubscribeResult = null;
+    const refused: AppSyncEventsSubscribeResult = { error: 'not allowed' };
+
+    expect([admitted, refused]).toHaveLength(2);
   });
 });

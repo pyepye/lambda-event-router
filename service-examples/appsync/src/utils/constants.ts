@@ -10,10 +10,23 @@ export const CUSTOMER_ROLE = 'customer';
 export const TICKET_NAMESPACE = 'ticket';
 export const PRESENCE_NAMESPACE = 'presence';
 export const AUDIT_NAMESPACE = 'audit';
+export const PROBE_NAMESPACE = 'probe';
 
 export const TICKET_CHANNEL = `/${TICKET_NAMESPACE}/t-1`;
 export const PRESENCE_CHANNEL = `/${PRESENCE_NAMESPACE}/desk-1`;
 export const AUDIT_CHANNEL = `/${AUDIT_NAMESPACE}/trail`;
+
+export const PROBE_REFLECT_CHANNEL = `/${PROBE_NAMESPACE}/reflect`;
+export const PROBE_BOTH_CHANNEL = `/${PROBE_NAMESPACE}/both`;
+export const PROBE_BARE_CHANNEL = `/${PROBE_NAMESPACE}/bare`;
+export const PROBE_EMPTY_CHANNEL = `/${PROBE_NAMESPACE}/empty`;
+export const PROBE_NOTHING_CHANNEL = `/${PROBE_NAMESPACE}/nothing`;
+export const PROBE_EXTRA_ENTRY_CHANNEL = `/${PROBE_NAMESPACE}/extra-entry`;
+export const PROBE_EXTRA_TOP_CHANNEL = `/${PROBE_NAMESPACE}/extra-top`;
+export const PROBE_ERROR_ONLY_CHANNEL = `/${PROBE_NAMESPACE}/error-only`;
+export const PROBE_EMPTY_LIST_CHANNEL = `/${PROBE_NAMESPACE}/empty-list`;
+export const PROBE_BOTH_TOP_CHANNEL = `/${PROBE_NAMESPACE}/both-top`;
+export const PROBE_ID_ONLY_CHANNEL = `/${PROBE_NAMESPACE}/id-only`;
 
 export const TICKET_CHANNEL_PATTERN = `/${TICKET_NAMESPACE}/*`;
 export const PRESENCE_CHANNEL_PATTERN = `/${PRESENCE_NAMESPACE}/*`;

@@ -7,6 +7,14 @@ import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // ─── AppSync Events types (local to avoid circular deps) ─────────────────────
 
+// Declared here rather than imported, because base depends on this package.
+type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue };
+
+export interface AppSyncEventsPublishedEvent {
+  id: string;
+  payload: JsonValue;
+}
+
 export type AppSyncEventsOperation = 'PUBLISH' | 'SUBSCRIBE';
 
 export interface AppSyncEventsIdentity {
@@ -36,7 +44,7 @@ export interface AppSyncEventsEvent {
     operation: AppSyncEventsOperation;
   };
   stash: Record<string, unknown>;
-  events: Record<string, unknown>[] | null;
+  events: AppSyncEventsPublishedEvent[] | null;
   prev: { result: Record<string, unknown> } | null;
   result: unknown;
   error: unknown;
@@ -147,7 +155,7 @@ export function createAppSyncEventsEvent(overrides: AppSyncEventsEventOverrides 
   const defaults: AppSyncEventsEvent = {
     identity: null,
     stash: {},
-    events: [{ data: 'test-payload' }],
+    events: [{ id: 'e-1', payload: { data: 'test-payload' } }],
     prev: null,
     result: null,
     error: null,

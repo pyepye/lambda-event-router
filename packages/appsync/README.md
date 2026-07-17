@@ -283,6 +283,22 @@ eventsRouter
   .subscribe({ channelPath: '/default/*', handler: handleSubscribe })
 ```
 
+#### Payload schema
+
+Each published event is an `id` and a `payload`, and `payload` is a `JsonValue` because AppSync
+accepts any JSON value a client publishes. `payloadSchema` validates and types it instead.
+
+```ts
+eventsRouter.publish({
+  channelPath: '/orders/*',
+  payloadSchema: OrderSchema,
+  handler: handlePublish,
+})
+```
+
+One payload that fails its schema throws and fails the whole publish. Where you want the rest of the
+batch delivered, leave the schema off and return an `{ id, error }` entry for each event you reject.
+
 ### AppSyncEventsAuthorizerRouter
 
 An Event API sends its authorizer a different event from a GraphQL API, so it has a router of its

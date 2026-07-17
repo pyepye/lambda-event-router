@@ -12,9 +12,13 @@ export type {
   AppSyncEventsMiddleware,
   AppSyncEventsOperation,
   AppSyncEventsOperationFilters,
+  AppSyncEventsOutgoingEvent,
+  AppSyncEventsPublishedEvent,
+  AppSyncEventsPublishResult,
   AppSyncEventsRequest,
   AppSyncEventsRouteDefinition,
   AppSyncEventsRouterOptions,
+  AppSyncEventsSubscribeResult,
   AppSyncPublishInput,
   AppSyncSubscribeInput,
 } from './types.js';

@@ -15,7 +15,7 @@ import { NodejsFunction, type NodejsFunctionProps, OutputFormat } from 'aws-cdk-
 import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import type { Construct } from 'constructs';
 
-import { AUDIT_NAMESPACE, PRESENCE_NAMESPACE, TICKET_NAMESPACE } from '../src/utils/constants.js';
+import { AUDIT_NAMESPACE, PRESENCE_NAMESPACE, PROBE_NAMESPACE, TICKET_NAMESPACE } from '../src/utils/constants.js';
 
 const FUNCTION_TIMEOUT_SECONDS = 10;
 const FUNCTION_MEMORY_MB = 512;
@@ -41,6 +41,7 @@ const CHANNEL_NAMESPACES = [
   { id: 'TicketNamespace', name: TICKET_NAMESPACE },
   { id: 'PresenceNamespace', name: PRESENCE_NAMESPACE },
   { id: 'AuditNamespace', name: AUDIT_NAMESPACE },
+  { id: 'ProbeNamespace', name: PROBE_NAMESPACE },
 ];
 
 const sharedBundling: NodejsFunctionProps['bundling'] = {

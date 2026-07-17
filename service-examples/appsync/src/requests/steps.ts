@@ -1,3 +1,5 @@
+import type { JsonValue } from '@lambda-event-router/base';
+
 import {
   ADMIN_OPERATION,
   AGENT_TOKEN,
@@ -47,7 +49,7 @@ export interface EventsStep {
   name: string;
   operation: 'PUBLISH' | 'SUBSCRIBE';
   channel: string;
-  payloads?: Record<string, unknown>[];
+  payloads?: Record<string, JsonValue>[];
   expected: Expected;
 }
 

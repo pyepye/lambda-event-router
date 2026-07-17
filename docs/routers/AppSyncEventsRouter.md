@@ -158,7 +158,7 @@ export async function onOrderPublish(request: AppSyncEventsRequest): Promise<unk
 | `channelNamespace` | `string` | The name of the namespace that channel belongs to |
 | `operation` | `AppSyncEventsOperation` | `PUBLISH` or `SUBSCRIBE` |
 | `identity` | `AppSyncEventsIdentity \| null \| undefined` | Who the caller is. The shape follows the API's authorisation mode, and it is `null` where the API does not identify anyone |
-| `events` | `Record<string, unknown>[]` | The published events, and empty on a `SUBSCRIBE` |
+| `events` | `AppSyncEventsPublishedEvent[]` | The published events, and empty on a `SUBSCRIBE` |
 | `info` | `{ channel, channelNamespace, operation }` | The same three values as AppSync sends them, with `channel` holding its `path` and `segments` |
 | `request` | `{ headers, domainName }` | The headers the client sent, and the custom domain the request arrived on |
 | `stash` | `Record<string, unknown>` | State shared across the functions of a pipeline |
@@ -176,7 +176,56 @@ router passes them through without typing either, so narrow a payload with `isOb
 ### Response type
 
 A route asks only for a `Promise<unknown>`, so the return type is yours to name. What you return goes
-back to AppSync untouched, which [Responses](#responses) covers.
+back to AppSync untouched, which [Responses](#responses) covers. `AppSyncEventsPublishResult` and
+`AppSyncEventsSubscribeResult` are the shapes AppSync accepts, so annotate your handler with one and
+the compiler holds you to it.
+
+### Published events
+
+Each entry is an `id` AppSync minted and the `payload` the client published.
+
+```ts
+handle(async ({ events }) => {
+  for (const { id, payload } of events) { ... }
+})
+```
+
+`payload` is a `JsonValue`, so it can be an object, an array, a string, a number, a boolean or `null`.
+AppSync turns away a publish whose event is not valid JSON, answering `InvalidEventException` with
+"Event should be a valid JSON string", so a handler is only ever given something already parsed.
+
+Reach for [`payloadSchema`](#payload-schema) when you want a shape rather than a `JsonValue`.
+
+### Payload schema
+
+`payloadSchema` validates every published payload and types it, so a handler reads fields instead of
+narrowing a `JsonValue` by hand. Any [Standard Schema](https://standardschema.dev) library works.
+
+```ts
+import { z } from 'zod'
+
+const OrderSchema = z.object({ orderId: z.string(), total: z.number() })
+
+eventsRouter.publish({
+  channelPath: '/orders/*',
+  payloadSchema: OrderSchema,
+  handler: async ({ events }) => {
+    for (const { id, total } of events.map(({ id, payload }) => ({ id, total: payload.total }))) {
+      logger.info(`Order ${id} is worth ${total}`)
+    }
+
+    return { events: [] }
+  },
+})
+```
+
+**One bad payload fails the whole publish.** Validation throws `SchemaValidationError` on the first
+event that does not match, and a throw is a 502, so the rest of the batch is not delivered either.
+Where you want the good events through, leave the schema off and return an `{ id, error }` entry for
+each one you reject.
+
+`payloadSchema` works on `route()`, `publish()`, `subscribe()` and `defineEventsRoute`. Leave it off
+and `payload` is a `JsonValue`.
 
 ### Inferred handlers
 
@@ -274,6 +323,13 @@ export async function onOrderPublish({ events }: AppSyncEventsRequest): Promise<
 | An entry of `{ id, error }` | Fails that one event and delivers the others |
 | `{ error }` at the top level | Fails the whole publish |
 | A throw | Fails the whole publish |
+| An entry of `{ id, payload, error }` | Fails that event and throws the payload away |
+| `{ events, error }` together | Fails the whole publish and throws the events away |
+| `{}`, an entry of `{ id }` alone, or a bare array | Refused outright, and the publisher gets a 502 |
+
+The response is checked strictly. An unknown field, on an entry or beside `events`, is refused the
+same way. Returning the array on its own is refused too, even though an AppSync JS resolver accepts
+it, so a Lambda handler always wraps it in `{ events }`.
 
 The publisher is told what the API accepted, not what you broadcast. Dropping a batch still answers
 `successful` for every event sent, and only the Lambda log shows it went nowhere.
@@ -341,6 +397,10 @@ All exported from `@lambda-event-router/appsync`.
 | Type | Description |
 | --- | --- |
 | `AppSyncEventsRequest` | The handler argument |
+| `AppSyncEventsPublishedEvent` | One published event, an `id` and a `payload` |
+| `AppSyncEventsOutgoingEvent` | One entry of a publish result, carrying a `payload` or an `error` |
+| `AppSyncEventsPublishResult` | What a `PUBLISH` handler returns |
+| `AppSyncEventsSubscribeResult` | What a `SUBSCRIBE` handler returns |
 | `AppSyncEventsEvent` | The event AppSync sends, which is also `request.event` |
 | `AppSyncEventsIdentity` | The caller, on `request.identity` |
 | `AppSyncEventsOperation` | `'PUBLISH' \| 'SUBSCRIBE'` |
@@ -356,8 +416,12 @@ All exported from `@lambda-event-router/appsync`.
 The `AppSyncEventsRouter` class and the `createAppSyncEventsRouter` and `defineEventsRoute` functions
 come from the same place.
 
-No type here takes a generic parameter. A route carries no schema, so there is nothing for one to pass
-through and every handler on this router is given the same request.
+`AppSyncEventsRequest`, `AppSyncEventsPublishedEvent`, `AppSyncEventsRouteDefinition` and the route
+inputs take the payload type as a parameter, defaulting to `JsonValue`. A `payloadSchema` fills it in
+with the schema's output, so you rarely name it yourself.
+
+`AppSyncEventsMiddleware` stays on the default. Middleware registers on the router as well as on a
+route, where no single route's schema applies. `JsonValue` comes from `@lambda-event-router/base`.
 
 ## Code example
 

@@ -9,6 +9,7 @@
     "lint:fix": "biome check --write .",
     "check": "tsx scripts/checkRoutes.ts",
     "trigger": "tsx scripts/trigger.ts",
+    "probe": "tsx scripts/probe.ts",
     "synth": "cdk synth",
     "diff": "cdk diff",
     "deploy": "cdk deploy --require-approval never",

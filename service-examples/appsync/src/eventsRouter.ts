@@ -3,6 +3,7 @@ import { createAppSyncEventsRouter } from '@lambda-event-router/appsync';
 import { admitTicketWatcher } from './handlers/admitTicketWatcher.js';
 import { archiveAuditEntry } from './handlers/archiveAuditEntry.js';
 import { holdTypingNotice, isTypingBatch } from './handlers/holdTypingNotice.js';
+import { probeEvents } from './handlers/probeEvents.js';
 import { recordTicketActivity } from './handlers/recordTicketActivity.js';
 import { trackPresence } from './handlers/trackPresence.js';
 import { logEventsRequest } from './middleware/logEventsRequest.js';
@@ -18,4 +19,5 @@ eventsRouter
   .publish({ channelPath: TICKET_CHANNEL_PATTERN, middleware: [withChannelContext], handler: recordTicketActivity })
   .subscribe({ channelPath: TICKET_CHANNEL_PATTERN, handler: admitTicketWatcher })
   .route(trackPresence)
-  .route(archiveAuditEntry);
+  .route(archiveAuditEntry)
+  .route(probeEvents);
