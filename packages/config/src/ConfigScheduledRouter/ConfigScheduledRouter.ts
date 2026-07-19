@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { ConfigEvent, ConfigResponse } from '../types.js';
 import type {
@@ -39,6 +45,7 @@ export function defineConfigScheduledRoute<
 
 export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, ConfigResponse> {
   private routes: InternalConfigScheduledRoute[] = [];
+  private routesOrdered = false;
   private middleware: ConfigScheduledMiddleware[] = [];
 
   constructor(options?: ConfigScheduledRouterOptions) {
@@ -63,6 +70,7 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
 
   route<TParams = Record<string, string>>(definition: ConfigScheduledRouteDefinition<TParams>): this {
     this.routes.push(definition as InternalConfigScheduledRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -93,7 +101,16 @@ export class ConfigScheduledRouter implements EventTypeRouter<ConfigEvent, Confi
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(input: ConfigScheduledFilterInput): Promise<InternalConfigScheduledRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

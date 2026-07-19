@@ -7,6 +7,7 @@ import {
   filterStringMatcher,
   handleEventWithMiddleware,
   isObject,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -44,6 +45,7 @@ export function defineRabbitMQRoute<
 
 export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined> {
   private routes: RabbitMQInternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: RabbitMQMiddleware[];
 
   constructor(options?: RabbitMQRouterOptions) {
@@ -57,6 +59,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
 
   route<TBody>(definition: RabbitMQRouteDefinition<TBody>): this {
     this.routes.push(definition as RabbitMQInternalRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -96,6 +99,13 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     }
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     event: RabbitMQEvent,
     queueName: string,
@@ -103,6 +113,8 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     message: RabbitMQMessage,
     record: RabbitMQMessage,
   ): Promise<RabbitMQInternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

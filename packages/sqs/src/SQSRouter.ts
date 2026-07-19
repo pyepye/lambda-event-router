@@ -8,6 +8,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -66,6 +67,7 @@ export function defineRoute<
 
 export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatchResponse> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private batchItemFailures: boolean;
   private middleware: Middleware<SQSRequest, void>[];
 
@@ -95,6 +97,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
       middleware: definition.middleware ?? [],
       handler: definition.handler as SQSRecordHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -216,11 +219,20 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     return result;
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     record: AWSSQSRecord,
     body: unknown,
     messageAttributes: SQSMessageAttributes,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

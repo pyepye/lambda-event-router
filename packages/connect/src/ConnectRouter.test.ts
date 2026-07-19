@@ -117,6 +117,32 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
+  test('orders a narrower route ahead of a broader one registered first', async ({ connectEvent }) => {
+    const broad = vi.fn();
+    const narrow = vi.fn();
+    router.route({ filters: {}, handler: broad });
+    router.route({ filters: { channel: 'VOICE' }, handler: narrow });
+    const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
+
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result?.handler).toBe(narrow);
+  });
+
+  test('orders a guarded route ahead of the fallback it shares filters with', async ({ connectEvent }) => {
+    const fallback = vi.fn();
+    const guarded = vi.fn();
+    router.route({ filters: { channel: 'VOICE' }, handler: fallback });
+    router.route({ filters: { channel: 'VOICE', custom: () => true }, handler: guarded });
+    const event = connectEvent({ Details: { ContactData: { Channel: 'VOICE' } } });
+
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result?.handler).toBe(guarded);
+  });
+
   test('matches when channel is in the channel filter array', async ({ connectEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { channel: ['VOICE', 'CHAT'] }, handler });

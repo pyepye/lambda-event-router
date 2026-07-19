@@ -90,12 +90,15 @@ which matters on any route carrying an `eventSchema`. See [Middleware](#middlewa
 eventRouter.route(generateReportRoute).route(reindexRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
-**A route with no `custom` matches every event this router will take**, which makes every route
-below it unreachable. Register a catch-all last if you want one at all, and see [Failures](#failures)
-for what leaving it off costs.
+**A route with no `custom` matches every event this router will take.** It ranks last whatever order you
+register it in, so the routes that do carry a `custom` still get their events. Two routes with different
+`custom` functions cannot be ranked against each other, so those keep registration order. See
+[Failures](#failures) for what leaving a catch-all off costs.
 
 ## Filters
 

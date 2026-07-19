@@ -8,6 +8,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   validateSchema,
 } from '@lambda-event-router/base';
 
@@ -70,6 +71,7 @@ export interface AppSyncRouterOptions {
 
 export class AppSyncRouter implements EventTypeRouter<ResolverEventInput, unknown> {
   private routes: InternalResolverRoute[] = [];
+  private routesOrdered = false;
   private middleware: AppSyncResolverMiddleware[];
   private batchItemFailures: boolean;
 
@@ -94,6 +96,7 @@ export class AppSyncRouter implements EventTypeRouter<ResolverEventInput, unknow
       middleware: definition.middleware ?? [],
       handler: definition.handler as InternalResolverRoute['handler'],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -199,11 +202,20 @@ export class AppSyncRouter implements EventTypeRouter<ResolverEventInput, unknow
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     parentTypeName: string,
     fieldName: string,
     event: AppSyncResolverEvent<Record<string, unknown>>,
   ): Promise<InternalResolverRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
       if (filters.parentTypeName !== undefined) {

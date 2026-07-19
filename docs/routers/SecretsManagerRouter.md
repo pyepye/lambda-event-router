@@ -58,15 +58,18 @@ step.
 secretsManagerRouter.route(createRoute).route(setRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. Matching on `step` does that, since a rotation delivers one step per call. See [match
-order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. Matching on `step` does that, since a rotation delivers one
+step per call. See [match order](/docs/routing#match-order) for how ranking works and what it cannot
+settle.
 
 **A step that matches no route throws** `No route matched for Secrets Manager rotation event (step: ...,
-secretId: ...)`. Secrets Manager expects every step to succeed, so an unmatched step fails the
-invocation and the rotation is marked failed rather than falling through. Register a filter-less
-catch-all last if you would rather handle every remaining step in one place, and see [nothing
-matched](/docs/routing#nothing-matched) for what the other routers do instead.
+secretId: ...)`. Secrets Manager expects every step to succeed, so an unmatched step fails the invocation
+and the rotation is marked failed rather than falling through. Register a filter-less catch-all if you
+would rather handle every remaining step in one place. It ranks last on its own, so it takes what the
+other steps turn down. See [nothing matched](/docs/routing#nothing-matched) for what the other routers do
+instead.
 
 A rotation event carries the step and the secret id rather than a payload you control, so there is
 nothing to validate and no schema validation section on this page.

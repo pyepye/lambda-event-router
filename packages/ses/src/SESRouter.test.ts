@@ -485,6 +485,36 @@ suite('SESRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders an exact recipient ahead of the wildcard that covers it', async ({ sesRecord }) => {
+      const wildcard = vi.fn();
+      const exact = vi.fn();
+
+      router.route(defineRoute({ filters: { recipient: '*@example.com' } }).handle(wildcard));
+      router.route(defineRoute({ filters: { recipient: 'recipient@example.com' } }).handle(exact));
+
+      const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record);
+
+      expect(result?.handler).toBe(exact);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ sesRecord }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      router.route(defineRoute({ filters: { recipient: 'recipient@example.com' } }).handle(fallback));
+      router.route(
+        defineRoute({ filters: { recipient: 'recipient@example.com', custom: () => true } }).handle(guarded),
+      );
+
+      const record = sesRecord({ ses: { receipt: { recipients: ['recipient@example.com'] } } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record);
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches when both recipients and senders match', async ({ sesRecord }) => {
       router.route(
         defineRoute({

@@ -58,14 +58,17 @@ turn.
 lexRouter.route(dialogRoute).route(fulfillmentRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A turn that matches no route throws** `No route matched for Amazon Lex event (intent: ...,
 invocationSource: ...)`. Lex expects a response, so an unmatched turn fails the invocation and the bot
 falls back to its configured error handling rather than continuing the conversation. Register a
-filter-less catch-all last if you would rather answer everything else in one place, and see [nothing
-matched](/docs/routing#nothing-matched) for what the other routers do instead.
+filter-less catch-all if you would rather answer everything else in one place. It ranks last on its own,
+so it takes what the other routes turn down. See [nothing matched](/docs/routing#nothing-matched) for
+what the other routers do instead.
 
 A Lex turn carries the intent and slots Lex has already parsed rather than a payload you control, so
 there is nothing to validate and no schema validation section on this page.

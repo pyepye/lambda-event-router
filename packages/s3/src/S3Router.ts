@@ -1,7 +1,12 @@
 import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { isS3BatchResponse } from './batchResponse.js';
@@ -94,6 +99,7 @@ function isS3TestEvent(event: unknown): event is S3TestEvent {
 
 export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3TestEvent, undefined | S3BatchResult> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private batchRoute: S3BatchRouteDefinition | undefined;
   private testEventRoute: S3TestEventRouteDefinition | undefined;
   private middleware: S3Middleware[] = [];
@@ -133,6 +139,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
       middleware: definition.middleware,
       handler: definition.handler as InternalHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -432,6 +439,7 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
       middleware,
       handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -522,12 +530,21 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     record: S3EventRecord,
     bucket: string,
     key: string,
     eventName: string,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

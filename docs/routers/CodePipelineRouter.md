@@ -59,8 +59,10 @@ codePipelineRouter.route({
 codePipelineRouter.route(deployRoute).route(migrateRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other
-route can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A job that matches no route reports failure to the pipeline and throws.** The stage fails with `No
 route matched for CodePipeline job <id>` and the Lambda re-throws. Register a route with empty

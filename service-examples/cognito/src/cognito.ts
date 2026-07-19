@@ -23,8 +23,8 @@ import { ADMIN_CALLER_CLIENT_ID } from './utils/constants.js';
 
 export const cognitoRouter = createCognitoRouter({ middleware: [logInvocation] });
 
-// Order matters and the first match wins. Each group runs from the narrowest filter to the widest, so
-// a route with no filter beyond its trigger source is registered last in its group.
+// The router ranks each group narrowest first, so a route filtered on nothing but its trigger source
+// takes what the more specific ones in that group turn down.
 cognitoRouter
   .preSignUpSignUp(rejectTestAccount)
   .route({

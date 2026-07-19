@@ -14,6 +14,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -67,6 +68,7 @@ export function defineRoute<
 
 export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEvent, FirehoseTransformationResult> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: FirehoseMiddleware[] = [];
 
   constructor(options?: FirehoseRouterOptions) {
@@ -86,6 +88,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
 
   route<TData>(definition: FirehoseRouteDefinition<TData>): this {
     this.routes.push(definition as InternalRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -170,11 +173,20 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     };
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     event: FirehoseTransformationEvent,
     record: FirehoseTransformationEventRecord,
     data: unknown,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

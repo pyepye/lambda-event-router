@@ -1,7 +1,12 @@
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type {
   LexDialogCodeHookRouteDefinition,
@@ -30,6 +35,7 @@ export function defineRoute(config: {
 
 export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
   private routes: LexRouteDefinition[] = [];
+  private routesOrdered = false;
   private middleware: LexMiddleware[] = [];
 
   constructor(options?: LexRouterOptions) {
@@ -54,6 +60,7 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
 
   route(definition: LexRouteDefinition): this {
     this.routes.push(definition);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -97,7 +104,16 @@ export class LexRouter implements EventTypeRouter<LexV2Event, LexV2Result> {
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(event: LexV2Event): Promise<LexRouteDefinition | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

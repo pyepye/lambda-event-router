@@ -61,8 +61,10 @@ every change.
 configRouter.route(tagsRoute).route(encryptionRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other
-route can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A change that matches no route throws** `No route matched for config rule <name>`, which fails the
 invocation. Register a route with empty `filters` as a catch-all if you would rather swallow rules

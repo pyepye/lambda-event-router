@@ -556,6 +556,21 @@ suite('CognitoRouter', () => {
         expect(result?.handler).toBe(firstHandler);
       });
 
+      test('orders a guarded route ahead of the catch-all it shares filters with', async ({
+        cognitoPreSignUpEvent,
+      }) => {
+        const catchAll = vi.fn();
+        const guarded = vi.fn();
+        router.route({ filters: {}, handler: catchAll });
+        router.route({ filters: { custom: () => true }, handler: guarded });
+
+        const event = cognitoPreSignUpEvent();
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(event, event.triggerSource);
+
+        expect(result?.handler).toBe(guarded);
+      });
+
       test('empty filters act as catch-all', async ({ cognitoPreSignUpEvent }) => {
         router.route({
           filters: {},

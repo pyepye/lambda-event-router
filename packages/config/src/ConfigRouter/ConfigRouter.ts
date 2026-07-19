@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { ConfigEvent, ConfigResponse } from '../types.js';
 import type {
@@ -53,6 +59,7 @@ const CHANGE_MESSAGE_TYPES: Set<string> = new Set([
 
 export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse> {
   private routes: InternalConfigRoute[] = [];
+  private routesOrdered = false;
   private middleware: ConfigMiddleware[] = [];
 
   constructor(options?: ConfigRouterOptions) {
@@ -78,6 +85,7 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     definition: ConfigRouteDefinition<TConfig, TParams>,
   ): this {
     this.routes.push(definition as InternalConfigRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -161,7 +169,16 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     await handleEventWithMiddleware(allMiddleware, request, handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(input: ConfigChangeFilterInput): Promise<InternalConfigRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

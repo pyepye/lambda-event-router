@@ -60,8 +60,10 @@ sesRouter.route({
 sesRouter.route(supportEmailRoute).route(bounceRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A message that matches no route throws**, which fails the invocation. A route with empty `filters`
 matches everything and gives unmatched mail somewhere to go, and see [nothing
@@ -403,9 +405,9 @@ export async function onSuspectEmail(request: SESRequest): Promise<SESResponse> 
 
 <CodeFileViewer :files="files" id="ses-example" default-file="ses.ts" line-numbers collapse-toggle fixed-height />
 
-The catch-all is registered last and takes everything the first two turned down, which is where spam
-and a failed virus scan end up. Every verdict combination is covered that way, and without it a suspect
-message addressed to `support@` would match nothing and throw.
+The catch-all ranks last wherever you put it and takes everything the other two turned down, which is
+where spam and a failed virus scan end up. Every verdict combination is covered that way, and without it
+a suspect message addressed to `support@` would match nothing and throw.
 
 `onSuspectEmail` returns `STOP_RULE_SET`, so a message that lands there stops the receipt rule set and
 no later action delivers it. This only takes effect when the rule invokes the Lambda synchronously.

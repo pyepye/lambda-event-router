@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   AppSyncEventsEvent,
@@ -39,6 +45,7 @@ export function defineEventsRoute<TPayloadSchema extends StandardSchemaV1 | unde
 
 export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, unknown> {
   private routes: InternalEventsRoute[] = [];
+  private routesOrdered = false;
   private middleware: AppSyncEventsMiddleware[];
 
   constructor(options?: AppSyncEventsRouterOptions) {
@@ -60,6 +67,7 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
 
   route<TPayload>(definition: AppSyncEventsRouteDefinition<TPayload>): this {
     this.routes.push(definition as InternalEventsRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -139,12 +147,21 @@ export class AppSyncEventsRouter implements EventTypeRouter<AppSyncEventsEvent, 
     return validated;
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     operation: string,
     channelPath: string,
     channelNamespace: string,
     event: AppSyncEventsEvent,
   ): Promise<InternalEventsRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

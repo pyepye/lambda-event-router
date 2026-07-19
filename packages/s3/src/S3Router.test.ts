@@ -560,6 +560,45 @@ suite('S3Router', () => {
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ s3Record }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: { bucket: 'my-bucket' } }).handle(broad));
+      router.route(defineRoute({ filters: { bucket: 'my-bucket', key: 'uploads/*' } }).handle(narrow));
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders an exact key ahead of the wildcard that covers it', async ({ s3Record }) => {
+      const wildcard = vi.fn();
+      const exact = vi.fn();
+      router.route(defineRoute({ filters: { bucket: 'my-bucket', key: 'uploads/*' } }).handle(wildcard));
+      router.route(defineRoute({ filters: { bucket: 'my-bucket', key: 'uploads/test.txt' } }).handle(exact));
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
+
+      expect(result?.handler).toBe(exact);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ s3Record }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { bucket: 'my-bucket' } }).handle(fallback));
+      router.route(defineRoute({ filters: { bucket: 'my-bucket', custom: () => true } }).handle(guarded));
+
+      const record = s3Record();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'my-bucket', 'uploads/test.txt', 'ObjectCreated:Put');
+
+      expect(result?.handler).toBe(guarded);
+    });
   });
 
   suite('handleEvent', () => {

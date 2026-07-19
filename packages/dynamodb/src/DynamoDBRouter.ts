@@ -9,6 +9,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   validateSchema,
 } from '@lambda-event-router/base';
 
@@ -146,6 +147,7 @@ export function defineRoute<
 
 export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, undefined | DynamoDBBatchResponse> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private batchItemFailures: boolean;
   private middleware: Middleware<DynamoDBRequest, void>[];
   private keys: DynamoDBRouterKeys | undefined;
@@ -242,6 +244,7 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
       ...definition,
       middleware: definition.middleware ?? [],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -341,6 +344,13 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     record: DynamoDBRecord,
     eventName: DynamoDBEventName,
@@ -349,6 +359,8 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
     newImage?: Record<string, unknown>, // TODO Make sure tests cover this
     oldImage?: Record<string, unknown>, // TODO Make sure tests cover this
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

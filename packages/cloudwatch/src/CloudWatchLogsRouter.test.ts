@@ -466,6 +466,32 @@ suite('CloudWatchLogsRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(broad));
+      router.route(defineRoute({ filters: { logGroup: '/aws/lambda/my-function' } }).handle(narrow));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(decodedData);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { logGroup: '/aws/lambda/my-function' } }).handle(fallback));
+      router.route(
+        defineRoute({ filters: { logGroup: '/aws/lambda/my-function', custom: () => true } }).handle(guarded),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(decodedData);
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches when multiple filter types all match', async () => {
       router.route(
         defineRoute({

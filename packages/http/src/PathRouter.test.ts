@@ -442,34 +442,119 @@ suite('PathRouter', () => {
       expect((await router.match('GET', '/a/y'))?.route.handler).toBe(yHandler);
     });
 
-    test('throws when two routes of the same method share a shape and differ only in param name', () => {
-      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
+    test('keeps two routes of the same shape in registration order', async () => {
+      const first = vi.fn();
+      const second = vi.fn();
+      router.get({ filters: { path: '/items/:id' }, handler: first });
+      router.get({ filters: { path: '/items/:slug' }, handler: second });
 
-      expect(() => router.get({ filters: { path: '/items/:slug' }, handler: vi.fn() })).toThrow(/ambiguous/i);
+      expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(first);
     });
 
-    test('does not treat the same shape under a different method as ambiguous', () => {
-      router.get({ filters: { path: '/items/:id' }, handler: vi.fn() });
+    test('registers the same path twice without complaint', async () => {
+      const first = vi.fn();
+      const second = vi.fn();
+      router.get({ filters: { path: '/items/latest' }, handler: first });
+      router.get({ filters: { path: '/items/latest' }, handler: second });
 
-      expect(() => router.post({ filters: { path: '/items/:slug' }, handler: vi.fn() })).not.toThrow();
+      expect((await router.match('GET', '/items/latest', buildFilterInput()))?.route.handler).toBe(first);
     });
 
-    test('exempts an ambiguous pair from the throw when one route carries a custom', async () => {
+    test('keeps the same shape under a different method apart', async () => {
+      const read = vi.fn();
+      const write = vi.fn();
+      router.get({ filters: { path: '/items/:id' }, handler: read });
+      router.post({ filters: { path: '/items/:slug' }, handler: write });
+
+      expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(read);
+      expect((await router.match('POST', '/items/1', buildFilterInput()))?.route.handler).toBe(write);
+    });
+
+    test('ranks a guarded route ahead of the same shape without a custom, in either order', async () => {
       const guarded = vi.fn();
       const fallback = vi.fn();
-
-      expect(() => {
-        router.get({
-          filters: { path: '/items/:id', custom: (input: HTTPFilterInput) => input.headers['x-route'] === 'guarded' },
-          handler: guarded,
-        });
-        router.get({ filters: { path: '/items/:slug' }, handler: fallback });
-      }).not.toThrow();
+      router.get({ filters: { path: '/items/:slug' }, handler: fallback });
+      router.get({
+        filters: { path: '/items/:id', custom: (input: HTTPFilterInput) => input.headers['x-route'] === 'guarded' },
+        handler: guarded,
+      });
 
       const guardedInput = buildFilterInput({ headers: { 'x-route': 'guarded' } });
 
       expect((await router.match('GET', '/items/1', guardedInput))?.route.handler).toBe(guarded);
       expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(fallback);
+    });
+
+    test('a route carrying a custom beats the same shape without one, fallback registered first', async () => {
+      const guarded = vi.fn();
+      const fallback = vi.fn();
+      router.get({ filters: { path: '/items/:slug' }, handler: fallback });
+      router.get({
+        filters: { path: '/items/:id', custom: (input: HTTPFilterInput) => input.headers['x-route'] === 'guarded' },
+        handler: guarded,
+      });
+
+      const guardedInput = buildFilterInput({ headers: { 'x-route': 'guarded' } });
+
+      expect((await router.match('GET', '/items/1', guardedInput))?.route.handler).toBe(guarded);
+      expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(fallback);
+    });
+
+    test('a more specific path beats a custom on a less specific one', async () => {
+      const literal = vi.fn();
+      const guardedParam = vi.fn();
+      router.get({ filters: { path: '/orders/:orderId', custom: () => true }, handler: guardedParam });
+      router.get({ filters: { path: '/orders/latest' }, handler: literal });
+
+      expect((await router.match('GET', '/orders/latest', buildFilterInput()))?.route.handler).toBe(literal);
+    });
+
+    test('keeps two routes carrying a custom on the same shape in registration order, both ahead of one without', async () => {
+      const plain = vi.fn();
+      const first = vi.fn();
+      const second = vi.fn();
+      router.get({ filters: { path: '/items/:id' }, handler: plain });
+      router.get({ filters: { path: '/items/:slug', custom: () => false }, handler: first });
+      router.get({ filters: { path: '/items/:other', custom: () => true }, handler: second });
+
+      expect((await router.match('GET', '/items/1', buildFilterInput()))?.route.handler).toBe(second);
+    });
+
+    test('ranks by path when routes of different lengths are registered alongside a custom', async () => {
+      const oneParam = vi.fn();
+      const paramThenLiteral = vi.fn();
+      const literalThenParam = vi.fn();
+      const twoParams = vi.fn();
+      router.get({ filters: { path: '/:u' }, handler: oneParam });
+      router.get({ filters: { path: '/:u/a' }, handler: paramThenLiteral });
+      router.get({ filters: { path: '/b/:v', custom: () => true }, handler: literalThenParam });
+      router.get({ filters: { path: '/:u/:id', custom: () => true }, handler: twoParams });
+
+      expect((await router.match('GET', '/a/a', buildFilterInput()))?.route.handler).toBe(paramThenLiteral);
+    });
+
+    test('ranks a literal ahead of a param when a shorter path is registered between them', async () => {
+      const param = vi.fn();
+      const collection = vi.fn();
+      const literal = vi.fn();
+      router.get({ filters: { path: '/users/:id' }, handler: param });
+      router.get({ filters: { path: '/users' }, handler: collection });
+      router.get({ filters: { path: '/users/me' }, handler: literal });
+
+      expect((await router.match('GET', '/users/me', buildFilterInput()))?.route.handler).toBe(literal);
+      expect((await router.match('GET', '/users/99', buildFilterInput()))?.route.handler).toBe(param);
+      expect((await router.match('GET', '/users', buildFilterInput()))?.route.handler).toBe(collection);
+    });
+
+    test('ranks routes of the same length against each other when a longer route sits between them', async () => {
+      const plain = vi.fn();
+      const longer = vi.fn();
+      const guarded = vi.fn();
+      router.get({ filters: { path: '/:x' }, handler: plain });
+      router.get({ filters: { path: '/:y/:z', custom: () => true }, handler: longer });
+      router.get({ filters: { path: '/:w', custom: () => true }, handler: guarded });
+
+      expect((await router.match('GET', '/b', buildFilterInput()))?.route.handler).toBe(guarded);
     });
   });
 
@@ -507,6 +592,15 @@ suite('PathRouter', () => {
       router.get({ filters: { path: '/orders/latest' }, handler: vi.fn() });
 
       expect(router.getMethodsForPath('/orders/latest').sort()).toEqual(['DELETE', 'GET']);
+    });
+
+    test('returns methods in registration order even when ranking moves the routes', async () => {
+      router.get({ filters: { path: '/items' }, handler: vi.fn() });
+      router.options({ filters: { path: '/items', custom: () => false }, handler: vi.fn() });
+
+      await router.match('GET', '/items', buildFilterInput());
+
+      expect(router.getMethodsForPath('/items')).toEqual(['GET', 'OPTIONS']);
     });
   });
 });

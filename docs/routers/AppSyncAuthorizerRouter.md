@@ -43,8 +43,9 @@ authRouter.route({
 })
 ```
 
-`handler` is required and the rest is optional. Routes match in registration order and the first
-match wins, so a route with no filters takes everything below it. See [match
+`handler` is required and the rest is optional. Routes are ranked by how specific they are, so an exact
+`apiId` beats a wildcard and a filtered route beats one with no filters, whatever order you registered
+them in. Registration order decides what the filters cannot. See [match
 order](/docs/routing#match-order).
 
 A route with no filters is a complete authorizer on its own, and that is the common shape. Filters

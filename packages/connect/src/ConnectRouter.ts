@@ -1,7 +1,12 @@
 import type { ConnectContactFlowResult, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type {
   ConnectChannelRouteDefinition,
@@ -31,6 +36,7 @@ export function defineRoute(config: {
 
 export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectContactFlowResult> {
   private routes: ConnectRouteDefinition[] = [];
+  private routesOrdered = false;
   private middleware: ConnectMiddleware[] = [];
 
   constructor(options?: ConnectRouterOptions) {
@@ -49,6 +55,7 @@ export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectConta
 
   route(definition: ConnectRouteDefinition): this {
     this.routes.push(definition);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -140,8 +147,17 @@ export class ConnectRouter implements EventTypeRouter<ConnectEvent, ConnectConta
     return handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(event: ConnectEvent): Promise<ConnectRouteDefinition | undefined> {
     const { ContactData: contactData } = event.Details;
+
+    this.orderRoutes();
 
     for (const route of this.routes) {
       const { filters } = route;

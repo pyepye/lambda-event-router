@@ -5,7 +5,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import { NoRouteMatchedError } from '../errors';
 import type { EventTypeRouter } from '../LambdaRouter';
 import { handleEventWithMiddleware } from '../middleware';
-import { isKnownEventSource, isObject, validateSchema } from '../utils';
+import { isKnownEventSource, isObject, orderRoutesBySpecificity, validateSchema } from '../utils';
 import type {
   EventFilterInput,
   EventFilters,
@@ -42,6 +42,7 @@ export interface EventRouterOptions<TResponse = unknown> {
 
 export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown, TResponse> {
   private routes: InternalEventRoute[] = [];
+  private routesOrdered = false;
   private middleware: EventRouterMiddleware<unknown, TResponse>[];
   private readonly matchedRoutes = new WeakMap<Record<string, unknown>, InternalEventRoute>();
   readonly matchTier = 'fallback'; // LambdaRouter sorts this last:
@@ -69,6 +70,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
       middleware,
       handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -86,12 +88,21 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
     return handleEventWithMiddleware(allMiddleware, request, route.handler as EventHandler<unknown, TResponse>);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(event: unknown): Promise<InternalEventRoute | undefined> {
     // canHandleEvent calls handleEvent but both call matchRoute - cache so filters.custom isn't called twice
     const cached = isObject(event) ? this.matchedRoutes.get(event) : undefined;
     if (cached) return cached;
 
     const filterInput: EventFilterInput = { event };
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
       if (filters.custom) {

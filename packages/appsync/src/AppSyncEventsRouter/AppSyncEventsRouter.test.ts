@@ -393,6 +393,34 @@ suite('AppSyncEventsRouter', () => {
       expect(matched?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route({ filters: { operation: 'PUBLISH' }, handler: broad });
+      router.route({ filters: { operation: 'PUBLISH', channelNamespace: 'default' }, handler: narrow });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+
+      expect(matched?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route({ filters: { operation: 'PUBLISH' }, handler: fallback });
+      router.route({ filters: { operation: 'PUBLISH', custom: () => true }, handler: guarded });
+
+      const event = createAppSyncEventsEvent({ info: { operation: 'PUBLISH' } });
+
+      // @ts-expect-error - testing private method directly
+      const matched = await router.matchRoute('PUBLISH', '/default/channel', 'default', event);
+
+      expect(matched?.handler).toBe(guarded);
+    });
+
     test('matches when combined filters and custom all pass', async () => {
       const handler = vi.fn();
       router.route({

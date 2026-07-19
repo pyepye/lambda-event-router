@@ -1,7 +1,12 @@
 import type { Context, SecretsManagerRotationEventStep } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type {
   SecretsManagerEvent,
@@ -49,6 +54,7 @@ export function defineRoute(config: {
 
 export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerEvent, undefined> {
   private routes: SecretsManagerRouteDefinition[] = [];
+  private routesOrdered = false;
   private middleware: SecretsManagerMiddleware[] = [];
 
   constructor(options?: SecretsManagerRouterOptions) {
@@ -66,6 +72,7 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerEvent
 
   route(definition: SecretsManagerRouteDefinition | SecretsManagerStepRouteDefinition): this {
     this.routes.push(definition);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -120,8 +127,17 @@ export class SecretsManagerRouter implements EventTypeRouter<SecretsManagerEvent
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(request: SecretsManagerFilterInput): Promise<SecretsManagerRouteDefinition | undefined> {
     const { secretId, secretName, step } = request;
+
+    this.orderRoutes();
 
     for (const route of this.routes) {
       const { filters } = route;

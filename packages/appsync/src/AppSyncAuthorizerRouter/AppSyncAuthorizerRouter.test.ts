@@ -398,6 +398,34 @@ suite('AppSyncAuthorizerRouter', () => {
       });
     });
 
+    test('orders an exact api id ahead of the wildcard that covers it', async () => {
+      const wildcard = vi.fn();
+      router
+        .route(defineAuthorizerRoute({ filters: { apiId: 'test-*' } }).handle(wildcard))
+        .route(defineAuthorizerRoute({ filters: { apiId: 'test-api-id' } }).handle(async () => Authorized()));
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+      expect(wildcard).not.toHaveBeenCalled();
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      router
+        .route(defineAuthorizerRoute({ filters: { apiId: 'test-api-id' } }).handle(fallback))
+        .route(
+          defineAuthorizerRoute({ filters: { apiId: 'test-api-id', custom: () => true } }).handle(async () =>
+            Authorized(),
+          ),
+        );
+
+      await expect(router.handleEvent(createAppSyncAuthorizerEvent(), createMockContext())).resolves.toEqual({
+        isAuthorized: true,
+      });
+      expect(fallback).not.toHaveBeenCalled();
+    });
+
     test('matches on the operation name', async () => {
       const other = vi.fn();
       router

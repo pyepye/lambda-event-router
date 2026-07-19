@@ -3,7 +3,14 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject, logger, safeJsonParse, validateSchema } from '@lambda-event-router/base';
+import {
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  orderRoutesBySpecificity,
+  safeJsonParse,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import { isHTTPShapedResponse, isWebSocketResponse } from './response.js';
 import type {
@@ -79,6 +86,7 @@ export function defineWebSocketRoute<
 
 export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocketResult> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: WebSocketMiddleware[];
 
   constructor(options?: WebSocketRouterOptions) {
@@ -116,6 +124,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       middleware: definition.middleware as WebSocketMiddleware[] | undefined,
       handler: definition.handler as InternalRoute['handler'],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -125,6 +134,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       middleware,
       handler: handler as InternalRoute['handler'],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -134,6 +144,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       middleware,
       handler: handler as InternalRoute['handler'],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -145,6 +156,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       middleware,
       handler: handler as InternalRoute['handler'],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -202,7 +214,16 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
     }
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(filterInput: WebSocketFilterInput): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

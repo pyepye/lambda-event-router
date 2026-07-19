@@ -5,6 +5,7 @@ import {
   filterStringMatcher,
   handleEventWithMiddleware,
   isObject,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -45,6 +46,7 @@ export function defineActiveMQRoute<
 
 export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined> {
   private routes: ActiveMQInternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: ActiveMQMiddleware[];
 
   constructor(options?: ActiveMQRouterOptions) {
@@ -60,6 +62,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     definition: ActiveMQRouteDefinition<TBody, TMessageType>,
   ): this {
     this.routes.push(definition as ActiveMQInternalRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -68,6 +71,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       ...definition,
       filters: { ...definition.filters, messageType: 'jms/text-message' },
     } as ActiveMQInternalRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -76,6 +80,7 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
       ...definition,
       filters: { ...definition.filters, messageType: 'jms/bytes-message' },
     } as ActiveMQInternalRoute);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -117,11 +122,20 @@ export class ActiveMQRouter implements EventTypeRouter<ActiveMQEvent, undefined>
     }
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     event: ActiveMQEvent,
     message: ActiveMQDecodedMessage,
     record: ActiveMQMessage,
   ): Promise<ActiveMQInternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

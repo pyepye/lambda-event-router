@@ -476,6 +476,50 @@ suite('DynamoDBRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a single event name ahead of the list that covers it', async ({ dynamoDBInsertRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      router.route(defineRoute({ filters: { eventName: ['INSERT', 'MODIFY'] } }).handle(broad));
+      router.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(narrow));
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ dynamoDBInsertRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      router.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(broad));
+      router.route(
+        defineRoute({ filters: { eventName: 'INSERT', streamViewType: 'NEW_AND_OLD_IMAGES' } }).handle(narrow),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ dynamoDBInsertRecord }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      router.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(fallback));
+      router.route(defineRoute({ filters: { eventName: 'INSERT', custom: () => true } }).handle(guarded));
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('does not match when eventName matches but eventSourceArn does not', async ({ dynamoDBInsertRecord }) => {
       router.route(
         defineRoute({

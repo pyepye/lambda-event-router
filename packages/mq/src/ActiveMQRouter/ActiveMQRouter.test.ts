@@ -532,6 +532,21 @@ suite('ActiveMQRouter', () => {
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
+
+    test('orders a guarded route ahead of the catch-all it shares filters with', async ({ activeMQMessage }) => {
+      const catchAll = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineActiveMQRoute({ filters: {} }).handle(catchAll));
+      router.route(defineActiveMQRoute({ filters: { custom: () => true } }).handle(guarded));
+
+      const event = createActiveMQEvent();
+      const message = activeMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, message);
+
+      expect(result?.handler).toBe(guarded);
+    });
   });
 
   suite('handleEvent', () => {

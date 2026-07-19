@@ -59,8 +59,10 @@ firehoseRouter.route({
 firehoseRouter.route(logLineRoute).route(appEventRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A record that matches no route comes back as `ProcessingFailed`.** Firehose sends those to the error
 output prefix on your delivery stream rather than to the destination, and every other record in the

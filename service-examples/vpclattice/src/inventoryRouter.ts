@@ -34,9 +34,9 @@ export const inventoryRouter = createVPCLatticeRouter({
   },
 });
 
-// Order matters in one place: adjustStockOnFloor and adjustStockLevel share a method and a path,
-// so the one with the custom filter is registered first. Everywhere else the router ranks routes
-// itself, which is why /stock/available is reached despite being registered after /stock/:sku.
+// The router ranks routes itself, which is why /stock/available is reached despite being registered
+// after /stock/:sku, and why adjustStockOnFloor's custom filter is asked before adjustStockLevel takes
+// the same method and path.
 inventoryRouter
   .route(adjustStockOnFloor)
   .patch({ filters: { path: '/stock/:sku' }, bodySchema: StockAdjustmentSchema, handler: adjustStockLevel })

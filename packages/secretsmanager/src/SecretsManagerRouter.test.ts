@@ -592,6 +592,44 @@ suite('SecretsManagerRouter', () => {
         expect(result.handler).toBe(firstHandler);
       });
 
+      test('orders a narrower route ahead of a broader one registered first', async () => {
+        const broad = vi.fn();
+        const narrow = vi.fn();
+
+        router.route(defineRoute({ filters: {} }).handle(broad));
+        router.route(defineRoute({ filters: { step: 'createSecret' } }).handle(narrow));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'any-secret',
+          secretName: 'any-secret',
+          clientRequestToken: 'any-token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+
+        expect(result?.handler).toBe(narrow);
+      });
+
+      test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+        const fallback = vi.fn();
+        const guarded = vi.fn();
+
+        router.route(defineRoute({ filters: { step: 'createSecret' } }).handle(fallback));
+        router.route(defineRoute({ filters: { step: 'createSecret', custom: () => true } }).handle(guarded));
+
+        const request: SecretsManagerFilterInput = {
+          secretId: 'any-secret',
+          secretName: 'any-secret',
+          clientRequestToken: 'any-token',
+          step: 'createSecret',
+        };
+        // @ts-expect-error - testing private method directly
+        const result = await router.matchRoute(request);
+
+        expect(result?.handler).toBe(guarded);
+      });
+
       test('returns undefined when no routes are defined', async () => {
         const request: SecretsManagerFilterInput = {
           secretId: 'any-secret',

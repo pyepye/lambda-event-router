@@ -483,6 +483,30 @@ suite('WebSocketRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route({ filters: { eventType: 'MESSAGE' }, handler: broad });
+      router.route({ filters: { eventType: 'MESSAGE', routeKey: '$default' }, handler: narrow });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: '$default' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route({ filters: { eventType: 'MESSAGE' }, handler: fallback });
+      router.route({ filters: { eventType: 'MESSAGE', custom: () => true }, handler: guarded });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ eventType: 'MESSAGE', routeKey: '$default' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches route by custom', async () => {
       router.route(
         defineWebSocketRoute({

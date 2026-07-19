@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   EventBridgeEventEnvelope,
@@ -63,6 +69,7 @@ export function defineRoute<
 
 export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelope, void> {
   private routes: InternalEventBridgeRoute[] = [];
+  private routesOrdered = false;
   private middleware: EventBridgeMiddleware[] = [];
 
   constructor(options?: EventBridgeRouterOptions) {
@@ -89,6 +96,7 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       middleware,
       handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -121,6 +129,13 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(event: EventBridgeEventEnvelope): Promise<InternalEventBridgeRoute | undefined> {
     const filterInput: EventBridgeFilterInput = {
       event,
@@ -128,6 +143,8 @@ export class EventBridgeRouter implements EventTypeRouter<EventBridgeEventEnvelo
       detailType: event['detail-type'],
       detail: event.detail,
     };
+
+    this.orderRoutes();
 
     for (const route of this.routes) {
       const { filters } = route;

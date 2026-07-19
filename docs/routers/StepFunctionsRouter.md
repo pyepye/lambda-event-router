@@ -65,10 +65,11 @@ stepFunctionsRouter.route({
 stepFunctionsRouter.route(processOrderRoute).route(enrichDataRoute)
 ```
 
-Routes match in registration order and the first match wins. A task payload carries no service
-identifier, so give every route a `custom` that recognises its own task, usually a `taskType`
-field you set in the state machine. See [match order](/docs/routing#match-order) for what goes wrong
-when they overlap.
+Routes are ranked by how specific they are, and registration order decides what the filters cannot. A
+task payload carries no service identifier, so give every route a `custom` that recognises its own task,
+usually a `taskType` field you set in the state machine. A route carrying a `custom` is ranked ahead of
+the same route without one, so a guarded route beats its own fallback. See [match
+order](/docs/routing#match-order) for how ranking works and what it cannot settle.
 
 **A route with empty `filters` matches every event this router claims, which is nearly all of them.**
 That makes the whole Lambda a Step Functions Lambda, so keep an unfiltered route for a Lambda that only

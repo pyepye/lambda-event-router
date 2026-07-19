@@ -716,6 +716,30 @@ suite('LambdaAuthorizerRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route({ filters: { type: 'REQUEST' }, handler: broad });
+      router.route({ filters: { type: 'REQUEST', method: 'GET' }, handler: narrow });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route({ filters: { type: 'REQUEST' }, handler: fallback });
+      router.route({ filters: { type: 'REQUEST', custom: () => true }, handler: guarded });
+
+      // @ts-expect-error - testing private method
+      const result = await router.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches route by custom', async () => {
       router.route(
         defineLambdaAuthorizerRoute({

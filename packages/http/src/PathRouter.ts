@@ -21,7 +21,7 @@ export interface InternalRoute {
   pattern: RegExp;
   pathParamNames: string[]; // path param names in order, mapped to the pattern's capture groups
   pathParamMask: boolean[]; // true where a segment is a path param, walked left to right to rank specificity
-  matchShape: string; // method + path with params flattened to ':'; equal shapes match the same requests
+  registrationIndex: number; // position the route was registered in, which ranking does not disturb
   custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
   middleware: Middleware<ApiRequest, HandlerResponse>[];
@@ -100,23 +100,31 @@ function normalizePath(path: string): string {
   return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
-function describePathSegments(method: HttpMethod, path: string): { pathParamMask: boolean[]; matchShape: string } {
-  // Split a normalized path into its segments and mark each a path param or a literal.
+function describePathSegments(path: string): boolean[] {
   const segments = path === '/' ? [] : path.replace(/^\//, '').split('/');
-  const pathParamMask = segments.map((segment) => segment.startsWith(':'));
-  const tokens = segments.map((segment) => (segment.startsWith(':') ? ':' : segment));
-  return { pathParamMask, matchShape: `${method} /${tokens.join('/')}` };
+  return segments.map((segment) => segment.startsWith(':'));
 }
 
 // Rank routes most specific first. Literal segments should sort above a param at the same position (compared
 // left to right). This means the first position where the two disagree decides.
 function compareRouteSpecificity(a: InternalRoute, b: InternalRoute): number {
-  const length = Math.min(a.pathParamMask.length, b.pathParamMask.length);
-  for (let index = 0; index < length; index++) {
-    if (a.pathParamMask[index] !== b.pathParamMask[index]) {
-      return a.pathParamMask[index] ? 1 : -1;
+  // Length first keeps the comparison total. Comparing only the shared prefix ranks a short path equal to two
+  // longer ones that differ from each other, which Array.sort cannot place consistently
+  if (a.pathParamMask.length !== b.pathParamMask.length) {
+    return a.pathParamMask.length - b.pathParamMask.length;
+  }
+
+  for (const [index, aIsParam] of a.pathParamMask.entries()) {
+    if (aIsParam !== b.pathParamMask[index]) {
+      return aIsParam ? 1 : -1;
     }
   }
+
+  // A custom can only reject a request, so a route carrying one matches a subset of the same path without one
+  if ((a.custom !== undefined) !== (b.custom !== undefined)) {
+    return a.custom === undefined ? 1 : -1;
+  }
+
   // Routes that agree on every compared position are equal and are kept in the same order
   return 0;
 }
@@ -167,25 +175,15 @@ export class PathRouter {
     const { custom } = config.filters;
     const path = normalizePath(config.filters.path);
     const { pattern, pathParamNames } = this.compilePath(path);
-    const { pathParamMask, matchShape } = describePathSegments(method, path);
-
-    // Error if we can't work out the order of 2 routes and there is no custom to tell them apart
-    if (custom === undefined) {
-      const clash = this.routes.find((route) => route.matchShape === matchShape && route.custom === undefined);
-      if (clash) {
-        throw new Error(
-          `Route ${method} ${path} is ambiguous with ${method} ${clash.path}: both match the same paths and cannot be ranked by specificity. Give them different paths, or add a custom to one.`,
-        );
-      }
-    }
+    const pathParamMask = describePathSegments(path);
 
     this.routes.push({
       method,
       path,
+      registrationIndex: this.routes.length,
       pattern,
       pathParamNames,
       pathParamMask,
-      matchShape,
       custom,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
       middleware: config.middleware ?? [],
@@ -223,16 +221,14 @@ export class PathRouter {
     };
   }
 
+  // Methods come back in registration order, so the CORS preflight header does not move when ranking does
   getMethodsForPath(path: string): HttpMethod[] {
-    this.sortRoutes();
     const normalizedPath = normalizePath(path);
-    const methods: HttpMethod[] = [];
-    for (const route of this.routes) {
-      if (route.pattern.test(normalizedPath) && !methods.includes(route.method)) {
-        methods.push(route.method);
-      }
-    }
-    return methods;
+    const matched = this.routes
+      .filter((route) => route.pattern.test(normalizedPath))
+      .sort((a, b) => a.registrationIndex - b.registrationIndex);
+
+    return [...new Set(matched.map((route) => route.method))];
   }
 
   async match(method: string, path: string, filterInput?: HTTPFilterInput): Promise<RouteMatch | null> {

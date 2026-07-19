@@ -7,7 +7,7 @@ import type {
 } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import { handleEventWithMiddleware, isObject, orderRoutesBySpecificity } from '@lambda-event-router/base';
 import { buildValueMaps } from '@lambda-event-router/http';
 
 import { isAuthorizerResponse } from './response.js';
@@ -114,6 +114,7 @@ function isRequestV2Event(event: LambdaAuthorizerEvent): event is APIGatewayRequ
 
 export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerEvent, LambdaAuthorizerResult> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: LambdaAuthorizerMiddleware[];
 
   constructor(options?: LambdaAuthorizerRouterOptions) {
@@ -150,6 +151,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
       middleware: definition.middleware,
       handler: definition.handler as LambdaAuthorizerHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -162,6 +164,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
       middleware,
       handler: handler as LambdaAuthorizerHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -175,6 +178,7 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
       middleware,
       handler: handler as LambdaAuthorizerHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -252,7 +256,16 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
     throw new Error('Unrecognized Lambda Authorizer event format');
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(filterInput: LambdaAuthorizerFilterInput): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

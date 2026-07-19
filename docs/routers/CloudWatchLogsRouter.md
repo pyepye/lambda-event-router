@@ -56,8 +56,10 @@ cloudWatchLogsRouter.route({
 cloudWatchLogsRouter.route(lambdaLogsRoute).route(ecsLogsRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other
-route can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 A subscription carries decoded log data whose shape CloudWatch fixes rather than a payload you
 control, so there is no schema to attach and nothing to validate. Match on the log group, the

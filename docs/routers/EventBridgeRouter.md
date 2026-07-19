@@ -63,9 +63,11 @@ every event.
 eventBridgeRouter.route(orderCreatedRoute).route(ec2StateChangeRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other
-route can match. Matching on `source` and `detailType` together does that, since no two kinds of
-event share both. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. Matching on `source` and `detailType` together does that,
+since no two kinds of event share both. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 The `detail` payload is `unknown` until you type it, either with a schema or from the source and
 detail type of a known AWS event. See [Typed detail](#typed-detail) for both.

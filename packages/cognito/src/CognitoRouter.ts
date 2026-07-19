@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type {
   CognitoEvent,
@@ -183,6 +189,7 @@ type CognitoResponse = CognitoEvent;
 
 export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoResponse> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: CognitoMiddleware[] = [];
 
   constructor(options?: CognitoRouterOptions) {
@@ -212,6 +219,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
       middleware: definition.middleware as CognitoMiddleware[] | undefined,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -523,6 +531,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
       middleware: definition.middleware as CognitoMiddleware[] | undefined,
       handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -552,12 +561,21 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     return await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     event: CognitoEvent,
     triggerSource: CognitoTriggerSource,
   ): Promise<InternalRoute | undefined> {
     // UserMigration events don't have userAttributes on request
     const userAttributes = hasUserAttributes(event.request) ? event.request.userAttributes : undefined;
+
+    this.orderRoutes();
 
     for (const route of this.routes) {
       const { filters } = route;

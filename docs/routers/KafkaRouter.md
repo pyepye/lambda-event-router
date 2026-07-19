@@ -61,8 +61,10 @@ kafkaRouter.route({
 kafkaRouter.route(stockMovedRoute).route(stockAlertRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A record that matches no route throws.** With `batchItemFailures` off that fails the entire batch,
 including records that would have succeeded, so adding a topic to the event source mapping without

@@ -2,7 +2,12 @@ import { gunzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsEventData, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type {
   CloudWatchLogsControlMessageRouteDefinition,
@@ -37,6 +42,7 @@ export function defineRoute(config: {
 
 export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent, undefined> {
   private routes: CloudWatchLogsRouteDefinition[] = [];
+  private routesOrdered = false;
   private middleware: CloudWatchLogsMiddleware[] = [];
 
   constructor(options?: CloudWatchLogsRouterOptions) {
@@ -51,6 +57,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
 
   route(definition: CloudWatchLogsRouteDefinition): this {
     this.routes.push(definition);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -59,6 +66,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
       ...definition,
       filters: { ...definition.filters, messageType: 'DATA_MESSAGE' },
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -67,6 +75,7 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
       ...definition,
       filters: { ...definition.filters, messageType: 'CONTROL_MESSAGE' },
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -96,7 +105,16 @@ export class CloudWatchLogsRouter implements EventTypeRouter<CloudWatchLogsEvent
     return decodedData;
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(input: CloudWatchLogsDecodedData): Promise<CloudWatchLogsRouteDefinition | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

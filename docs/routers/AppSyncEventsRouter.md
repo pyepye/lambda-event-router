@@ -54,8 +54,10 @@ A route has no schema key, so validate the payloads you were sent inside the han
 eventsRouter.route(orderPublishRoute).route(orderSubscribeRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A request that matches no route throws `No route matched for PUBLISH on channel /orders/eu`.**
 AppSync reads a failed invocation as a refusal, so the publish fails or the subscription is turned

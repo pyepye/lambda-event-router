@@ -29,7 +29,7 @@ export const handler = lambdaRouter.handler()
 
 - **Multi-source routing** - Combine routers from different AWS services in a single Lambda handler
 - **Type-safe** - Full TypeScript support with inferred types from schemas and filters for inline handlers
-- **Declarative filters** - Route events by service-specific data - ARN, eventType, topic, bucket, event name, detail type and custom filter functions
+- **Declarative filters** - Route events by service-specific data - ARN, eventType, topic, bucket, event name, detail type and custom filter functions. Where two routes overlap, the more specific one is tried first, whatever order you registered them in
 - **Native support for 29+ AWS services** - Includes dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and more. Any service that emits Lambda events is supported out of the box.
 - **Works with any AWS service** - Even services without native Lambda support can be integrated using CloudTrail and EventBridge using the EventBridgeRouter.
 - **Schema validation** - Built-in validation for request bodies, message attributes, path params and more. Works with any Standard Schema library

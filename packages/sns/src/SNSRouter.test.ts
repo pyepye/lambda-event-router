@@ -598,6 +598,34 @@ suite('SNSRouter', () => {
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: { topicArn: 'arn:aws:sns:us-east-1:123456789012:*' } }).handle(broad));
+      router.route(defineRoute({ filters: { topicArn } }).handle(narrow));
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { topicArn } }).handle(fallback));
+      router.route(defineRoute({ filters: { topicArn, custom: () => true } }).handle(guarded));
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result?.handler).toBe(guarded);
+    });
   });
 
   suite('handleEvent', () => {

@@ -1,7 +1,12 @@
 import type { AppSyncAuthorizerEvent, Context } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import { isAppSyncAuthorizerResponse } from './response.js';
 import type {
@@ -26,6 +31,7 @@ export function defineAuthorizerRoute(config?: AppSyncAuthorizerRouteInput): App
 
 export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorizerEvent, AppSyncAuthorizerResponse> {
   private routes: InternalAuthorizerRoute[] = [];
+  private routesOrdered = false;
   private middleware: AppSyncAuthorizerMiddleware[];
 
   constructor(options?: AppSyncAuthorizerRouterOptions) {
@@ -54,6 +60,7 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
       middleware: definition.middleware,
       handler: definition.handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -90,11 +97,20 @@ export class AppSyncAuthorizerRouter implements EventTypeRouter<AppSyncAuthorize
     }
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     apiId: string,
     operationName: string | undefined,
     event: AppSyncAuthorizerEvent,
   ): Promise<InternalAuthorizerRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

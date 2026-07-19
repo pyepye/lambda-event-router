@@ -207,11 +207,11 @@ export const highValueOrderRoute = defineRoute({
 
 ## Match order
 
-Routes are checked in the order you register them and the first match wins, so a broad route
-registered early takes the events a later one was written for.
+Routes are ranked by specificity before matching. If one route matches only a subset of another, it is
+tried first, regardless of registration order.
 
 ```ts
-// Takes every record on the queue, whatever its attributes
+// Broader: matches everything the route below matches, and more
 sqsRouter.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN
@@ -219,7 +219,7 @@ sqsRouter.route({
   handler: processOrder,
 })
 
-// Never reached, because the route above matched first
+// Narrower: same queue, plus a message attribute
 sqsRouter.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN,
@@ -229,18 +229,38 @@ sqsRouter.route({
 })
 ```
 
-Swapping the two fixes this pair. Adding `messageAttributes: { type: 'OrderPlaced' }` to the first
-route fixes it for good, and that is the approach to reach for: make the filters mutually exclusive so
-registration order stops carrying any meaning. In practice it means giving each route its own message
-attribute or detail type rather than leaning on one broad route being registered last.
+Ranking comes from the filters alone. **Every key in the broader route must be covered**, so filters are
+compared as one test:
 
-**Check the router page before relying on order.** Stopping at the first match is per router rather
-than a framework rule, and a router that runs every matching route instead makes overlapping filters
-deliberate rather than a mistake. Each router page says which of the two it does.
+- A filters object with fewer keys is broader, since a key you leave off is one you do not constrain.
+  `filters: {}` constrains nothing at all, so it is the broadest route you can write
+- An exact value beats a pattern matching it, so `orders-2024` is tried before `orders-*`
+- A pattern beats a longer pattern of the same shape, so `orders-*` is tried before `orders-2024-*`,
+  and `*` on its own is broader than every other matcher
+- A single value beats a list holding it, so `'INSERT'` is tried before `['INSERT', 'MODIFY']`
+- A `custom` can only reject an event, never accept an extra one, so a route carrying one is tried
+  before the same route without it. A guarded route beats its own fallback
 
-The HTTP routers (API Gateway, ALB, VPC Lattice) do not use registration order at all. They rank
-overlapping routes by path specificity, so a literal segment beats a param at the same position and
-`/orders/latest` wins over `/orders/:orderId` whichever order you register them in.
+If neither route covers the other, **registration order is preserved**. This includes filters that
+disagree on keys, most `RegExp` pairs, incompatible patterns and a `custom` on the broader route.
+Identical filters also stay in registration order. Nothing else moves either: a route is only lifted past
+a route it is provably narrower than.
+
+**Ranking is based on what filters could exclude, not your actual traffic.** A key that is always present
+still counts, so `{ tenant: '*', type: 'Order' }` ranks ahead of `{ type: 'Order' }` even if they
+currently match the same events. Prefer mutually exclusive filters, such as distinct message attributes
+or detail types, to avoid relying on ranking.
+
+**Check the router page before relying on order.** First-match behaviour is router-specific. CodeCommit
+runs every matching route, so it is not ranked at all.
+
+HTTP routers (API Gateway, ALB, VPC Lattice) rank paths instead. Literal segments beat params at the same
+position, left to right: `/orders/latest` beats `/orders/:orderId`, and `/a/:x` beats `/:y/b` for `/a/b`.
+A `custom` also beats the same path without one. Identical paths use registration order.
+
+**The difference is that paths are ordered; filter objects aren't.** HTTP routers can therefore resolve
+overlaps that filter routers leave alone, because a filters object has no leftmost key to appeal to when
+`source` and `detailType` disagree.
 
 ### Nothing matched
 

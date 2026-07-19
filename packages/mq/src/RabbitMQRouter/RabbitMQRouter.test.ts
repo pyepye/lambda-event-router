@@ -508,6 +508,38 @@ suite('RabbitMQRouter', () => {
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ rabbitMQMessage }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(broad));
+      router.route(defineRabbitMQRoute({ filters: { queue: 'test-queue' } }).handle(narrow));
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ rabbitMQMessage }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      router.route(defineRabbitMQRoute({ filters: { queue: 'test-queue' } }).handle(fallback));
+      router.route(defineRabbitMQRoute({ filters: { queue: 'test-queue', custom: () => true } }).handle(guarded));
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result?.handler).toBe(guarded);
+    });
   });
 
   suite('handleEvent', () => {

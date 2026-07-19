@@ -158,6 +158,32 @@ suite('matchRoute', () => {
     expect(result?.handler).toBe(handler);
   });
 
+  test('orders a narrower route ahead of a broader one registered first', async ({ lexEvent }) => {
+    const broad = vi.fn();
+    const narrow = vi.fn();
+    router.route({ filters: {}, handler: broad });
+    router.route({ filters: { intentName: 'CheckBalance' }, handler: narrow });
+
+    const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result?.handler).toBe(narrow);
+  });
+
+  test('orders a guarded route ahead of the fallback it shares filters with', async ({ lexEvent }) => {
+    const fallback = vi.fn();
+    const guarded = vi.fn();
+    router.route({ filters: { intentName: 'CheckBalance' }, handler: fallback });
+    router.route({ filters: { intentName: 'CheckBalance', custom: () => true }, handler: guarded });
+
+    const event = lexEvent({ sessionState: { intent: { name: 'CheckBalance' } } });
+    // @ts-expect-error - testing private method
+    const result = await router.matchRoute(event);
+
+    expect(result?.handler).toBe(guarded);
+  });
+
   test('does not match when intentName is an empty string', async ({ lexEvent }) => {
     const handler = vi.fn();
     router.route({ filters: { intentName: '' }, handler });

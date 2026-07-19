@@ -56,9 +56,11 @@ is making, rather than a payload you control, so there is nothing to validate.
 authRouter.route(tokenRoute).route(readRoute).route(writeRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. A catch-all registered first swallows every event behind it. See [match
-order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. A route with no filters is the broadest there is, so it
+drops to last wherever you put it. See [match order](/docs/routing#match-order) for how ranking works and
+what it cannot settle.
 
 **When nothing matches, the router throws and the invocation fails.** The message names the type and
 the method it could not place, and no handler runs. A failed authorizer is an error rather than a

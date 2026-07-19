@@ -447,6 +447,32 @@ suite('DocumentDBRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(broad));
+      router.route(defineRoute({ filters: { operationType: 'insert' } }).handle(narrow));
+
+      const changeEvent = createDocumentDBInsertEntry().event;
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { operationType: 'insert' } }).handle(fallback));
+      router.route(defineRoute({ filters: { operationType: 'insert', custom: () => true } }).handle(guarded));
+
+      const changeEvent = createDocumentDBInsertEntry().event;
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(changeEvent, 'arn:test');
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches when all combined filters match', async () => {
       const eventSourceArn = 'arn:aws:rds:us-east-1:123456789012:cluster:my-docdb-cluster';
       router.route(

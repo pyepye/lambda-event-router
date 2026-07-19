@@ -392,6 +392,97 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
     });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ sqsRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(broad));
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn, messageAttributes: { eventType: 'order.created' } },
+        }).handle(narrow),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a wildcard route behind the exact arn it covers', async ({ sqsRecord }) => {
+      const wildcard = vi.fn();
+      const exact = vi.fn();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:orders';
+      router.route(
+        defineRoute({ filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789012:*' } }).handle(wildcard),
+      );
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(exact));
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, {});
+
+      expect(result?.handler).toBe(exact);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ sqsRecord }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(fallback));
+      router.route(
+        defineRoute({
+          filters: {
+            eventSourceArn,
+            custom: ({ messageAttributes }: SQSFilterInput): boolean => messageAttributes.eventType === 'urgent',
+          },
+        }).handle(guarded),
+      );
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { eventType: 'urgent' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
+    test('re-ranks when a narrower route is registered after a match has already run', async ({ sqsRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:my-queue';
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(broad));
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      expect((await router.matchRoute(record, {}, {}))?.handler).toBe(broad);
+
+      router.route(
+        defineRoute({
+          filters: { eventSourceArn, messageAttributes: { eventType: 'order.created' } },
+        }).handle(narrow),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('leaves a RegExp pair in registration order, because it cannot rank them', async ({ sqsRecord }) => {
+      const first = vi.fn();
+      const second = vi.fn();
+      const eventSourceArn = 'arn:aws:sqs:us-east-1:123456789012:orders';
+      router.route(defineRoute({ filters: { eventSourceArn: /orders/ } }).handle(first));
+      router.route(defineRoute({ filters: { eventSourceArn: /^arn:aws:sqs:.*:orders$/ } }).handle(second));
+
+      const record = sqsRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, {});
+
+      expect(result?.handler).toBe(first);
+    });
   });
 
   suite('handleEvent', () => {

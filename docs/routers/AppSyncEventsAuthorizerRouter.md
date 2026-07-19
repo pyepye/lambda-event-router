@@ -43,9 +43,12 @@ router with nothing attached to it.
 
 ## Register routes
 
-Unlike the GraphQL authorizer, this router holds a list of routes and the first match wins. A client
-connects once and then publishes and subscribes many times, and those are three decisions rather than
-one.
+Unlike the GraphQL authorizer, this router holds a list of routes and picks one. A client connects once
+and then publishes and subscribes many times, and those are three decisions rather than one.
+
+Routes are ranked by how specific they are, so an exact `channelPath` beats a wildcard whatever order you
+registered them in. Registration order decides what the filters cannot. See [match
+order](/docs/routing#match-order).
 
 ```ts
 eventsAuthorizerRouter.route({

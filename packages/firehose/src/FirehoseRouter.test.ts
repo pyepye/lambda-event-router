@@ -126,6 +126,36 @@ suite('FirehoseRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async ({ firehoseRecord }) => {
+      const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(broad));
+      router.route(defineRoute({ filters: { deliveryStreamArn } }).handle(narrow));
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record], { deliveryStreamArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, record, {});
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ firehoseRecord }) => {
+      const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { deliveryStreamArn } }).handle(fallback));
+      router.route(defineRoute({ filters: { deliveryStreamArn, custom: () => true } }).handle(guarded));
+
+      const record = firehoseRecord();
+      const event = createFirehoseEvent([record], { deliveryStreamArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, record, {});
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('does not match when deliveryStreamArn is an empty string', async ({ firehoseRecord }) => {
       const deliveryStreamArn = 'arn:aws:firehose:us-east-1:123456789012:deliverystream/my-stream';
       router.route(

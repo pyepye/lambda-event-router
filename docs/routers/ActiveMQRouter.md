@@ -63,8 +63,10 @@ activeMQRouter.route({
 activeMQRouter.route(processOrderRoute).route(refundOrderRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A message that matches no route throws**, which fails the invocation and leaves the messages behind
 it in the batch unhandled. Register a catch-all route with empty `filters` if you would rather swallow

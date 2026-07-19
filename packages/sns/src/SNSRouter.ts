@@ -7,6 +7,7 @@ import {
   filterStringMatcher,
   handleEventWithMiddleware,
   isObject,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -66,6 +67,7 @@ export function defineRoute<
 
 export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: Middleware<SNSRequest, void>[];
 
   constructor(options?: SNSRouterOptions) {
@@ -93,6 +95,7 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
       middleware: definition.middleware ?? [],
       handler: definition.handler as SNSRecordHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -112,11 +115,20 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     return result;
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     record: SNSEventRecord,
     body: unknown,
     messageAttributes: SNSMessageAttributes,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
       const sns = record.Sns;

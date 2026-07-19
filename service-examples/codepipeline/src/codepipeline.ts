@@ -13,8 +13,8 @@ export const codePipelineRouter = createCodePipelineRouter({
   middleware: [logJob],
 });
 
-// Order matters at the end of the list. rollbackRelease claims any deployer job with no input
-// artifacts, so every narrower deployer route has to be registered before it.
+// rollbackRelease claims any deployer job with no input artifacts, which makes it the broadest
+// deployer route, so the router tries the narrower ones first.
 codePipelineRouter
   .route(publishReleaseNotes)
   .route(verifyReleaseBundle)

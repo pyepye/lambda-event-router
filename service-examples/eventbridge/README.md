@@ -42,7 +42,7 @@ three of its failure paths.
 | Detail schemas | Seven routes carry a `detailSchema`, `routeToLeedsWarehouse` carries none |
 | Router middleware | `logEvent` runs once per event |
 | Route middleware | `withOrderContext` runs only on `processOrder` |
-| Route order | Two pairs share a source and detail type, and the narrow route is registered first |
+| Route order | Two pairs share a source and detail type, and the router tries the narrow route first |
 | No route matched | A `ler.legacy` event reaches the worker and no route claims it |
 | Handler failure | `settlePaymentLedger` throws after its middleware has run |
 | Schema failure | An order placed with no `amount` |

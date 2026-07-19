@@ -1,7 +1,12 @@
 import type { Context, SESEvent, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+} from '@lambda-event-router/base';
 
 import type {
   SESDisposition,
@@ -43,6 +48,7 @@ export function defineRoute(config: RouteInput): RouteBuilder {
 
 export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
   private routes: SESRouteDefinition[] = [];
+  private routesOrdered = false;
   private middleware: SESMiddleware[];
 
   constructor(options?: SESRouterOptions) {
@@ -61,6 +67,7 @@ export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
 
   route(definition: SESRouteDefinition): this {
     this.routes.push(definition);
+    this.routesOrdered = false;
     return this;
   }
 
@@ -83,8 +90,17 @@ export class SESRouter implements EventTypeRouter<SESEvent, SESResult> {
     return typeof response === 'string' ? response : response.disposition;
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(record: SESEventRecord): Promise<SESRouteDefinition | undefined> {
     const { mail, receipt } = record.ses;
+
+    this.orderRoutes();
 
     for (const route of this.routes) {
       const { filters } = route;

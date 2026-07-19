@@ -26,7 +26,7 @@ response shape and all three of its failures.
 | `custom` filter | `verifyReleaseBundle` reads `step` out of the raw UserParameters |
 | Async `custom` filter | Both canary routes return a promise, which the router awaits |
 | `continuation()` helper | `awaitCanaryHealth` is registered with it, which adds `hasContinuationToken: true` |
-| Route order | `rollbackRelease` claims any deployer job with no artifact, so it is registered last |
+| Route order | `rollbackRelease` claims any deployer job with no artifact, so it ranks behind the narrower deployer routes |
 | Standard schemas | `userParametersSchema` on four routes, and none on `publishReleaseNotes` |
 | Unparsed UserParameters | `AnnounceRelease` sets a value that is not JSON, so the handler gets the raw string |
 | Router client | `createCodePipelineRouter({ client })`, so the route check can record job results |

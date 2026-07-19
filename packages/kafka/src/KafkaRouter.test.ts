@@ -366,6 +366,39 @@ suite('KafkaRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async ({ kafkaRecord, kafkaMSKEvent }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(broad));
+      router.route(defineRoute({ filters: { topic: 'test-topic' } }).handle(narrow));
+
+      const record = kafkaRecord();
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({
+      kafkaRecord,
+      kafkaMSKEvent,
+    }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { topic: 'test-topic' } }).handle(fallback));
+      router.route(defineRoute({ filters: { topic: 'test-topic', custom: () => true } }).handle(guarded));
+
+      const record = kafkaRecord();
+      const event = kafkaMSKEvent({ 'test-topic-0': [record] });
+
+      // @ts-expect-error testing private method
+      const result = await router.matchRoute(record, event, []);
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches route by async custom', async ({ kafkaRecord, kafkaMSKEvent }) => {
       router.route(
         defineRoute({

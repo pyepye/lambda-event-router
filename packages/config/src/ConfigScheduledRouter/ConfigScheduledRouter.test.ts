@@ -100,6 +100,36 @@ suite('ConfigScheduledRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } }).handle(broad));
+      router.route(
+        defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule', accountId: '123456789012' } }).handle(
+          narrow,
+        ),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule', accountId: '123456789012' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule' } }).handle(fallback));
+      router.route(
+        defineConfigScheduledRoute({ filters: { configRuleName: 'my-rule', custom: () => true } }).handle(guarded),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule', accountId: '123456789012' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('does not match when configRuleName is an empty string', async () => {
       router.route(defineConfigScheduledRoute({ filters: { configRuleName: '' } }).handle(async () => {}));
 

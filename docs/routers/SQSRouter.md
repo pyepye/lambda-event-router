@@ -60,8 +60,10 @@ sqsRouter.route({
 sqsRouter.route(createOrderRoute).route(refundOrderRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. See [match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **A record that matches no route throws.** With `batchItemFailures` off that fails the entire batch,
 including records that would have succeeded. Register a catch-all route filtering only on

@@ -114,6 +114,36 @@ suite('KinesisRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async ({ kinesisRecord }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(
+        defineRoute({ filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789012:*' } }).handle(broad),
+      );
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(narrow));
+
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {});
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ kinesisRecord }) => {
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(fallback));
+      router.route(defineRoute({ filters: { eventSourceArn, custom: () => true } }).handle(guarded));
+
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn });
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {});
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('does not match when eventSourceArn is an empty string', async ({ kinesisRecord }) => {
       const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
       router.route(

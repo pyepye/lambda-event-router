@@ -286,6 +286,30 @@ suite('ConfigRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      router.route(defineRoute({ filters: { configRuleName: 'my-*' } }).handle(broad));
+      router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(narrow));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      router.route(defineRoute({ filters: { configRuleName: 'my-rule' } }).handle(fallback));
+      router.route(defineRoute({ filters: { configRuleName: 'my-rule', custom: () => true } }).handle(guarded));
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute({ configRuleName: 'my-rule' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches route by custom', async () => {
       router.route(
         defineRoute({

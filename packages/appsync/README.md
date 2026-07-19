@@ -204,10 +204,10 @@ authRouter.route(
 )
 ```
 
-Routes match in registration order and the first match wins. A route with no filters takes
-everything, which is the common shape for an API with one authorizer. Filter on `apiId` when one
-function guards several APIs, on `operationName` to give a named operation its own decision, or with
-`custom`.
+Routes are ranked by how specific they are, so a filtered route beats one with no filters whatever order
+you registered them in. A route with no filters takes everything else, which is the common shape for an
+API with one authorizer. Filter on `apiId` when one function guards several APIs, on `operationName` to
+give a named operation its own decision or with `custom`.
 
 ```ts
 authRouter

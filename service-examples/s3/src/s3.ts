@@ -30,9 +30,9 @@ import { withDocumentContext } from './middleware/withDocumentContext.js';
 
 export const s3Router = createS3Router({ middleware: [logRecord] });
 
-// Order matters three times over. rejectOversizedUpload's size filter must win over scanDocument's
-// key filter for a large PDF, so it goes first. logRemoval and expireRestoredCopy are wildcards that
-// would swallow everything below them, so they go after the routes they share an event family with.
+// rejectOversizedUpload's size filter and scanDocument's key filter cannot be ranked against each
+// other, so rejectOversizedUpload goes first to claim a large PDF. logRemoval and expireRestoredCopy
+// are wildcards, which the router ranks behind the narrower routes in their event family.
 s3Router
   .objectCreated({
     filters: {

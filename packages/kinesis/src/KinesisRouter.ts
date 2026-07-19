@@ -8,6 +8,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -52,6 +53,7 @@ export function defineRoute<
 
 export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefined | KinesisStreamBatchResponse> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private batchItemFailures: boolean;
   private middleware: Middleware<KinesisRequest, void>[];
 
@@ -79,6 +81,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       // @ts-expect-error Contravariance: typed handler stored in general InternalRoute, safe because schema validates before calling
       handler: definition.handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -145,7 +148,16 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(record: KinesisStreamRecord, data: unknown): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

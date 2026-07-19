@@ -432,6 +432,34 @@ suite('EventBridgeRouter', () => {
       expect(result?.handler).toBe(firstHandler);
     });
 
+    test('orders an exact source ahead of the wildcard that covers it', async ({ eventBridgeEvent }) => {
+      const wildcard = vi.fn();
+      const exact = vi.fn();
+
+      router.route(defineRoute({ filters: { source: 'my.*' } }).handle(wildcard));
+      router.route(defineRoute({ filters: { source: 'my.app' } }).handle(exact));
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event);
+
+      expect(result?.handler).toBe(exact);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ eventBridgeEvent }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      router.route(defineRoute({ filters: { source: 'my.app' } }).handle(fallback));
+      router.route(defineRoute({ filters: { source: 'my.app', custom: () => true } }).handle(guarded));
+
+      const event = eventBridgeEvent();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event);
+
+      expect(result?.handler).toBe(guarded);
+    });
+
     test('matches when standard filters and custom both pass', async ({ eventBridgeEvent }) => {
       router.route(
         defineRoute({

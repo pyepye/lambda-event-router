@@ -8,6 +8,7 @@ import {
   handleEventWithMiddleware,
   isObject,
   logger,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -46,6 +47,7 @@ export function defineRoute<
 
 export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | KafkaBatchResponse> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private batchItemFailures: boolean;
   private middleware: Middleware<KafkaRequest, void>[];
 
@@ -75,6 +77,7 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
       // @ts-expect-error Contravariance: typed handler stored in general InternalRoute, safe because schema validates before calling
       handler: definition.handler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -229,6 +232,13 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     record: KafkaRecord,
     event: KafkaEvent,
@@ -236,6 +246,8 @@ export class KafkaRouter implements EventTypeRouter<KafkaEvent, undefined | Kafk
     headerList: KafkaDecodedHeader[],
     tombstone: boolean,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

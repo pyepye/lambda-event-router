@@ -202,7 +202,8 @@ Note: an invocation whose handler threw still reports a `status` of `success` in
 | `ApplicantsPool` | 10 | Yes, to the SES mailbox simulator |
 | `StaffPool` | 3 | No, the custom email sender takes it |
 
-Routes match in registration order and the first match wins.
+The narrowest route is tried first, so a route filtered on nothing but its trigger source takes what the
+more specific ones turn down.
 
 | Route | Trigger source | Picked out by |
 | --- | --- | --- |

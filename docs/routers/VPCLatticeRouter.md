@@ -71,9 +71,10 @@ paths overlap. `GET /orders/:orderId` and `POST /orders/latest` never collide.
 Where they do share a method, routes match by path specificity rather than registration order: a literal
 segment beats a param at the same position, compared left to right. So `GET /orders/latest` takes
 `/orders/latest` while `GET /orders/:orderId` catches every other id, whichever order you register them in.
-Two routes of the same shape differing only in a param name, such as `GET /orders/:orderId` and
-`GET /orders/:id`, match the same paths and cannot be ranked, so registering the second throws. See
-[match order](/docs/routing#match-order).
+Two routes of the same shape differing only in a param name, such as `GET /orders/:orderId` and `GET
+/orders/:id`, match the same paths and cannot be ranked, so the one you registered first wins and the
+second never runs. Giving one of them a `custom` ranks it first, because a `custom` can only reject a
+request and never accept an extra one. See [match order](/docs/routing#match-order).
 
 **When nothing matches, the router answers 404 with `{"error":"Not found"}` and runs no middleware.** A path
 you have registered under another method counts as no match rather than a 405, so `DELETE /orders/1` against

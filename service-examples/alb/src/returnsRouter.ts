@@ -40,9 +40,9 @@ export const returnsRouter = createALBRouter({
   },
 });
 
-// Order matters in one place: amendReturnAtDesk and amendReturn share a method and a path, so the
-// one with the custom filter is registered first. Everywhere else the router ranks routes itself,
-// which is why /returns/open is reached despite being registered after /returns/:returnId.
+// The router ranks routes itself, which is why /returns/open is reached despite being registered after
+// /returns/:returnId, and why amendReturnAtDesk's custom filter is asked before amendReturn takes the
+// same method and path.
 returnsRouter
   .route(amendReturnAtDesk)
   .patch({ filters: { path: '/returns/:returnId' }, bodySchema: ReturnAmendmentSchema, handler: amendReturn })

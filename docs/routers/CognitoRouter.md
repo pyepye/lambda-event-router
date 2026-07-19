@@ -71,9 +71,11 @@ Every registration method returns the router, so you can chain them.
 cognitoRouter.preSignUp({ handler: allowSignUp }).preTokenGeneration({ handler: addRoleClaim })
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. A `triggerSource` does that on its own, since one event carries exactly one source. See
-[match order](/docs/routing#match-order) for what goes wrong when they overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. A `triggerSource` does that on its own, since one event
+carries exactly one source. See [match order](/docs/routing#match-order) for how ranking works and what
+it cannot settle.
 
 **An event that matches no route throws** `No route matched for trigger <source>`. The router claims
 any event carrying a string `triggerSource` and `userPoolId`, so once Cognito routes a trigger to your

@@ -62,7 +62,7 @@ codeCommitRouter.route(mainPushRoute).route(releasePushRoute)
 Routes do not compete. Each is tested against the record on its own and every one that matches runs, so
 two routes both asking for pushes to `main` both get them. Registration order changes nothing, which
 means overlapping filters are a design choice here rather than a bug to avoid. See [match
-order](/docs/routing#match-order) for the first match behaviour to expect elsewhere.
+order](/docs/routing#match-order) for the ranking and first match behaviour to expect elsewhere.
 
 **A record matching no route at all throws.** A route with empty `filters` matches every record and
 gives unrouted triggers somewhere to go, and see [nothing matched](/docs/routing#nothing-matched) for

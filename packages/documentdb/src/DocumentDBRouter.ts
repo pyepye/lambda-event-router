@@ -3,7 +3,13 @@ import type { Context } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
-import { filterStringMatcher, handleEventWithMiddleware, isObject, validateSchema } from '@lambda-event-router/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@lambda-event-router/base';
 
 import type { FiltersToRequest, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type {
@@ -68,6 +74,7 @@ export function defineRoute<
 
 export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefined> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: Middleware<DocumentDBRequest, void>[];
 
   constructor(options?: DocumentDBRouterOptions) {
@@ -151,6 +158,7 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
       ...definition,
       middleware: definition.middleware ?? [],
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -208,10 +216,19 @@ export class DocumentDBRouter implements EventTypeRouter<DocumentDBEvent, undefi
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(
     changeEvent: DocumentDBChangeEvent,
     eventSourceArn: string,
   ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

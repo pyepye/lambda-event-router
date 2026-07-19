@@ -13,6 +13,7 @@ import {
   filterStringMatcher,
   handleEventWithMiddleware,
   isObject,
+  orderRoutesBySpecificity,
   safeJsonParse,
   validateSchema,
 } from '@lambda-event-router/base';
@@ -66,6 +67,7 @@ export function defineRoute<
 
 export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, void> {
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private codePipelineClient: CodePipelineClient;
   private middleware: CodePipelineMiddleware[];
 
@@ -90,6 +92,7 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
       middleware: definition.middleware as CodePipelineMiddleware[] | undefined,
       handler: definition.handler as CodePipelineHandler,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -159,7 +162,16 @@ export class CodePipelineRouter implements EventTypeRouter<CodePipelineEvent, vo
     }
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(input: CodePipelineFilterInput): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

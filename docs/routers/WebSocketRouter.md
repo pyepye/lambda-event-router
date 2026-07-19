@@ -56,10 +56,12 @@ wsRouter.route({
 wsRouter.route(connectRoute).route(sendMessageRoute).route(disconnectRoute)
 ```
 
-Routes match in registration order and the first match wins, so give each route filters no other route
-can match. Both filter keys are exact matches, which makes that easy: one route per route key never
-competes with another. See [match order](/docs/routing#match-order) for what goes wrong when they
-overlap.
+Routes are ranked by how specific they are. Where two overlap, the one matching only a subset of the
+other is tried first, whatever order you registered them in. Registration order decides the rest, so give
+each route filters no other route can match. Both filter keys compare exactly, which makes that easy: one
+route per route key never competes with another, and the pattern part of the ranking rule does not apply
+because neither key reads `*` as a wildcard. See [match order](/docs/routing#match-order) for how ranking
+works and what it cannot settle.
 
 **When nothing matches, the router throws and the invocation fails.** The message names the event type
 and the route key it could not place, and no handler runs. A `$connect` with no route never opens the

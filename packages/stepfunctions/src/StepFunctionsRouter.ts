@@ -8,6 +8,7 @@ import {
   isKnownEventSource,
   isObject,
   NoRouteMatchedError,
+  orderRoutesBySpecificity,
   validateSchema,
 } from '@lambda-event-router/base';
 
@@ -85,6 +86,7 @@ export function defineRoute(config: {
 export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
   readonly matchTier = 'catchAll';
   private routes: InternalRoute[] = [];
+  private routesOrdered = false;
   private middleware: StepFunctionsMiddleware[];
 
   constructor(options?: StepFunctionsRouterOptions) {
@@ -112,6 +114,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
       handler: definition.handler as (request: never) => Promise<unknown>,
       isTaskTokenRoute: isTaskToken,
     });
+    this.routesOrdered = false;
     return this;
   }
 
@@ -163,7 +166,16 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
     );
   }
 
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
   private async matchRoute(event: unknown): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
     for (const route of this.routes) {
       const { filters } = route;
 

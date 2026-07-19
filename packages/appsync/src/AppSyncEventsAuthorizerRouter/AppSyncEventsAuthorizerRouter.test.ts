@@ -144,6 +144,38 @@ suite('AppSyncEventsAuthorizerRouter', () => {
       expect(result).toEqual({ isAuthorized: true, handlerContext: { via: 'namespace' } });
     });
 
+    test('orders an exact channel path ahead of the wildcard that covers it', async () => {
+      const wildcard = vi.fn();
+      router
+        .route(defineEventsAuthorizerRoute({ filters: { channelPath: '/default/*' } }).handle(wildcard))
+        .route(
+          defineEventsAuthorizerRoute({ filters: { channelPath: '/default/channel' } }).handle(async () =>
+            EventsAuthorized({ handlerContext: { via: 'exact' } }),
+          ),
+        );
+
+      const result = await router.handleEvent(createAppSyncEventsAuthorizerEvent(), createMockContext());
+
+      expect(result).toEqual({ isAuthorized: true, handlerContext: { via: 'exact' } });
+      expect(wildcard).not.toHaveBeenCalled();
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      router
+        .route(defineEventsAuthorizerRoute({ filters: { channelNamespace: 'default' } }).handle(fallback))
+        .route(
+          defineEventsAuthorizerRoute({ filters: { channelNamespace: 'default', custom: () => true } }).handle(
+            async () => EventsAuthorized({ handlerContext: { via: 'guarded' } }),
+          ),
+        );
+
+      const result = await router.handleEvent(createAppSyncEventsAuthorizerEvent(), createMockContext());
+
+      expect(result).toEqual({ isAuthorized: true, handlerContext: { via: 'guarded' } });
+      expect(fallback).not.toHaveBeenCalled();
+    });
+
     test('takes a list of operations on one route', async () => {
       router.route(
         defineEventsAuthorizerRoute({ filters: { operation: ['EVENT_CONNECT', 'EVENT_PUBLISH'] } }).handle(async () =>
