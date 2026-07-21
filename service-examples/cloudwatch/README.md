@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `CloudWatchLogsRouter` end to end. It mo
 service. Five log groups are subscribed to one Lambda, and the router decides what happens to each
 delivery.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 /ler-example/checkout-api
 ├── checkout-errors  → escalateCheckoutFailure  (subscriptionFilter filter)
@@ -68,7 +71,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cloudwatch build
+pnpm -F @lambda-event-router/service-example-cloudwatch... install
+pnpm -F @lambda-event-router/service-example-cloudwatch... build
 pnpm -F @lambda-event-router/service-example-cloudwatch run deploy
 ```
 

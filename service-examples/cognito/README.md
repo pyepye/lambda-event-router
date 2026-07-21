@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `CognitoRouter` end to end. It models an
 Two user pools send every Lambda trigger to the same worker, and the router dispatches on the
 trigger source.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 applicants pool
 ├── preSignUp, postConfirmation
@@ -91,7 +94,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cognito build
+pnpm -F @lambda-event-router/service-example-cognito... install
+pnpm -F @lambda-event-router/service-example-cognito... build
 pnpm -F @lambda-event-router/service-example-cognito run deploy
 ```
 

@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `SecretsManagerRouter` end to end. It mo
 rotation for an internal platform. One Lambda is the rotation function for five secrets, and the
 router dispatches each of the four rotation steps.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 payments/api-token
 ├── createPendingToken   (createSecret, a list of an ARN, a regex and a name pattern)
@@ -82,7 +85,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-secretsmanager build
+pnpm -F @lambda-event-router/service-example-secretsmanager... install
+pnpm -F @lambda-event-router/service-example-secretsmanager... build
 pnpm -F @lambda-event-router/service-example-secretsmanager run deploy
 ```
 

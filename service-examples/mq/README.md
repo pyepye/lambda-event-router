@@ -3,6 +3,9 @@
 A deployable CDK app that exercises both Amazon MQ routers end to end. It models an order and payment
 pipeline. Two brokers feed a Lambda each, and the router does the per-message dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 The two engines send different event shapes, so `ActiveMQRouter` and `RabbitMQRouter` get a worker
 each rather than sharing one.
 
@@ -127,7 +130,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-mq build
+pnpm -F @lambda-event-router/service-example-mq... install
+pnpm -F @lambda-event-router/service-example-mq... build
 AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-mq run deploy \
   --context allowedCidr=$(curl -s https://checkip.amazonaws.com)/32
 ```

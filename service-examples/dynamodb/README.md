@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `DynamoDBRouter` end to end. It models an order service. One
 Lambda consumes two DynamoDB streams, and the router does the per-record dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 orders (NEW_AND_OLD_IMAGES)
 ├── processOrder            (insert: partitionKey ORDER#*, sortKey SUMMARY)
@@ -83,7 +86,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-dynamodb build
+pnpm -F @lambda-event-router/service-example-dynamodb... install
+pnpm -F @lambda-event-router/service-example-dynamodb... build
 pnpm -F @lambda-event-router/service-example-dynamodb run deploy
 ```
 

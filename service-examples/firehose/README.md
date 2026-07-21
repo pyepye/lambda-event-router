@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `FirehoseRouter` end to end. It models a
 audit trail. One Lambda transforms records for two delivery streams, and the router does the
 per-record dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 clickstream (direct put)
 ├── dropHealthCheckPing   (custom filter: eventType healthCheck, returns Dropped)
@@ -76,7 +79,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-firehose build
+pnpm -F @lambda-event-router/service-example-firehose... install
+pnpm -F @lambda-event-router/service-example-firehose... build
 pnpm -F @lambda-event-router/service-example-firehose run deploy
 ```
 

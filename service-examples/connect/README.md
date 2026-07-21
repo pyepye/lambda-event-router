@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `ConnectRouter` end to end. It models a 
 One Lambda is the code hook for every Invoke AWS Lambda function block in a contact flow. The router
 picks the handler for each block.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 ler-example-connect-support (Amazon Connect contact flow)
 ├── escalateToSupervisor   (custom filter: priority parameter, wins over every step route)
@@ -93,7 +96,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-connect build
+pnpm -F @lambda-event-router/service-example-connect... install
+pnpm -F @lambda-event-router/service-example-connect... build
 pnpm -F @lambda-event-router/service-example-connect run deploy
 ```
 

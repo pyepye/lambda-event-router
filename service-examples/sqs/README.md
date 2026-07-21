@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `SQSRouter` end to end. It models a notifications dispatcher.
 One Lambda consumes two SQS queues, and the router does the final per-record dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 notifications (standard queue)
 ├── holdMarketing        (custom filter: body.category === 'marketing')
@@ -62,7 +65,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sqs build
+pnpm -F @lambda-event-router/service-example-sqs... install
+pnpm -F @lambda-event-router/service-example-sqs... build
 pnpm -F @lambda-event-router/service-example-sqs run deploy
 ```
 

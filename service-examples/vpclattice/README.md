@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `VPCLatticeRouter` end to end. It models
 service reached over a service network. One Lambda serves every route, and a second Lambda inside
 the VPC makes the requests.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 inventory (one Lattice service, one domain name)
 ├── port 80    target group on payload version 1.0
@@ -106,7 +109,8 @@ parameter ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-vpclattice build
+pnpm -F @lambda-event-router/service-example-vpclattice... install
+pnpm -F @lambda-event-router/service-example-vpclattice... build
 pnpm -F @lambda-event-router/service-example-vpclattice run deploy
 ```
 

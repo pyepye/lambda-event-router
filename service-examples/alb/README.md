@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `ALBRouter` end to end. It models a returns desk behind an
 Application Load Balancer. One Lambda serves every route, and the trigger calls it from your shell.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 returns desk (one load balancer, two listeners)
 ├── port 80    target group with multi-value headers off
@@ -110,7 +113,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-alb build
+pnpm -F @lambda-event-router/service-example-alb... install
+pnpm -F @lambda-event-router/service-example-alb... build
 pnpm -F @lambda-event-router/service-example-alb run deploy
 ```
 

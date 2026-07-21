@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `APIGatewayRouter`, `LambdaAuthorizerRou
 `WebSocketRouter` end to end. It models a warehouse fulfilment service across three APIs, and every
 route belongs to one of the three routers.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 One worker Lambda serves all three APIs. A second Lambda authorises the REST API and the HTTP API.
 
 ```
@@ -112,7 +115,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-apigateway build
+pnpm -F @lambda-event-router/service-example-apigateway... install
+pnpm -F @lambda-event-router/service-example-apigateway... build
 pnpm -F @lambda-event-router/service-example-apigateway run deploy
 ```
 

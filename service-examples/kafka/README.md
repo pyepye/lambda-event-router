@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `KafkaRouter` end to end. It models an order pipeline. One
 Lambda consumes three topics on one Amazon MSK cluster, and the router does the per-record dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 orders (3 partitions)
 ├── escalateUrgentOrder     (custom filter: a priority: urgent header)
@@ -72,7 +75,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kafka run build
+pnpm -F @lambda-event-router/service-example-kafka... install
+pnpm -F @lambda-event-router/service-example-kafka... run build
 pnpm -F @lambda-event-router/service-example-kafka run deploy
 ```
 

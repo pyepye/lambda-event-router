@@ -4,6 +4,9 @@ A deployable CDK app that exercises all four AppSync routers end to end. It mode
 A GraphQL API serves tickets, an Event API carries live activity, and one Lambda authorizer guards
 both.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 SupportApi (GraphQL, Lambda authorization)
 ├── getTicketForAgent      (custom filter: the caller's role is agent)
@@ -121,7 +124,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-appsync build
+pnpm -F @lambda-event-router/service-example-appsync... install
+pnpm -F @lambda-event-router/service-example-appsync... build
 pnpm -F @lambda-event-router/service-example-appsync run deploy
 ```
 

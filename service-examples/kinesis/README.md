@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `KinesisRouter` end to end. It models an order and telemetry
 pipeline. One Lambda consumes two Kinesis data streams, and the router does the per-record dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 orders (1 shard)
 ├── flagHighValueOrder  (custom filter: the total is at or above 1000)
@@ -75,7 +78,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kinesis build
+pnpm -F @lambda-event-router/service-example-kinesis... install
+pnpm -F @lambda-event-router/service-example-kinesis... build
 pnpm -F @lambda-event-router/service-example-kinesis run deploy
 ```
 

@@ -3,6 +3,9 @@
 A deployable CDK app that exercises the `LexRouter` end to end. It models a parcel support bot. One
 Lambda is the code hook for every intent, and the router picks the handler for each turn.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 ParcelSupport (Amazon Lex V2 bot, en_GB)
 ├── escalateToSupervisor  (custom filter: accountTier session attribute, fulfilment)
@@ -73,7 +76,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-lex build
+pnpm -F @lambda-event-router/service-example-lex... install
+pnpm -F @lambda-event-router/service-example-lex... build
 pnpm -F @lambda-event-router/service-example-lex run deploy
 ```
 

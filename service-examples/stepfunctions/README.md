@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `StepFunctionsRouter` end to end. It mod
 fulfilment workflow. One state machine invokes one Lambda across ten parallel branches, and the
 router decides which handler each payload reaches.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 OrderFulfilment (standard workflow)
 ├── reserveStock         (custom filter: task === 'reserve-stock', refuses callbacks)
@@ -65,7 +68,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-stepfunctions build
+pnpm -F @lambda-event-router/service-example-stepfunctions... install
+pnpm -F @lambda-event-router/service-example-stepfunctions... build
 pnpm -F @lambda-event-router/service-example-stepfunctions run deploy
 ```
 

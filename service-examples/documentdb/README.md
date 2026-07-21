@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `DocumentDBRouter` end to end. It models
 Lambda consumes seven change streams from one Amazon DocumentDB cluster, and the router does the
 per-change dispatch.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 storefront            one mapping for the whole database, UpdateLookup
 ├── orders
@@ -94,7 +97,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-documentdb build
+pnpm -F @lambda-event-router/service-example-documentdb... install
+pnpm -F @lambda-event-router/service-example-documentdb... build
 AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-documentdb run deploy
 ```
 

@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `CodePipelineRouter` end to end. It mode
 pipeline. Two Lambda functions share one router bundle, and the router decides which handler each
 pipeline job reaches.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 ler-example-codepipeline-release
 ├── verifyReleaseBundle   (deployer, has input artifacts, writes an output artifact)
@@ -73,7 +76,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-codepipeline run build
+pnpm -F @lambda-event-router/service-example-codepipeline... install
+pnpm -F @lambda-event-router/service-example-codepipeline... run build
 pnpm -F @lambda-event-router/service-example-codepipeline run deploy
 ```
 

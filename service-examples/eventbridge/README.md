@@ -4,6 +4,9 @@ A deployable CDK app that exercises the `EventBridgeRouter` end to end. It model
 fulfilment bus. One rule forwards four event sources to a single Lambda, and the router decides
 which handler each event reaches.
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 ```
 ler-example-events (custom bus, one rule, four sources)
 
@@ -80,7 +83,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-eventbridge build
+pnpm -F @lambda-event-router/service-example-eventbridge... install
+pnpm -F @lambda-event-router/service-example-eventbridge... build
 pnpm -F @lambda-event-router/service-example-eventbridge run deploy
 ```
 
