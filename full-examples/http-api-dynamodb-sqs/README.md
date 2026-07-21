@@ -16,6 +16,9 @@ Client
                     └── workerFn / sendConfirmationEmail (sqsRouter)
 ```
 
+The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
+and [Deploy](#deploy).
+
 Five distinct router-handled boxes (createOrder, orderProcessor, decrementStock, sendConfirmationEmail, stockMonitor) running on two Lambda functions (`apiFn` and `workerFn`). A future PR will register a global `LambdaRouter` middleware to observe all of these from a single attachment point - that is the reason this example is deliberately long.
 
 It also has tracing middleware configured as an example to show how it can be used.
@@ -45,7 +48,8 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs build
+pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs... install
+pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs... build
 pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs run deploy
 ```
 
