@@ -24,7 +24,7 @@ features:
     details: Full TypeScript support, with handler types inferred from the schemas and filters on the route.
   - title: 🎛️ Declarative filters
     details: Route events by ARN, eventType, topic, bucket, event name, detail type, and custom filter functions.
-  - title: 🧱 25+ AWS services
+  - title: 🧱 25 AWS services
     details: Dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more.
   - title: ✅ Schema validation
     details: Built-in schema validation for request bodies, message attributes, path params, and more. Compatible with any Standard Schema compatible library.
@@ -58,7 +58,7 @@ import { createOrder, createOrderSchema } from './createOrder'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.route({
-  filter {
+  filter: {
     method: 'GET',
     path: '/order/:id/',
   },
@@ -66,7 +66,7 @@ apiRouter.route({
 })
 
 apiRouter.route({
-  filter {
+  filter: {
     method: 'POST',
     path: '/order/:id/',
   },
@@ -97,3 +97,9 @@ sqsRouter.route({
 :::
 
 </div>
+
+<hr class="home-divider" />
+
+<HomeServices />
+
+<HomeCallToAction />

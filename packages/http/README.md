@@ -25,7 +25,7 @@ import { z } from 'zod'
 
 // Inline functions allows Typescript to automatic infer types
 const getItemRoute = defineRoute({
-  filter {
+  filter: {
     method: 'GET',
     path: '/orgs/:orgId/items/:itemId',
   },
@@ -59,7 +59,7 @@ const ResponseSchema = z.object({
 })
 
 const createItemRoute = defineRoute({
-  filter {
+  filter: {
     method: 'POST',
     path: '/items',
   },

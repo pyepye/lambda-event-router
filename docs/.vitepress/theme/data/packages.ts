@@ -24,8 +24,7 @@ type SupportedAWSServices =
   | 'ses'
   | 'connect'
   | 'lex'
-  | 'secrets-manager'
-  | 'iot-core';
+  | 'secrets-manager';
 
 export type PackageEntry = {
   icons: string[];
@@ -38,44 +37,175 @@ export type PackageEntry = {
 
 export type FilterPill = {
   name: string;
+  short: string;
   service: string;
+  link: string;
 };
 
 // Use Record here to ensure there is at least one pill for each service
 export const filterPillsMap: Record<SupportedAWSServices, FilterPill> = {
-  eventbridge: { name: 'Amazon EventBridge', service: 'eventbridge' },
-  'api-gateway': { name: 'Amazon API Gateway', service: 'api-gateway' },
-  elb: { name: 'Elastic Load Balancing', service: 'elb' },
-  'vpc-lattice': { name: 'Amazon VPC Lattice', service: 'vpc-lattice' },
-  sqs: { name: 'Amazon SQS', service: 'sqs' },
-  sns: { name: 'Amazon SNS', service: 'sns' },
-  kinesis: { name: 'Amazon Kinesis', service: 'kinesis' },
-  firehose: { name: 'Amazon Data Firehose', service: 'firehose' },
-  msk: { name: 'Amazon MSK / Self-managed Kafka', service: 'msk' },
-  mq: { name: 'Amazon MQ', service: 'mq' },
-  dynamodb: { name: 'Amazon DynamoDB', service: 'dynamodb' },
-  documentdb: { name: 'Amazon DocumentDB', service: 'documentdb' },
-  s3: { name: 'Amazon S3', service: 's3' },
-  cloudwatch: { name: 'Amazon CloudWatch', service: 'cloudwatch' },
-  'step-functions': { name: 'AWS Step Functions', service: 'step-functions' },
-  codepipeline: { name: 'AWS CodePipeline', service: 'codepipeline' },
-  codecommit: { name: 'AWS CodeCommit', service: 'codecommit' },
-  cloudformation: { name: 'AWS CloudFormation', service: 'cloudformation' },
-  config: { name: 'AWS Config', service: 'config' },
-  cognito: { name: 'Amazon Cognito', service: 'cognito' },
-  appsync: { name: 'AWS AppSync', service: 'appsync' },
-  ses: { name: 'Amazon SES', service: 'ses' },
-  connect: { name: 'Amazon Connect', service: 'connect' },
-  lex: { name: 'Amazon Lex', service: 'lex' },
-  'secrets-manager': { name: 'AWS Secrets Manager', service: 'secrets-manager' },
-  'iot-core': { name: 'AWS IoT Core', service: 'iot-core' },
-  other: { name: 'All other services', service: 'other' },
+  eventbridge: {
+    name: 'Amazon EventBridge',
+    short: 'EventBridge',
+    service: 'eventbridge',
+    link: '/routers/EventBridgeRouter',
+  },
+  'api-gateway': {
+    name: 'Amazon API Gateway',
+    short: 'API Gateway',
+    service: 'api-gateway',
+    link: '/routers/APIGatewayRouter',
+  },
+  elb: {
+    name: 'Elastic Load Balancing',
+    short: 'ALB',
+    service: 'elb',
+    link: '/routers/ALBRouter',
+  },
+  'vpc-lattice': {
+    name: 'Amazon VPC Lattice',
+    short: 'VPC Lattice',
+    service: 'vpc-lattice',
+    link: '/routers/VPCLatticeRouter',
+  },
+  sqs: {
+    name: 'Amazon SQS',
+    short: 'SQS',
+    service: 'sqs',
+    link: '/routers/SQSRouter',
+  },
+  sns: {
+    name: 'Amazon SNS',
+    short: 'SNS',
+    service: 'sns',
+    link: '/routers/SNSRouter',
+  },
+  kinesis: {
+    name: 'Amazon Kinesis',
+    short: 'Kinesis',
+    service: 'kinesis',
+    link: '/routers/KinesisRouter',
+  },
+  firehose: {
+    name: 'Amazon Data Firehose',
+    short: 'Firehose',
+    service: 'firehose',
+    link: '/routers/FirehoseRouter',
+  },
+  msk: {
+    name: 'Amazon MSK / Self-managed Kafka',
+    short: 'MSK / Kafka',
+    service: 'msk',
+    link: '/routers/KafkaRouter',
+  },
+  mq: {
+    name: 'Amazon MQ',
+    short: 'Amazon MQ',
+    service: 'mq',
+    link: '/routers/ActiveMQRouter',
+  },
+  dynamodb: {
+    name: 'Amazon DynamoDB',
+    short: 'DynamoDB',
+    service: 'dynamodb',
+    link: '/routers/DynamoDBRouter',
+  },
+  documentdb: {
+    name: 'Amazon DocumentDB',
+    short: 'DocumentDB',
+    service: 'documentdb',
+    link: '/routers/DocumentDBRouter',
+  },
+  s3: {
+    name: 'Amazon S3',
+    short: 'S3',
+    service: 's3',
+    link: '/routers/S3Router',
+  },
+  cloudwatch: {
+    name: 'Amazon CloudWatch',
+    short: 'CloudWatch',
+    service: 'cloudwatch',
+    link: '/routers/CloudWatchLogsRouter',
+  },
+  'step-functions': {
+    name: 'AWS Step Functions',
+    short: 'Step Functions',
+    service: 'step-functions',
+    link: '/routers/StepFunctionsRouter',
+  },
+  codepipeline: {
+    name: 'AWS CodePipeline',
+    short: 'CodePipeline',
+    service: 'codepipeline',
+    link: '/routers/CodePipelineRouter',
+  },
+  codecommit: {
+    name: 'AWS CodeCommit',
+    short: 'CodeCommit',
+    service: 'codecommit',
+    link: '/routers/CodeCommitRouter',
+  },
+  cloudformation: {
+    name: 'AWS CloudFormation',
+    short: 'CloudFormation',
+    service: 'cloudformation',
+    link: '/routers/CloudFormationRouter',
+  },
+  config: {
+    name: 'AWS Config',
+    short: 'Config',
+    service: 'config',
+    link: '/routers/ConfigRouter',
+  },
+  cognito: {
+    name: 'Amazon Cognito',
+    short: 'Cognito',
+    service: 'cognito',
+    link: '/routers/CognitoRouter',
+  },
+  appsync: {
+    name: 'AWS AppSync',
+    short: 'AppSync',
+    service: 'appsync',
+    link: '/routers/AppSyncRouter',
+  },
+  ses: {
+    name: 'Amazon SES',
+    short: 'SES',
+    service: 'ses',
+    link: '/routers/SESRouter',
+  },
+  connect: {
+    name: 'Amazon Connect',
+    short: 'Connect',
+    service: 'connect',
+    link: '/routers/ConnectRouter',
+  },
+  lex: {
+    name: 'Amazon Lex',
+    short: 'Lex',
+    service: 'lex',
+    link: '/routers/LexRouter',
+  },
+  'secrets-manager': {
+    name: 'AWS Secrets Manager',
+    short: 'Secrets Manager',
+    service: 'secrets-manager',
+    link: '/routers/SecretsManagerRouter',
+  },
+  other: {
+    name: 'All other services',
+    short: 'All other services',
+    service: 'other',
+    link: '/packages',
+  },
 };
 export const filterPills: FilterPill[] = Object.values(filterPillsMap);
 
 export const packages: PackageEntry[] = [
   {
-    icons: ['eventbridge', 'step-functions', 'iot-core'],
+    icons: ['eventbridge', 'step-functions'],
     name: 'EventRouter',
     package: '@lambda-event-router/base',
     services: ['eventbridge'],
@@ -337,13 +467,5 @@ export const packages: PackageEntry[] = [
     services: ['secrets-manager'],
     details: 'AWS Secrets Manager - Rotation',
     link: '/routers/SecretsManagerRouter',
-  },
-  {
-    icons: ['iot-core'],
-    name: 'IoTRouter',
-    package: '@lambda-event-router/iot',
-    services: ['iot-core'],
-    details: 'AWS IoT Core - Rules Engine action',
-    link: '/routers/IoTRouter',
   },
 ];
