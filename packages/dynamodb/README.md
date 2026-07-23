@@ -166,4 +166,4 @@ const dynamodbRouter = createDynamoDBRouter({ batchItemFailures: true })
 
 ## Examples
 
-See the [examples/dynamodb](../../examples/dynamodb) directory for complete working examples.
+See the [service-examples/dynamodb](../../service-examples/dynamodb) directory for complete working examples.

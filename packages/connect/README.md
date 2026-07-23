@@ -139,4 +139,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/connect](../../examples/connect) directory for complete working examples.
+See the [service-examples/connect](../../service-examples/connect) directory for complete working examples.

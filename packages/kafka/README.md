@@ -147,4 +147,4 @@ const withWarehouseContext: KafkaMiddleware<StockMovement> = async (request, nex
 
 ## Examples
 
-See the [examples/kafka](../../examples/kafka) directory for complete working examples.
+See the [service-examples/kafka](../../service-examples/kafka) directory for complete working examples.

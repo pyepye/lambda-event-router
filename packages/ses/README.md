@@ -132,4 +132,4 @@ takes effect when the receipt rule invokes your Lambda synchronously (`RequestRe
 
 ## Examples
 
-See the [examples/ses](../../examples/ses) directory for complete working examples.
+See the [service-examples/ses](../../service-examples/ses) directory for complete working examples.

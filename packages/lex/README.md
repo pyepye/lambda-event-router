@@ -160,4 +160,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/lex](../../examples/lex) directory for complete working examples.
+See the [service-examples/lex](../../service-examples/lex) directory for complete working examples.

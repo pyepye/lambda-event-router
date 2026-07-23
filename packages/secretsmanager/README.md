@@ -78,4 +78,4 @@ the filter input.
 
 ## Examples
 
-See the [examples/secretsmanager](../../examples/secretsmanager) directory for complete working examples.
+See the [service-examples/secretsmanager](../../service-examples/secretsmanager) directory for complete working examples.

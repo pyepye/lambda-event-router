@@ -115,4 +115,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/cloudformation](../../examples/cloudformation) directory for complete working examples.
+See the [service-examples/cloudformation](../../service-examples/cloudformation) directory for complete working examples.

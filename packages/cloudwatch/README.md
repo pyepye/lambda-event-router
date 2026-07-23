@@ -129,4 +129,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/cloudwatch](../../examples/cloudwatch) directory for complete working examples.
+See the [service-examples/cloudwatch](../../service-examples/cloudwatch) directory for complete working examples.

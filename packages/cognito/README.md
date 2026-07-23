@@ -195,4 +195,4 @@ const withTenant: CognitoMiddleware<Attributes> = async (request, next) => {
 
 ## Examples
 
-See the [examples/cognito](../../examples/cognito) directory for complete working examples.
+See the [service-examples/cognito](../../service-examples/cognito) directory for complete working examples.

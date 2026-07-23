@@ -227,4 +227,4 @@ Route middleware on a route carrying an `eventSchema` needs the payload type. Us
 
 ## Examples
 
-See the [examples/base](../../examples/base) directory for complete working examples.
+See the [service-examples/base](../../service-examples/base) directory for complete working examples.

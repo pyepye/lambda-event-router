@@ -195,4 +195,4 @@ const withAuditContext: ConfigScheduledMiddleware<TagAuditParams> = async (reque
 
 ## Examples
 
-See the [examples/config](../../examples/config) directory for complete working examples.
+See the [service-examples/config](../../service-examples/config) directory for complete working examples.

@@ -230,4 +230,4 @@ const withTextOrderContext: ActiveMQMiddleware<Order, 'jms/text-message'> = asyn
 
 ## Examples
 
-See the [examples/mq](../../examples/mq) directory for complete working examples.
+See the [service-examples/mq](../../service-examples/mq) directory for complete working examples.

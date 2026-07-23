@@ -186,4 +186,4 @@ const processOrder = defineRoute({
 
 ## Examples
 
-See the [examples/stepfunctions](../../examples/stepfunctions) directory for complete working examples.
+See the [service-examples/stepfunctions](../../service-examples/stepfunctions) directory for complete working examples.

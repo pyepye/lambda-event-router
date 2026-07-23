@@ -158,4 +158,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/documentdb](../../examples/documentdb) directory for complete working examples.
+See the [service-examples/documentdb](../../service-examples/documentdb) directory for complete working examples.

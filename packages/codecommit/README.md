@@ -70,4 +70,4 @@ the references each time.
 
 ## Examples
 
-See the [examples/codecommit](../../examples/codecommit) directory for complete working examples.
+See the [service-examples/codecommit](../../service-examples/codecommit) directory for complete working examples.

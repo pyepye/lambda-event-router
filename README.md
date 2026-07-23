@@ -162,9 +162,9 @@ sqsRouter.route({
 
 ## Examples
 
-See the [examples](examples/) directory for working examples covering every supported service.
+The [service-examples](service-examples/) directory has one deployable app per AWS service. Each one has a README with the deploy steps, a script that triggers it and a walk through the logs it produces.
 
-There is also a [full-examples](full-examples/) directory with deployable code you can spin up on your own AWS environment with a few commands.
+The [full-examples](full-examples/) directory has apps that chain several AWS services through a single flow.
 
 
 ## When not to use it

@@ -1,6 +1,5 @@
 packages:
   - packages/*
-  - examples
   - docs
   - full-examples/*
   - service-examples/*

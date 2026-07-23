@@ -141,4 +141,4 @@ When enabled, failed records are reported back to Kinesis as partial batch failu
 
 ## Examples
 
-See the [examples/kinesis](../../examples/kinesis) directory for complete working examples.
+See the [service-examples/kinesis](../../service-examples/kinesis) directory for complete working examples.

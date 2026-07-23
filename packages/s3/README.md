@@ -210,4 +210,4 @@ invocation succeeds instead of failing with no matching route.
 
 ## Examples
 
-See the [examples/s3](../../examples/s3) directory for complete working examples.
+See the [service-examples/s3](../../service-examples/s3) directory for complete working examples.

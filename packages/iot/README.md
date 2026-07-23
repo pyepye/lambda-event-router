@@ -21,4 +21,4 @@ IoT Core events are handled via the base `EventRouter` since they arrive as gene
 
 ## Examples
 
-See the [examples/iot](../../examples/iot) directory for complete working examples.
+See the [service-examples/iot](../../service-examples/iot) directory for complete working examples.

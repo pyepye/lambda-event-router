@@ -153,4 +153,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/sns](../../examples/sns) directory for complete working examples.
+See the [service-examples/sns](../../service-examples/sns) directory for complete working examples.

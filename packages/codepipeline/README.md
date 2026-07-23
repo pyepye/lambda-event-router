@@ -145,4 +145,4 @@ const withDeployContext: CodePipelineMiddleware<DeployParameters> = async (reque
 
 ## Examples
 
-See the [examples/codepipeline](../../examples/codepipeline) directory for complete working examples.
+See the [service-examples/codepipeline](../../service-examples/codepipeline) directory for complete working examples.

@@ -155,4 +155,4 @@ const v2Only = new HTTPRouter({ adapter: vpcLatticeV2Adapter })
 
 ## Examples
 
-See the [examples/vpclattice](../../examples/vpclattice) directory for complete working examples.
+See the [service-examples/vpclattice](../../service-examples/vpclattice) directory for complete working examples.

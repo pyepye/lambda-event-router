@@ -143,4 +143,4 @@ throw InternalServerError()
 
 ## Examples
 
-See the [examples/alb](../../examples/alb) directory for complete working examples.
+See the [service-examples/alb](../../service-examples/alb) directory for complete working examples.

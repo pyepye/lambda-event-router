@@ -412,4 +412,4 @@ await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({
 
 ## Examples
 
-See the [examples/apigateway](../../examples/apigateway) directory for complete working examples.
+See the [service-examples/apigateway](../../service-examples/apigateway) directory for complete working examples.

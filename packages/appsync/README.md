@@ -331,4 +331,4 @@ connect names no channel, so a channel filter cannot match one.
 
 ## Examples
 
-See the [examples/appsync](../../examples/appsync) directory for complete working examples.
+See the [service-examples/appsync](../../service-examples/appsync) directory for complete working examples.

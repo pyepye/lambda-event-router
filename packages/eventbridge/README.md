@@ -198,4 +198,4 @@ defineRoute({
 
 ## Examples
 
-See the [examples/eventbridge](../../examples/eventbridge) directory for complete working examples.
+See the [service-examples/eventbridge](../../service-examples/eventbridge) directory for complete working examples.

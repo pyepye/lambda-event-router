@@ -150,4 +150,4 @@ When enabled, failed messages are reported back to SQS as partial batch failures
 
 ## Examples
 
-See the [examples/sqs](../../examples/sqs) directory for complete working examples.
+See the [service-examples/sqs](../../service-examples/sqs) directory for complete working examples.

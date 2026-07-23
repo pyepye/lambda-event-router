@@ -127,4 +127,4 @@ const withLogLineContext: FirehoseMiddleware<LogLine> = async (request, next) =>
 
 ## Examples
 
-See the [examples/firehose](../../examples/firehose) directory for complete working examples.
+See the [service-examples/firehose](../../service-examples/firehose) directory for complete working examples.
