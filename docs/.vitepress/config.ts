@@ -1,12 +1,14 @@
 import { defineConfig } from 'vitepress';
 
+const base = '/lambda-event-router/'; // '/' If we move to a custom domain
+
 export default defineConfig({
   srcExclude: ['README.md'],
   title: 'Lambda Event Router',
   description: 'Type-safe event routing for AWS Lambda events',
-  base: '/lambda-event-router/', // '/' If we move to a custom domain
+  base,
   cleanUrls: true,
-  head: [['link', { rel: 'icon', href: '/lambda-event-router.svg' }]],
+  head: [['link', { rel: 'icon', href: `${base}lambda-event-router.svg` }]],
   themeConfig: {
     logo: {
       light: '/lambda-event-router-light.svg',

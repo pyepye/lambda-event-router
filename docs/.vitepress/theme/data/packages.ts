@@ -1,3 +1,9 @@
+import { withBase } from 'vitepress';
+
+export function iconUrl(slug: string): string {
+  return withBase(`/aws-icons/${slug}.svg`);
+}
+
 type SupportedAWSServices =
   | 'other'
   | 'eventbridge'

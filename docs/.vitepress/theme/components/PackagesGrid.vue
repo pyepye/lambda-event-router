@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
-import { filterPills, type PackageEntry, packages } from '../data/packages';
+import { withBase } from 'vitepress';
+import { filterPills, iconUrl, type PackageEntry, packages } from '../data/packages';
 
 const searchQuery = ref<string>('');
 const selectedServices = ref<Set<string>>(new Set());
@@ -44,9 +45,6 @@ function clearFilters(): void {
   selectedServices.value = new Set();
 }
 
-function iconUrl(slug: string): string {
-  return `/aws-icons/${slug}.svg`;
-}
 </script>
 
 <template>
@@ -87,7 +85,7 @@ function iconUrl(slug: string): string {
       <a
         v-for="entry in filteredPackages"
         :key="entry.name"
-        :href="entry.link"
+        :href="withBase(entry.link)"
         class="packages-card"
       >
         <div class="packages-card-icon">

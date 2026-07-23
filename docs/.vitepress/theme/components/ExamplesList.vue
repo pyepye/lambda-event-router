@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { type ExampleEntry, exampleLink, fullExamples, serviceExamples } from '../data/examples';
+import { iconUrl } from '../data/packages';
 
 const props = withDefaults(defineProps<{ group?: 'service' | 'full' }>(), { group: 'service' });
 
@@ -47,7 +48,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
           <img
             v-for="icon in entry.icons"
             :key="icon"
-            :src="`/aws-icons/${icon}.svg`"
+            :src="iconUrl(icon)"
             alt=""
             aria-hidden="true"
           />

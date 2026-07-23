@@ -1,3 +1,7 @@
+<script setup lang="ts">
+import { withBase } from 'vitepress';
+</script>
+
 <template>
   <section class="home-cta">
     <div class="home-cta-inner">
@@ -7,8 +11,8 @@
         to the same handler. The examples are CDK apps you can deploy and trigger.
       </p>
       <div class="home-cta-actions">
-        <a class="home-cta-button is-brand" href="/docs/quick-start">Quick start guide</a>
-        <a class="home-cta-button is-alt" href="/examples/">View examples</a>
+        <a class="home-cta-button is-brand" :href="withBase('/docs/quick-start')">Quick start guide</a>
+        <a class="home-cta-button is-alt" :href="withBase('/examples/')">View examples</a>
       </div>
     </div>
   </section>
