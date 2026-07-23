@@ -1,12 +1,10 @@
 import { defineConfig } from 'vitepress';
 
-// TODO: set `base` to '/lambda-event-router/' before deploying to
-// https://pyepye.github.io/lambda-event-router/, or keep '/' for a custom domain.
 export default defineConfig({
   srcExclude: ['README.md'],
   title: 'Lambda Event Router',
   description: 'Type-safe event routing for AWS Lambda events',
-  base: '/',
+  base: '/lambda-event-router/', // '/' If we move to a custom domain
   cleanUrls: true,
   head: [['link', { rel: 'icon', href: '/lambda-event-router.svg' }]],
   themeConfig: {

@@ -6,7 +6,8 @@
   "scripts": {
     "docs:dev": "vitepress dev",
     "docs:build": "vitepress build",
-    "docs:preview": "vitepress preview"
+    "docs:preview": "vitepress preview",
+    "docs:deploy": "pnpm docs:build && npx gh-pages -d .vitepress/dist/"
   },
   "devDependencies": {
     "shiki": "^4.0.2",
