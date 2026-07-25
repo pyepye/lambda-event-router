@@ -95,6 +95,9 @@ export async function updateItem(
 | API Gateway | Lambda Authorizer | `LambdaAuthorizerRouter` | [LambdaAuthorizerRouter](#lambdaauthorizerrouter) |
 | API Gateway | WebSocket | `WebSocketRouter` | [WebSocketRouter](#websocketrouter) |
 
+`APIGatewayRouter` ignores a Lambda authorizer event. An API and its authorizer can share a Lambda,
+so register the two routers in either order.
+
 See `@lambda-event-router/alb` and `@lambda-event-router/vpclattice` for how to deal with HTTP requests from those services.
 
 
@@ -214,6 +217,10 @@ throw InternalServerError()
 Routes filter on the authorizer `type`, so a TOKEN authorizer gets `authorizationToken` and a REQUEST
 authorizer gets the headers, query, method and path. `Allow` and `Deny` both take the principal and the
 resource ARN to scope the policy to.
+
+Note: an HTTP API on payload format 1.0 loses a repeated header or query param. API Gateway sends
+that authorizer neither multi-value map, so it keeps only the last value of a name it sees twice. Its
+event type is `HttpApiRequestAuthorizerEventV1`, exported from this package.
 
 ```ts
 import { createLambdaAuthorizerRouter, defineLambdaAuthorizerRoute, Allow, Deny } from '@lambda-event-router/apigateway'

@@ -1,4 +1,4 @@
-import { createApiGatewayV1Event } from '@lambda-event-router/testing';
+import { createApiGatewayLambdaAuthorizerRequestV1Event, createApiGatewayV1Event } from '@lambda-event-router/testing';
 
 import { apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
 
@@ -29,6 +29,11 @@ suite('apiGatewayV1Adapter', () => {
       expect(
         apiGatewayV1Adapter.canHandleEvent({ httpMethod: 'GET', path: '/', rawPath: '/', requestContext: {} }),
       ).toBe(false);
+    });
+
+    test('returns false for a REQUEST authorizer event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event();
+      expect(apiGatewayV1Adapter.canHandleEvent(event)).toBe(false);
     });
 
     test('returns false for an ALB event (has requestContext.elb)', () => {

@@ -13,6 +13,7 @@ import { buildValueMaps } from '@lambda-event-router/http';
 import { isAuthorizerResponse } from './response.js';
 import type {
   AuthorizerType,
+  HttpApiRequestAuthorizerEventV1,
   LambdaAuthorizerContext,
   LambdaAuthorizerEvent,
   LambdaAuthorizerFilterInput,
@@ -104,7 +105,9 @@ function isTokenEvent(event: LambdaAuthorizerEvent): event is APIGatewayTokenAut
   return event.type === 'TOKEN' && 'authorizationToken' in event;
 }
 
-function isRequestV1Event(event: LambdaAuthorizerEvent): event is APIGatewayRequestAuthorizerEvent {
+function isRequestV1Event(
+  event: LambdaAuthorizerEvent,
+): event is APIGatewayRequestAuthorizerEvent | HttpApiRequestAuthorizerEventV1 {
   return event.type === 'REQUEST' && 'methodArn' in event;
 }
 

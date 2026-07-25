@@ -181,6 +181,27 @@ same whichever arrived.
 REST API's request authorizer, and the only difference your handler sees is whether it may answer with
 a boolean, which [Simple responses](#simple-responses) covers.
 
+An API and its authorizer can share a Lambda, and the two event shapes overlap.
+[`APIGatewayRouter`](/routers/APIGatewayRouter) ignores anything carrying `type: 'REQUEST'` with
+`methodArn` or `routeArn`. Each router takes only its own events, so register them in any order.
+
+Note: an HTTP API on payload format 1.0 loses a repeated header or query param, where a REST API does
+not. That authorizer is sent neither `multiValueHeaders` nor `multiValueQueryStringParameters`. Send
+`x-depot: leeds` and then `x-depot: hull` and your handler reads `hull`.
+
+Each row is its own event shape, so `request.event` is a union of four types. The HTTP API's payload 1.0
+event is `HttpApiRequestAuthorizerEventV1`, exported from here. It adds `version`, `identitySource`
+and `authorizationToken` to the REST API fields, and carries neither multi-value map.
+
+Narrow on the ARN field and the `version` key together. `aws-lambda` types payload 2.0's `version` as
+`string`. A version check on its own leaves both HTTP API shapes in the union.
+
+```ts
+if ('methodArn' in request.event && 'version' in request.event) {
+  // HTTP API, payload format 1.0
+}
+```
+
 ## Handler
 
 Handlers take one argument and return the policy API Gateway should act on.
@@ -214,8 +235,9 @@ export async function authoriseToken(request: LambdaAuthorizerTokenRequest): Pro
 | `event` | `LambdaAuthorizerEvent` | The untouched event from AWS, for the request context and anything else you need |
 | `context` | `Context` | The Lambda context |
 
-`Context` comes from `aws-lambda`, not from this package. `LambdaAuthorizerEvent` types `event` and is
-exported from here, as a union of that package's three authorizer event types.
+`Context` comes from `aws-lambda`, not from this package. `LambdaAuthorizerEvent` types `event` and
+is exported from here. It unions four shapes: three from `aws-lambda` and
+[`HttpApiRequestAuthorizerEventV1`](#authorizer-types) from this package.
 
 **Header names arrive lowercased.** The router lowercases them whichever authorizer sent them, so
 `headers.authorization` and `headers['x-api-key']` are the spellings to read. Query string names are
@@ -495,14 +517,15 @@ All exported from `@lambda-event-router/apigateway`.
 | `LambdaAuthorizerFilters` | The `filters` key |
 | `LambdaAuthorizerFilterInput` | What a `custom` is given |
 | `LambdaAuthorizerEvent` | `request.event` |
+| `HttpApiRequestAuthorizerEventV1` | The event an HTTP API sends its authorizer on payload format 1.0 |
 | `AuthorizerType` | `'TOKEN' \| 'REQUEST'` |
 
-`Context` on the request comes from `aws-lambda`, and so do the three events `LambdaAuthorizerEvent`
-unions together and the policy half of `LambdaAuthorizerResult`. `Allow`, `Deny` and `generatePolicy`
-all return that package's `APIGatewayAuthorizerResult`, which is what to annotate a policy handler's
-return type with. `Authorized` and `Denied` return `LambdaAuthorizerSimpleResult`, which is this
-package's own, because API Gateway documents one simple response with an optional context and
-`aws-lambda` splits it across two interfaces.
+`Context` on the request comes from `aws-lambda`, and so do three of the four events
+`LambdaAuthorizerEvent` unions together and the policy half of `LambdaAuthorizerResult`. `Allow`,
+`Deny` and `generatePolicy` all return that package's `APIGatewayAuthorizerResult`, which is what to
+annotate a policy handler's return type with. `Authorized` and `Denied` return
+`LambdaAuthorizerSimpleResult`, which is this package's own, because API Gateway documents one simple
+response with an optional context and `aws-lambda` splits it across two interfaces.
 
 `LambdaAuthorizerResult`, `LambdaAuthorizerSimpleResult`, `LambdaAuthorizerHandler`,
 `LambdaAuthorizerRouteDefinition`, `LambdaAuthorizerTokenInput` and `LambdaAuthorizerRequestInput` take

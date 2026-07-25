@@ -1,4 +1,5 @@
 import {
+  createApiGatewayLambdaAuthorizerRequestV2Event,
   createApiGatewayV2Event,
   createApiGatewayV2WithIAMAuthorizerEvent,
   createApiGatewayV2WithJWTAuthorizerEvent,
@@ -24,6 +25,11 @@ suite('apiGatewayV2Adapter', () => {
 
     test('returns false when requestContext.http is missing', () => {
       expect(apiGatewayV2Adapter.canHandleEvent({ rawPath: '/', requestContext: {} })).toBe(false);
+    });
+
+    test('returns false for a REQUEST authorizer event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event();
+      expect(apiGatewayV2Adapter.canHandleEvent(event)).toBe(false);
     });
 
     test('returns false when http.method is not a string', () => {

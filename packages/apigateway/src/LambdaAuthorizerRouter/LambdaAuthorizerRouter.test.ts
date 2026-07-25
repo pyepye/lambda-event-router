@@ -1,4 +1,5 @@
 import {
+  createApiGatewayLambdaAuthorizerRequestHttpApiV1Event,
   createApiGatewayLambdaAuthorizerRequestV1Event,
   createApiGatewayLambdaAuthorizerRequestV2Event,
   createApiGatewayLambdaAuthorizerTokenEvent,
@@ -42,6 +43,11 @@ suite('LambdaAuthorizerRouter', () => {
 
     test('returns true for a valid REQUEST V2 event', () => {
       const event = createApiGatewayLambdaAuthorizerRequestV2Event();
+      expect(router.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true for an HTTP API payload 1.0 REQUEST event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestHttpApiV1Event();
       expect(router.canHandleEvent(event)).toBe(true);
     });
 
@@ -463,6 +469,49 @@ suite('LambdaAuthorizerRouter', () => {
           query: { dryRun: 'true' },
         }),
       );
+    });
+
+    test('builds a REQUEST request from an HTTP API payload 1.0 event', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerRequestHttpApiV1Event({
+        methodArn: 'arn:aws:execute-api:eu-west-2:123456789012:abc123/$default/PATCH/inventory/brk-9',
+        httpMethod: 'PATCH',
+        path: '/inventory/brk-9',
+        headers: { Authorization: 'service-7710' },
+        queryStringParameters: { depot: 'hull' },
+      });
+
+      await router.handleEvent(event, context());
+
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REQUEST',
+          method: 'PATCH',
+          path: '/inventory/brk-9',
+          headers: { authorization: 'service-7710' },
+          query: { depot: 'hull' },
+          resourceArn: 'arn:aws:execute-api:eu-west-2:123456789012:abc123/$default/PATCH/inventory/brk-9',
+        }),
+      );
+    });
+
+    test('treats an HTTP API payload 1.0 event as REQUEST despite its authorizationToken', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+
+      await router.handleEvent(createApiGatewayLambdaAuthorizerRequestHttpApiV1Event(), context());
+
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ type: 'REQUEST' }));
+      expect(custom.mock.calls[0]?.[0]).not.toHaveProperty('authorizationToken');
     });
 
     test('routes on a header a custom filter reads', async ({ context }) => {

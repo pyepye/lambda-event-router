@@ -1,4 +1,5 @@
 import type {
+  APIGatewayEventRequestContextWithAuthorizer,
   APIGatewayRequestAuthorizerEvent,
   APIGatewayRequestAuthorizerEventV2,
   APIGatewayTokenAuthorizerEvent,
@@ -69,6 +70,81 @@ export function createApiGatewayLambdaAuthorizerRequestV1Event(
       requestId: crypto.randomUUID(),
       requestTimeEpoch: 1704067200000,
       resourceId: 'abc123',
+      resourcePath: '/resource',
+    },
+  };
+
+  return deepMerge(defaults, overrides);
+}
+
+// A repeated header or query param reaches this authorizer as its last value alone: API Gateway sends
+// neither multi-value map on payload format 1.0.
+export interface ApiGatewayLambdaAuthorizerRequestHttpApiV1Event {
+  version: '1.0';
+  type: 'REQUEST';
+  methodArn: string;
+  identitySource: string;
+  authorizationToken: string;
+  resource: string;
+  path: string;
+  httpMethod: string;
+  headers: Record<string, string | undefined>;
+  queryStringParameters: Record<string, string | undefined>;
+  pathParameters: Record<string, string | undefined>;
+  stageVariables: Record<string, string | undefined>;
+  requestContext: Omit<APIGatewayEventRequestContextWithAuthorizer<undefined>, 'authorizer'>;
+}
+
+export type ApiGatewayLambdaAuthorizerRequestHttpApiV1EventOverrides =
+  DeepPartial<ApiGatewayLambdaAuthorizerRequestHttpApiV1Event>;
+
+export function createApiGatewayLambdaAuthorizerRequestHttpApiV1Event(
+  overrides: ApiGatewayLambdaAuthorizerRequestHttpApiV1EventOverrides = {},
+): ApiGatewayLambdaAuthorizerRequestHttpApiV1Event {
+  const defaults: ApiGatewayLambdaAuthorizerRequestHttpApiV1Event = {
+    version: '1.0',
+    type: 'REQUEST',
+    methodArn: 'arn:aws:execute-api:us-east-1:123456789012:abc123/$default/GET/resource',
+    identitySource: 'Bearer test-token',
+    authorizationToken: 'Bearer test-token',
+    resource: '',
+    path: '/',
+    httpMethod: 'GET',
+    headers: {},
+    queryStringParameters: {},
+    pathParameters: {},
+    stageVariables: {},
+    requestContext: {
+      accountId: '123456789012',
+      apiId: 'abc123',
+      domainName: 'abc123.execute-api.us-east-1.amazonaws.com',
+      domainPrefix: 'abc123',
+      extendedRequestId: 'abc123=',
+      protocol: 'HTTP/1.1',
+      httpMethod: 'GET',
+      identity: {
+        accessKey: null,
+        accountId: null,
+        apiKey: null,
+        apiKeyId: null,
+        caller: null,
+        clientCert: null,
+        cognitoAuthenticationProvider: null,
+        cognitoAuthenticationType: null,
+        cognitoIdentityId: null,
+        cognitoIdentityPoolId: null,
+        principalOrgId: null,
+        sourceIp: '127.0.0.1',
+        user: null,
+        userAgent: 'test-agent',
+        userArn: null,
+      },
+      path: '/',
+      stage: '$default',
+      requestId: crypto.randomUUID(),
+      requestTime: '01/Jan/2024:00:00:00 +0000',
+      requestTimeEpoch: 1704067200000,
+      resourceId: 'GET /resource',
       resourcePath: '/resource',
     },
   };
@@ -169,6 +245,24 @@ export function createApiGatewayLambdaAuthorizerRequestV2HandlerEvent(
   return { event, context };
 }
 
+export interface ApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent {
+  event: ApiGatewayLambdaAuthorizerRequestHttpApiV1Event;
+  context: Context;
+}
+
+export interface CreateApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEventOptions {
+  event?: ApiGatewayLambdaAuthorizerRequestHttpApiV1EventOverrides;
+  context?: Partial<Context>;
+}
+
+export function createApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent(
+  options: CreateApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEventOptions = {},
+): ApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent {
+  const event = createApiGatewayLambdaAuthorizerRequestHttpApiV1Event(options.event);
+  const context = createMockContext(options.context);
+  return { event, context };
+}
+
 export interface ApiGatewayLambdaAuthorizerFixtures {
   apiGatewayLambdaAuthorizerTokenEvent: (
     overrides?: ApiGatewayLambdaAuthorizerTokenEventOverrides,
@@ -188,6 +282,12 @@ export interface ApiGatewayLambdaAuthorizerFixtures {
   apiGatewayLambdaAuthorizerRequestV2HandlerEvent: (
     options?: CreateApiGatewayLambdaAuthorizerRequestV2HandlerEventOptions,
   ) => ApiGatewayLambdaAuthorizerRequestV2HandlerEvent;
+  apiGatewayLambdaAuthorizerRequestHttpApiV1Event: (
+    overrides?: ApiGatewayLambdaAuthorizerRequestHttpApiV1EventOverrides,
+  ) => ApiGatewayLambdaAuthorizerRequestHttpApiV1Event;
+  apiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent: (
+    options?: CreateApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEventOptions,
+  ) => ApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent;
 }
 
 export const apiGatewayLambdaAuthorizerFixtures: FixtureMap<ApiGatewayLambdaAuthorizerFixtures> = {
@@ -197,4 +297,8 @@ export const apiGatewayLambdaAuthorizerFixtures: FixtureMap<ApiGatewayLambdaAuth
   apiGatewayLambdaAuthorizerRequestV1HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV1HandlerEvent),
   apiGatewayLambdaAuthorizerRequestV2Event: fixture(createApiGatewayLambdaAuthorizerRequestV2Event),
   apiGatewayLambdaAuthorizerRequestV2HandlerEvent: fixture(createApiGatewayLambdaAuthorizerRequestV2HandlerEvent),
+  apiGatewayLambdaAuthorizerRequestHttpApiV1Event: fixture(createApiGatewayLambdaAuthorizerRequestHttpApiV1Event),
+  apiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent: fixture(
+    createApiGatewayLambdaAuthorizerRequestHttpApiV1HandlerEvent,
+  ),
 };

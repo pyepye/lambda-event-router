@@ -1,5 +1,6 @@
 import type {
   APIGatewayAuthorizerResult,
+  APIGatewayEventRequestContextWithAuthorizer,
   APIGatewayRequestAuthorizerEvent,
   APIGatewayRequestAuthorizerEventV2,
   APIGatewaySimpleAuthorizerResult,
@@ -9,9 +10,28 @@ import type {
 
 import type { JsonValue, Middleware } from '@lambda-event-router/base';
 
+// A repeated header or query param reaches this authorizer as its last value alone: API Gateway sends
+// neither multi-value map on payload format 1.0.
+export interface HttpApiRequestAuthorizerEventV1 {
+  version: '1.0';
+  type: 'REQUEST';
+  methodArn: string;
+  identitySource: string;
+  authorizationToken: string;
+  resource: string;
+  path: string;
+  httpMethod: string;
+  headers: Record<string, string | undefined>;
+  queryStringParameters: Record<string, string | undefined>;
+  pathParameters: Record<string, string | undefined>;
+  stageVariables: Record<string, string | undefined>;
+  requestContext: Omit<APIGatewayEventRequestContextWithAuthorizer<undefined>, 'authorizer'>;
+}
+
 export type LambdaAuthorizerEvent =
   | APIGatewayTokenAuthorizerEvent
   | APIGatewayRequestAuthorizerEvent
+  | HttpApiRequestAuthorizerEventV1
   | APIGatewayRequestAuthorizerEventV2;
 
 export type AuthorizerType = 'TOKEN' | 'REQUEST';

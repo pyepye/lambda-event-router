@@ -604,6 +604,10 @@ Your handler is given the same [request object](#request-object) either way, and
 result each payload expects. Nothing else on this page changes with the payload version, so a Lambda can
 move from a REST API to an HTTP API without touching your routes.
 
+This router ignores Lambda authorizer events. The adapter checks for `type: 'REQUEST'` with
+`methodArn` or `routeArn` before it claims an event. Register it and
+[`LambdaAuthorizerRouter`](/routers/LambdaAuthorizerRouter) on the same Lambda in any order.
+
 Where the two differ is in what the event itself carries, which is why `request.event` is typed
 `APIGatewayEvent`, a union of both. Narrow it before reading anything payload specific.
 

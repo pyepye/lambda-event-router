@@ -62,6 +62,7 @@ export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayP
   canHandleEvent(event: unknown): event is APIGatewayV2EventType {
     if (!isObject(event)) return false;
     if (typeof event.rawPath !== 'string') return false;
+    if (event.type === 'REQUEST' && typeof event.routeArn === 'string') return false; // Guard against a REQUEST Lambda authorizer event
     if (!isObject(event.requestContext)) return false;
     if (!isObject(event.requestContext.http)) return false;
     if (typeof event.requestContext.http.method !== 'string') return false;

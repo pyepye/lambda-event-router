@@ -86,6 +86,7 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
     if (typeof event.path !== 'string') return false; // Guard against VPCLatticeV1, APIGatewayV2
     if (typeof event.httpMethod !== 'string') return false; // Guard against VPCLatticeV1, VPCLatticeV2
     if ('rawPath' in event) return false; // Guard against APIGatewayV2
+    if (event.type === 'REQUEST' && typeof event.methodArn === 'string') return false; // Guard against a REQUEST Lambda authorizer event
     if (!isObject(event.requestContext)) return false;
     if (isObject(event.requestContext.elb)) return false; // Guard against ALBEvent
     // event.httpMethod guards against VPCLatticeV1, VPCLatticeV2

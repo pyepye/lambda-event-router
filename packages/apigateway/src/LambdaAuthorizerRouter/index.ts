@@ -8,6 +8,7 @@ export {
 export { Allow, Authorized, Denied, Deny, isAuthorizerResponse } from './response.js';
 export type {
   AuthorizerType,
+  HttpApiRequestAuthorizerEventV1,
   LambdaAuthorizerBaseRequest,
   LambdaAuthorizerContext,
   LambdaAuthorizerEvent,
