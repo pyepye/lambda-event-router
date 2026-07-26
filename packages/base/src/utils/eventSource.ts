@@ -1,5 +1,23 @@
 import { isObject } from './data.js';
 
+function holdsKafkaRecords(records: Record<string, unknown>): boolean {
+  const partitions = Object.values(records);
+  if (partitions.length === 0) return false;
+
+  return partitions.every(
+    (partitionRecords) =>
+      Array.isArray(partitionRecords) &&
+      partitionRecords.length > 0 &&
+      partitionRecords.every(
+        (record) =>
+          isObject(record) &&
+          typeof record.topic === 'string' &&
+          typeof record.partition === 'number' &&
+          typeof record.offset === 'number',
+      ),
+  );
+}
+
 // Check if event is from a known AWS source that has its own router
 export function isKnownEventSource(event: Record<string, unknown>): boolean {
   // Records-based events (SQS, SNS, S3, DynamoDB, Kinesis, CodeCommit, SES)
@@ -28,6 +46,11 @@ export function isKnownEventSource(event: Record<string, unknown>): boolean {
     }
   }
 
+  // Kafka re-delivering a batch reported through batchItemFailures, which names no source
+  if (event.eventSource === undefined && isObject(event.records) && holdsKafkaRecords(event.records)) {
+    return true;
+  }
+
   // EventBridge envelope events (source + detail-type + detail)
   if (typeof event.source === 'string' && typeof event['detail-type'] === 'string' && isObject(event.detail)) {
     return true;
@@ -43,9 +66,24 @@ export function isKnownEventSource(event: Record<string, unknown>): boolean {
     return true;
   }
 
-  // API Gateway V2 / WebSocket
+  // API Gateway V2
   if (typeof event.rawPath === 'string' && isObject(event.requestContext)) {
     return true;
+  }
+
+  // API Gateway WebSocket
+  if (isObject(event.requestContext)) {
+    const { connectionId, eventType, routeKey } = event.requestContext;
+    if (typeof connectionId === 'string' && typeof eventType === 'string' && typeof routeKey === 'string') {
+      return true;
+    }
+  }
+
+  // Lambda authorizer
+  if (event.type === 'TOKEN' || event.type === 'REQUEST') {
+    if (typeof event.methodArn === 'string' || typeof event.routeArn === 'string') {
+      return true;
+    }
   }
 
   // VPC Lattice V1 (uses snake_case raw_path + method)
@@ -86,7 +124,7 @@ export function isKnownEventSource(event: Record<string, unknown>): boolean {
 
   // AppSync (resolver or channel handler)
   if (isObject(event.info)) {
-    if (typeof event.info.parentTypeName === 'string' || typeof event.info.channel === 'string') {
+    if (typeof event.info.parentTypeName === 'string' || isObject(event.info.channel)) {
       return true;
     }
   }

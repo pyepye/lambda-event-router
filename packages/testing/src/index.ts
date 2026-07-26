@@ -203,6 +203,8 @@ export {
   createDynamoDBRecord,
   createDynamoDBRemoveRecord,
 } from './dynamodb.js';
+export type { EventBuilderEntry } from './eventBuilders.js';
+export { allEventBuilders } from './eventBuilders.js';
 export type {
   CreateEventBridgeHandlerEventOptions,
   EventBridgeEvent,

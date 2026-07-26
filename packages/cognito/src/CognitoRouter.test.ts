@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { type CognitoRequest, CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
 import type { UserAttributes } from './types/common.js';
@@ -1009,5 +1009,30 @@ suite('CognitoRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('User attributes validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('CognitoRouter.canHandleEvent', () => {
+  const ownEvents = [
+    'createCognitoCreateAuthChallengeEvent',
+    'createCognitoCustomEmailSenderEvent',
+    'createCognitoCustomMessageEvent',
+    'createCognitoDefineAuthChallengeEvent',
+    'createCognitoPostAuthenticationEvent',
+    'createCognitoPostConfirmationEvent',
+    'createCognitoPreAuthenticationEvent',
+    'createCognitoPreSignUpEvent',
+    'createCognitoPreTokenGenerationEvent',
+    'createCognitoUserMigrationEvent',
+    'createCognitoVerifyAuthChallengeResponseEvent',
+  ];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createCognitoRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -2,7 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import { Unauthorised } from '@lambda-event-router/http';
-import { createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
 
 import { WebSocketForbidden } from './response.js';
 import type { WebSocketConnectResponse, WebSocketFilterInput, WebSocketRequest } from './types.js';
@@ -1019,5 +1019,18 @@ suite('WebSocketRouter', () => {
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
+  });
+});
+
+suite('WebSocketRouter.canHandleEvent', () => {
+  const ownEvents = ['createWebSocketEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createWebSocketRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

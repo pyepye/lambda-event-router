@@ -1,4 +1,5 @@
 import {
+  allEventBuilders,
   createApiGatewayLambdaAuthorizerRequestHttpApiV1Event,
   createApiGatewayLambdaAuthorizerRequestV1Event,
   createApiGatewayLambdaAuthorizerRequestV2Event,
@@ -1075,5 +1076,23 @@ suite('LambdaAuthorizerRouter', () => {
 
       expect(callOrder).toEqual(['router-mw', 'route-mw', 'handler']);
     });
+  });
+});
+
+suite('LambdaAuthorizerRouter.canHandleEvent', () => {
+  const ownEvents = [
+    'createApiGatewayLambdaAuthorizerRequestHttpApiV1Event',
+    'createApiGatewayLambdaAuthorizerRequestV1Event',
+    'createApiGatewayLambdaAuthorizerRequestV2Event',
+    'createApiGatewayLambdaAuthorizerTokenEvent',
+  ];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createLambdaAuthorizerRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

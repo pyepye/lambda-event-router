@@ -1,4 +1,4 @@
-import { createConnectEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createConnectEvent, test } from '@lambda-event-router/testing';
 
 import { ConnectRouter, createConnectRouter, defineRoute } from './ConnectRouter.js';
 import type { ConnectEvent, ConnectRequest, ConnectResponse } from './types.js';
@@ -833,5 +833,18 @@ suite('combined router and route middleware', () => {
 
     expect(routeMiddleware).not.toHaveBeenCalled();
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+suite('ConnectRouter.canHandleEvent', () => {
+  const ownEvents = ['createConnectEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createConnectRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

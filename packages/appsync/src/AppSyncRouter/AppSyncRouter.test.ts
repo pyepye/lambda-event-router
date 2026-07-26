@@ -3,7 +3,13 @@ import type { AppSyncResolverEvent } from 'aws-lambda';
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createAppSyncResolverEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createAppSyncResolverEvent,
+  createMockContext,
+  createMockSchema,
+  test,
+} from '@lambda-event-router/testing';
 
 import { AppSyncRouter, createAppSyncRouter, defineRoute } from './AppSyncRouter.js';
 import type { AppSyncResolverFilterInput, AppSyncResolverRequest } from './types.js';
@@ -1028,5 +1034,18 @@ suite('AppSyncRouter', () => {
         },
       ]);
     });
+  });
+});
+
+suite('AppSyncRouter.canHandleEvent', () => {
+  const ownEvents = ['createAppSyncResolverEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createAppSyncRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

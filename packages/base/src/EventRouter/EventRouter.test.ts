@@ -137,7 +137,7 @@ suite('EventRouter', () => {
 
     test('returns false for a known AppSync channel event', async () => {
       router.route(defineEventRoute({ filters: {} }).handle(async () => {}));
-      const event = { info: { channel: '/default/test' } };
+      const event = { info: { channel: { path: '/default/test', segments: ['default', 'test'] } } };
       expect(await router.canHandleEvent(event)).toBe(false);
     });
 

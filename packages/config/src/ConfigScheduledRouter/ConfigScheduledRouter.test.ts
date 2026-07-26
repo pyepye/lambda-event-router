@@ -2,7 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import type { ConfigEvent } from '@lambda-event-router/testing';
-import { createConfigEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createConfigEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import {
   ConfigScheduledRouter,
@@ -619,5 +619,20 @@ suite('ConfigScheduledRouter', () => {
         expect(middleware).not.toHaveBeenCalled();
       });
     });
+  });
+});
+
+suite('ConfigScheduledRouter.canHandleEvent', () => {
+  // No builder makes a scheduled Config event yet.
+  // No builder makes a scheduled Config event yet.
+  const ownEvents: string[] = [];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createConfigScheduledRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,4 +1,10 @@
-import { createAppSyncEventsEvent, createMockContext, createMockSchema, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createAppSyncEventsEvent,
+  createMockContext,
+  createMockSchema,
+  test,
+} from '@lambda-event-router/testing';
 
 import { AppSyncEventsRouter, createAppSyncEventsRouter, defineEventsRoute } from './AppSyncEventsRouter.js';
 import type {
@@ -905,5 +911,18 @@ suite('result types', () => {
     const refused: AppSyncEventsSubscribeResult = { error: 'not allowed' };
 
     expect([admitted, refused]).toHaveLength(2);
+  });
+});
+
+suite('AppSyncEventsRouter.canHandleEvent', () => {
+  const ownEvents = ['createAppSyncEventsEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createAppSyncEventsRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

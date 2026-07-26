@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createDynamoDBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createDynamoDBRouter, DynamoDBRouter, defineRoute } from './DynamoDBRouter.js';
 import type { DynamoDBFilterInput, DynamoDBFilters, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
@@ -1757,5 +1757,18 @@ suite('DynamoDBRouter', () => {
       });
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('DynamoDBRouter.canHandleEvent', () => {
+  const ownEvents = ['createDynamoDBEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createDynamoDBRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

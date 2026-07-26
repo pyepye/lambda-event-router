@@ -1,7 +1,7 @@
 import type { Mock, MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createCodePipelineEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
 import type { CodePipelineFilterInput, CodePipelineRequest, CodePipelineResponse } from './types.js';
@@ -894,5 +894,18 @@ suite('CodePipelineRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('UserParameters validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('CodePipelineRouter.canHandleEvent', () => {
+  const ownEvents = ['createCodePipelineEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createCodePipelineRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

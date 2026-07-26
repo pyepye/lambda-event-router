@@ -2,6 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import {
+  allEventBuilders,
   createDocumentDBDeleteEntry,
   createDocumentDBEvent,
   createDocumentDBInsertEntry,
@@ -1063,5 +1064,18 @@ suite('DocumentDBRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('DocumentDBRouter.canHandleEvent', () => {
+  const ownEvents = ['createDocumentDBEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createDocumentDBRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,4 +1,4 @@
-import { createCodeCommitEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createCodeCommitEvent, test } from '@lambda-event-router/testing';
 
 import { CodeCommitRouter, createCodeCommitRouter, defineRoute } from './CodeCommitRouter.js';
 import type { CodeCommitFilterInput, CodeCommitRequest } from './types.js';
@@ -1399,5 +1399,18 @@ suite('CodeCommitRouter', () => {
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('CodeCommitRouter.canHandleEvent', () => {
+  const ownEvents = ['createCodeCommitEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createCodeCommitRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

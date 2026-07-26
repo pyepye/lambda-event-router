@@ -3,7 +3,7 @@ import type { Context } from 'aws-lambda';
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
 import { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
 import type { StepFunctionsFilterInput, StepFunctionsMiddleware, StepFunctionsRequest } from './types.js';
@@ -812,5 +812,20 @@ suite('StepFunctionsRouter', () => {
 
       await expect(router.handleEvent({ action: 'process' }, context)).resolves.toEqual({ done: true });
     });
+  });
+});
+
+suite('StepFunctionsRouter.canHandleEvent', () => {
+  // createDocumentDBChangeEvent builds one change document rather than an event, so this
+  // catch-all router is the only thing that recognises it.
+  const ownEvents = ['createDocumentDBChangeEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createStepFunctionsRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,4 +1,10 @@
-import { createS3BatchEvent, createS3BatchTask, createS3Event, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createS3BatchEvent,
+  createS3BatchTask,
+  createS3Event,
+  test,
+} from '@lambda-event-router/testing';
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { createS3Router, defineRoute, S3Router } from './S3Router.js';
@@ -1375,5 +1381,18 @@ suite('S3Router', () => {
 
       expect(filters.eventName).toBe('Object*');
     });
+  });
+});
+
+suite('S3Router.canHandleEvent', () => {
+  const ownEvents = ['createS3BatchEvent', 'createS3Event'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createS3Router().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

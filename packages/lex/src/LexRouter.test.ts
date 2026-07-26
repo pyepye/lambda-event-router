@@ -1,6 +1,6 @@
 import type { LexV2Result } from 'aws-lambda';
 
-import { createLexEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createLexEvent, test } from '@lambda-event-router/testing';
 
 import { createLexRouter, defineRoute, LexRouter } from './LexRouter.js';
 import type { LexFilterInput, LexRequest } from './types.js';
@@ -948,5 +948,18 @@ suite('combined router and route middleware', () => {
 
     expect(routeMiddleware).not.toHaveBeenCalled();
     expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+suite('LexRouter.canHandleEvent', () => {
+  const ownEvents = ['createLexEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createLexRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

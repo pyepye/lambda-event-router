@@ -1,4 +1,9 @@
-import { createAppSyncEventsAuthorizerEvent, createMockContext, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createAppSyncEventsAuthorizerEvent,
+  createMockContext,
+  test,
+} from '@lambda-event-router/testing';
 
 import {
   AppSyncEventsAuthorizerRouter,
@@ -470,5 +475,18 @@ suite('AppSyncEventsAuthorizerRouter', () => {
     test('turns away an isAuthorized that is not a boolean', () => {
       expect(isAppSyncEventsAuthorizerResponse({ isAuthorized: 'yes' })).toBe(false);
     });
+  });
+});
+
+suite('AppSyncEventsAuthorizerRouter.canHandleEvent', () => {
+  const ownEvents = ['createAppSyncEventsAuthorizerEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createAppSyncEventsAuthorizerRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

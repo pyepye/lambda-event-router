@@ -39,6 +39,29 @@ const sqsEvent = createSQSEvent({ records: [{ body: '{"name": "test"}' }] })
 const snsEvent = createSNSEvent({ records: [{ Sns: { Message: '{"name": "test"}' } }] })
 ```
 
+### All event builders
+
+`allEventBuilders()` returns every event builder as a `[name, build]` pair, so one assertion can run
+across all of them.
+
+```ts
+import { allEventBuilders } from '@lambda-event-router/testing'
+
+const ownEvents = ['createSQSEvent']
+
+test.each(allEventBuilders())('%s', async (name, build) => {
+  const event = build()
+  const isOwnEvent = ownEvents.includes(name)
+
+  const claimed = await createSQSRouter().canHandleEvent(event)
+
+  expect(claimed).toBe(isOwnEvent)
+})
+```
+
+Each router test file ends with this, asserting the router claims its own events and nobody else's. Adding a builder
+here fails those tests until every router says whether it claims the new event.
+
 ### Creating records
 
 ```ts

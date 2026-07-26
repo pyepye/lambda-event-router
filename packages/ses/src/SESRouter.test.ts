@@ -1,4 +1,4 @@
-import { createSESEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createSESEvent, test } from '@lambda-event-router/testing';
 
 import { createSESRouter, defineRoute, SESRouter } from './SESRouter.js';
 import type { SESRequest, SESResponse } from './types.js';
@@ -1102,5 +1102,18 @@ suite('SESRouter', () => {
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('SESRouter.canHandleEvent', () => {
+  const ownEvents = ['createSESEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createSESRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

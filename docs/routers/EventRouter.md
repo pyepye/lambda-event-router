@@ -25,9 +25,10 @@ includes a bare string and a top level array.
 | --- | --- |
 | `Records[0].eventSource` or `Records[0].EventSource` | SQS, SNS, S3, DynamoDB Streams, Kinesis, CodeCommit, SES |
 | A top level `eventSource` | DocumentDB, ActiveMQ, RabbitMQ, Kafka |
+| The record shape | A Kafka batch Lambda re-delivers, which names no source |
 | `source` with `detail-type` and `detail` | EventBridge buses, pipes and rules |
-| The request shape | ALB, API Gateway REST and HTTP, VPC Lattice, AppSync Authorizer |
-| Fields only that service sends | Cognito, Firehose, S3 Batch Operations, AppSync, CloudWatch Logs, CodePipeline, Config, Connect, Lex, Secrets Manager |
+| The request shape | ALB, API Gateway REST, HTTP and WebSocket, Lambda authorizers, VPC Lattice, AppSync Authorizer |
+| Fields only that service sends | Cognito, Firehose, S3 Batch Operations, AppSync, AppSync Events, CloudWatch Logs, CodePipeline, Config, Connect, Lex, Secrets Manager |
 
 **An EventBridge rule event is refused**, because a rule delivers the same envelope a bus does. Reach
 for [EventBridgeRouter](/routers/EventBridgeRouter) for those. EventBridge Scheduler is the one

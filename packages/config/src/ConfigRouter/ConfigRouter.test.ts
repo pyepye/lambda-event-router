@@ -2,6 +2,7 @@ import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import {
+  allEventBuilders,
   createConfigurationItem,
   createConfigurationItemSummary,
   createMockSchema,
@@ -859,5 +860,18 @@ suite('ConfigRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed for ruleParameters');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('ConfigRouter.canHandleEvent', () => {
+  const ownEvents = ['createConfigEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createConfigRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
 import type { KafkaEvent, KafkaFilterInput, KafkaRecord, KafkaRecordHeader, KafkaRequest } from './types.js';
@@ -1422,5 +1422,18 @@ suite('KafkaRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('KafkaRouter.canHandleEvent', () => {
+  const ownEvents = ['createKafkaRetryEvent', 'createMSKEvent', 'createSelfManagedKafkaEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createKafkaRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

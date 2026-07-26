@@ -1,5 +1,5 @@
 import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
-import { createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 
 import { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
 
@@ -310,5 +310,18 @@ suite('VPCLatticeRouter', () => {
         }),
       );
     });
+  });
+});
+
+suite('VPCLatticeRouter.canHandleEvent', () => {
+  const ownEvents = ['createVPCLatticeV1Event', 'createVPCLatticeV2Event'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createVPCLatticeRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

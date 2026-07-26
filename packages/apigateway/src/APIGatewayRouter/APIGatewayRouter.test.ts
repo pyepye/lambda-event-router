@@ -1,5 +1,5 @@
 import { type ApiRequest, defineRoute, type HandlerResponse, NoContent, Ok, Response } from '@lambda-event-router/http';
-import { createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
 
@@ -749,5 +749,24 @@ suite('APIGatewayRouter', () => {
         }),
       );
     });
+  });
+});
+
+suite('APIGatewayRouter.canHandleEvent', () => {
+  const ownEvents = [
+    'createApiGatewayV1Event',
+    'createApiGatewayV2Event',
+    'createApiGatewayV2WithIAMAuthorizerEvent',
+    'createApiGatewayV2WithJWTAuthorizerEvent',
+    'createApiGatewayV2WithLambdaAuthorizerEvent',
+  ];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createAPIGatewayRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockSchema, createSQSEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createMockSchema, createSQSEvent, test } from '@lambda-event-router/testing';
 
 import { createSQSRouter, defineRoute, SQSRouter } from './SQSRouter.js';
 import type { SQSFilterInput, SQSRequest } from './types.js';
@@ -1484,5 +1484,18 @@ suite('SQSRouter', () => {
       expect(result).toBeUndefined();
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('SQSRouter.canHandleEvent', () => {
+  const ownEvents = ['createSQSEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createSQSRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

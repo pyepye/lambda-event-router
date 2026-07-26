@@ -1,4 +1,4 @@
-import { createSecretsManagerRotationEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createSecretsManagerRotationEvent, test } from '@lambda-event-router/testing';
 
 import { createSecretsManagerRouter, defineRoute, SecretsManagerRouter } from './SecretsManagerRouter.js';
 import type { SecretsManagerFilterInput, SecretsManagerFilters, SecretsManagerRequest } from './types.js';
@@ -1040,5 +1040,18 @@ suite('SecretsManagerRouter', () => {
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('SecretsManagerRouter.canHandleEvent', () => {
+  const ownEvents = ['createSecretsManagerRotationEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createSecretsManagerRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

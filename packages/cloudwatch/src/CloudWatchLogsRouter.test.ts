@@ -1,7 +1,7 @@
 import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData } from 'aws-lambda';
 
-import { createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createCloudWatchLogsEvent, test } from '@lambda-event-router/testing';
 
 import { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchLogsRouter.js';
 import type { CloudWatchLogsRequest } from './types.js';
@@ -849,5 +849,18 @@ suite('CloudWatchLogsRouter', () => {
       expect(routeMiddleware).not.toHaveBeenCalled();
       expect(handler).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('CloudWatchLogsRouter.canHandleEvent', () => {
+  const ownEvents = ['createCloudWatchLogsEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createCloudWatchLogsRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

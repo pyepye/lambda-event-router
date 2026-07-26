@@ -1,7 +1,13 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createActiveMQEvent, createActiveMQHandlerEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createActiveMQEvent,
+  createActiveMQHandlerEvent,
+  createMockSchema,
+  test,
+} from '@lambda-event-router/testing';
 
 import { ActiveMQRouter, createActiveMQRouter, defineActiveMQRoute } from './ActiveMQRouter.js';
 import type {
@@ -1021,5 +1027,18 @@ suite('ActiveMQRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('ActiveMQRouter.canHandleEvent', () => {
+  const ownEvents = ['createActiveMQEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createActiveMQRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

@@ -1,7 +1,13 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockSchema, createRabbitMQEvent, createRabbitMQHandlerEvent, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createMockSchema,
+  createRabbitMQEvent,
+  createRabbitMQHandlerEvent,
+  test,
+} from '@lambda-event-router/testing';
 
 import { createRabbitMQRouter, defineRabbitMQRoute, RabbitMQRouter } from './RabbitMQRouter.js';
 import type { RabbitMQFilterInput, RabbitMQRequest } from './types.js';
@@ -1068,5 +1074,18 @@ suite('RabbitMQRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('RabbitMQRouter.canHandleEvent', () => {
+  const ownEvents = ['createRabbitMQEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createRabbitMQRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

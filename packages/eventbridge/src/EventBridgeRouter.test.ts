@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createEventBridgeEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createEventBridgeEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createEventBridgeRouter, defineRoute, EventBridgeRouter } from './EventBridgeRouter.js';
 import type { EventBridgeFilterInput, EventBridgeRequest } from './types.js';
@@ -902,5 +902,18 @@ suite('EventBridgeRouter', () => {
       await expect(router.handleEvent(event, context)).rejects.toThrow('Schema validation failed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('EventBridgeRouter.canHandleEvent', () => {
+  const ownEvents = ['createEventBridgeEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createEventBridgeRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

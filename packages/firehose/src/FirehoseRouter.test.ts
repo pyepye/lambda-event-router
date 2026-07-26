@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createFirehoseEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createFirehoseEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { createFirehoseRouter, defineRoute, FirehoseRouter } from './FirehoseRouter.js';
 import type { FirehoseResponseResult } from './response.js';
@@ -1298,5 +1298,18 @@ suite('FirehoseRouter', () => {
       expect(result.records[0]?.result).toBe('ProcessingFailed');
       expect(middleware).not.toHaveBeenCalled();
     });
+  });
+});
+
+suite('FirehoseRouter.canHandleEvent', () => {
+  const ownEvents = ['createFirehoseEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createFirehoseRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });

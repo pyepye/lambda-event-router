@@ -1,5 +1,5 @@
 import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
-import { createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { ALBRouter, createALBRouter } from './ALBRouter.js';
 
@@ -328,5 +328,18 @@ suite('ALBRouter', () => {
         }),
       );
     });
+  });
+});
+
+suite('ALBRouter.canHandleEvent', () => {
+  const ownEvents = ['createALBEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createALBRouter().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
   });
 });
