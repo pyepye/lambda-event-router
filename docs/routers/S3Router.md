@@ -1,12 +1,12 @@
 # S3Router
 
-`S3Router` routes Amazon S3 events to handlers, either an object notification or a task from an S3
-Batch Operations job.
+`S3Router` routes Amazon S3 object notifications to handlers, one record at a time.
 
 A notification tells you something happened to an object, so you register a route per event name and
-the router hands one record at a time to the handler that matches it. A batch job is the other
-direction: it works through a manifest and calls your function per object, expecting a result back for
-each one. Both arrive on the same router.
+the router hands each record to the handler that matches it.
+
+An S3 Batch Operations job is a different trigger and has its own router. See
+[S3BatchRouter](/routers/S3BatchRouter).
 
 ## Install
 
@@ -28,14 +28,14 @@ const s3Router = createS3Router({
 })
 ```
 
-Both options are optional, so `createS3Router()` on its own is what you want most of the time.
+`middleware` is the only option and it can be left out. `createS3Router()` on its own gives you a
+router with no shared middleware.
 
 ### Options
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
-| `middleware` | `S3Middleware[]` | No | `[]` | Runs for every notification record this router handles, before any route middleware. Batch tasks do not get it. See [Middleware](#middleware) |
-| `batchMiddleware` | `S3BatchMiddleware[]` | No | `[]` | Runs for every batch task this router handles, before any batch route middleware. Notification records do not get it. See [Middleware](#middleware) |
+| `middleware` | `S3Middleware[]` | No | `[]` | Runs for every record this router handles, before any route middleware. See [Middleware](#middleware) |
 
 ## Register routes
 
@@ -336,104 +336,23 @@ The request is mapped from the raw event, in the same camelCase shape as the oth
 Skip `testEvent()` and the router still claims the test event and returns without doing anything, so
 the invocation succeeds rather than failing with no matching route.
 
-## Batch operations
-
-An S3 Batch Operations job works through a manifest and invokes your function once per object. The job
-already decided which objects it is sending, so a batch route takes no filters. There is only ever one
-of them, and calling `batchOperation()` a second time throws.
-
-An invocation can carry more than one task. The router runs the handler for each and returns a result
-per task, so one task failing does not stop the rest.
-
-```ts
-import { logger } from '@lambda-event-router/base'
-import { createS3Router, PermanentFailure, Succeeded } from '@lambda-event-router/s3'
-
-const s3Router = createS3Router()
-
-s3Router.batchOperation({
-  middleware: [logBatchTask],  // Optional
-  handler: async ({ bucket, key, versionId }) => {
-    if (!key.endsWith('.csv')) return PermanentFailure(`${key} is not a CSV`)
-
-    logger.info(`Converting ${key} from ${bucket}, version ${versionId ?? 'latest'}`)
-    return Succeeded(`Converted ${key}`)
-  },
-})
-```
-
-The request is a task rather than a record.
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `taskId` | `string` | The task's ID, which the router puts in the result for you |
-| `bucket` | `string` | Taken off the task's `s3BucketArn` |
-| `key` | `string` | The object key, URL-decoded |
-| `versionId` | `string \| null` | The object version from the manifest |
-| `task` | `S3BatchEventTask` | The untouched task from AWS |
-| `event` | `S3BatchEvent` | The whole invocation, for `job.id` and `invocationId` |
-| `context` | `Context` | The Lambda context |
-
-Return one of three helpers, which build the `S3BatchResponse` the job expects. The router wraps it in
-the result envelope, so there is nothing to assemble yourself.
-
-| Helper | What the job does with it |
-| --- | --- |
-| `Succeeded(resultString?)` | Counts the task as done. The string lands in the completion report |
-| `TemporaryFailure(resultString?)` | Redrives the task before the job finishes. The string is only reported if the last redrive fails |
-| `PermanentFailure(resultString?)` | Marks the task failed and reports the string |
-
-Throwing one of them works too, so code well below the handler can fail a task without threading a
-return value back up. Any other error is rethrown and fails the invocation.
-
-```ts
-if (!(await bucketIsWritable(bucket))) throw PermanentFailure('destination is read only')
-```
-
-The result envelope carries a `treatMissingKeysAs` field, which tells the job how to count any task it
-sent that your response leaves out. The router returns a result for every task it runs, so this only
-comes into play if a task never reaches the handler.
-
-It defaults to `PermanentFailure`. Set it on the route when you want the job to treat a missing task as
-something else.
-
-```ts
-s3Router.batchOperation({
-  treatMissingKeysAs: 'TemporaryFailure',
-  handler: async ({ key }) => Succeeded(`Converted ${key}`),
-})
-```
-
-**A batch event with no `batchOperation()` route throws.** The router has nothing to answer with, and a
-notification route cannot stand in because the two take different requests and return different things.
-
 ## Middleware
 
-Notification middleware is typed `S3Middleware` and runs once per record, so an event carrying three
-records runs it three times. Batch middleware is typed `S3BatchMiddleware`, because a task is not a
-record and the handler returns a result rather than nothing.
+Middleware is typed `S3Middleware` and runs once per record, so an event carrying three records runs
+it three times.
 
 ```ts
 import { logger } from '@lambda-event-router/base'
-import type { S3BatchMiddleware, S3Middleware } from '@lambda-event-router/s3'
+import type { S3Middleware } from '@lambda-event-router/s3'
 
 export const logInvocation: S3Middleware = async (request, next) => {
   logger.info(`${request.eventName} on ${request.bucket}/${request.key}`)
   return next(request)
 }
-
-export const logBatchTask: S3BatchMiddleware = async (request, next) => {
-  const response = await next(request)
-  logger.info(`Task ${request.taskId} finished ${response.resultCode}`)
-  return response
-}
 ```
 
 ```ts
-const s3Router = createS3Router({
-  middleware: [logInvocation],
-  batchMiddleware: [logBatchTask],
-})
+const s3Router = createS3Router({ middleware: [logInvocation] })
 
 s3Router.objectCreatedPut({
   filters: { bucket: UPLOADS_BUCKET },
@@ -442,12 +361,7 @@ s3Router.objectCreatedPut({
 })
 ```
 
-The two never cross. `middleware` runs for notification records and `batchMiddleware` runs for batch
-tasks. They cannot share a list. A batch task is not a record, and its handler returns a result rather than
-nothing.
-
-To get the same behaviour on both sides, write it twice against the two request types. See
-[middleware](/docs/middleware) for the execution order and the three levels it attaches at.
+See [middleware](/docs/middleware) for the execution order and the three levels it attaches at.
 
 ## Types
 
@@ -476,17 +390,6 @@ Routes and filters:
 | `S3ObjectRemovedRouteDefinition`, `S3ObjectRestoreRouteDefinition`, `S3ObjectTaggingRouteDefinition`, `S3ObjectAclRouteDefinition`, `S3LifecycleExpirationRouteDefinition`, `S3LifecycleTransitionRouteDefinition`, `S3IntelligentTieringRouteDefinition`, `S3ReducedRedundancyLostObjectRouteDefinition` | A route passed to the matching convenience method |
 | `S3ObjectCreatedHandler`, `S3ObjectRemovedHandler`, `S3ObjectRestoreHandler`, `S3ObjectTaggingHandler`, `S3ObjectAclHandler`, `S3LifecycleExpirationHandler`, `S3LifecycleTransitionHandler`, `S3IntelligentTieringHandler`, `S3ReducedRedundancyLostObjectHandler` | The handler each route definition takes |
 
-Batch operations:
-
-| Type | Description |
-| --- | --- |
-| `S3BatchRequest` | The batch handler argument |
-| `S3BatchResponse` | What a batch handler returns, `{ resultCode, resultString? }` |
-| `S3BatchHandler` | The batch handler |
-| `S3BatchMiddleware` | Batch route middleware |
-| `S3BatchRouteDefinition` | The object passed to `batchOperation()` |
-| `S3BatchEvent`, `S3BatchEventJob`, `S3BatchEventTask`, `S3BatchResult`, `S3BatchResultResult`, `S3BatchResultResultCode` | Re-exported from `aws-lambda` so you do not need both imports |
-
 Test event:
 
 | Type | Description |
@@ -513,15 +416,14 @@ Event names, as a type and a matching array of the values:
 
 The `eventName` filter takes `S3EventName`, so a name outside it is a compile error. The per-family
 types narrow that further, for a helper or a variable you want held to one family.
-`isS3BatchResponse`, the `Succeeded`, `TemporaryFailure` and `PermanentFailure` helpers, the
-`S3Router` class and the `createS3Router` and `defineRoute` functions all come from the same place.
+The `S3Router` class and the `createS3Router` and `defineRoute` functions come from the same place.
 
 ## Code example
 
 An uploads bucket feeding one Lambda, with CSVs and images going to their own handlers, deletes tidying
-up derived files and a batch route that reprocesses the backlog from a manifest.
+up derived files, and a batch router reprocessing the backlog from a manifest.
 
-Open a file: [index.ts](#s3-example:index.ts) | [S3 router](#s3-example:s3.ts) | [notification handlers](#s3-example:handlers/uploads.ts) | [batch handler](#s3-example:handlers/reprocess.ts)
+Open a file: [index.ts](#s3-example:index.ts) | [S3 router](#s3-example:s3.ts) | [batch router](#s3-example:s3Batch.ts) | [notification handlers](#s3-example:handlers/uploads.ts) | [batch handler](#s3-example:handlers/reprocess.ts)
 
 <script setup>
 const files = [
@@ -530,10 +432,11 @@ const files = [
     code: `import type { Handler } from 'aws-lambda'
 import { LambdaRouter } from '@lambda-event-router/base'
 
+import { s3BatchRouter } from './s3Batch.js'
 import { s3Router } from './s3.js'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [s3Router],
+  routers: [s3Router, s3BatchRouter],
 })
 
 export const handler: Handler = lambdaRouter.handler()`,
@@ -543,7 +446,6 @@ export const handler: Handler = lambdaRouter.handler()`,
     code: `import { createS3Router } from '@lambda-event-router/s3'
 
 import { onUploadRemoved, processImage, processReport } from './handlers/uploads.js'
-import { reprocessReport } from './handlers/reprocess.js'
 
 const UPLOADS_BUCKET = 'acme-uploads'
 
@@ -561,10 +463,17 @@ s3Router
   .objectRemoved({
     filters: { bucket: UPLOADS_BUCKET },
     handler: onUploadRemoved,
-  })
-  .batchOperation({
-    handler: reprocessReport,
   })`,
+  },
+  {
+    path: 's3Batch.ts',
+    code: `import { createS3BatchRouter } from '@lambda-event-router/s3'
+
+import { reprocessReport } from './handlers/reprocess.js'
+
+export const s3BatchRouter = createS3BatchRouter().route({
+  handler: reprocessReport,
+})`,
   },
   {
     path: 'handlers/uploads.ts',
@@ -613,9 +522,8 @@ event, so no record can match more than one and the order they are registered in
 Both upload routes go through a convenience method rather than `route()`, which is what types
 `objectSize` and `eTag` onto the request `processReport` and `processImage` are handed.
 
-The batch route sits on the same router and the same Lambda as the notification routes, and the router
-tells the two event shapes apart for you. Nothing about the notification routes affects which task the
-batch job sends.
+The batch router sits on the same Lambda as the notification routes, and each takes only its own
+events. See [S3BatchRouter](/routers/S3BatchRouter) for what a batch handler returns.
 
 `index.ts` hands the router to `LambdaRouter`, which is what AWS invokes and what every router in the
 Lambda gets registered on. See [routers](/docs/routers) for how the two levels of matching fit

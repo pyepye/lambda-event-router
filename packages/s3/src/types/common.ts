@@ -2,7 +2,6 @@ import type { Context, S3EventRecord } from 'aws-lambda';
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
-import type { S3BatchMiddleware } from './batch.js';
 import type { S3IntelligentTieringEventName } from './intelligentTiering.js';
 import type { S3LifecycleExpirationEventName, S3LifecycleTransitionEventName } from './lifecycle.js';
 import type { S3ObjectAclEventName } from './objectAcl.js';
@@ -67,5 +66,4 @@ export type S3Middleware = Middleware<S3BaseRequest, void>;
 
 export interface S3RouterOptions {
   middleware?: S3Middleware[];
-  batchMiddleware?: S3BatchMiddleware[];
 }

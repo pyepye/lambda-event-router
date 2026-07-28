@@ -105,6 +105,32 @@ export function createS3BatchHandlerEvent(options: CreateS3BatchHandlerEventOpti
   return { event, context };
 }
 
+// A bucket sends this once, when a notification configuration is saved. aws-lambda declares no type
+// for it, so the shape is declared here.
+export interface S3TestEvent {
+  Service: 'Amazon S3';
+  Event: 's3:TestEvent';
+  Time: string;
+  Bucket: string;
+  RequestId: string;
+  HostId: string;
+}
+
+export type S3TestEventOverrides = DeepPartial<S3TestEvent>;
+
+export function createS3TestEvent(overrides: S3TestEventOverrides = {}): S3TestEvent {
+  const defaults: S3TestEvent = {
+    Service: 'Amazon S3',
+    Event: 's3:TestEvent',
+    Time: '2024-01-01T00:00:00.000Z',
+    Bucket: 'test-bucket',
+    RequestId: crypto.randomUUID(),
+    HostId: 'test-host-id',
+  };
+
+  return deepMerge(defaults, overrides);
+}
+
 export interface S3Fixtures {
   s3Record: (overrides?: S3RecordOverrides) => S3EventRecord;
   s3Event: (records?: S3EventRecord[]) => S3Event;
@@ -112,6 +138,7 @@ export interface S3Fixtures {
   s3BatchTask: (overrides?: S3BatchTaskOverrides) => S3BatchEventTask;
   s3BatchEvent: (overrides?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] }) => S3BatchEvent;
   s3BatchHandlerEvent: (options?: CreateS3BatchHandlerEventOptions) => S3BatchHandlerEvent;
+  s3TestEvent: (overrides?: S3TestEventOverrides) => S3TestEvent;
 }
 
 export const s3Fixtures: FixtureMap<S3Fixtures> = {
@@ -121,4 +148,5 @@ export const s3Fixtures: FixtureMap<S3Fixtures> = {
   s3BatchTask: fixture(createS3BatchTask),
   s3BatchEvent: fixture(createS3BatchEvent),
   s3BatchHandlerEvent: fixture(createS3BatchHandlerEvent),
+  s3TestEvent: fixture(createS3TestEvent),
 };

@@ -127,7 +127,7 @@ export const serviceExamples: ExampleEntry[] = [
     name: 'S3',
     icons: ['s3'],
     summary: 'A document vault over two buckets and a Batch job',
-    routers: ['S3Router'],
+    routers: ['S3Router', 'S3BatchRouter'],
     path: 'service-examples/s3',
   },
   {

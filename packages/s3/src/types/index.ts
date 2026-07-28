@@ -12,6 +12,7 @@ export type {
   S3BatchResultResult,
   S3BatchResultResultCode,
   S3BatchRouteDefinition,
+  S3BatchRouterOptions,
 } from './batch.js';
 export type {
   S3BaseRequest,

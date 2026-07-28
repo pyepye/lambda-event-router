@@ -1,8 +1,8 @@
 # Service example: S3
 
-A deployable CDK app that exercises the `S3Router` end to end. It models a student document vault.
-One Lambda handles the notifications from two buckets and the tasks of an S3 Batch job, and the
-router does the per-record dispatch.
+A deployable CDK app that exercises `S3Router` and `S3BatchRouter` end to end. It models a student
+document vault. One Lambda handles the notifications from two buckets and the tasks of an S3 Batch
+job, with a router registered for each.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
@@ -45,6 +45,9 @@ cannot feed back into the worker.
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The one
 exception is the batch route, which returns a result code to S3 for every task.
 
+`LambdaRouter` picks the router from the event shape, so a notification never reaches the batch
+handler and a task never reaches a notification route.
+
 ## What it covers
 
 One `trigger` writes 22 notification events across the two buckets and then runs an eight task batch
@@ -64,6 +67,7 @@ result the batch route can return.
 | Router middleware | `logRecord` runs once per record, on both buckets |
 | Route middleware | `withDocumentContext` on `scanDocument` |
 | Batch middleware | `withBatchContext` on the batch route, which has its own request type |
+| Two routers, one Lambda | `S3Router` takes the notifications and `S3BatchRouter` takes the job's tasks |
 | ObjectCreated request | `objectSize` and `eTag`, which only the created routes receive |
 | ObjectRestore request | `restoreEventData`, which only `ObjectRestore:Completed` carries |
 | Filter order | An oversized PDF reaches `rejectOversizedUpload`, registered above `scanDocument` |

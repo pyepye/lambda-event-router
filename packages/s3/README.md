@@ -1,10 +1,10 @@
 # @lambda-event-router/s3
 
-S3 event routing by bucket, key pattern and event name. Convenience methods for the object, lifecycle, tagging and ACL events, plus S3 Batch Operations.
+S3 notification routing by bucket, key pattern and event name, with convenience methods for the object, lifecycle, tagging and ACL events. A separate router for S3 Batch Operations.
 
 **Supported AWS Services:** `Amazon S3`
 
-**Available Routers:** `S3Router`
+**Available Routers:** `S3Router` | `S3BatchRouter`
 
 ## Install
 
@@ -73,6 +73,8 @@ export async function processUpload({ bucket, key, objectSize, eventName }: S3Ob
 
 
 ## Usage
+
+### S3Router
 
 #### Inline handlers
 
@@ -151,7 +153,6 @@ s3Router.objectAclPut()
 s3Router.reducedRedundancyLostObject()
 s3Router.intelligentTiering()
 s3Router.testEvent()
-s3Router.batchOperation()
 ```
 
 #### Filters
@@ -170,28 +171,6 @@ defineRoute({
 })
 ```
 
-#### S3 Batch Operations
-
-A batch route is registered with `batchOperation()` and takes no filters, since a batch job invokes the
-function directly rather than arriving as a notification.
-
-```ts
-import { createS3Router, Succeeded, TemporaryFailure, PermanentFailure } from '@lambda-event-router/s3'
-
-const s3Router = createS3Router()
-
-// S3 Batch route returns Succeeded, TemporaryFailure or PermanentFailure
-s3Router.batchOperation({
-  handler: async ({ bucket, key }) => {
-    // Process the object
-    return Succeeded()
-  },
-})
-```
-
-Set `treatMissingKeysAs` on the route to control how the job counts a task left out of the response. It
-defaults to `PermanentFailure`.
-
 #### S3 test event
 
 S3 sends a one-off `s3:TestEvent` when you first configure a bucket notification. It has no `Records`,
@@ -207,6 +186,36 @@ s3Router.testEvent({
 
 Skip `testEvent()` and the router still claims the event and returns without doing anything, so the
 invocation succeeds instead of failing with no matching route.
+
+### S3BatchRouter
+
+An S3 Batch Operations job is a different trigger to a notification, so it has its own router. The job
+already chose the objects, so the route takes no filters and there is only ever one of it.
+
+```ts
+import { createS3BatchRouter, Succeeded } from '@lambda-event-router/s3'
+
+export const s3BatchRouter = createS3BatchRouter().route({
+  handler: async ({ bucket, key }) => {
+    // Process the object
+    return Succeeded()
+  },
+})
+```
+
+A handler returns `Succeeded`, `TemporaryFailure` or `PermanentFailure`, and the router assembles the
+result envelope the job reads.
+
+Set `treatMissingKeysAs` on the route to control how the job counts a task left out of the response. It
+defaults to `PermanentFailure`.
+
+Register both routers when one Lambda does both jobs.
+
+```ts
+import { LambdaRouter } from '@lambda-event-router/base'
+
+const lambdaRouter = new LambdaRouter({ routers: [s3Router, s3BatchRouter] })
+```
 
 ## Examples
 

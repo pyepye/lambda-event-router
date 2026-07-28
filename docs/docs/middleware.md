@@ -310,12 +310,10 @@ Most packages name it `<Source>Middleware`, so `SQSMiddleware`, `DynamoDBMiddlew
 | `AppSyncRouter` | `AppSyncResolverMiddleware` | `@lambda-event-router/appsync` |
 | `ActiveMQRouter`, `RabbitMQRouter` | `ActiveMQMiddleware`, `RabbitMQMiddleware` | `@lambda-event-router/mq` |
 | `CloudWatchLogsRouter` | `CloudWatchLogsMiddleware` | `@lambda-event-router/cloudwatch` |
-| `S3Router` | `S3Middleware`, and `S3BatchMiddleware` for Batch tasks | `@lambda-event-router/s3` |
+| `S3Router` | `S3Middleware` | `@lambda-event-router/s3` |
+| `S3BatchRouter` | `S3BatchMiddleware` | `@lambda-event-router/s3` |
 | `EventRouter` | `EventRouterMiddleware` | `@lambda-event-router/base` |
 | `StepFunctionsRouter` | `StepFunctionsMiddleware`, and `StepFunctionsTaskTokenMiddleware` on a callback route | `@lambda-event-router/stepfunctions` |
-
-**`S3Router` keeps its two middleware types apart.** `middleware` runs for notification records and
-`batchMiddleware` runs for Batch tasks. That holds at both the router and the route level.
 
 ## Full example
 

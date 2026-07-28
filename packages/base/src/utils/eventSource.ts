@@ -38,6 +38,11 @@ export function isKnownEventSource(event: Record<string, unknown>): boolean {
     }
   }
 
+  // S3 sending a bucket's notification configuration a one-off ping
+  if (event.Event === 's3:TestEvent') {
+    return true;
+  }
+
   // Top-level eventSource field (DocumentDB, ActiveMQ, RabbitMQ)
   if (typeof event.eventSource === 'string') {
     const topLevelSources = ['aws:docdb', 'aws:mq', 'aws:rmq', 'aws:kafka', 'SelfManagedKafka'];

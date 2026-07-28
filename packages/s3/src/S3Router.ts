@@ -1,4 +1,4 @@
-import type { Context, S3BatchEvent, S3BatchResult, S3Event, S3EventRecord } from 'aws-lambda';
+import type { Context, S3Event, S3EventRecord } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import {
@@ -8,14 +8,9 @@ import {
   orderRoutesBySpecificity,
 } from '@lambda-event-router/base';
 
-import type { S3BatchResponse } from './batchResponse.js';
-import { isS3BatchResponse } from './batchResponse.js';
-import type { S3BatchMiddleware } from './types/batch.js';
 import type { S3Middleware, S3RouterOptions } from './types/common.js';
 import type {
   S3BaseRequest,
-  S3BatchRequest,
-  S3BatchRouteDefinition,
   S3EventName,
   S3FilterInput,
   S3Filters,
@@ -76,17 +71,6 @@ export function defineRoute(config: RouteInput): RouteBuilder {
 // Type Guard
 // =============================================================================
 
-function isS3BatchEvent(event: unknown): event is S3BatchEvent {
-  /* v8 ignore next -- @preserve - Guard is for TS. canHandleEvent already checks isObject */
-  if (!isObject(event)) return false;
-  return (
-    typeof event.invocationSchemaVersion === 'string' &&
-    typeof event.invocationId === 'string' &&
-    isObject(event.job) &&
-    Array.isArray(event.tasks)
-  );
-}
-
 function isS3TestEvent(event: unknown): event is S3TestEvent {
   /* v8 ignore next -- @preserve - Guard is for TS. canHandleEvent already checks isObject */
   if (!isObject(event)) return false;
@@ -97,27 +81,21 @@ function isS3TestEvent(event: unknown): event is S3TestEvent {
 // S3Router Class
 // =============================================================================
 
-export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3TestEvent, undefined | S3BatchResult> {
+export class S3Router implements EventTypeRouter<S3Event | S3TestEvent, undefined> {
   private routes: InternalRoute[] = [];
   private routesOrdered = false;
-  private batchRoute: S3BatchRouteDefinition | undefined;
   private testEventRoute: S3TestEventRouteDefinition | undefined;
   private middleware: S3Middleware[] = [];
-  private batchMiddleware: S3BatchMiddleware[] = [];
 
   constructor(options?: S3RouterOptions) {
     this.middleware = options?.middleware ?? [];
-    this.batchMiddleware = options?.batchMiddleware ?? [];
   }
   // ===========================================================================
   // Event Detection
   // ===========================================================================
 
-  canHandleEvent(event: unknown): event is S3Event | S3BatchEvent | S3TestEvent {
+  canHandleEvent(event: unknown): event is S3Event | S3TestEvent {
     if (!isObject(event)) return false;
-
-    // Check for S3 Batch Event
-    if (isS3BatchEvent(event)) return true;
 
     // Check for S3 Test Event
     if (isS3TestEvent(event)) return true;
@@ -378,27 +356,10 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
   }
 
   // ===========================================================================
-  // Batch Operations
-  // ===========================================================================
-
-  batchOperation(definition: S3BatchRouteDefinition): this {
-    if (this.batchRoute) {
-      throw new Error('A batch route is already registered: a job sends one task shape, so a router takes one');
-    }
-    this.batchRoute = definition;
-    return this;
-  }
-
-  // ===========================================================================
   // Event Handling
   // ===========================================================================
 
-  async handleEvent(event: S3Event | S3BatchEvent | S3TestEvent, context: Context): Promise<undefined | S3BatchResult> {
-    // Handle S3 Batch Event
-    if (isS3BatchEvent(event)) {
-      return this.handleBatchEvent(event, context);
-    }
-
+  async handleEvent(event: S3Event | S3TestEvent, context: Context): Promise<undefined> {
     // Handle S3 Test Event - short-circuits notification routing
     if (isS3TestEvent(event)) {
       return this.handleTestEvent(event, context);
@@ -441,76 +402,6 @@ export class S3Router implements EventTypeRouter<S3Event | S3BatchEvent | S3Test
     });
     this.routesOrdered = false;
     return this;
-  }
-
-  private async handleBatchEvent(event: S3BatchEvent, context: Context): Promise<S3BatchResult> {
-    if (!this.batchRoute) {
-      throw new Error('No batch operation handler registered');
-    }
-
-    // S3 Batch expects a per-task result. Missing tasks missing in the response gets marked treatMissingKeysAs which
-    // results as a PermanentFailure
-    const results: S3BatchResult['results'] = [];
-    for (const task of event.tasks) {
-      const request = this.buildBatchRequest(task, event, context);
-      const response = await this.processBatchTask(this.batchRoute, request);
-      results.push({
-        taskId: task.taskId,
-        resultCode: response.resultCode,
-        resultString: response.resultString ?? '',
-      });
-    }
-
-    return this.buildBatchResult(event, results);
-  }
-
-  private buildBatchRequest(
-    task: S3BatchEvent['tasks'][number],
-    event: S3BatchEvent,
-    context: Context,
-  ): S3BatchRequest {
-    // The bucket name is the last ARN segment. S3 Batch may send either arn:aws:s3:region:account:bucket
-    // or arn:aws:s3:::bucket, and a bucket name holds no colon.
-    const bucketArn = task.s3BucketArn;
-    /* v8 ignore next -- @preserve - split always yields at least one segment, so the fallback is unreachable */
-    const bucket = bucketArn.split(':').at(-1) ?? '';
-
-    // S3 Batch keys are URL-encoded
-    const key = decodeURIComponent(task.s3Key.replace(/\+/g, ' '));
-
-    return {
-      taskId: task.taskId,
-      bucket,
-      key,
-      versionId: task.s3VersionId,
-      task,
-      event,
-      context,
-    };
-  }
-
-  private async processBatchTask(route: S3BatchRouteDefinition, request: S3BatchRequest): Promise<S3BatchResponse> {
-    try {
-      const batchMiddleware: S3BatchMiddleware[] = [...this.batchMiddleware, ...(route.middleware ?? [])];
-      if (batchMiddleware.length > 0) {
-        return await handleEventWithMiddleware(batchMiddleware, request, route.handler);
-      }
-      return await route.handler(request);
-    } catch (error) {
-      if (isS3BatchResponse(error)) {
-        return error;
-      }
-      throw error;
-    }
-  }
-
-  private buildBatchResult(event: S3BatchEvent, results: S3BatchResult['results']): S3BatchResult {
-    return {
-      invocationSchemaVersion: event.invocationSchemaVersion,
-      treatMissingKeysAs: this.batchRoute?.treatMissingKeysAs ?? 'PermanentFailure',
-      invocationId: event.invocationId,
-      results,
-    };
   }
 
   private async processRecord(record: S3EventRecord, context: Context): Promise<void> {

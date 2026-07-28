@@ -67,6 +67,7 @@ export default defineConfig({
             { text: 'KinesisRouter', link: '/routers/KinesisRouter' },
             { text: 'LexRouter', link: '/routers/LexRouter' },
             { text: 'RabbitMQRouter', link: '/routers/RabbitMQRouter' },
+            { text: 'S3BatchRouter', link: '/routers/S3BatchRouter' },
             { text: 'S3Router', link: '/routers/S3Router' },
             { text: 'SecretsManagerRouter', link: '/routers/SecretsManagerRouter' },
             { text: 'SESRouter', link: '/routers/SESRouter' },

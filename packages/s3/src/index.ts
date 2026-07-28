@@ -1,5 +1,6 @@
 export type { S3BatchResponse } from './batchResponse.js';
 export { isS3BatchResponse, PermanentFailure, Succeeded, TemporaryFailure } from './batchResponse.js';
+export { createS3BatchRouter, S3BatchRouter } from './S3BatchRouter.js';
 export { createS3Router, defineRoute, S3Router } from './S3Router.js';
 // Re-export all types
 export type {
@@ -16,6 +17,7 @@ export type {
   S3BatchResultResult,
   S3BatchResultResultCode,
   S3BatchRouteDefinition,
+  S3BatchRouterOptions,
   S3FilterInput,
   S3Filters,
   S3FiltersWithoutEventNames,

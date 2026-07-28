@@ -33,6 +33,10 @@ export type S3BatchMiddleware = Middleware<S3BatchRequest, S3BatchResponse>;
 // Route Definition Types
 // =============================================================================
 
+export interface S3BatchRouterOptions {
+  middleware?: S3BatchMiddleware[];
+}
+
 export interface S3BatchRouteDefinition {
   treatMissingKeysAs?: S3BatchResultResultCode; // How S3 batch should treat missing keys in the response. Defaults to 'PermanentFailure'
   middleware?: S3BatchMiddleware[];

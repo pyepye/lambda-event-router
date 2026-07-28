@@ -1,4 +1,4 @@
-import { createS3Router } from '@lambda-event-router/s3';
+import { createS3BatchRouter, createS3Router } from '@lambda-event-router/s3';
 
 import { MAX_UPLOAD_BYTES, REPORTS_BUCKET, UPLOADS_BUCKET } from './config.js';
 import { acceptFormUpload } from './handlers/acceptFormUpload.js';
@@ -113,9 +113,10 @@ s3Router
     filters: { bucket: UPLOADS_BUCKET },
     handler: coolDownLedger,
   })
-  .testEvent({ handler: recordNotificationSetup })
-  .batchOperation({
-    treatMissingKeysAs: 'TemporaryFailure',
-    middleware: [withBatchContext],
-    handler: processArchiveTask,
-  });
+  .testEvent({ handler: recordNotificationSetup });
+
+export const s3BatchRouter = createS3BatchRouter().route({
+  treatMissingKeysAs: 'TemporaryFailure',
+  middleware: [withBatchContext],
+  handler: processArchiveTask,
+});

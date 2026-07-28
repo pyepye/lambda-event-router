@@ -343,8 +343,16 @@ export const packages: PackageEntry[] = [
     name: 'S3Router',
     package: '@lambda-event-router/s3',
     services: ['s3'],
-    details: 'Amazon S3 - Object notification, Batch Operations',
+    details: 'Amazon S3 - Object notification',
     link: '/routers/S3Router',
+  },
+  {
+    icons: ['s3'],
+    name: 'S3BatchRouter',
+    package: '@lambda-event-router/s3',
+    services: ['s3'],
+    details: 'Amazon S3 - Batch Operations',
+    link: '/routers/S3BatchRouter',
   },
   {
     icons: ['cloudwatch'],

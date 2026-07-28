@@ -66,7 +66,7 @@ For usage details, check the individual READMEs linked in the table.
 | Amazon EventBridge | Bus | [`@lambda-event-router/eventbridge`](packages/eventbridge/README.md) | `EventBridgeRouter` | [README](packages/eventbridge/README.md) |
 | Amazon EventBridge | Scheduler | [`@lambda-event-router/base`](packages/base/README.md) | `EventRouter` | [README](packages/base/README.md) |
 | Amazon S3 | Object notification | [`@lambda-event-router/s3`](packages/s3/README.md) | `S3Router` | [README](packages/s3/README.md) |
-| Amazon S3 | Batch Operations | [`@lambda-event-router/s3`](packages/s3/README.md) | `S3Router` | [README](packages/s3/README.md) |
+| Amazon S3 | Batch Operations | [`@lambda-event-router/s3`](packages/s3/README.md) | `S3BatchRouter` | [README](packages/s3/README.md) |
 | Amazon CloudWatch | Logs subscription filter | [`@lambda-event-router/cloudwatch`](packages/cloudwatch/README.md) | `CloudWatchLogsRouter` | [README](packages/cloudwatch/README.md) |
 | AWS Step Functions | Task | [`@lambda-event-router/stepfunctions`](packages/stepfunctions/README.md) | `StepFunctionsRouter` | [README](packages/stepfunctions/README.md) |
 | AWS CodePipeline | Job | [`@lambda-event-router/codepipeline`](packages/codepipeline/README.md) | `CodePipelineRouter` | [README](packages/codepipeline/README.md) |

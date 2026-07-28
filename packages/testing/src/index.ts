@@ -256,6 +256,8 @@ export type {
   S3BatchHandlerEvent,
   S3HandlerEvent,
   S3RecordOverrides,
+  S3TestEvent,
+  S3TestEventOverrides,
 } from './s3.js';
 export {
   createS3BatchEvent,
@@ -264,6 +266,7 @@ export {
   createS3Event,
   createS3HandlerEvent,
   createS3Record,
+  createS3TestEvent,
 } from './s3.js';
 export type {
   CreateSecretsManagerHandlerEventOptions,
