@@ -2,6 +2,8 @@
 
 // Batch operation types
 export type {
+  S3BatchAnyEvent,
+  S3BatchAnyEventTask,
   S3BatchEvent,
   S3BatchEventJob,
   S3BatchEventTask,
@@ -13,6 +15,8 @@ export type {
   S3BatchResultResultCode,
   S3BatchRouteDefinition,
   S3BatchRouterOptions,
+  S3BatchV2Event,
+  S3BatchV2EventTask,
 } from './batch.js';
 export type {
   S3BaseRequest,

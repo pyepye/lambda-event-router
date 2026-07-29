@@ -1,4 +1,11 @@
-import { allEventBuilders, createS3BatchEvent, createS3BatchTask, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createS3BatchEvent,
+  createS3BatchTask,
+  createS3BatchV2Event,
+  createS3BatchV2Task,
+  test,
+} from '@lambda-event-router/testing';
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { createS3BatchRouter, S3BatchRouter } from './S3BatchRouter.js';
@@ -22,6 +29,10 @@ suite('S3BatchRouter', () => {
   suite('canHandleEvent', () => {
     test('returns true for an S3 Batch event', () => {
       expect(router.canHandleEvent(createS3BatchEvent())).toBe(true);
+    });
+
+    test('returns true for a schema 2.0 batch event', () => {
+      expect(router.canHandleEvent(createS3BatchV2Event())).toBe(true);
     });
 
     test('returns false for an S3 notification event', () => {
@@ -261,6 +272,55 @@ suite('S3BatchRouter', () => {
     });
   });
 
+  suite('schema 2.0', () => {
+    test('takes the bucket name from s3Bucket rather than an ARN', async ({ context }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
+      router.route({ handler });
+      const event = createS3BatchV2Event({ tasks: [createS3BatchV2Task({ s3Bucket: 'my-directory-bucket' })] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ bucket: 'my-directory-bucket' }));
+    });
+
+    test('URL-decodes the key the same way as schema 1.0', async ({ context }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
+      router.route({ handler });
+      const event = createS3BatchV2Event({ tasks: [createS3BatchV2Task({ s3Key: 'probe/schema-2+probe.json' })] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ key: 'probe/schema-2 probe.json' }));
+    });
+
+    test('hands the job userArguments to the handler', async ({ context }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
+      router.route({ handler });
+      const event = createS3BatchV2Event({ job: { id: 'job-1', userArguments: { mode: 'reindex' } } });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ userArguments: { mode: 'reindex' } }));
+    });
+
+    test('leaves userArguments undefined on a schema 1.0 event', async ({ context }) => {
+      const handler = vi.fn().mockResolvedValue({ resultCode: 'Succeeded' });
+      router.route({ handler });
+
+      await router.handleEvent(createS3BatchEvent(), context());
+
+      expect(handler.mock.calls[0]?.[0]).not.toHaveProperty('userArguments');
+    });
+
+    test('echoes the schema version back in the result', async ({ context }) => {
+      router.route({ handler: async () => ({ resultCode: 'Succeeded' as const }) });
+
+      const result = await router.handleEvent(createS3BatchV2Event(), context());
+
+      expect(result.invocationSchemaVersion).toBe('2.0');
+    });
+  });
+
   suite('middleware', () => {
     test('executes middleware before the handler', async ({ s3BatchHandlerEvent }) => {
       const callOrder: string[] = [];
@@ -412,7 +472,7 @@ suite('S3BatchRouter', () => {
 });
 
 suite('S3BatchRouter.canHandleEvent', () => {
-  const ownEvents = ['createS3BatchEvent'];
+  const ownEvents = ['createS3BatchEvent', 'createS3BatchV2Event'];
 
   test.each(allEventBuilders())('%s', async (name, build) => {
     const event = build();

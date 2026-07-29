@@ -72,11 +72,12 @@ missing response as a failure of the whole invocation.
 | Field | Type | Description |
 | --- | --- | --- |
 | `taskId` | `string` | The task's ID, which the router puts in the result for you |
-| `bucket` | `string` | Taken off the task's `s3BucketArn` |
+| `bucket` | `string` | The bucket name, whichever schema the job uses |
 | `key` | `string` | The object key, URL-decoded |
 | `versionId` | `string \| null` | The object version from the manifest |
-| `task` | `S3BatchEventTask` | The untouched task from AWS |
-| `event` | `S3BatchEvent` | The whole invocation, for `job.id` and `invocationId` |
+| `userArguments` | `Record<string, string> \| undefined` | What the job passed, on schema 2.0 only |
+| `task` | `S3BatchAnyEventTask` | The untouched task from AWS |
+| `event` | `S3BatchAnyEvent` | The whole invocation, for `job.id` and `invocationId` |
 | `context` | `Context` | The Lambda context |
 
 ### Response type
@@ -112,6 +113,30 @@ s3BatchRouter.route({
   handler: async ({ key }) => Succeeded(`Converted ${key}`),
 })
 ```
+
+## Schema versions
+
+A job picks its payload schema at creation time with `InvocationSchemaVersion`. Version 1.0 is the
+default. Version 2.0 is required for a job on a directory bucket, and for any job passing
+`UserArguments`.
+
+The router takes both and hands your handler the same request either way, so `bucket`, `key` and
+`versionId` read the same whichever arrived.
+
+| | 1.0 | 2.0 |
+| --- | --- | --- |
+| Task names the bucket with | `s3BucketArn`, an ARN | `s3Bucket`, a plain name |
+| `job` carries | `id` | `id` and `userArguments` |
+| Type for the event | `S3BatchEvent`, from `aws-lambda` | `S3BatchV2Event`, from this package |
+
+`aws-lambda` declares no 2.0 types, which is why the 2.0 shapes are exported from here. Narrow on
+`invocationSchemaVersion` before reading anything version specific off `request.event`.
+
+```ts
+const version = request.event.invocationSchemaVersion
+```
+
+The result envelope echoes back whichever version the job sent, so there is nothing to set.
 
 ## Failures and retries
 
@@ -159,6 +184,8 @@ All exported from `@lambda-event-router/s3`. None of them take generic parameter
 | `S3BatchHandler` | The handler |
 | `S3BatchMiddleware` | Router and route middleware |
 | `S3BatchRouteDefinition` | The object passed to `route()` |
+| `S3BatchV2Event`, `S3BatchV2EventTask` | The schema 2.0 shapes, declared here because `aws-lambda` has none |
+| `S3BatchAnyEvent`, `S3BatchAnyEventTask` | Either schema, which is what `request.event` and `request.task` are typed as |
 | `S3BatchRouterOptions` | Options for `createS3BatchRouter` |
 | `S3BatchEvent`, `S3BatchEventJob`, `S3BatchEventTask`, `S3BatchResult`, `S3BatchResultResult`, `S3BatchResultResultCode` | Re-exported from `aws-lambda` so you do not need both imports |
 

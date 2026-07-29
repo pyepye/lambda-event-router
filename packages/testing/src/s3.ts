@@ -94,6 +94,55 @@ export function createS3BatchEvent(
   };
 }
 
+// Schema 2.0 is what a job on a directory bucket sends, and what any job passing userArguments sends.
+// The task names the bucket rather than its ARN, and aws-lambda declares no type for either shape.
+export interface S3BatchV2EventTask {
+  taskId: string;
+  s3Key: string;
+  s3VersionId: string | null;
+  s3Bucket: string;
+}
+
+export interface S3BatchV2Event {
+  invocationSchemaVersion: '2.0';
+  invocationId: string;
+  job: {
+    id: string;
+    userArguments?: Record<string, string>;
+  };
+  tasks: S3BatchV2EventTask[];
+}
+
+export type S3BatchV2TaskOverrides = DeepPartial<S3BatchV2EventTask>;
+
+export function createS3BatchV2Task(overrides: S3BatchV2TaskOverrides = {}): S3BatchV2EventTask {
+  const defaults: S3BatchV2EventTask = {
+    taskId: crypto.randomUUID(),
+    s3Key: 'uploads/test-file.txt',
+    s3VersionId: null,
+    s3Bucket: 'my-bucket',
+  };
+
+  return deepMerge(defaults, overrides);
+}
+
+export function createS3BatchV2Event(
+  overrides: Partial<Omit<S3BatchV2Event, 'tasks'>> & { tasks?: S3BatchV2EventTask[] } = {},
+): S3BatchV2Event {
+  const { tasks, ...restOverrides } = overrides;
+
+  return {
+    invocationSchemaVersion: '2.0',
+    invocationId: crypto.randomUUID(),
+    job: {
+      id: crypto.randomUUID(),
+      userArguments: { source: 'test' },
+    },
+    tasks: tasks ?? [createS3BatchV2Task()],
+    ...restOverrides,
+  };
+}
+
 export interface CreateS3BatchHandlerEventOptions {
   event?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] };
   context?: Partial<Context>;
@@ -139,6 +188,10 @@ export interface S3Fixtures {
   s3BatchEvent: (overrides?: Partial<Omit<S3BatchEvent, 'tasks'>> & { tasks?: S3BatchEventTask[] }) => S3BatchEvent;
   s3BatchHandlerEvent: (options?: CreateS3BatchHandlerEventOptions) => S3BatchHandlerEvent;
   s3TestEvent: (overrides?: S3TestEventOverrides) => S3TestEvent;
+  s3BatchV2Task: (overrides?: S3BatchV2TaskOverrides) => S3BatchV2EventTask;
+  s3BatchV2Event: (
+    overrides?: Partial<Omit<S3BatchV2Event, 'tasks'>> & { tasks?: S3BatchV2EventTask[] },
+  ) => S3BatchV2Event;
 }
 
 export const s3Fixtures: FixtureMap<S3Fixtures> = {
@@ -149,4 +202,6 @@ export const s3Fixtures: FixtureMap<S3Fixtures> = {
   s3BatchEvent: fixture(createS3BatchEvent),
   s3BatchHandlerEvent: fixture(createS3BatchHandlerEvent),
   s3TestEvent: fixture(createS3TestEvent),
+  s3BatchV2Task: fixture(createS3BatchV2Task),
+  s3BatchV2Event: fixture(createS3BatchV2Event),
 };

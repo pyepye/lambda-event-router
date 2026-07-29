@@ -336,6 +336,9 @@ The request is mapped from the raw event, in the same camelCase shape as the oth
 Skip `testEvent()` and the router still claims the test event and returns without doing anything, so
 the invocation succeeds rather than failing with no matching route.
 
+The route takes no middleware. S3 sends one test event when the configuration is saved, so there is a
+single handler and nothing for middleware to share across.
+
 ## Middleware
 
 Middleware is typed `S3Middleware` and runs once per record, so an event carrying three records runs

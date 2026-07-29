@@ -1,13 +1,20 @@
-import type { Context, S3BatchEvent, S3BatchResult } from 'aws-lambda';
+import type { Context, S3BatchResult } from 'aws-lambda';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, isObject } from '@lambda-event-router/base';
 
 import type { S3BatchResponse } from './batchResponse.js';
 import { isS3BatchResponse } from './batchResponse.js';
-import type { S3BatchMiddleware, S3BatchRequest, S3BatchRouteDefinition, S3BatchRouterOptions } from './types/index.js';
+import type {
+  S3BatchAnyEvent,
+  S3BatchAnyEventTask,
+  S3BatchMiddleware,
+  S3BatchRequest,
+  S3BatchRouteDefinition,
+  S3BatchRouterOptions,
+} from './types/index.js';
 
-export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResult> {
+export class S3BatchRouter implements EventTypeRouter<S3BatchAnyEvent, S3BatchResult> {
   private batchRoute: S3BatchRouteDefinition | undefined;
   private middleware: S3BatchMiddleware[] = [];
 
@@ -15,7 +22,7 @@ export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResul
     this.middleware = options?.middleware ?? [];
   }
 
-  canHandleEvent(event: unknown): event is S3BatchEvent {
+  canHandleEvent(event: unknown): event is S3BatchAnyEvent {
     if (!isObject(event)) return false;
     if (typeof event.invocationSchemaVersion !== 'string') return false;
     if (typeof event.invocationId !== 'string') return false;
@@ -31,7 +38,7 @@ export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResul
     return this;
   }
 
-  async handleEvent(event: S3BatchEvent, context: Context): Promise<S3BatchResult> {
+  async handleEvent(event: S3BatchAnyEvent, context: Context): Promise<S3BatchResult> {
     if (!this.batchRoute) {
       throw new Error('No batch route registered: register one with route() before the job runs');
     }
@@ -52,17 +59,16 @@ export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResul
     return this.buildResult(this.batchRoute, event, results);
   }
 
-  private buildRequest(task: S3BatchEvent['tasks'][number], event: S3BatchEvent, context: Context): S3BatchRequest {
-    // The bucket name is the last ARN segment. S3 Batch may send either arn:aws:s3:region:account:bucket
-    // or arn:aws:s3:::bucket, and a bucket name holds no colon.
-    const bucketArn = task.s3BucketArn;
+  private buildRequest(task: S3BatchAnyEventTask, event: S3BatchAnyEvent, context: Context): S3BatchRequest {
+    // Schema 2.0 names the bucket. Schema 1.0 sends an ARN, either arn:aws:s3:region:account:bucket
+    // or arn:aws:s3:::bucket, and a bucket name holds no colon, so the name is its last segment.
     /* v8 ignore next -- @preserve - split always yields at least one segment, so the fallback is unreachable */
-    const bucket = bucketArn.split(':').at(-1) ?? '';
+    const bucket = 's3Bucket' in task ? task.s3Bucket : (task.s3BucketArn.split(':').at(-1) ?? '');
 
     // S3 Batch keys are URL-encoded
     const key = decodeURIComponent(task.s3Key.replace(/\+/g, ' '));
 
-    return {
+    const request: S3BatchRequest = {
       taskId: task.taskId,
       bucket,
       key,
@@ -71,6 +77,13 @@ export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResul
       event,
       context,
     };
+
+    // userArguments is a schema 2.0 field, so it stays off the request for a 1.0 job.
+    if ('userArguments' in event.job && event.job.userArguments) {
+      request.userArguments = event.job.userArguments;
+    }
+
+    return request;
   }
 
   private async processTask(route: S3BatchRouteDefinition, request: S3BatchRequest): Promise<S3BatchResponse> {
@@ -90,7 +103,7 @@ export class S3BatchRouter implements EventTypeRouter<S3BatchEvent, S3BatchResul
 
   private buildResult(
     route: S3BatchRouteDefinition,
-    event: S3BatchEvent,
+    event: S3BatchAnyEvent,
     results: S3BatchResult['results'],
   ): S3BatchResult {
     return {

@@ -209,6 +209,10 @@ result envelope the job reads.
 Set `treatMissingKeysAs` on the route to control how the job counts a task left out of the response. It
 defaults to `PermanentFailure`.
 
+The router takes both payload schemas. A job picks one with `InvocationSchemaVersion`, and 2.0 is
+required for a directory bucket or for passing `UserArguments`. The handler gets the same `bucket`,
+`key` and `versionId` either way, and `userArguments` on 2.0.
+
 Register both routers when one Lambda does both jobs.
 
 ```ts
