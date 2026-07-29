@@ -74,9 +74,8 @@ matched](/docs/routing#nothing-matched) for what the other routers do instead.
 ### Convenience methods
 
 Each one fills in the `eventName` filter and types the handler for the event it sets, so they are the
-shortest way to register a route and the only way to get the right request type. There are 23 of them,
-covering the object, lifecycle, tagging and ACL events, with a wildcard method per family alongside the
-specific ones.
+shortest way to register a route. They cover the object, lifecycle, tagging and ACL events, with a
+wildcard method per family alongside the specific ones.
 
 ```ts
 // Both of these register the same route
@@ -254,11 +253,13 @@ Inference pays off most in a Lambda taking several event sources, since you neve
 their request shapes. See [inferred handlers](/docs/handlers#inferred-handlers), where the same queue
 is written both ways to compare.
 
-**`defineRoute` types every handler as an ObjectCreated request.** `objectSize` and `eTag` are on the
-inferred request whatever you filter for, and the router only sets them on `ObjectCreated:` events, so
-a route filtered to `ObjectRemoved:Delete` gets both as `undefined` while the type promises a `number`
-and a `string`. Use the [convenience method](#convenience-methods) for the event you want, which types
-the handler from the event it sets.
+The `eventName` filter picks the request type. Filter to `ObjectCreated:*` and you get `objectSize` and
+`eTag`. Filter to `ObjectRestore:Completed` and you get `restoreEventData`. Every other event gives you
+the base request, and `route()` narrows an inline handler the same way.
+
+**A route with no `eventName` filter gets `S3BaseRequest`.** Any notification can reach it, so
+`objectSize` is not on the type. A filter naming two event families works the same way and gives you
+only the fields both of them carry, so split it into a route per family when you need more.
 
 ### Annotated handlers
 
@@ -289,10 +290,10 @@ s3Router.objectRestoreCompleted({
 })
 ```
 
-Registering through the convenience method rather than `route()` is what gets `restoreEventData` onto
-the request type here. `route()` accepts a handler annotated with any of the request types, so it
-compiles either way, but it types the handler it hands you as an ObjectCreated request. See [annotated
-handlers](/docs/handlers#annotated-handlers) for the worked version.
+`objectRestoreCompleted()` sets the `eventName` filter, which is what gets `restoreEventData` onto the
+request type. `route({ filters: { eventName: 'ObjectRestore:Completed' } })` types it the same way, so
+pick whichever reads better. See [annotated handlers](/docs/handlers#annotated-handlers) for the worked
+version.
 
 ## Failures and retries
 
@@ -388,7 +389,7 @@ Routes and filters:
 | `S3FilterInput` | What `custom` receives |
 | `S3RouterOptions` | Options for `createS3Router` |
 | `S3Middleware` | Router and route middleware for notifications |
-| `S3ObjectCreatedRouteDefinition` | A full route passed to `route()` |
+| `S3RouteDefinition` | A full route passed to `route()`, with its handler taking every notification the filters can match |
 | `S3ObjectCreatedConvenienceRouteDefinition` | A route passed to one of the `objectCreated*()` methods |
 | `S3ObjectRemovedRouteDefinition`, `S3ObjectRestoreRouteDefinition`, `S3ObjectTaggingRouteDefinition`, `S3ObjectAclRouteDefinition`, `S3LifecycleExpirationRouteDefinition`, `S3LifecycleTransitionRouteDefinition`, `S3IntelligentTieringRouteDefinition`, `S3ReducedRedundancyLostObjectRouteDefinition` | A route passed to the matching convenience method |
 | `S3ObjectCreatedHandler`, `S3ObjectRemovedHandler`, `S3ObjectRestoreHandler`, `S3ObjectTaggingHandler`, `S3ObjectAclHandler`, `S3LifecycleExpirationHandler`, `S3LifecycleTransitionHandler`, `S3IntelligentTieringHandler`, `S3ReducedRedundancyLostObjectHandler` | The handler each route definition takes |
@@ -522,7 +523,7 @@ export async function reprocessReport(request: S3BatchRequest): Promise<S3BatchR
 The two `objectCreatedPut()` routes take different key patterns and the delete route takes a different
 event, so no record can match more than one and the order they are registered in makes no difference.
 
-Both upload routes go through a convenience method rather than `route()`, which is what types
+Both upload routes go through a convenience method, which sets the `ObjectCreated:Put` filter and types
 `objectSize` and `eTag` onto the request `processReport` and `processImage` are handed.
 
 The batch router sits on the same Lambda as the notification routes, and each takes only its own

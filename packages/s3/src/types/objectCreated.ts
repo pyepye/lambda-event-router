@@ -1,6 +1,6 @@
 import type { S3EventRecord } from 'aws-lambda';
 
-import type { S3BaseRequest, S3Filters, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
+import type { S3BaseRequest, S3FiltersWithoutEventNames, S3Middleware } from './common.js';
 
 // =============================================================================
 // Event Names
@@ -32,13 +32,6 @@ export interface S3ObjectCreatedRequest extends S3BaseRequest {
 // =============================================================================
 
 export type S3ObjectCreatedHandler = (request: S3ObjectCreatedRequest) => Promise<void>;
-
-// Generic route definition with full filter options
-export interface S3ObjectCreatedRouteDefinition {
-  filters: S3Filters;
-  middleware?: S3Middleware[];
-  handler: S3ObjectCreatedHandler;
-}
 
 // Convenience route definition - eventNames set automatically by the method
 export interface S3ObjectCreatedConvenienceRouteDefinition {

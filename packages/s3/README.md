@@ -96,6 +96,8 @@ const processUpload = defineRoute({
 s3Router.route(processUpload)
 ```
 
+The `eventName` filter picks the request type, so `objectSize` above is a `number`. Leave `eventName` off and you get `S3BaseRequest`, since any notification can reach the route.
+
 #### Separate handlers
 
 ```ts

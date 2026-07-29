@@ -8,6 +8,7 @@ import {
   orderRoutesBySpecificity,
 } from '@lambda-event-router/base';
 
+import type { FiltersToRequest, InternalRoute, RouteBuilder, RouteInput } from './routeTypes.js';
 import type { S3Middleware, S3RouterOptions } from './types/common.js';
 import type {
   S3BaseRequest,
@@ -19,14 +20,13 @@ import type {
   S3LifecycleTransitionRouteDefinition,
   S3ObjectAclRouteDefinition,
   S3ObjectCreatedConvenienceRouteDefinition,
-  S3ObjectCreatedHandler,
   S3ObjectCreatedRequest,
-  S3ObjectCreatedRouteDefinition,
   S3ObjectRemovedRouteDefinition,
   S3ObjectRestoreRequest,
   S3ObjectRestoreRouteDefinition,
   S3ObjectTaggingRouteDefinition,
   S3ReducedRedundancyLostObjectRouteDefinition,
+  S3RouteDefinition,
   S3TestEvent,
   S3TestEventRequest,
   S3TestEventRouteDefinition,
@@ -39,30 +39,19 @@ import type {
 // Internal handler type - uses base request for storage, handlers receive specific types at runtime
 type InternalHandler = (request: S3BaseRequest) => Promise<void>;
 
-interface InternalRoute {
-  filters: S3Filters;
-  middleware?: S3Middleware[];
-  handler: InternalHandler;
-}
-
-interface RouteInput {
-  filters: S3Filters;
-  middleware?: S3Middleware[];
-}
-
-interface RouteBuilder {
-  handle(handler: S3ObjectCreatedHandler): S3ObjectCreatedRouteDefinition;
-}
-
 // =============================================================================
 // Define Route Builder
 // =============================================================================
 
-export function defineRoute(config: RouteInput): RouteBuilder {
+export function defineRoute<TFilters extends S3Filters = S3Filters>(
+  config: RouteInput<TFilters>,
+): RouteBuilder<TFilters> {
   return {
+    // The cast bridges the handler narrowed by the filters back to the erased route definition,
+    // which takes every notification the route can match
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
-    handle(handler): S3ObjectCreatedRouteDefinition {
-      return { ...config, handler };
+    handle(handler): S3RouteDefinition {
+      return { ...config, handler: handler as InternalHandler };
     },
   };
 }
@@ -111,7 +100,18 @@ export class S3Router implements EventTypeRouter<S3Event | S3TestEvent, undefine
   // Generic Route Method
   // ===========================================================================
 
-  route(definition: S3ObjectCreatedRouteDefinition): this {
+  // An inline definition narrows its handler from the eventName filter, the way defineRoute does
+  route<TFilters extends S3Filters = S3Filters>(
+    definition: RouteInput<TFilters> & { handler: (request: FiltersToRequest<TFilters>) => Promise<void> },
+  ): this;
+
+  route(definition: S3RouteDefinition): this;
+
+  route(definition: {
+    filters: S3Filters;
+    middleware?: S3Middleware[];
+    handler: (...args: never[]) => Promise<void>;
+  }): this {
     this.routes.push({
       filters: definition.filters,
       middleware: definition.middleware,

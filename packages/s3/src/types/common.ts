@@ -64,6 +64,18 @@ export interface S3BaseRequest {
 
 export type S3Middleware = Middleware<S3BaseRequest, void>;
 
+// =============================================================================
+// Route Definition
+// =============================================================================
+
+// A route registered through route(). Its filters need not name an event family, so its handler
+// takes the fields every notification carries. Narrow on request.eventName inside the handler.
+export interface S3RouteDefinition {
+  filters: S3Filters;
+  middleware?: S3Middleware[];
+  handler: (request: S3BaseRequest) => Promise<void>;
+}
+
 export interface S3RouterOptions {
   middleware?: S3Middleware[];
 }

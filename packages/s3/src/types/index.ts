@@ -25,6 +25,7 @@ export type {
   S3Filters,
   S3FiltersWithoutEventNames,
   S3Middleware,
+  S3RouteDefinition,
   S3RouterOptions,
 } from './common.js';
 export type {
@@ -60,7 +61,6 @@ export type {
   S3ObjectCreatedEventName,
   S3ObjectCreatedHandler,
   S3ObjectCreatedRequest,
-  S3ObjectCreatedRouteDefinition,
 } from './objectCreated.js';
 // ObjectCreated types
 export { OBJECT_CREATED_EVENT_NAMES } from './objectCreated.js';

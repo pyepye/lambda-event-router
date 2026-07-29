@@ -47,7 +47,6 @@ export type {
   S3ObjectCreatedEventName,
   S3ObjectCreatedHandler,
   S3ObjectCreatedRequest,
-  S3ObjectCreatedRouteDefinition,
   // ObjectRemoved types
   S3ObjectRemovedEventName,
   S3ObjectRemovedHandler,
@@ -67,6 +66,7 @@ export type {
   S3ReducedRedundancyLostObjectHandler,
   S3ReducedRedundancyLostObjectRequest,
   S3ReducedRedundancyLostObjectRouteDefinition,
+  S3RouteDefinition,
   // RouterOptions
   S3RouterOptions,
   S3TestEvent,
