@@ -88,15 +88,17 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
   private routes: InternalRoute[] = [];
   private routesOrdered = false;
   private middleware: StepFunctionsMiddleware[];
+  private readonly matchedRoutes = new WeakMap<Record<string, unknown>, InternalRoute>();
 
   constructor(options?: StepFunctionsRouterOptions) {
     this.middleware = options?.middleware ?? [];
   }
 
-  canHandleEvent(event: unknown): event is unknown {
+  async canHandleEvent(event: unknown): Promise<boolean> {
     if (!isObject(event)) return false;
     if (isKnownEventSource(event)) return false;
-    return true;
+    const matched = await this.matchRoute(event);
+    return matched !== undefined;
   }
 
   route<TInput>(definition: StepFunctionsTaskTokenRouteDefinition<TInput>): this;
@@ -174,6 +176,10 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
   }
 
   private async matchRoute(event: unknown): Promise<InternalRoute | undefined> {
+    // canHandleEvent and handleEvent both match the same event, so cache the hit to run filters.custom once
+    const cached = isObject(event) ? this.matchedRoutes.get(event) : undefined;
+    if (cached) return cached;
+
     this.orderRoutes();
 
     for (const route of this.routes) {
@@ -188,6 +194,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
         const match = await filters.custom({ event });
         if (!match) continue;
       }
+      if (isObject(event)) this.matchedRoutes.set(event, route);
       return route;
     }
     return undefined;

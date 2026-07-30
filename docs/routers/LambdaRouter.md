@@ -64,7 +64,8 @@ handlers return nothing resolves to `undefined`.
 method every router has, and gives the event to the first one that says yes.
 
 Each answer is awaited before the next router is asked, so a router can decide asynchronously.
-`EventRouter` does, because it runs your `custom` to make up its mind.
+`EventRouter` and `StepFunctionsRouter` return a promise, because they run your `custom` before
+answering.
 
 None of that is yours to write. Each router recognises its own event source from the shape AWS sends,
 so adding a second router cannot change how the first one's events are routed.
@@ -72,9 +73,11 @@ so adding a second router cannot change how the first one's events are routed.
 ### Claiming an event and then missing
 
 A router that claims an event and then finds none of its own routes match throws `NoRouteMatchedError`,
-and `LambdaRouter` carries on down the list rather than failing. That is what lets `EventRouter` and
-`StepFunctionsRouter` sit on one Lambda: a custom JSON payload gives neither of them a shape to
-recognise, so their routes settle which one owns an event and the order you register in does not.
+and `LambdaRouter` carries on down the list rather than failing.
+
+`EventRouter` and `StepFunctionsRouter` sit on one Lambda without needing that. A custom JSON payload
+gives neither of them a shape to recognise, so both ask their own routes before claiming and the order
+you register in makes no difference.
 
 ```ts
 // Either order works. The TaskToken payload matches a route on one and not the other
@@ -102,10 +105,9 @@ first router's 404 rather than reaching it.
 for anything claims everything. `LambdaRouter` sorts `EventRouter` to the end of the list whatever
 order you registered in, which gives every dedicated router first refusal on its own events.
 
-`StepFunctionsRouter` is a catch-all too, claiming any object it does not recognise as one of a short
-list of AWS event shapes, far fewer than `EventRouter` knows about. `LambdaRouter` sorts it after the
-dedicated routers as well, and ahead of `EventRouter`. A shape it claims but has no route for throws
-`NoRouteMatchedError`, which falls through to `EventRouter` as the final fallback.
+`StepFunctionsRouter` does the same for any object it does not recognise as one of a short list of AWS
+event shapes. `LambdaRouter` sorts it after the dedicated routers as well, and ahead of
+`EventRouter`.
 
 ## No router for the event
 
@@ -228,8 +230,7 @@ reach for a router of your own when you need the whole event source rather than 
 
 A router that recognises an event loosely can throw `NoRouteMatchedError`, exported from
 `@lambda-event-router/base`, from `handleEvent` to hand the event back, and `LambdaRouter` tries the
-next router. That is the fall-through `EventRouter` and `StepFunctionsRouter` rely on, and throwing it
-is how a custom router opts in.
+next router. Throwing it is how a custom router opts in.
 
 ## Code example
 

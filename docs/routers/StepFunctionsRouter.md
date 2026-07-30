@@ -7,12 +7,13 @@ no fixed AWS envelope to match on the way the other routers match a service even
 your tasks with a `custom` over the payload, and the router hands the matched handler that payload
 to act on.
 
-This router claims almost any event, so `LambdaRouter` sorts it after the dedicated routers for you.
-Its check turns down the events it recognises as another service (SQS, SNS, S3, DynamoDB, Kinesis, API
-Gateway, Cognito and EventBridge) and accepts everything else, since a task payload can look like
-anything. It sorts ahead of `EventRouter`, and a shape it claims but has no route for falls through to
-`EventRouter` as the final fallback. See [Register routes](#register-routes) for how to keep it to your
-own tasks.
+A task payload can look like anything, so this router turns down the events it recognises as another
+service (SQS, SNS, S3, DynamoDB, Kinesis, API Gateway, Cognito and EventBridge) and then matches the
+rest against its own routes. It claims an event only when one of your routes matches, and
+`LambdaRouter` hands anything else on.
+
+`LambdaRouter` sorts it after the dedicated routers and ahead of `EventRouter`, whatever order you
+register in. See [Register routes](#register-routes) for how to keep it to your own tasks.
 
 ## Install
 
@@ -71,17 +72,16 @@ usually a `taskType` field you set in the state machine. A route carrying a `cus
 the same route without one, so a guarded route beats its own fallback. See [match
 order](/docs/routing#match-order) for how ranking works and what it cannot settle.
 
-**A route with empty `filters` matches every event this router claims, which is nearly all of them.**
-That makes the whole Lambda a Step Functions Lambda, so keep an unfiltered route for a Lambda that only
-handles tasks. `LambdaRouter` sorts this router after the dedicated ones, so a loose route cannot take
-their events, but it still beats `EventRouter` to any payload neither recognises. See
-[routers](/docs/routers) for how `LambdaRouter` picks between routers.
+**A route with empty `filters` makes this router claim every event it does not recognise as another
+service.** That makes the whole Lambda a Step Functions Lambda, so keep an unfiltered route for a
+Lambda that only handles tasks. `LambdaRouter` sorts this router after the dedicated ones, so a loose
+route cannot take their events, but it still beats `EventRouter` to any payload neither recognises.
+See [routers](/docs/routers) for how `LambdaRouter` picks between routers.
 
-**A task that matches no route throws** `No route matched for Step Functions event`. That miss lets the
-event fall through to the next router rather than failing the invocation, so a task the router claimed
-but has no route for is handed on. When `StepFunctionsRouter` is the only router that could take the
-event, the miss fails the invocation and the task state gets the error. See [nothing
-matched](/docs/routing#nothing-matched) for what the other routers do instead.
+**A task that matches no route usually fails one level up.** This router declines it, `LambdaRouter`
+tries the next one and throws `No router found for event` when none of them take it, so the task state
+gets that error. You only see `No route matched for Step Functions event` when you call `handleEvent`
+yourself. See [nothing matched](/docs/routing#nothing-matched) for what the other routers do instead.
 
 ## Filters
 
@@ -116,6 +116,9 @@ request type off `taskToken: true`, so an inline handler is typed either way.
 **`custom` is the only way a route recognises its task**, and its `event` is `unknown`, so narrow
 it with `isObject` from `@lambda-event-router/base` before reading a field off it. See
 [`custom`](/docs/routing#custom) for where it sits in the filter order.
+
+Your `custom` runs once per event. `canHandleEvent` matches the event to decide whether this router
+claims it, then `handleEvent` reuses that match rather than running your filters a second time.
 
 ## Handler
 

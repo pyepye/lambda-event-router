@@ -33,7 +33,7 @@ filter the router has, both request shapes and every failure it can produce.
 | Router middleware | `logTask` runs once per matched route |
 | Route middleware | `withOrderContext` on a regular route, `withApprovalContext` on a callback route |
 | Task results | Three branches return a value, which becomes the branch result |
-| No route matched | `ReconcileLedger` carries a task name no filter claims |
+| No route matched | `ReconcileLedger` carries a task name no filter claims, so the router declines it |
 | Handler failure | `ReleaseStockHold` throws, and the state retries it twice |
 | Schema failures | A worded order total, and a fraud review with no risk score |
 | Declined event | `ForwardScheduledEvent` sends an EventBridge payload, which the router refuses |
@@ -113,8 +113,8 @@ The execution output is the first thing to read. The trigger prints it, and each
   `No callback route handles reserve-stock`. `reserveStock` claims that task name but sets
   `taskToken` to `false`, so a callback payload goes past it.
 - `releaseStockHold` fails with a `Cause` holding `Warehouse API unavailable for RES-AB-1029`.
-- `reconcileLedger` fails with `NoRouteMatchedError`, and its `Cause` holds
-  `No route matched for Step Functions event`.
+- `reconcileLedger` fails with a `Cause` holding `No router found for event`. No route claims the task
+  name, so the router declines the payload and `LambdaRouter` runs out of routers to try.
 - `chargeUnpricedOrder` fails with `SchemaValidationError` and `Event validation failed`, because
   `amountPence` arrived as a sentence.
 - `awaitUnscoredReview` fails with `SchemaValidationError` the same way. The payload carries a

@@ -206,16 +206,22 @@ async function routerFor(event: unknown): Promise<string> {
 }
 
 const routerDeclined = await routerFor(scheduledEvent);
+const reconcileDeclined = await routerFor({ task: 'reconcile-ledger', orderId: ORDER_ID, period: '2026-09' });
 
 const claims: [string, boolean][] = [
-  ['the router takes a plain task payload', stepFunctionsRouter.canHandleEvent({ task: 'reserve-stock' })],
+  ['the router takes a plain task payload', await stepFunctionsRouter.canHandleEvent({ task: 'reserve-stock' })],
   [
     'the router turns an SQS event away',
-    !stepFunctionsRouter.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] }),
+    !(await stepFunctionsRouter.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })),
   ],
-  ['the router turns a bare string away', !stepFunctionsRouter.canHandleEvent('reserve-stock')],
-  ['the router turns a scheduled EventBridge event away', !stepFunctionsRouter.canHandleEvent(scheduledEvent)],
+  ['the router turns a bare string away', !(await stepFunctionsRouter.canHandleEvent('reserve-stock'))],
+  ['the router turns a scheduled EventBridge event away', !(await stepFunctionsRouter.canHandleEvent(scheduledEvent))],
+  [
+    'the router turns away a task name no route claims',
+    !(await stepFunctionsRouter.canHandleEvent({ task: 'reconcile-ledger' })),
+  ],
   ['a scheduled EventBridge event finds no router at all', routerDeclined === 'No router found for event'],
+  ['a reconcile-ledger payload finds no router at all', reconcileDeclined === 'No router found for event'],
 ];
 
 for (const [label, held] of claims) {

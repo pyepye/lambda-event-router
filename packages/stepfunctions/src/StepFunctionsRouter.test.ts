@@ -35,111 +35,171 @@ suite('StepFunctionsRouter', () => {
   });
 
   suite('canHandleEvent', () => {
-    test('returns true for a plain object event', () => {
-      expect(router.canHandleEvent({ action: 'process', data: 123 })).toBe(true);
+    beforeEach(() => {
+      router.route(defineRoute({ filters: {} }).handle(vi.fn()));
     });
 
-    test('returns false for null', () => {
-      expect(router.canHandleEvent(null)).toBe(false);
+    test('returns true for a plain object event', async () => {
+      expect(await router.canHandleEvent({ action: 'process', data: 123 })).toBe(true);
     });
 
-    test('returns false for a string', () => {
-      expect(router.canHandleEvent('not an event')).toBe(false);
+    test('returns false for null', async () => {
+      expect(await router.canHandleEvent(null)).toBe(false);
     });
 
-    test('returns false for an array', () => {
-      expect(router.canHandleEvent([1, 2, 3])).toBe(false);
+    test('returns false for a string', async () => {
+      expect(await router.canHandleEvent('not an event')).toBe(false);
     });
 
-    test('returns false for undefined', () => {
-      expect(router.canHandleEvent(undefined)).toBe(false);
+    test('returns false for an array', async () => {
+      expect(await router.canHandleEvent([1, 2, 3])).toBe(false);
     });
 
-    test('returns false for a number', () => {
-      expect(router.canHandleEvent(42)).toBe(false);
+    test('returns false for undefined', async () => {
+      expect(await router.canHandleEvent(undefined)).toBe(false);
     });
 
-    test('returns false for a known SQS event', () => {
+    test('returns false for a number', async () => {
+      expect(await router.canHandleEvent(42)).toBe(false);
+    });
+
+    test('returns false for a known SQS event', async () => {
       const event = { Records: [{ eventSource: 'aws:sqs' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known SNS event', () => {
+    test('returns false for a known SNS event', async () => {
       const event = { Records: [{ EventSource: 'aws:sns' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known S3 event', () => {
+    test('returns false for a known S3 event', async () => {
       const event = { Records: [{ eventSource: 'aws:s3' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known DynamoDB event', () => {
+    test('returns false for a known DynamoDB event', async () => {
       const event = { Records: [{ eventSource: 'aws:dynamodb' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a known Kinesis event', () => {
+    test('returns false for a known Kinesis event', async () => {
       const event = { Records: [{ eventSource: 'aws:kinesis' }] };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for an API Gateway V2 event', () => {
+    test('returns false for an API Gateway V2 event', async () => {
       const event = { rawPath: '/api/users', requestContext: { http: {} } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a Cognito event', () => {
+    test('returns false for a Cognito event', async () => {
       const event = { triggerSource: 'PreSignUp_SignUp', userPoolId: 'us-east-1_abc123' };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for an EventBridge event', () => {
+    test('returns false for an EventBridge event', async () => {
       const event = { source: 'custom.app', 'detail-type': 'OrderCreated', detail: { orderId: '123' } };
-      expect(router.canHandleEvent(event)).toBe(false);
+      expect(await router.canHandleEvent(event)).toBe(false);
     });
 
-    test('returns false for a Connect contact flow event', () => {
-      expect(router.canHandleEvent({ Name: 'ContactFlowEvent', Details: {} })).toBe(false);
+    test('returns false for a Connect contact flow event', async () => {
+      expect(await router.canHandleEvent({ Name: 'ContactFlowEvent', Details: {} })).toBe(false);
     });
 
-    test('returns false for a Lex event', () => {
-      expect(router.canHandleEvent({ sessionState: {}, bot: { name: 'orders' } })).toBe(false);
+    test('returns false for a Lex event', async () => {
+      expect(await router.canHandleEvent({ sessionState: {}, bot: { name: 'orders' } })).toBe(false);
     });
 
-    test('returns false for a CloudWatch Logs event', () => {
-      expect(router.canHandleEvent({ awslogs: { data: 'H4sIA' } })).toBe(false);
+    test('returns false for a CloudWatch Logs event', async () => {
+      expect(await router.canHandleEvent({ awslogs: { data: 'H4sIA' } })).toBe(false);
     });
 
-    test('returns false for a Firehose event', () => {
-      expect(router.canHandleEvent({ deliveryStreamArn: 'arn:aws:firehose:::x', records: [] })).toBe(false);
+    test('returns false for a Firehose event', async () => {
+      expect(await router.canHandleEvent({ deliveryStreamArn: 'arn:aws:firehose:::x', records: [] })).toBe(false);
     });
 
-    test('returns true for an empty Records array', () => {
-      expect(router.canHandleEvent({ Records: [] })).toBe(true);
+    test('returns true for an empty Records array', async () => {
+      expect(await router.canHandleEvent({ Records: [] })).toBe(true);
     });
 
-    test('returns true when Records contains a non-object element', () => {
-      expect(router.canHandleEvent({ Records: ['not-an-object'] })).toBe(true);
+    test('returns true when Records contains a non-object element', async () => {
+      expect(await router.canHandleEvent({ Records: ['not-an-object'] })).toBe(true);
     });
 
-    test('returns true for an unknown eventSource in Records', () => {
+    test('returns true for an unknown eventSource in Records', async () => {
       const event = { Records: [{ eventSource: 'custom:source' }] };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true when eventSource is not a string', () => {
+    test('returns true when eventSource is not a string', async () => {
       const event = { Records: [{ eventSource: 123 }] };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
     });
 
-    test('returns true for an empty object', () => {
-      expect(router.canHandleEvent({})).toBe(true);
+    test('returns true for an empty object', async () => {
+      expect(await router.canHandleEvent({})).toBe(true);
     });
 
-    test('returns true for an object with TaskToken', () => {
+    test('returns true for an object with TaskToken', async () => {
       const event = { TaskToken: 'abc-123', input: { action: 'process' } };
-      expect(router.canHandleEvent(event)).toBe(true);
+      expect(await router.canHandleEvent(event)).toBe(true);
+    });
+  });
+
+  suite('canHandleEvent route matching', () => {
+    test('declines an event when no route is registered', async () => {
+      expect(await router.canHandleEvent({ taskType: 'processOrder' })).toBe(false);
+    });
+
+    test('declines an event no custom filter matches', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput): boolean =>
+              base.isObject(event) && event.taskType === 'processOrder',
+          },
+        }).handle(async () => {}),
+      );
+
+      expect(await router.canHandleEvent({ taskType: 'enrichData' })).toBe(false);
+    });
+
+    test('claims an event a custom filter matches', async () => {
+      router.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput): boolean =>
+              base.isObject(event) && event.taskType === 'processOrder',
+          },
+        }).handle(async () => {}),
+      );
+
+      expect(await router.canHandleEvent({ taskType: 'processOrder' })).toBe(true);
+    });
+
+    test('declines a task with no TaskToken when every route wants one', async () => {
+      router.route(defineRoute({ filters: { taskToken: true } }).handle(async () => {}));
+
+      expect(await router.canHandleEvent({ taskType: 'humanApproval' })).toBe(false);
+    });
+
+    test('claims a task carrying a TaskToken', async () => {
+      router.route(defineRoute({ filters: { taskToken: true } }).handle(async () => {}));
+
+      expect(await router.canHandleEvent({ TaskToken: 'abc-123', taskType: 'humanApproval' })).toBe(true);
+    });
+
+    test('runs a custom filter once across canHandleEvent and handleEvent', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue({ done: true });
+      router.route(defineRoute({ filters: { custom } }).handle(handler));
+      const event = { taskType: 'processOrder' };
+
+      expect(await router.canHandleEvent(event)).toBe(true);
+      await expect(router.handleEvent(event, context)).resolves.toEqual({ done: true });
+
+      expect(custom).toHaveBeenCalledOnce();
     });
   });
 
@@ -505,6 +565,14 @@ suite('StepFunctionsRouter', () => {
       expect(result).toEqual({ status: 'done' });
     });
 
+    test('runs a route for a non-object event handed straight to handleEvent', async () => {
+      const handler = vi.fn().mockResolvedValue({ status: 'done' });
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      await expect(router.handleEvent(42, context)).resolves.toEqual({ status: 'done' });
+      expect(handler).toHaveBeenCalledWith({ event: 42, context });
+    });
+
     test('throws when no route matches', async () => {
       await expect(router.handleEvent({ action: 'unknown' }, context)).rejects.toThrow(
         'No route matched for Step Functions event',
@@ -824,7 +892,9 @@ suite('StepFunctionsRouter.canHandleEvent', () => {
     const event = build();
     const isOwnEvent = ownEvents.includes(name);
 
-    const claimed = await createStepFunctionsRouter().canHandleEvent(event);
+    const router = createStepFunctionsRouter().route(defineRoute({ filters: {} }).handle(async () => {}));
+
+    const claimed = await router.canHandleEvent(event);
 
     expect(claimed).toBe(isOwnEvent);
   });
