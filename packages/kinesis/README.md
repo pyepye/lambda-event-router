@@ -131,6 +131,20 @@ const withDeviceContext: KinesisMiddleware<Reading> = async (request, next) => {
 }
 ```
 
+#### Binary payloads
+
+`data` is the record decoded as UTF-8 text and parsed as JSON. A payload that is not text, such as gzip
+or protobuf, comes out mangled, so read `rawData` for the bytes instead.
+
+```ts
+defineRoute({
+  filters: {},
+}).handle(async ({ rawData }) => {
+  const json = gunzipSync(rawData).toString('utf-8')
+  console.log(JSON.parse(json))
+})
+```
+
 #### Batch failure reporting
 
 ```ts

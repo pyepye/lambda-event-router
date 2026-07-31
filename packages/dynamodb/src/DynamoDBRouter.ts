@@ -28,6 +28,8 @@ import type {
 
 type UnmarshallInput = Parameters<typeof unmarshall>[0];
 
+type UnmarshallOptions = NonNullable<Parameters<typeof unmarshall>[1]>;
+
 interface InternalRoute {
   filters: DynamoDBFilters;
   keysSchema?: StandardSchemaV1;
@@ -151,11 +153,22 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
   private batchItemFailures: boolean;
   private middleware: Middleware<DynamoDBRequest, void>[];
   private keys: DynamoDBRouterKeys | undefined;
+  private unmarshallOptions: UnmarshallOptions;
 
   constructor(options?: DynamoDBRouterOptions) {
     this.batchItemFailures = options?.batchItemFailures ?? false;
     this.middleware = options?.middleware ?? [];
     this.keys = options?.keys;
+    this.unmarshallOptions = { wrapNumbers: (value: string): number | string => this.exactNumberOrText(value) };
+  }
+
+  // DynamoDB holds 38 significant digits and sends every number as text, so a value that survives the
+  // round trip is exact and anything longer stays as the text it sent, with every digit intact.
+  private exactNumberOrText(value: string): number | string {
+    const numberValue = Number(value);
+    if (String(numberValue) !== value) return value;
+
+    return numberValue;
   }
 
   canHandleEvent(event: unknown): event is DynamoDBStreamEvent {
@@ -298,9 +311,15 @@ export class DynamoDBRouter implements EventTypeRouter<DynamoDBStreamEvent, unde
 
     const streamViewType = record.dynamodb?.StreamViewType;
     /* v8 ignore next -- @preserve - Guard is for TS. Keys is always present in AWS events but typed as optional */
-    const keys = record.dynamodb?.Keys ? unmarshall(record.dynamodb.Keys as UnmarshallInput) : {};
-    const newImage = record.dynamodb?.NewImage ? unmarshall(record.dynamodb.NewImage as UnmarshallInput) : undefined;
-    const oldImage = record.dynamodb?.OldImage ? unmarshall(record.dynamodb.OldImage as UnmarshallInput) : undefined;
+    const keys = record.dynamodb?.Keys
+      ? unmarshall(record.dynamodb.Keys as UnmarshallInput, this.unmarshallOptions)
+      : {};
+    const newImage = record.dynamodb?.NewImage
+      ? unmarshall(record.dynamodb.NewImage as UnmarshallInput, this.unmarshallOptions)
+      : undefined;
+    const oldImage = record.dynamodb?.OldImage
+      ? unmarshall(record.dynamodb.OldImage as UnmarshallInput, this.unmarshallOptions)
+      : undefined;
 
     const route = await this.matchRoute(record, eventName, streamViewType, keys, newImage, oldImage);
     if (!route) {

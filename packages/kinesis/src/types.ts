@@ -6,6 +6,7 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 
 export interface KinesisFilterInput {
   data: unknown;
+  rawData: Buffer;
   partitionKey: string;
   record: KinesisStreamRecord;
 }
@@ -18,6 +19,7 @@ export interface KinesisFilters {
 
 export interface KinesisRequest<TData = unknown> {
   data: TData;
+  rawData: Buffer;
   partitionKey: string;
   sequenceNumber: string;
   approximateArrivalTimestamp: number;

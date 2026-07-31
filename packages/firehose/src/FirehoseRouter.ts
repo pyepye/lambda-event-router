@@ -109,10 +109,10 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     context: Context,
   ): Promise<FirehoseTransformationResultRecord> {
     try {
-      const rawData = Buffer.from(record.data, 'base64').toString('utf-8');
-      const data = safeJsonParse(rawData);
+      const rawData = Buffer.from(record.data, 'base64');
+      const data = safeJsonParse(rawData.toString('utf-8'));
 
-      const route = await this.matchRoute(event, record, data);
+      const route = await this.matchRoute(event, record, data, rawData);
       if (!route) {
         throw new Error(`No route matched for record ${record.recordId} from ${event.deliveryStreamArn}`);
       }
@@ -125,6 +125,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
 
       const request: FirehoseRequest = {
         data: validatedData,
+        rawData,
         recordId: record.recordId,
         approximateArrivalTimestamp: record.approximateArrivalTimestamp,
         record,
@@ -184,6 +185,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
     event: FirehoseTransformationEvent,
     record: FirehoseTransformationEventRecord,
     data: unknown,
+    rawData: Buffer,
   ): Promise<InternalRoute | undefined> {
     this.orderRoutes();
 
@@ -207,6 +209,7 @@ export class FirehoseRouter implements EventTypeRouter<FirehoseTransformationEve
       if (filters.custom) {
         const match = await filters.custom({
           data,
+          rawData,
           recordId: record.recordId,
           approximateArrivalTimestamp: record.approximateArrivalTimestamp,
           record,

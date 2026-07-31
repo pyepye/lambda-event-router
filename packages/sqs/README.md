@@ -140,6 +140,18 @@ defineRoute({
 })
 ```
 
+#### Message attribute types
+
+Attributes reach your handler converted, and a custom label on the data type makes no difference. A
+`Number.float` is read as a `Number` and a `Binary.gif` as `Binary`.
+
+| Data type | You get |
+| --- | --- |
+| `String` | the string |
+| `String.Array` | a `string[]`, or the raw JSON text when the list holds anything but strings |
+| `Number` | a number, or the original text when the value has more digits than a number holds exactly |
+| `Binary` | a `Buffer`, decoded from base64 |
+
 #### Batch failure reporting
 
 ```ts

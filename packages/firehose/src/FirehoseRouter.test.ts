@@ -985,6 +985,36 @@ suite('FirehoseRouter', () => {
     });
   });
 
+  suite('handleEvent - rawData', () => {
+    test('hands the handler the record bytes as rawData', async ({ firehoseRecord, firehoseHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(Ok());
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const gzipBytes = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xfe]);
+      const record = firehoseRecord();
+      record.data = gzipBytes.toString('base64');
+      const { event, context } = firehoseHandlerEvent({ records: [record] });
+
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rawData: gzipBytes }));
+    });
+
+    test('passes rawData to a custom filter', async ({ firehoseRecord, firehoseHandlerEvent }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(defineRoute({ filters: { custom } }).handle(async () => Ok()));
+
+      const gzipBytes = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xfe]);
+      const record = firehoseRecord();
+      record.data = gzipBytes.toString('base64');
+      const { event, context } = firehoseHandlerEvent({ records: [record] });
+
+      await router.handleEvent(event, context);
+
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ rawData: gzipBytes }));
+    });
+  });
+
   suite('handleEvent - error handling', () => {
     test('thrown FirehoseResponse is caught and mapped to result', async ({ firehoseHandlerEvent }) => {
       router.route(

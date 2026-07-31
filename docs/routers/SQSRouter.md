@@ -104,8 +104,15 @@ sqsRouter.route({
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
-Numeric message attributes are compared as numbers, which is why `Attempt: 1` works above. This only
-applies to attributes SQS has typed as `Number`.
+Numeric message attributes are compared as numbers, which is why `Attempt: 1` works above. Any
+attribute SQS has typed as `Number` counts, custom label and all, so `Number.float` compares the same
+way.
+
+A value with more digits than a number can hold reaches the filter as the text SQS sent, so match it
+with a string rather than a number.
+
+A `String.Array` attribute matches when any of its entries matches, so `{ tags: 'urgent' }` picks up
+`["urgent","eu"]`.
 
 **`custom` sees the body before any schema has run**, so narrow it with `isObject` from
 `@lambda-event-router/base` rather than reading straight into it. See
@@ -132,11 +139,25 @@ export async function processOrder(
 | Field | Type | Description |
 | --- | --- | --- |
 | `body` | `TBody` | The record body. JSON is parsed for you. If the body is not valid JSON you get the raw string |
-| `messageAttributes` | `TMessageAttributes` | Message attributes converted to real values. `Number` attributes become numbers, `Binary` become a `Buffer`, everything else stays a string |
+| `messageAttributes` | `TMessageAttributes` | Message attributes converted to real values. See [Message attribute types](#message-attribute-types) |
 | `record` | `SQSRecord` | The untouched record from AWS, for `messageId`, `attributes` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
 `SQSRecord` and `Context` come from `aws-lambda`, not from this package.
+
+### Message attribute types
+
+SQS lets the publisher add a label to the data type, so `Number.float` and `Binary.gif` both turn up on
+real messages. We read the part before the dot, so a label never changes what you get.
+
+| Data type | You get |
+| --- | --- |
+| `String` | the string |
+| `String.Array` | a `string[]`, or the raw JSON text when the list holds anything but strings |
+| `Number` | a number, or the original text when the value has more digits than a number holds exactly |
+| `Binary` | a `Buffer`, decoded from base64 |
+
+The label, and everything else AWS sent, is still on `request.record.messageAttributes`.
 
 ### Response type
 
@@ -310,7 +331,8 @@ All exported from `@lambda-event-router/sqs`.
 | `SQSRouterOptions` | Options for `createSQSRouter` |
 | `SQSMiddleware<TBody, TMessageAttributes>` | Router and route middleware |
 | `SQSMessageAttributes` | `Record<string, SQSMessageAttributeValue>` |
-| `SQSMessageAttributeValue` | `string \| number \| Buffer` |
+| `SQSMessageAttributeValue` | `string \| string[] \| number \| Buffer` |
+| `SQSMessageAttributeFilter` | One value in the `messageAttributes` filter |
 
 The `SQSRouter` class and the `createSQSRouter` and `defineRoute` functions come from the same place.
 
@@ -325,7 +347,7 @@ The three types above that take parameters take the same two, in the same order.
 
 Pass just the first and the second falls back to its default, so `SQSRequest<Order>` types the body and
 leaves message attributes loose. `TMessageAttributes` has to extend `SQSMessageAttributes`, so its
-values can only be a string, a number or a `Buffer`.
+values can only be a string, a string array, a number or a `Buffer`.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers both.
 

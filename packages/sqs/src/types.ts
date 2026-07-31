@@ -4,8 +4,9 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
-export type SQSMessageAttributeValue = string | number | Buffer;
+export type SQSMessageAttributeValue = string | string[] | number | Buffer;
 export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;
+export type SQSMessageAttributeFilter = FilterStringMatcher | number | number[];
 
 export interface SQSRequest<TBody = unknown, TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes> {
   body: TBody;
@@ -34,7 +35,7 @@ export interface SQSFilterInput {
 
 export interface SQSFilters {
   eventSourceArn?: FilterStringMatcher;
-  messageAttributes?: Record<string, FilterStringMatcher | number | number[]>;
+  messageAttributes?: Record<string, SQSMessageAttributeFilter>;
   custom?: (input: SQSFilterInput) => boolean | Promise<boolean>;
 }
 

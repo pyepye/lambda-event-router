@@ -151,6 +151,20 @@ defineRoute({
 })
 ```
 
+#### Message attribute types
+
+`Publish` takes four types, but a Lambda subscription receives two. A custom label such as
+`Number.float` is dropped on the way.
+
+| You publish | Your handler gets |
+| --- | --- |
+| `String` | the string |
+| `Number` | the digits, as a string |
+| `String.Array` | the JSON text, as a string |
+| `Binary` | a `Buffer`, decoded from base64 |
+
+Only `Binary` is converted for you. Coerce the rest in your `messageAttributesSchema`.
+
 ## Examples
 
 See the [service-examples/sns](../../service-examples/sns) directory for complete working examples.

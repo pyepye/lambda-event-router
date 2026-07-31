@@ -186,6 +186,23 @@ export async function onOrderChanged(
 narrows the images to the ones that event carries. Filtering a route to one event name gets you the
 narrow type without the check, which [Inferred handlers](#inferred-handlers) covers.
 
+### Numbers
+
+DynamoDB holds 38 significant digits and sends every number as text, which is more than a JS number
+holds. A value that survives the round trip reaches you as a number, and anything longer reaches you as
+the text DynamoDB sent, with every digit intact.
+
+| Stored | You get |
+| --- | --- |
+| `42.5` | `42.5` |
+| `123456789012345678901234567890` | `'123456789012345678901234567890'` |
+| `123456789012345678.5` | `'123456789012345678.5'` |
+
+Most numbers this long are identifiers rather than quantities, and text is the right shape for those.
+If you are doing arithmetic on one, convert it in your schema with `BigInt` or a decimal library.
+
+A key this long is text as well, so filter it with a string rather than a number.
+
 **Set your stream's view type to match the images your routes read.** `NEW_AND_OLD_IMAGES` is the only
 one carrying both. On a `KEYS_ONLY` stream every image arrives as `undefined` even where the types
 promise one, and a route with an image schema fails the record instead.

@@ -1,8 +1,14 @@
-import type { SQSRecord as AWSSQSRecord, Context, SQSBatchResponse, SQSEvent } from 'aws-lambda';
+import type {
+  SQSMessageAttribute as AWSSQSMessageAttribute,
+  SQSRecord as AWSSQSRecord,
+  Context,
+  SQSBatchResponse,
+  SQSEvent,
+} from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { EventTypeRouter, FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import {
   filterStringMatcher,
   handleEventWithMiddleware,
@@ -15,6 +21,7 @@ import {
 
 import type {
   SQSFilters,
+  SQSMessageAttributeFilter,
   SQSMessageAttributes,
   SQSMessageAttributeValue,
   SQSRecordHandler,
@@ -63,6 +70,12 @@ export function defineRoute<
       return { ...config, handler } as SQSRouteDefinition<TBody, TMessageAttributes>;
     },
   };
+}
+
+function isStringArray(value: unknown): value is string[] {
+  if (!Array.isArray(value)) return false;
+
+  return value.every((item) => typeof item === 'string');
 }
 
 export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatchResponse> {
@@ -207,16 +220,52 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
   private convertMessageAttributes(raw: AWSSQSRecord['messageAttributes']): SQSMessageAttributes {
     const result: SQSMessageAttributes = {};
     for (const [key, attr] of Object.entries(raw)) {
-      /* v8 ignore next -- @preserve - Guard is for TS. AWS always provides one of stringValue or binaryValue but both are typed as optional */
-      if (attr.dataType === 'Number' && attr.stringValue != null) {
-        result[key] = Number(attr.stringValue);
-      } else if (attr.dataType === 'Binary' && attr.binaryValue != null) {
-        result[key] = Buffer.from(attr.binaryValue, 'base64');
-      } else if (attr.stringValue != null) {
-        result[key] = attr.stringValue;
+      const value = this.convertMessageAttribute(attr);
+      if (value !== undefined) {
+        result[key] = value;
       }
     }
     return result;
+  }
+
+  // SQS keeps whatever label the publisher appended to the type, so `Number.float` and `Binary.gif`
+  // arrive whole and the logical type is the part before the first dot.
+  private convertMessageAttribute(attr: AWSSQSMessageAttribute): SQSMessageAttributeValue | undefined {
+    const [logicalType] = attr.dataType.split('.');
+
+    if (logicalType === 'Binary') {
+      /* v8 ignore next -- @preserve - Guard is for TS. A Binary attribute always carries binaryValue but it is typed as optional */
+      if (attr.binaryValue == null) return undefined;
+
+      return Buffer.from(attr.binaryValue, 'base64');
+    }
+
+    /* v8 ignore next -- @preserve - Guard is for TS. Every other attribute carries stringValue but it is typed as optional */
+    if (attr.stringValue == null) return undefined;
+
+    if (logicalType === 'Number') return this.convertNumberAttribute(attr.stringValue);
+
+    if (attr.dataType === 'String.Array') return this.convertStringArrayAttribute(attr.stringValue);
+
+    return attr.stringValue;
+  }
+
+  // SQS accepts more digits than a number holds. A value that survives the round trip is exact, and
+  // anything else stays as the text SQS sent, for a schema to convert however it needs to.
+  private convertNumberAttribute(stringValue: string): number | string {
+    const numberValue = Number(stringValue);
+    if (String(numberValue) !== stringValue) return stringValue;
+
+    return numberValue;
+  }
+
+  // A String.Array attribute carries its list as JSON text. Anything but a list of strings stays text
+  // for a schema to deal with.
+  private convertStringArrayAttribute(stringValue: string): string[] | string {
+    const parsed = safeJsonParse(stringValue);
+    if (!isStringArray(parsed)) return stringValue;
+
+    return parsed;
   }
 
   private orderRoutes(): void {
@@ -294,16 +343,19 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     await handleEventWithMiddleware(allMiddleware, request, route.handler);
   }
 
-  private matchMessageAttribute(
-    attr: SQSMessageAttributeValue,
-    allowed: FilterStringMatcher | number | number[],
-  ): boolean {
-    if (typeof allowed === 'number') {
-      return attr === allowed;
-    }
+  private matchMessageAttribute(attr: SQSMessageAttributeValue, allowed: SQSMessageAttributeFilter): boolean {
     if (Array.isArray(allowed)) {
       return allowed.some((item) => this.matchMessageAttribute(attr, item));
     }
+
+    if (typeof allowed === 'number') {
+      return attr === allowed;
+    }
+
+    if (isStringArray(attr)) {
+      return attr.some((item) => filterStringMatcher(item, allowed));
+    }
+
     return typeof attr === 'string' && filterStringMatcher(attr, allowed);
   }
 }

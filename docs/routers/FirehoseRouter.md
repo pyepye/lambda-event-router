@@ -132,12 +132,18 @@ export async function normaliseLogLine(request: FirehoseRequest<LogLine>): Promi
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `TData` | The record's data, base64 decoded and JSON parsed. If it is not valid JSON you get the decoded string |
+| `data` | `TData` | The record's data, base64 decoded, read as UTF-8 text and JSON parsed. If it is not valid JSON you get the text |
+| `rawData` | `Buffer` | The record's bytes, base64 decoded and left alone |
 | `recordId` | `string` | Firehose's id for the record. The router puts it back on the result for you |
 | `approximateArrivalTimestamp` | `number` | When Firehose accepted the record, as a Unix timestamp in milliseconds |
 | `record` | `FirehoseTransformationEventRecord` | The untouched record from AWS, including the still encoded `data` |
 | `context` | `Context` | The Lambda context |
 | `metadata` | `FirehoseRecordMetadata` | The source record's `shardId`, `partitionKey` and `sequenceNumber`. Only set when a Kinesis stream feeds the delivery stream |
+
+**A payload that is not UTF-8 text does not survive `data`.** Reading bytes as text swaps anything it
+cannot read for a replacement character, so gzip, Avro and protobuf come out mangled. Read `rawData`
+for those and decode it yourself. CloudWatch Logs subscriptions send gzip, so this is worth checking
+before you trust `data`.
 
 `FirehoseTransformationEventRecord`, `FirehoseRecordMetadata` and `Context` come from `aws-lambda`, not
 from this package.

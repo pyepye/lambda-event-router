@@ -8,6 +8,7 @@ import type { FirehoseResponseResult } from './response.js';
 
 export interface FirehoseFilterInput {
   data: unknown;
+  rawData: Buffer;
   recordId: string;
   approximateArrivalTimestamp: number;
   record: FirehoseTransformationEventRecord;
@@ -22,6 +23,7 @@ export interface FirehoseFilters {
 
 export interface FirehoseRequest<TData = unknown> {
   data: TData;
+  rawData: Buffer;
   recordId: string;
   approximateArrivalTimestamp: number;
   record: FirehoseTransformationEventRecord;

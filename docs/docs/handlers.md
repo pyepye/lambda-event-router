@@ -383,7 +383,8 @@ Same four files, same schemas, same handler body. Both differ in one thing only,
 Derive those types from the schema with `z.infer` rather than writing an interface that mirrors it, so
 the two cannot drift.
 
-**A message attribute type is only accepted if every value is a `string`, a `number` or a `Buffer`.**
+**A message attribute type is only accepted if every value is a `string`, a `string[]`, a `number` or a
+`Buffer`.**
 `z.infer` on `OrderAttributesSchema` gives `{ dryRun: boolean }`, which `SQSRequest` rejects on its
 own. Intersecting it with `SQSMessageAttributes` satisfies the constraint and leaves `dryRun` as a
 `boolean`. Inferred handlers never meet this, because `defineRoute` applies the intersection for you.

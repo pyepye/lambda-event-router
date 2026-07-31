@@ -125,12 +125,17 @@ export async function onReading(request: KinesisRequest<Reading>): Promise<Kines
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `data` | `TData` | The record's data, base64 decoded and JSON parsed. If it is not valid JSON you get the decoded string |
+| `data` | `TData` | The record's data, base64 decoded, read as UTF-8 text and JSON parsed. If it is not valid JSON you get the text |
+| `rawData` | `Buffer` | The record's bytes, base64 decoded and left alone |
 | `partitionKey` | `string` | The partition key the producer wrote the record under, which is what Kinesis shards on |
 | `sequenceNumber` | `string` | Where the record sits in its shard. Unique per shard and increasing, so it makes a good idempotency key |
-| `approximateArrivalTimestamp` | `number` | When Kinesis accepted the record, as a Unix timestamp in seconds |
+| `approximateArrivalTimestamp` | `number` | When Kinesis accepted the record, as a Unix timestamp in seconds. It carries a fraction, so a `Date` needs `approximateArrivalTimestamp * 1000` |
 | `record` | `KinesisStreamRecord` | The untouched record from AWS, for `eventID`, `invokeIdentityArn` and anything else you need |
 | `context` | `Context` | The Lambda context |
+
+**A payload that is not UTF-8 text does not survive `data`.** Reading bytes as text swaps anything it
+cannot read for a replacement character, so gzip, Avro and protobuf come out mangled. Read `rawData`
+for those and decode it yourself.
 
 `KinesisStreamRecord` and `Context` come from `aws-lambda`, not from this package.
 

@@ -158,6 +158,19 @@ defineRoute({
 })
 ```
 
+#### Numbers
+
+DynamoDB sends every number as text and holds more digits than a JS number does. A value a number holds
+exactly reaches you as a number, and anything longer reaches you as the original text.
+
+| Stored | You get |
+| --- | --- |
+| `42.5` | `42.5` |
+| `123456789012345678901234567890` | `'123456789012345678901234567890'` |
+| `123456789012345678.5` | `'123456789012345678.5'` |
+
+Convert it in your schema if you need arithmetic on one.
+
 #### Batch failure reporting
 
 ```ts

@@ -203,6 +203,48 @@ suite('SQSRouter', () => {
       expect(result).toBeDefined();
     });
 
+    test('matches an oversized Number attribute against a string filter', async ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { count: '12345678901234567890' } },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { count: '12345678901234567890' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches when a string array messageAttribute contains the filter value', async ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { tags: 'urgent' } },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { tags: ['urgent', 'eu'] });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when a string array messageAttribute lacks the filter value', async ({ sqsRecord }) => {
+      router.route(
+        defineRoute({
+          filters: { messageAttributes: { tags: 'urgent' } },
+        }).handle(async () => {}),
+      );
+
+      const record = sqsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(record, {}, { tags: ['eu', 'de'] });
+
+      expect(result).toBeUndefined();
+    });
+
     test('does not match when messageAttribute value is a Buffer', async ({ sqsRecord }) => {
       router.route(
         defineRoute({
@@ -1136,6 +1178,71 @@ suite('SQSRouter', () => {
       expect(result).toEqual({ myNumber: 42 });
     });
 
+    test('converts a Number attribute with a custom label to a number', () => {
+      const raw = { rating: { stringValue: '3.14', dataType: 'Number.float' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ rating: 3.14 });
+    });
+
+    test('keeps a Number attribute beyond the safe range as its original text', () => {
+      const stringValue = '12345678901234567890';
+      const raw = { count: { stringValue, dataType: 'Number' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ count: stringValue });
+    });
+
+    test('keeps a Number attribute with too many decimal digits as its original text', () => {
+      const stringValue = '123456789012345678.5';
+      const raw = { ratio: { stringValue, dataType: 'Number' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ ratio: stringValue });
+    });
+
+    test('converts a Number attribute a number holds exactly to a number', () => {
+      const raw = { total: { stringValue: '42.5', dataType: 'Number' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ total: 42.5 });
+    });
+
+    test('parses a String.Array attribute to an array of strings', () => {
+      const raw = { tags: { stringValue: '["urgent","eu"]', dataType: 'String.Array' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ tags: ['urgent', 'eu'] });
+    });
+
+    test('keeps a String.Array attribute as a string when it holds anything but strings', () => {
+      const raw = { tags: { stringValue: '["urgent",1]', dataType: 'String.Array' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ tags: '["urgent",1]' });
+    });
+
+    test('keeps an attribute with an unknown data type as a string', () => {
+      const raw = { shape: { stringValue: 'circle', dataType: 'Shape' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ shape: 'circle' });
+    });
+
     test('converts Binary attribute to Buffer value', () => {
       const binaryData = Buffer.from('binary-content').toString('base64');
       const raw = {
@@ -1148,6 +1255,18 @@ suite('SQSRouter', () => {
       expect(Buffer.isBuffer(result.myBinary)).toBe(true);
       // @ts-expect-error - myBinary is a Buffer as asserted above
       expect(result.myBinary.toString()).toBe('binary-content');
+    });
+
+    test('converts a Binary attribute with a custom label to a Buffer', () => {
+      const binaryData = Buffer.from('gif-content').toString('base64');
+      const raw = { thumbnail: { binaryValue: binaryData, dataType: 'Binary.gif' } };
+
+      // @ts-expect-error - testing private method directly
+      const result = router.convertMessageAttributes(raw);
+
+      expect(Buffer.isBuffer(result.thumbnail)).toBe(true);
+      // @ts-expect-error - thumbnail is a Buffer as asserted above
+      expect(result.thumbnail.toString()).toBe('gif-content');
     });
   });
 

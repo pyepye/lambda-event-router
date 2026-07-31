@@ -124,10 +124,10 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
   }
 
   private async processRecord(record: KinesisStreamRecord, context: Context): Promise<void> {
-    const rawData = Buffer.from(record.kinesis.data, 'base64').toString('utf-8');
-    const data = safeJsonParse(rawData);
+    const rawData = Buffer.from(record.kinesis.data, 'base64');
+    const data = safeJsonParse(rawData.toString('utf-8'));
 
-    const route = await this.matchRoute(record, data);
+    const route = await this.matchRoute(record, data, rawData);
     if (!route) {
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
@@ -137,6 +137,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
 
     const request: KinesisRequest = {
       data: validatedData,
+      rawData,
       partitionKey: record.kinesis.partitionKey,
       sequenceNumber: record.kinesis.sequenceNumber,
       approximateArrivalTimestamp: record.kinesis.approximateArrivalTimestamp,
@@ -155,7 +156,11 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     this.routesOrdered = true;
   }
 
-  private async matchRoute(record: KinesisStreamRecord, data: unknown): Promise<InternalRoute | undefined> {
+  private async matchRoute(
+    record: KinesisStreamRecord,
+    data: unknown,
+    rawData: Buffer,
+  ): Promise<InternalRoute | undefined> {
     this.orderRoutes();
 
     for (const route of this.routes) {
@@ -172,7 +177,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       }
 
       if (filters.custom) {
-        const match = await filters.custom({ data, partitionKey: record.kinesis.partitionKey, record });
+        const match = await filters.custom({ data, rawData, partitionKey: record.kinesis.partitionKey, record });
         if (!match) continue;
       }
 

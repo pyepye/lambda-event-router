@@ -154,6 +154,10 @@ and `String.Array` to `String` on the way.
 | `String.Array` | `'["london","manchester"]'`, a string holding the JSON |
 | `Binary` | a `Buffer`, decoded from base64 |
 
+A custom label on a published type, such as `Number.float` or `Binary.gif`, does not reach your
+handler: SNS drops it and delivers the base type. [`SQSRouter`](/routers/SQSRouter) behaves the other
+way round, so a route moved from one to the other cannot filter on a label.
+
 Only `Binary` is converted for you. Handle the other two in your schema:
 
 ```ts

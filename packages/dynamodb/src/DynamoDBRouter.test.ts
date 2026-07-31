@@ -1032,6 +1032,73 @@ suite('DynamoDBRouter', () => {
     });
   });
 
+  suite('handleEvent - number attributes', () => {
+    test('unmarshalls a number a JS number holds exactly as a number', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.insert({ filters: {}, handler });
+
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { total: { N: '42.5' } } } });
+      await router.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ newImage: expect.objectContaining({ total: 42.5 }) }),
+      );
+    });
+
+    test('keeps a whole number beyond the safe range as its original text', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.insert({ filters: {}, handler });
+
+      const orderId = '123456789012345678901234567890';
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { orderId: { N: orderId } } } });
+      await router.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: expect.objectContaining({ orderId }) }));
+    });
+
+    test('keeps a decimal beyond the safe range as its original text instead of throwing', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.insert({ filters: {}, handler });
+
+      const ratio = '123456789012345678.5';
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { ratio: { N: ratio } } } });
+      await router.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: expect.objectContaining({ ratio }) }));
+    });
+
+    test('keeps an oversized key value as text, so a string filter still matches it', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      const partitionKey = '123456789012345678901234567890';
+      const keyedRouter = new DynamoDBRouter({ keys: { partitionKey: 'pk' } });
+      keyedRouter.insert({ filters: { partitionKey }, handler });
+
+      const record = dynamoDBInsertRecord();
+      record.dynamodb = { ...record.dynamodb, Keys: { pk: { N: partitionKey } } };
+      await keyedRouter.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ keys: expect.objectContaining({ pk: partitionKey }) }),
+      );
+    });
+  });
+
   suite('handleEvent - batchItemFailures', () => {
     let router: DynamoDBRouter;
 

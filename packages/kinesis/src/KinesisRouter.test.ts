@@ -688,6 +688,37 @@ suite('KinesisRouter', () => {
     });
   });
 
+  suite('handleEvent - rawData', () => {
+    test('hands the handler the record bytes as rawData', async ({ kinesisRecord, kinesisHandlerEvent }) => {
+      const handler = vi.fn();
+      const eventSourceArn = 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream';
+      router.route(defineRoute({ filters: { eventSourceArn } }).handle(handler));
+
+      const gzipBytes = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xfe]);
+      const record = kinesisRecord({ eventSourceARN: eventSourceArn });
+      record.kinesis.data = gzipBytes.toString('base64');
+      const { event, context } = kinesisHandlerEvent({ records: [record] });
+
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rawData: gzipBytes }));
+    });
+
+    test('passes rawData to a custom filter', async ({ kinesisRecord, kinesisHandlerEvent }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(defineRoute({ filters: { custom } }).handle(async () => {}));
+
+      const gzipBytes = Buffer.from([0x1f, 0x8b, 0x08, 0x00, 0xff, 0xfe]);
+      const record = kinesisRecord();
+      record.kinesis.data = gzipBytes.toString('base64');
+      const { event, context } = kinesisHandlerEvent({ records: [record] });
+
+      await router.handleEvent(event, context);
+
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ rawData: gzipBytes }));
+    });
+  });
+
   suite('full event processing', () => {
     test('routes records to different handlers based on filters', async ({ kinesisRecord, kinesisEvent, context }) => {
       const streamAHandler = vi.fn();
