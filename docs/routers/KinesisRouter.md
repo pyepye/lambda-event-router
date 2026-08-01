@@ -6,6 +6,9 @@ A single event can carry many records from one or more streams. The router base6
 data, parses it as JSON, then works out which of your routes should handle it. Records run in the order
 they arrive rather than in parallel, because a shard is ordered.
 
+A record written with KPL aggregation holds many messages. The router unpacks it, so each message
+reaches your handler on its own. See [Aggregated records](#aggregated-records).
+
 ## Install
 
 ```bash
@@ -128,7 +131,8 @@ export async function onReading(request: KinesisRequest<Reading>): Promise<Kines
 | `data` | `TData` | The record's data, base64 decoded, read as UTF-8 text and JSON parsed. If it is not valid JSON you get the text |
 | `rawData` | `Buffer` | The record's bytes, base64 decoded and left alone |
 | `partitionKey` | `string` | The partition key the producer wrote the record under, which is what Kinesis shards on |
-| `sequenceNumber` | `string` | Where the record sits in its shard. Unique per shard and increasing, so it makes a good idempotency key |
+| `sequenceNumber` | `string` | Where the record sits in its shard. Unique per shard and increasing, so it makes a good idempotency key. Messages from one aggregated record share it |
+| `subSequenceNumber` | `number \| undefined` | Where the message sits inside an aggregated record, counting from 0. `undefined` for a plain record |
 | `approximateArrivalTimestamp` | `number` | When Kinesis accepted the record, as a Unix timestamp in seconds. It carries a fraction, so a `Date` needs `approximateArrivalTimestamp * 1000` |
 | `record` | `KinesisStreamRecord` | The untouched record from AWS, for `eventID`, `invokeIdentityArn` and anything else you need |
 | `context` | `Context` | The Lambda context |
@@ -267,6 +271,24 @@ record left in the batch. Lambda redelivers from the failed record onwards.
 
 You also need to set the `ReportBatchItemFailures` response type on the event source mapping. Without
 it, AWS ignores what the router returns.
+
+## Aggregated records
+
+A producer using the Kinesis Producer Library (KPL) can pack many messages into one Kinesis record.
+Lambda hands that record over whole, so the router unpacks it for you. There is nothing to turn on.
+
+Each message gets its own `data`, `rawData` and `partitionKey`. Filters, schemas and middleware run
+once per message, the same as for a plain record.
+
+**Messages from one aggregated record share a `sequenceNumber`.** Use `sequenceNumber` and
+`subSequenceNumber` together as the idempotency key. `record` is the aggregated record for every
+message in it.
+
+**A throw on one message retries the whole aggregated record.** Lambda can only report the aggregated
+record as failed, not a message inside it. This means the messages before the one that threw run again
+on the retry.
+
+A record that looks aggregated but fails its checksum, or cannot be read, is routed as a plain record.
 
 ## Middleware
 

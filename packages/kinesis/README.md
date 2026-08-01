@@ -145,6 +145,15 @@ defineRoute({
 })
 ```
 
+#### Aggregated records
+
+A record written with KPL aggregation holds many messages. The router unpacks it and routes each
+message on its own, with its own `data`, `rawData` and `partitionKey`.
+
+Messages from one aggregated record share a `sequenceNumber`, so use `sequenceNumber` and
+`subSequenceNumber` together as the idempotency key. A throw on one message retries the whole
+aggregated record.
+
 #### Batch failure reporting
 
 ```ts

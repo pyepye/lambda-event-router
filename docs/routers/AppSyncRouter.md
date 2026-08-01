@@ -67,11 +67,6 @@ works and what it cannot settle.
 failed invocation into an error on the field, so the client gets `null` for it and an entry in
 `errors`. See [nothing matched](/docs/routing#nothing-matched) for what the other routers do instead.
 
-**A batching resolver never reaches this router.** With `maxBatchSize` set, AppSync sends an array of
-events rather than one, which `canHandleEvent` refuses. `LambdaRouter` then has nothing to hand it to
-and throws `No router found for event`. Leave batching off on any resolver pointing at a Lambda you
-route with this.
-
 ### Convenience methods
 
 `query()`, `mutation()` and `subscription()` fill in the `parentTypeName` filter and take the field

@@ -43,6 +43,7 @@
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "aws-kinesis-agg": "catalog:",
     "tsup": "catalog:",
     "vitest": "catalog:"
   }

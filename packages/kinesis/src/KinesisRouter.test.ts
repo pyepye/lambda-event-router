@@ -1,7 +1,17 @@
+import { createHash } from 'node:crypto';
+import type { KinesisStreamRecord } from 'aws-lambda';
+
+import { aggregate } from 'aws-kinesis-agg';
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { allEventBuilders, createKinesisEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createKinesisEvent,
+  createKinesisRecord,
+  createMockSchema,
+  test,
+} from '@lambda-event-router/testing';
 
 import { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
 import type { KinesisFilterInput, KinesisRequest } from './types.js';
@@ -12,6 +22,38 @@ const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 
 let router: KinesisRouter;
+
+interface UserRecordInput {
+  partitionKey: string;
+  data: string;
+}
+
+function aggregateUserRecords(userRecords: UserRecordInput[]): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    aggregate(
+      userRecords,
+      (encodedRecord, done) => {
+        resolve(encodedRecord.data);
+        done();
+      },
+      () => {},
+      reject,
+    );
+  });
+}
+
+async function createAggregatedRecord(userRecords: UserRecordInput[]): Promise<KinesisStreamRecord> {
+  const aggregatedData = await aggregateUserRecords(userRecords);
+  const record = createKinesisRecord({ kinesis: { partitionKey: 'outer-key' } });
+  record.kinesis.data = aggregatedData.toString('base64');
+  return record;
+}
+
+const orderUserRecords: UserRecordInput[] = [
+  { partitionKey: 'order-1', data: JSON.stringify({ orderId: '1' }) },
+  { partitionKey: 'order-2', data: JSON.stringify({ orderId: '2' }) },
+  { partitionKey: 'order-1', data: JSON.stringify({ orderId: '3' }) },
+];
 
 beforeEach(() => {
   router = new KinesisRouter();
@@ -109,7 +151,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -125,7 +167,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result?.handler).toBe(narrow);
     });
@@ -139,7 +181,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result?.handler).toBe(guarded);
     });
@@ -154,7 +196,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -170,7 +212,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: eventSourceArn });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -184,7 +226,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream' });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -198,7 +240,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -212,7 +254,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -226,7 +268,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord({ kinesis: { partitionKey: 'partition-key-1' } });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -246,7 +288,7 @@ suite('KinesisRouter', () => {
       const record = kinesisRecord();
       const data = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, data);
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, data);
 
       expect(result).toBeDefined();
     });
@@ -260,7 +302,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -281,7 +323,7 @@ suite('KinesisRouter', () => {
       const record = kinesisRecord();
       const data = { action: 'processOrder' };
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, data);
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, data);
 
       expect(result).toBeDefined();
     });
@@ -295,7 +337,7 @@ suite('KinesisRouter', () => {
 
       const record = kinesisRecord();
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -318,7 +360,7 @@ suite('KinesisRouter', () => {
         eventSourceARN: 'arn:aws:kinesis:us-east-1:123456789012:stream/my-stream',
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
       expect(result?.handler).toBe(firstHandler);
@@ -340,7 +382,7 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeDefined();
     });
@@ -361,7 +403,7 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -381,7 +423,7 @@ suite('KinesisRouter', () => {
         kinesis: { partitionKey: 'partition-key-1' },
       });
       // @ts-expect-error - testing private method directly
-      const result = await router.matchRoute(record, {});
+      const result = await router.matchRoute(record, record.kinesis.partitionKey, {});
 
       expect(result).toBeUndefined();
     });
@@ -716,6 +758,196 @@ suite('KinesisRouter', () => {
       await router.handleEvent(event, context);
 
       expect(custom).toHaveBeenCalledWith(expect.objectContaining({ rawData: gzipBytes }));
+    });
+  });
+
+  suite('handleEvent - aggregated records', () => {
+    test('routes each record inside an aggregate on its own', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+      expect(handler).toHaveBeenNthCalledWith(1, expect.objectContaining({ data: { orderId: '1' } }));
+      expect(handler).toHaveBeenNthCalledWith(2, expect.objectContaining({ data: { orderId: '2' } }));
+      expect(handler).toHaveBeenNthCalledWith(3, expect.objectContaining({ data: { orderId: '3' } }));
+    });
+
+    test('hands the handler the inner record bytes as rawData', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ rawData: Buffer.from(JSON.stringify({ orderId: '2' })) }),
+      );
+    });
+
+    test('gives each inner record its own partition key', async ({ context }) => {
+      const handler = vi.fn<(request: KinesisRequest) => Promise<void>>();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      const partitionKeys = handler.mock.calls.map(([request]) => request.partitionKey);
+      expect(partitionKeys).toEqual(['order-1', 'order-2', 'order-1']);
+    });
+
+    test('matches the partitionKey filter against the inner partition key', async ({ context }) => {
+      const orderOneHandler = vi.fn();
+      const otherHandler = vi.fn();
+      router.route(defineRoute({ filters: { partitionKey: 'order-1' } }).handle(orderOneHandler));
+      router.route(defineRoute({ filters: {} }).handle(otherHandler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(orderOneHandler).toHaveBeenCalledTimes(2);
+      expect(otherHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('passes the inner data and partition key to a custom filter', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      router.route(defineRoute({ filters: { custom } }).handle(async () => {}));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(custom).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ data: { orderId: '2' }, partitionKey: 'order-2' }),
+      );
+    });
+
+    test('sets subSequenceNumber to the position inside the aggregate', async ({ context }) => {
+      const handler = vi.fn<(request: KinesisRequest) => Promise<void>>();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      const subSequenceNumbers = handler.mock.calls.map(([request]) => request.subSequenceNumber);
+      expect(subSequenceNumbers).toEqual([0, 1, 2]);
+    });
+
+    test('gives every inner record the sequence number and record of the aggregate', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+      for (const [request] of handler.mock.calls) {
+        expect(request).toEqual(expect.objectContaining({ sequenceNumber: record.kinesis.sequenceNumber, record }));
+      }
+    });
+
+    test('leaves subSequenceNumber undefined for a plain record', async ({ kinesisHandlerEvent }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const { event, context } = kinesisHandlerEvent();
+      await router.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ subSequenceNumber: undefined }));
+    });
+
+    test('validates each inner record against dataSchema', async ({ context }) => {
+      const dataSchema = createMockSchema();
+      router.route(defineRoute({ filters: {}, dataSchema }).handle(async () => {}));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '1' }, dataSchema, expect.any(String));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '2' }, dataSchema, expect.any(String));
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '3' }, dataSchema, expect.any(String));
+    });
+
+    test('routes a record with a checksum that does not match as a plain record', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const aggregatedData = await aggregateUserRecords(orderUserRecords);
+      const lastByteIndex = aggregatedData.length - 1;
+      aggregatedData[lastByteIndex] = (aggregatedData[lastByteIndex] ?? 0) ^ 0xff;
+      const record = createKinesisRecord();
+      record.kinesis.data = aggregatedData.toString('base64');
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ rawData: aggregatedData, partitionKey: record.kinesis.partitionKey }),
+      );
+    });
+
+    test('routes a record holding only the magic bytes as a plain record', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const magicOnly = Buffer.from([0xf3, 0x89, 0x9a, 0xc2]);
+      const record = createKinesisRecord();
+      record.kinesis.data = magicOnly.toString('base64');
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rawData: magicOnly }));
+    });
+
+    test('routes a record with a valid checksum over bytes that are not an aggregate as a plain record', async ({
+      context,
+    }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const magic = Buffer.from([0xf3, 0x89, 0x9a, 0xc2]);
+      // Field 3 claims 100 bytes of length-delimited data but only 2 follow
+      const truncatedMessage = Buffer.from([0x1a, 0x64, 0x01, 0x02]);
+      const checksum = createHash('md5').update(truncatedMessage).digest();
+      const rawData = Buffer.concat([magic, truncatedMessage, checksum]);
+      const record = createKinesisRecord();
+      record.kinesis.data = rawData.toString('base64');
+      await router.handleEvent(createKinesisEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ rawData }));
+    });
+
+    test('throws when an inner record fails and batchItemFailures is disabled', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineRoute({ filters: { partitionKey: 'order-1' } }).handle(handler));
+
+      const record = await createAggregatedRecord(orderUserRecords);
+
+      await expect(router.handleEvent(createKinesisEvent([record]), context())).rejects.toThrow('No route matched');
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    test('reports the aggregate once and stops at the first inner record that fails', async ({ context }) => {
+      const router = new KinesisRouter({ batchItemFailures: true });
+      const handler = vi.fn(async (request: KinesisRequest) => {
+        if (request.subSequenceNumber === 1) throw new Error('processing failed');
+      });
+      router.route(defineRoute({ filters: {} }).handle(handler));
+
+      const aggregatedRecord = await createAggregatedRecord(orderUserRecords);
+      const laterRecord = createKinesisRecord();
+      const result = await router.handleEvent(createKinesisEvent([aggregatedRecord, laterRecord]), context());
+
+      expect(handler).toHaveBeenCalledTimes(2);
+      expect(result).toEqual({
+        batchItemFailures: [
+          { itemIdentifier: aggregatedRecord.kinesis.sequenceNumber },
+          { itemIdentifier: laterRecord.kinesis.sequenceNumber },
+        ],
+      });
     });
   });
 

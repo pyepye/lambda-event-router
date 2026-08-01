@@ -22,6 +22,7 @@ export interface KinesisRequest<TData = unknown> {
   rawData: Buffer;
   partitionKey: string;
   sequenceNumber: string;
+  subSequenceNumber?: number;
   approximateArrivalTimestamp: number;
   record: KinesisStreamRecord;
   context: Context;

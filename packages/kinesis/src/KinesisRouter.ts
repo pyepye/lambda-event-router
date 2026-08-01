@@ -13,6 +13,7 @@ import {
   validateSchema,
 } from '@lambda-event-router/base';
 
+import { deaggregateRecord, type UserRecord } from './deaggregate.js';
 import type { KinesisFilters, KinesisRequest, KinesisRouteDefinition, KinesisRouterOptions } from './types.js';
 
 interface InternalRoute {
@@ -124,10 +125,23 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
   }
 
   private async processRecord(record: KinesisStreamRecord, context: Context): Promise<void> {
-    const rawData = Buffer.from(record.kinesis.data, 'base64');
+    const recordData = Buffer.from(record.kinesis.data, 'base64');
+    const userRecords = deaggregateRecord(recordData, record.kinesis.partitionKey);
+
+    for (const userRecord of userRecords) {
+      await this.processUserRecord(record, userRecord, context);
+    }
+  }
+
+  private async processUserRecord(
+    record: KinesisStreamRecord,
+    userRecord: UserRecord,
+    context: Context,
+  ): Promise<void> {
+    const { data: rawData, partitionKey, subSequenceNumber } = userRecord;
     const data = safeJsonParse(rawData.toString('utf-8'));
 
-    const route = await this.matchRoute(record, data, rawData);
+    const route = await this.matchRoute(record, partitionKey, data, rawData);
     if (!route) {
       throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
     }
@@ -138,8 +152,9 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
     const request: KinesisRequest = {
       data: validatedData,
       rawData,
-      partitionKey: record.kinesis.partitionKey,
+      partitionKey,
       sequenceNumber: record.kinesis.sequenceNumber,
+      subSequenceNumber,
       approximateArrivalTimestamp: record.kinesis.approximateArrivalTimestamp,
       record,
       context,
@@ -158,6 +173,7 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
 
   private async matchRoute(
     record: KinesisStreamRecord,
+    partitionKey: string,
     data: unknown,
     rawData: Buffer,
   ): Promise<InternalRoute | undefined> {
@@ -172,12 +188,12 @@ export class KinesisRouter implements EventTypeRouter<KinesisStreamEvent, undefi
       }
 
       if (filters.partitionKey !== undefined) {
-        const partitionKeyMatch = filterStringMatcher(record.kinesis.partitionKey, filters.partitionKey);
+        const partitionKeyMatch = filterStringMatcher(partitionKey, filters.partitionKey);
         if (!partitionKeyMatch) continue;
       }
 
       if (filters.custom) {
-        const match = await filters.custom({ data, rawData, partitionKey: record.kinesis.partitionKey, record });
+        const match = await filters.custom({ data, rawData, partitionKey, record });
         if (!match) continue;
       }
 
