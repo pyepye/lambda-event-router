@@ -124,7 +124,7 @@ import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.route({
-  filter: {
+  filters: {
     method: 'POST',
     path: '/order/:id/',
   },
@@ -141,7 +141,7 @@ import { refundOrder } from './order/refund'
 const sqsRouter = createSQSRouter()
 
 sqsRouter.route({
-  filter: {
+  filters: {
     messageAttributes: {
       Type: 'ProcessOrder',
     }
@@ -150,7 +150,7 @@ sqsRouter.route({
 })
 
 sqsRouter.route({
-  filter: {
+  filters: {
     messageAttributes: {
       Type: 'RefundOrder',
     }

@@ -189,20 +189,6 @@ apiRouter.post({
 The HTTP routers share one type, `HTTPMiddleware`, so the name does not follow the router the way
 `SQSMiddleware` does. Each package re-exports it, so import it from the router's own package.
 
-**`get()` and `delete()` reject the bare `HTTPMiddleware` alias**, because neither route has a request
-body and the alias defaults its body parameter to `unknown`. Pass `undefined` as the third parameter
-for those two.
-
-```ts
-export const withApiKey: HTTPMiddleware<
-  Record<string, string>,
-  Record<string, string | undefined>,
-  undefined
-> = async (request, next) => {
-  // ...
-}
-```
-
 ## Stopping the handler
 
 Returning without calling `next` skips everything inside that layer, the handler included. What that
