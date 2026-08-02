@@ -241,11 +241,13 @@ suite('Request', () => {
   });
 
   suite('validateBody', () => {
-    test('returns the parsed body when no bodySchema is defined', async () => {
+    test('returns undefined without reading the body when no bodySchema is defined', async () => {
+      validateSchemaResultSpy.mockClear();
       const normalizedEvent = createNormalizedEvent({ body: JSON.stringify({ total: '42' }) });
       const request = new Request(normalizedEvent, {}, createMockContext(), createRoute(), {});
 
-      await expect(request.validateBody()).resolves.toEqual({ total: '42' });
+      await expect(request.validateBody()).resolves.toBeUndefined();
+      expect(validateSchemaResultSpy).not.toHaveBeenCalled();
     });
 
     test('returns the schema output so coercion and defaults reach the caller', async () => {

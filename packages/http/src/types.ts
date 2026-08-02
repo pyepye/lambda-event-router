@@ -8,6 +8,13 @@ import type { Middleware } from '@lambda-event-router/base';
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
 export type LowercaseHttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete' | 'options' | 'head';
 export type AnyHttpMethod = HttpMethod | LowercaseHttpMethod;
+export type BodyMethod = 'POST' | 'PUT' | 'PATCH';
+export type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
+
+// The body a route without a bodySchema receives
+export type DefaultBody<TMethod extends AnyHttpMethod> = TMethod extends BodyMethod | Lowercase<BodyMethod>
+  ? unknown
+  : undefined;
 
 type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${infer Rest}`
   ? { [K in Param | keyof ExtractParams<Rest>]: string }
@@ -100,8 +107,8 @@ export interface HTTPFilterInput<TEvent = unknown> {
   event: TEvent;
 }
 
-export interface HTTPFilters<TPathString extends string = string> {
-  method: AnyHttpMethod;
+export interface HTTPFilters<TPathString extends string = string, TMethod extends AnyHttpMethod = AnyHttpMethod> {
+  method: TMethod;
   path: TPathString;
   custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
 }
@@ -126,10 +133,11 @@ export interface RouteDefinition<
   TQuery = Record<string, string | undefined>,
   TBody = unknown,
   TResponse = unknown,
+  TMethod extends AnyHttpMethod = AnyHttpMethod,
 > {
-  filters: HTTPFilters<TPathString>;
-  handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  middleware?: HTTPMiddleware<TPath, TQuery, TBody, TResponse>[];
+  filters: HTTPFilters<TPathString, TMethod>;
+  handler: ApiHandler<TPath, TQuery, NoInfer<TBody>, TResponse>;
+  middleware?: HTTPMiddleware<TPath, TQuery, NoInfer<TBody>, TResponse>[];
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;

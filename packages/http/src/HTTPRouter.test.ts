@@ -10,6 +10,7 @@ import { NoContent, Ok } from './Response.js';
 import type { ApiRequest, FinalizedHTTPResponse, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
 type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
 
 interface MockEvent {
@@ -241,15 +242,6 @@ suite('HTTPRouter', () => {
       expect(handler).toHaveBeenCalledOnce();
       expect(result.body).toBe(JSON.stringify({ mine: true }));
       expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
-    });
-
-    test('neither takes a bodySchema', () => {
-      const bodySchema = createMockSchema();
-
-      // @ts-expect-error - a HEAD route has no body to validate
-      router.head({ filters: { path: '/items' }, bodySchema, handler: async () => NoContent() });
-      // @ts-expect-error - an OPTIONS route has no body to validate
-      router.options({ filters: { path: '/items' }, bodySchema, handler: async () => NoContent() });
     });
   });
 
@@ -576,6 +568,139 @@ suite('HTTPRouter', () => {
           body: { total: 42, currency: 'GBP' },
         }),
       );
+    });
+  });
+
+  suite('handleEvent - body parsing', () => {
+    const jsonBody = JSON.stringify({ name: 'test-item' });
+
+    beforeEach(() => {
+      safeJsonParseSpy.mockClear();
+    });
+
+    test.each([
+      'GET',
+      'HEAD',
+      'DELETE',
+      'OPTIONS',
+    ] as const)('a %s route without a bodySchema hands the handler no body and does not parse it', async (method) => {
+      const handler = vi.fn().mockResolvedValue(NoContent());
+      router.route({ filters: { method, path: '/items' }, handler });
+
+      await router.handleEvent(createMockEvent({ method, path: '/items', body: jsonBody }), createMockContext());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: undefined, rawBody: jsonBody }));
+      expect(safeJsonParseSpy).not.toHaveBeenCalled();
+    });
+
+    test('a GET route with a bodySchema parses and validates the body', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      const bodySchema = createMockSchema();
+      router.get({ filters: { path: '/items' }, handler, bodySchema });
+
+      await router.handleEvent(createMockEvent({ path: '/items', body: jsonBody }), createMockContext());
+
+      expect(validateSchemaResultSpy).toHaveBeenCalledWith({ name: 'test-item' }, bodySchema);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: { name: 'test-item' } }));
+    });
+
+    test('a GET route with a bodySchema returns 422 for an invalid body', async () => {
+      const handler = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid body' }] });
+      router.get({ filters: { path: '/items' }, handler, bodySchema });
+
+      const result = await router.handleEvent(createMockEvent({ path: '/items', body: jsonBody }), createMockContext());
+
+      expect(result.statusCode).toBe(422);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('a POST route without a bodySchema does not parse a body the handler never reads', async () => {
+      router.post({ filters: { path: '/items' }, handler: async () => NoContent() });
+
+      await router.handleEvent(
+        createMockEvent({ method: 'POST', path: '/items', body: jsonBody }),
+        createMockContext(),
+      );
+
+      expect(safeJsonParseSpy).not.toHaveBeenCalled();
+    });
+
+    test('a POST route without a bodySchema parses the body when the handler reads it', async () => {
+      let receivedBody: unknown;
+      router.post({
+        filters: { path: '/items' },
+        handler: async (request: ApiRequest): Promise<HandlerResponse> => {
+          receivedBody = request.body;
+          return NoContent();
+        },
+      });
+
+      await router.handleEvent(
+        createMockEvent({ method: 'POST', path: '/items', body: jsonBody }),
+        createMockContext(),
+      );
+
+      expect(receivedBody).toEqual({ name: 'test-item' });
+    });
+
+    test('a POST body read twice is parsed once', async () => {
+      router.post({
+        filters: { path: '/items' },
+        handler: async (request: ApiRequest): Promise<HandlerResponse> =>
+          Ok({ first: request.body, second: request.body }),
+      });
+
+      await router.handleEvent(
+        createMockEvent({ method: 'POST', path: '/items', body: jsonBody }),
+        createMockContext(),
+      );
+
+      expect(safeJsonParseSpy).toHaveBeenCalledOnce();
+    });
+
+    test('a body assigned by middleware reaches the handler', async () => {
+      let receivedBody: unknown;
+      const replaceBody: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
+        request.body = { replaced: true };
+        return next(request);
+      };
+      router.post({
+        filters: { path: '/items' },
+        middleware: [replaceBody],
+        handler: async (request: ApiRequest): Promise<HandlerResponse> => {
+          receivedBody = request.body;
+          return NoContent();
+        },
+      });
+
+      await router.handleEvent(
+        createMockEvent({ method: 'POST', path: '/items', body: jsonBody }),
+        createMockContext(),
+      );
+
+      expect(receivedBody).toEqual({ replaced: true });
+    });
+
+    test('a request spread by middleware carries the parsed body', async () => {
+      let receivedBody: unknown;
+      const spreadRequest: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) =>
+        next({ ...request, headers: { ...request.headers, 'x-added': 'yes' } });
+      router.post({
+        filters: { path: '/items' },
+        middleware: [spreadRequest],
+        handler: async (request: ApiRequest): Promise<HandlerResponse> => {
+          receivedBody = request.body;
+          return NoContent();
+        },
+      });
+
+      await router.handleEvent(
+        createMockEvent({ method: 'POST', path: '/items', body: jsonBody }),
+        createMockContext(),
+      );
+
+      expect(receivedBody).toEqual({ name: 'test-item' });
     });
   });
 

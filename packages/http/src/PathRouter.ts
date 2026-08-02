@@ -3,17 +3,18 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { Middleware } from '@lambda-event-router/base';
 
 import type {
+  AnyHttpMethod,
   ApiHandler,
   ApiRequest,
+  BodyMethod,
+  DefaultBody,
   HandlerResponse,
   HTTPFilterInput,
   HttpMethod,
+  NoBodyMethod,
   PathParams,
   RouteDefinition,
 } from './types.js';
-
-type BodyMethod = 'POST' | 'PUT' | 'PATCH';
-type NoBodyMethod = 'GET' | 'HEAD' | 'DELETE' | 'OPTIONS';
 
 export interface InternalRoute {
   method: HttpMethod;
@@ -42,30 +43,32 @@ interface BaseRouteConfig<TPathString extends string, TQuery, TResponse> {
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }
 
-// Config for HTTP methods that don't support a request body (GET, HEAD, DELETE, OPTIONS)
-interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse>
+// Config for HTTP methods that read a request body only with a bodySchema (GET, HEAD, DELETE, OPTIONS)
+interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TResponse, TBody>
   extends BaseRouteConfig<TPathString, TQuery, TResponse> {
-  handler: ApiHandler<TPath, TQuery, undefined, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, undefined>, HandlerResponse<TResponse>>[];
+  handler: ApiHandler<TPath, TQuery, NoInfer<TBody>, TResponse>;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TBody>>, HandlerResponse<TResponse>>[];
+  bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
 // Config for HTTP methods that support a request body (POST, PUT, PATCH)
 interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TBody, TResponse>
   extends BaseRouteConfig<TPathString, TQuery, TResponse> {
-  handler: ApiHandler<TPath, TQuery, TBody, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
+  handler: ApiHandler<TPath, TQuery, NoInfer<TBody>, TResponse>;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TBody>>, HandlerResponse<TResponse>>[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
 // Method signature for route (takes full RouteDefinition with method)
 export type RouteMethodFn<TReturn = PathRouter> = <
   TPathString extends string,
+  TMethod extends AnyHttpMethod,
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
-  TBody = never,
+  TBody = DefaultBody<TMethod>,
   TResponse = unknown,
 >(
-  route: RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>,
+  route: RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>,
 ) => TReturn;
 
 // Method signature for routes with body support
@@ -85,8 +88,9 @@ export type NoBodyRouteMethodFn<TReturn = PathRouter> = <
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
   TResponse = unknown,
+  TBody = undefined,
 >(
-  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TResponse>,
+  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TResponse, TBody>,
 ) => TReturn;
 
 interface RouteMatch {

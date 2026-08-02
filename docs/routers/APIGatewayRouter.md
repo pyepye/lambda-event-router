@@ -81,9 +81,9 @@ path you have registered under another method counts as no match rather than a 4
 against a `GET /orders/:orderId` route answers 404. See [nothing
 matched](/docs/routing#nothing-matched) for what the other routers do instead.
 
-**`route()` types `body` as `never` until you attach a `bodySchema`,** whatever method the filters name, so
-an inline handler on a `POST` cannot read it. Attach the schema you were going to write anyway, or reach for
-`post()`, `put()` or `patch()`, which give you `unknown` without one.
+**`route()` types `body` from the `method` filter.** A `POST`, `PUT` or `PATCH` route gets `unknown` and
+the other four get `undefined`, the same as the [convenience methods](#convenience-methods). A `bodySchema`
+replaces either with the schema output.
 
 ### Convenience methods
 
@@ -103,23 +103,22 @@ apiRouter.route({
 })
 ```
 
-| Method | Sets | Takes a `bodySchema` | Types `body` as |
-| --- | --- | --- | --- |
-| `get()` | `method: 'GET'` | No | `undefined` |
-| `post()` | `method: 'POST'` | Yes | The schema output, or `unknown` |
-| `put()` | `method: 'PUT'` | Yes | The schema output, or `unknown` |
-| `patch()` | `method: 'PATCH'` | Yes | The schema output, or `unknown` |
-| `delete()` | `method: 'DELETE'` | No | `undefined` |
-| `head()` | `method: 'HEAD'` | No | `undefined` |
-| `options()` | `method: 'OPTIONS'` | No | `undefined` |
+| Method | Sets | Types `body` as without a `bodySchema` |
+| --- | --- | --- |
+| `get()` | `method: 'GET'` | `undefined` |
+| `post()` | `method: 'POST'` | `unknown` |
+| `put()` | `method: 'PUT'` | `unknown` |
+| `patch()` | `method: 'PATCH'` | `unknown` |
+| `delete()` | `method: 'DELETE'` | `undefined` |
+| `head()` | `method: 'HEAD'` | `undefined` |
+| `options()` | `method: 'OPTIONS'` | `undefined` |
 
-Each method rejects a `method` in its filters, and the four with no body reject a `bodySchema` outright.
-`route()` still takes everything. See [convenience methods](/docs/routing#convenience-methods) for how
-the other routers use them.
+Every method takes a `bodySchema`, and `body` is then the schema output. Each method rejects a `method` in
+its filters. See [convenience methods](/docs/routing#convenience-methods) for how the other routers use them.
 
-Typing `body` as `undefined` on those four is the types keeping you honest rather than the router dropping
-anything. A `GET` or `DELETE` that arrives with a body still has it parsed, so `request.event.body` holds it
-if you are talking to a client that sends one.
+**A `GET`, `HEAD`, `DELETE` or `OPTIONS` route without a `bodySchema` never parses the body**, so the handler
+gets `undefined` even when the client sends one. Add a `bodySchema` if the route needs it. See [request
+body](#request-body) for when the router parses it.
 
 An `options()` route wins over the automatic [CORS](#cors) preflight, which is how you take over answering a
 preflight for one path.
@@ -218,7 +217,7 @@ export async function getOrder(
 | `rawPath` | `string` | The path string the caller asked for, the same on a 1.0 or 2.0 payload |
 | `query` | `TQuery` | Query string params, one value per key. Where a name repeats, this is the last value |
 | `multiValueQuery` | `Record<string, string[] \| undefined>` | Every value for each query param, in the order they arrived |
-| `body` | `TBody` | The parsed JSON body. A body that is not valid JSON arrives as the raw string, a binary body as a `Buffer`, and no body at all as `null` |
+| `body` | `TBody` | The parsed body. See [request body](#request-body) for when the router parses it. A body that is not valid JSON arrives as the raw string, a binary body as a `Buffer`, and no body at all as `null` |
 | `rawBody` | `string \| undefined` | The body exactly as the service sent it, still base64 where `isBase64Encoded` is true |
 | `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers. Read them lower cased. Where a name repeats, this is the last value |
@@ -260,6 +259,20 @@ and `request.multiValueHeaders` give you the full list while `query` and `header
 An HTTP API (2.0) payload does not. AWS comma joins repeated values into one string before it reaches you, so
 `?tag=a&tag=b` arrives as `query.tag` of `'a,b'`. We do not split that back apart, since a value can hold a
 comma of its own, so on a 2.0 payload `multiValueQuery.tag` is the single entry `['a,b']`.
+
+### Request body
+
+The router parses the body only when the route needs it. This means a route that ignores the body does not
+spend time or memory on `JSON.parse`.
+
+| Route | When the router parses the body | `body` |
+| --- | --- | --- |
+| Any method with a `bodySchema` | Before the handler runs, to validate it | The schema output |
+| `POST`, `PUT` or `PATCH` without a `bodySchema` | The first time something reads `request.body` | `unknown` |
+| `GET`, `HEAD`, `DELETE` or `OPTIONS` without a `bodySchema` | Never | `undefined` |
+
+A middleware that copies the request with `{ ...request }` reads `body`, so the parse happens there rather
+than in the handler. It still happens only once.
 
 ### Response type
 
@@ -342,6 +355,9 @@ apiRouter.post({
 ```
 
 Derive the type from the schema with `z.infer` rather than hand-writing an interface that mirrors it.
+
+**The handler's annotation does not type the body on its own.** Only the `bodySchema` or the method does, so
+`createOrder` above does not compile on a route without `bodySchema: NewOrderSchema`.
 [Annotated handlers](/docs/handlers#annotated-handlers) has the worked version.
 
 For the path you can do the same with `PathParams<'/orgs/:orgId/orders/:orderId'>`, which reads the params
@@ -718,7 +734,7 @@ All exported from `@lambda-event-router/apigateway`.
 | `ApiResponse<T>` | `{ statusCode, body, headers? }` |
 | `HTTPResponse<T>` | An alias of `ApiResponse<T>`, and what the helpers return |
 | `ApiHandler<TPath, TQuery, TBody, TResponse>` | The handler signature |
-| `RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>` | A full route passed to `route()` |
+| `RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>` | A full route passed to `route()` |
 | `PathParams<TPathString>` | The params a pattern names, so `PathParams<'/orders/:orderId'>` is `{ orderId: string }` |
 | `Auth` | `request.auth` |
 | `CorsConfig` | The `cors` option |
@@ -745,20 +761,21 @@ go with it for writing an adapter of your own, and are not something a route nee
 
 ### Generic parameters
 
-Six parameters cover every type above, and they do not all appear in the same order.
+Seven parameters cover every type above, and they do not all appear in the same order.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TPathString` | The path pattern itself, which `PathParams` reads | `string` |
 | `TPath` | `request.path` | `PathParams<TPathString>` on `RouteDefinition`, `Record<string, string>` elsewhere |
 | `TQuery` | `request.query` | `Record<string, string \| undefined>` |
-| `TBody` | `request.body` | `unknown`, except on `route()` where it is `never` |
+| `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
+| `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | `unknown` |
 | `TEvent` | `request.event` | `unknown` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TBody`. `ApiRequest`'s fourth
 is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
-`TPath` from it.
+`TPath` from it. It takes `TMethod` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types
 the path and leaves the query and body loose.

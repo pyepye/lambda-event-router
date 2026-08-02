@@ -18,6 +18,7 @@ import { Response } from './Response.js';
 import type {
   AnyHttpMethod,
   ApiRequest,
+  DefaultBody,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,
@@ -34,6 +35,7 @@ type ResponseType<TResponseSchema> = TResponseSchema extends StandardSchemaV1<un
 // Config without handler (for builder pattern)
 interface RouteInput<
   TPathString extends string,
+  TMethod extends AnyHttpMethod,
   TQuerySchema extends StandardSchemaV1 | undefined,
   TBodySchema extends StandardSchemaV1 | undefined,
   TResponseSchema extends StandardSchemaV1 | undefined,
@@ -41,11 +43,11 @@ interface RouteInput<
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
     : Record<string, string | undefined>,
-  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : DefaultBody<TMethod>,
   TResponse = TResponseSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TResponseSchema> : unknown,
 > {
   filters: {
-    method: AnyHttpMethod;
+    method: TMethod;
     path: TPathString;
     custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   };
@@ -56,14 +58,15 @@ interface RouteInput<
 }
 
 // Builder that provides typed handle method
-interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse> {
+interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse, TMethod extends AnyHttpMethod> {
   handle(
     handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>,
-  ): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>;
+  ): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>;
 }
 
 export function defineRoute<
   TPathString extends string,
+  TMethod extends AnyHttpMethod,
   TQuerySchema extends StandardSchemaV1 | undefined = undefined,
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TResponseSchema extends StandardSchemaV1 | undefined = undefined,
@@ -71,15 +74,15 @@ export function defineRoute<
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
     : Record<string, string | undefined>,
-  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : DefaultBody<TMethod>,
   TResponse = ResponseType<TResponseSchema>,
 >(
-  config: RouteInput<TPathString, TQuerySchema, TBodySchema, TResponseSchema>,
-): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse> {
+  config: RouteInput<TPathString, TMethod, TQuerySchema, TBodySchema, TResponseSchema>,
+): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse, TMethod> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
-    handle(handler): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse> {
-      return { ...config, handler } as RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse>;
+    handle(handler): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod> {
+      return { ...config, handler } as RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>;
     },
   };
 }

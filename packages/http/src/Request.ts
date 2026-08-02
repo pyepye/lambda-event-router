@@ -5,7 +5,9 @@ import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
 import { decodeBody } from './binaryBody.js';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
-import type { ApiRequest, Auth, NormalizedHTTPEvent } from './types.js';
+import type { ApiRequest, Auth, BodyMethod, HttpMethod, NormalizedHTTPEvent } from './types.js';
+
+const BODY_METHODS: ReadonlySet<HttpMethod> = new Set<BodyMethod>(['POST', 'PUT', 'PATCH']);
 
 export class Request {
   readonly headers: Record<string, string | undefined>;
@@ -37,6 +39,11 @@ export class Request {
     return this._body;
   }
 
+  set body(value: unknown) {
+    this._body = value;
+    this._bodyParsed = true;
+  }
+
   get rawBody(): string | undefined {
     return this.normalizedEvent.body;
   }
@@ -47,6 +54,19 @@ export class Request {
 
   get auth(): Auth | undefined {
     return this.normalizedEvent.auth;
+  }
+
+  // Parses the body on first read, so a handler that never reads it skips the parse
+  private withLazyBody(apiRequest: ApiRequest): ApiRequest {
+    Object.defineProperty(apiRequest, 'body', {
+      enumerable: true,
+      configurable: true,
+      get: (): unknown => this.body,
+      set: (value: unknown): void => {
+        this.body = value;
+      },
+    });
+    return apiRequest;
   }
 
   private parseBody(): unknown {
@@ -76,6 +96,8 @@ export class Request {
   }
 
   async validateBody(): Promise<unknown> {
+    if (!this.route.bodySchema) return undefined;
+
     const result = await validateSchemaResult(this.body, this.route.bodySchema);
     if (!result.success) {
       throw Response.UnprocessableContent(result.issues);
@@ -83,15 +105,15 @@ export class Request {
     return result.data;
   }
 
-  buildApiRequest(query: Record<string, string | undefined>, body: unknown): ApiRequest {
-    return {
+  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): ApiRequest {
+    const apiRequest: ApiRequest = {
       method: this.method,
       path: this.pathParams,
       rawPath: this.path,
       query,
       multiValueQuery: this.multiValueQueryParams,
       auth: this.auth,
-      body,
+      body: validatedBody,
       rawBody: this.rawBody,
       isBase64Encoded: this.isBase64Encoded,
       headers: this.headers,
@@ -99,5 +121,8 @@ export class Request {
       event: this.rawEvent,
       context: this.context,
     };
+
+    const readsBodyOnDemand = !this.route.bodySchema && BODY_METHODS.has(this.route.method);
+    return readsBodyOnDemand ? this.withLazyBody(apiRequest) : apiRequest;
   }
 }
