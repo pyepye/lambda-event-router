@@ -162,16 +162,28 @@ suite('vpcLatticeV2Adapter', () => {
       expect(normalized.body).toBeUndefined();
     });
 
-    test('extracts auth from requestContext.identity.principal', () => {
+    test('copies the caller identity to auth.iam alongside the principal', () => {
+      const identity = {
+        sourceVpcArn: 'arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc',
+        type: 'AWS_IAM',
+        principal: 'arn:aws:sts::123456789012:assumed-role/Ordering/session',
+        sessionName: 'session',
+      };
+      const event = createVPCLatticeV2Event({ requestContext: { identity } });
+
+      const normalized = vpcLatticeV2Adapter.normalize(event);
+
+      expect(normalized.auth).toEqual({ principalId: identity.principal, iam: identity });
+    });
+
+    test('returns undefined auth when the identity names no principal', () => {
       const event = createVPCLatticeV2Event({
-        requestContext: {
-          identity: { principal: 'arn:aws:iam::123456789012:role/my-role' },
-        },
+        requestContext: { identity: { sourceVpcArn: 'arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc' } },
       });
 
       const normalized = vpcLatticeV2Adapter.normalize(event);
 
-      expect(normalized.auth).toEqual({ principalId: 'arn:aws:iam::123456789012:role/my-role' });
+      expect(normalized.auth).toBeUndefined();
     });
 
     test('returns undefined auth when no identity is present', () => {

@@ -224,7 +224,7 @@ export async function getOrder(
 | `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
-| `auth` | `Auth \| undefined` | Only ever `principalId`, on either payload version. See [Auth](#auth) |
+| `auth` | `Auth \| undefined` | `principalId` and `iam`, on either payload version. See [Auth](#auth) |
 | `event` | `TEvent` | The untouched event, typed `VPCLatticeEvent` |
 | `context` | `Context` | The Lambda context |
 
@@ -487,27 +487,37 @@ See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with t
 
 ## Auth
 
-`request.auth` carries at most one field, and both payload versions fill it.
+`request.auth` names the caller, and both payload versions fill it the same way.
 
 | Field | Type | Comes from |
 | --- | --- | --- |
-| `principalId` | `string` | `requestContext.identity.principal` on a 2.0 payload, and the `x-amzn-lattice-identity` header on a 1.0 one |
+| `principalId` | `string` | `requestContext.identity.principal` on a 2.0 payload, and `Principal=` in the `x-amzn-lattice-identity` header on a 1.0 one |
+| `iam` | `Record<string, unknown>` | A copy of `requestContext.identity` on a 2.0 payload. On a 1.0 payload, the fields of the `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers |
 
-Lattice names the caller in a different place on each version, and the router reads both, so a handler behind
-either listener gets the same `principalId`. A 1.0 payload has no request context at all, and its header holds
-`Principal=`, `SessionName=` and `Type=` as one semicolon separated string.
+A signed caller gets the same `iam` behind either listener:
+
+```json
+{
+  "sourceVpcArn": "arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc123def4567890",
+  "type": "AWS_IAM",
+  "principal": "arn:aws:sts::123456789012:assumed-role/ordering-role/ordering-session",
+  "sessionName": "ordering-session"
+}
+```
+
+A 1.0 payload has no request context, so the router builds `iam` from the two headers. Each holds
+`Key=value` pairs split by semicolons, like `Principal=arn:...; PrincipalOrgID=; SessionName=name; Type=AWS_IAM`.
+The router lower cases the first letter of each key to match the 2.0 names, and drops a key with an empty value.
+A 2.0 payload leaves out the same empty fields, so `principalOrgID` only appears when the caller has one.
 
 `Auth` is shared across the HTTP routers, so it declares `claims`, `scopes` and the rest as optional. None of
 them are ever populated here.
 
 **A request Lattice cannot name gets `auth: undefined`,** so a route that needs a caller identity has to handle
 that rather than assume the field is there. A service with an auth type of `NONE`, or one whose auth policy
-grants anonymous access, sends no principal for an unsigned caller.
-
-The rest of what Lattice sends about the caller is on the event and not on `auth`. Read
-`request.event.requestContext.identity` for `sourceVpcArn`, `principalOrgID` and the `x509*` fields when a
-client certificate is involved, narrowing the event to a 2.0 payload first. On a 1.0 payload the same detail is
-in the `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers.
+grants anonymous access, sends no principal for an unsigned caller. Lattice still sends `sourceVpcArn` for that
+caller, but only on the event. Read it from `request.event.requestContext.identity` on a 2.0 payload, or the
+`x-amzn-lattice-network` header on a 1.0 one.
 
 ## CORS
 
@@ -594,8 +604,8 @@ two name almost every field differently, which is the reason the router normalis
 | Headers | `headers`, one string per key | `headers`, an array per key |
 | Base64 flag | `is_base64_encoded` | `isBase64Encoded` |
 | Request id | `request_id` | `requestId` |
-| Caller | `x-amzn-lattice-identity` header | `requestContext.identity` |
-| Request context | Absent | `requestContext`, with `serviceArn` and `identity` |
+| Caller | `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers | `requestContext.identity` |
+| Service and target group | `x-amzn-lattice-target` header | `requestContext`, with `serviceArn`, `serviceNetworkArn` and `targetGroupArn` |
 
 Your handler is given the same [request object](#request-object) either way. A 2.0 payload can carry more
 than one value per query param or header, so reach for `request.multiValueQuery` and
@@ -624,6 +634,10 @@ const serviceArn = isObject(request.event) && 'requestContext' in request.event
   ? request.event.requestContext.serviceArn
   : undefined
 ```
+
+A 1.0 payload has no `requestContext`, but it still names the service. The `x-amzn-lattice-target` header holds
+`ServiceArn=`, `ServiceNetworkArn=` and `TargetGroupArn=` as one semicolon separated string, so read
+`request.headers['x-amzn-lattice-target']` and split it yourself.
 
 To take one version and reject the other, hand that version's adapter to `HTTPRouter`. Both are exported
 from here, and the router it gives you routes and responds exactly as the one on the rest of this page does.

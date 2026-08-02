@@ -65,7 +65,7 @@ supports and every failure path it has.
 | Query on the path | Lattice appends the query string to the path it sends, and the adapter takes it off |
 | HEAD responses | `headStockItem` builds a body and the router strips it |
 | Auth | `listSupplierSkus` reads `auth.principalId`. Only a signed caller has one, on either version |
-| Request context | `getStockItem` reads `serviceArn` off the event, which only a 2.0 payload carries |
+| Request context | `getStockItem` reads `serviceArn` off the request context, which only a 2.0 payload carries |
 | WARN records | `requireCallerPrincipal` warns before it refuses an unsigned caller |
 | Binary body | `replaceStockItem` takes a count sheet as bytes, typed by a `bodySchema` of `BinaryBody` |
 | String response | `exportStockValuation` returns CSV, so the router sets no JSON content type |
@@ -89,6 +89,7 @@ the router answers with is asserted by the trigger.
 ## Prerequisites
 
 - AWS account with credentials on the shell
+- `AWS_REGION` set to the region the stack is deployed in
 - CDK bootstrap already run for the target account / region
 - Node 24 and pnpm installed
 
@@ -184,8 +185,9 @@ The rest of the log is one line per handler:
   repeated query param and drops the rest. `depotHeaders` is `['leeds,hull']`, because it joins a
   repeated header into one string instead. The same event uses two different rules.
 - `page` is the number 2 on both, since the querySchema coerces it.
-- `principalId` is set on both listeners. `serviceArn` is set only on 2.0, because a 1.0 payload
-  has no request context to read it from.
+- `principalId` is set on both listeners. `serviceArn` is set only on 2.0, because the handler
+  reads it from the request context. A 1.0 payload has no request context and sends the service ARN
+  in the `x-amzn-lattice-target` header.
 - `Available stock listed` appears four times per listener. One is the plain read, one scopes to a
   depot, and two are the CORS steps.
 - `Supplier read authorised` and `Supplier SKUs listed` are the signed read. The unsigned one logs

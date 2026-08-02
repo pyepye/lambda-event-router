@@ -8,7 +8,7 @@ import {
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
-import { IDENTITY_HEADER, pathWithoutQuery, principalFromIdentityHeader } from './latticeEvent.js';
+import { fieldsFromLatticeHeader, IDENTITY_HEADER, NETWORK_HEADER, pathWithoutQuery } from './latticeEvent.js';
 
 export interface VPCLatticeEventBase {
   method: HttpMethod;
@@ -31,8 +31,12 @@ export interface VPCLatticeResult {
 }
 
 function extractV1Auth(headers: Record<string, string | undefined>): Auth | undefined {
-  const principalId = principalFromIdentityHeader(headers[IDENTITY_HEADER]);
-  return principalId ? { principalId } : undefined;
+  const identity = {
+    ...fieldsFromLatticeHeader(headers[NETWORK_HEADER]),
+    ...fieldsFromLatticeHeader(headers[IDENTITY_HEADER]),
+  };
+  if (!identity.principal) return undefined;
+  return { principalId: identity.principal, iam: identity };
 }
 
 export const vpcLatticeV1Adapter: HTTPAdapter<VPCLatticeEventV1, VPCLatticeResult> = {

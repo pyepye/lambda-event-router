@@ -43,11 +43,9 @@ export interface VPCLatticeEventV2 extends VPCLatticeEventBase {
 }
 
 function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
-  const { requestContext } = event;
-  if (requestContext.identity?.principal) {
-    return { principalId: requestContext.identity?.principal };
-  }
-  return undefined;
+  const { identity } = event.requestContext;
+  if (!identity?.principal) return undefined;
+  return { principalId: identity.principal, iam: { ...identity } };
 }
 
 export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResult> = {

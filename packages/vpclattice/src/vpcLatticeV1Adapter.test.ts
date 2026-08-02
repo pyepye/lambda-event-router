@@ -124,17 +124,36 @@ suite('vpcLatticeV1Adapter', () => {
       expect(normalized.path).toBe('/stock/brk-9');
     });
 
-    test('reads the principal from the identity header', () => {
+    test('reads the identity and network headers into auth.iam alongside the principal', () => {
       const event = createVPCLatticeV1Event({
         headers: {
           'x-amzn-lattice-identity':
-            'Principal=arn:aws:sts::123456789012:assumed-role/Ordering/session; PrincipalOrgID=; SessionName=session; Type=AWS_IAM',
+            'Principal=arn:aws:sts::123456789012:assumed-role/Ordering/session; PrincipalOrgID=; PrincipalOrgPaths=; SessionName=session; Type=AWS_IAM',
+          'x-amzn-lattice-network': 'SourceVpcArn=arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc',
         },
       });
 
       const normalized = vpcLatticeV1Adapter.normalize(event);
 
-      expect(normalized.auth).toEqual({ principalId: 'arn:aws:sts::123456789012:assumed-role/Ordering/session' });
+      expect(normalized.auth).toEqual({
+        principalId: 'arn:aws:sts::123456789012:assumed-role/Ordering/session',
+        iam: {
+          sourceVpcArn: 'arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc',
+          type: 'AWS_IAM',
+          principal: 'arn:aws:sts::123456789012:assumed-role/Ordering/session',
+          sessionName: 'session',
+        },
+      });
+    });
+
+    test('auth is undefined when only the network header is present', () => {
+      const event = createVPCLatticeV1Event({
+        headers: { 'x-amzn-lattice-network': 'SourceVpcArn=arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc' },
+      });
+
+      const normalized = vpcLatticeV1Adapter.normalize(event);
+
+      expect(normalized.auth).toBeUndefined();
     });
 
     test('auth is undefined when there is no identity header', () => {
