@@ -150,8 +150,15 @@ Amazon MQ omits a field rather than sending it empty. `message.properties` is fi
 object so a filter can read it either way, and `record.properties` is left as Amazon MQ sent it. The
 same goes for `correlationID` and `type`, which are absent unless the sender sets them.
 
-An unset AMQP property arrives as `null`, so `basicProperties.priority`, `deliveryMode`, `expiration`,
-`timestamp` and `userId` are all nullable on a RabbitMQ message.
+Every AMQP property is on a RabbitMQ message, and one the publisher did not set arrives as `null`.
+That includes `contentType`, so a message with no content type never matches a `contentType` filter.
+
+`request.timestamp` is the `timestamp` property parsed to a `Date`. Amazon MQ sends it as UTC text with
+no time zone, such as `Sep 21, 2026, 2:13:20 PM`, and the router reads it as UTC. It is `null` when
+there is no timestamp or the text is in a format the router does not recognise.
+
+A string header arrives as its UTF-8 bytes, such as `{ bytes: [117, 114, 103, 101, 110, 116] }` for
+`'urgent'`. `RabbitMQHeaderValue` types every shape a header can take.
 
 ### RabbitMQRouter
 

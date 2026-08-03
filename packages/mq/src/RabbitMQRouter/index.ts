@@ -4,6 +4,7 @@ export type {
   RabbitMQEvent,
   RabbitMQFilterInput,
   RabbitMQFilters,
+  RabbitMQHeaderValue,
   RabbitMQMessage,
   RabbitMQMiddleware,
   RabbitMQRequest,

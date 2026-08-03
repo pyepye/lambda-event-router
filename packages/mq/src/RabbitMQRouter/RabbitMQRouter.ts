@@ -26,6 +26,28 @@ import type {
   RabbitMQRouterOptions,
 } from './types.js';
 
+const MONTH_INDEXES: Map<string, number> = new Map([
+  ['Jan', 0],
+  ['Feb', 1],
+  ['Mar', 2],
+  ['Apr', 3],
+  ['May', 4],
+  ['Jun', 5],
+  ['Jul', 6],
+  ['Aug', 7],
+  ['Sep', 8],
+  ['Oct', 9],
+  ['Nov', 10],
+  ['Dec', 11],
+]);
+
+const HOURS_PER_MERIDIEM: number = 12;
+
+// Amazon MQ sends the AMQP timestamp as Java locale text in UTC, such as "Sep 21, 2026, 2:13:20 PM".
+// Groups: month, day, year, hour, minute, second, AM or PM. The space before the meridiem can be a
+// normal space or a narrow no-break space (U+202F).
+const TIMESTAMP_PATTERN: RegExp = /^([A-Z][a-z]{2}) (\d{1,2}), (\d{4}), (\d{1,2}):(\d{2}):(\d{2})[ \u202F](AM|PM)$/;
+
 export function defineRabbitMQRoute<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
@@ -76,7 +98,9 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         const decodedData = Buffer.from(message.data, 'base64').toString('utf-8');
         const decodedMessage = { ...message, data: decodedData };
 
-        const route = await this.matchRoute(event, queueName, virtualHost, decodedMessage, message);
+        const timestamp = this.parseTimestamp(message.basicProperties.timestamp);
+
+        const route = await this.matchRoute(event, queueName, virtualHost, decodedMessage, message, timestamp);
         if (!route) {
           throw new Error(`No route matched for message on queue ${queueName} from ${event.eventSourceArn}`);
         }
@@ -89,6 +113,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           queue: queueName,
           virtualHost,
           body,
+          timestamp,
           record: message,
           context,
         };
@@ -97,6 +122,23 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
         await handleEventWithMiddleware(allMiddleware, request, route.handler);
       }
     }
+  }
+
+  private parseTimestamp(timestamp: string | null): Date | null {
+    if (timestamp === null) return null;
+
+    const match = TIMESTAMP_PATTERN.exec(timestamp);
+    if (!match) return null;
+
+    const [, monthName = '', day, year, hour, minute, second, meridiem] = match;
+    const monthIndex = MONTH_INDEXES.get(monthName);
+    if (monthIndex === undefined) return null;
+
+    const hourOnClock = Number(hour) % HOURS_PER_MERIDIEM;
+    const hourOfDay = meridiem === 'PM' ? hourOnClock + HOURS_PER_MERIDIEM : hourOnClock;
+    const milliseconds = Date.UTC(Number(year), monthIndex, Number(day), hourOfDay, Number(minute), Number(second));
+
+    return new Date(milliseconds);
   }
 
   private orderRoutes(): void {
@@ -112,6 +154,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
     virtualHost: string | undefined,
     message: RabbitMQMessage,
     record: RabbitMQMessage,
+    timestamp: Date | null,
   ): Promise<RabbitMQInternalRoute | undefined> {
     this.orderRoutes();
 
@@ -138,7 +181,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
       if (filters.contentType !== undefined) {
         // A message with no content type cannot match a contentType filter, so skip it
         const { contentType } = message.basicProperties;
-        if (contentType === undefined) continue;
+        if (contentType === null) continue;
         const contentTypeMatch = filterStringMatcher(contentType, filters.contentType);
         if (!contentTypeMatch) continue;
       }
@@ -148,6 +191,7 @@ export class RabbitMQRouter implements EventTypeRouter<RabbitMQEvent, undefined>
           queue: queueName,
           virtualHost,
           contentType: message.basicProperties.contentType,
+          timestamp,
           message,
           record,
         };

@@ -6,12 +6,22 @@ import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base'
 
 // --- AWS Event Types (not in @types/aws-lambda) ---
 
+// Amazon MQ delivers a string header as its UTF-8 bytes. A timestamp header is the only plain string.
+export type RabbitMQHeaderValue =
+  | { bytes: number[] }
+  | string
+  | number
+  | boolean
+  | null
+  | RabbitMQHeaderValue[]
+  | { [key: string]: RabbitMQHeaderValue };
+
 // An AMQP property the publisher does not set arrives as null rather than as a default, so every field
 // a publisher may leave out is nullable.
 export interface RabbitMQBasicProperties {
-  contentType?: string;
+  contentType: string | null;
   contentEncoding: string | null;
-  headers: Record<string, unknown>;
+  headers: Record<string, RabbitMQHeaderValue>;
   deliveryMode: number | null;
   priority: number | null;
   correlationId: string | null;
@@ -45,6 +55,7 @@ export interface RabbitMQRequest<TBody = unknown> {
   queue: string;
   virtualHost: string | undefined;
   body: TBody;
+  timestamp: Date | null;
   record: RabbitMQMessage;
   context: Context;
 }
@@ -54,7 +65,8 @@ export interface RabbitMQRequest<TBody = unknown> {
 export interface RabbitMQFilterInput {
   queue: string;
   virtualHost: string | undefined;
-  contentType: string | undefined;
+  contentType: string | null;
+  timestamp: Date | null;
   message: RabbitMQMessage;
   record: RabbitMQMessage;
 }

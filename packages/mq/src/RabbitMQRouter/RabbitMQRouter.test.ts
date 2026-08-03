@@ -353,12 +353,47 @@ suite('RabbitMQRouter', () => {
       );
 
       const event = createRabbitMQEvent();
-      const message = rabbitMQMessage({ basicProperties: { contentType: undefined } });
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
 
       // @ts-expect-error - testing private method directly
       const result = await router.matchRoute(event, 'test-queue', undefined, message, message);
 
       expect(result).toBeUndefined();
+    });
+
+    test('does not match a contentType filter of "null" when the message has no contentType', async ({
+      rabbitMQMessage,
+    }) => {
+      router.route(
+        defineRabbitMQRoute({
+          filters: { contentType: 'null' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await router.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom receives a null contentType when the message has none', async ({ rabbitMQMessage }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      router.route(
+        defineRabbitMQRoute({
+          filters: { custom: filterSpy },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
+
+      // @ts-expect-error - testing private method directly
+      await router.matchRoute(event, 'orders', undefined, message, message);
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ contentType: null }));
     });
 
     test('matches route by custom', async ({ rabbitMQMessage }) => {
@@ -409,12 +444,13 @@ suite('RabbitMQRouter', () => {
       const message = rabbitMQMessage({ basicProperties: { contentType: 'text/plain' } });
 
       // @ts-expect-error - testing private method directly
-      await router.matchRoute(event, 'orders', '/production', message, message);
+      await router.matchRoute(event, 'orders', '/production', message, message, null);
 
       expect(filterSpy).toHaveBeenCalledWith({
         queue: 'orders',
         virtualHost: '/production',
         contentType: 'text/plain',
+        timestamp: null,
         message,
         record: message,
       });
@@ -548,6 +584,57 @@ suite('RabbitMQRouter', () => {
     });
   });
 
+  suite('parseTimestamp', () => {
+    test('parses the text Amazon MQ delivers as UTC', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Sep 21, 2026, 2:13:20 PM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+    });
+
+    test('parses a narrow no-break space before the meridiem', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Sep 21, 2026, 2:13:20\u202FPM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+    });
+
+    test('reads 12 AM as midnight', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Jan 1, 2026, 12:00:00 AM')).toEqual(new Date('2026-01-01T00:00:00Z'));
+    });
+
+    test('reads 12 PM as noon', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Jan 1, 2026, 12:00:00 PM')).toEqual(new Date('2026-01-01T12:00:00Z'));
+    });
+
+    test('parses a two digit day and hour', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Dec 31, 2026, 11:59:59 PM')).toEqual(new Date('2026-12-31T23:59:59Z'));
+    });
+
+    test('gives the same instant whatever the local time zone', () => {
+      vi.stubEnv('TZ', 'Europe/London');
+
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Sep 21, 2026, 2:13:20 PM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+
+      vi.unstubAllEnvs();
+    });
+
+    test('returns null when there is no timestamp', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp(null)).toBeNull();
+    });
+
+    test('returns null for text in another format', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('2026-09-21T14:13:20Z')).toBeNull();
+    });
+
+    test('returns null for an unknown month', () => {
+      // @ts-expect-error testing private method
+      expect(router.parseTimestamp('Sept 21, 2026, 2:13:20 PM')).toBeNull();
+    });
+  });
+
   suite('handleEvent', () => {
     test('calls matched handler with correct RabbitMQRequest shape', async ({
       rabbitMQMessage,
@@ -569,6 +656,73 @@ suite('RabbitMQRouter', () => {
           context,
         }),
       );
+    });
+
+    test('parses the timestamp property into request.timestamp', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'Sep 21, 2026, 2:13:20 PM' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timestamp: new Date('2026-09-21T14:13:20Z'),
+          record: expect.objectContaining({
+            basicProperties: expect.objectContaining({ timestamp: 'Sep 21, 2026, 2:13:20 PM' }),
+          }),
+        }),
+      );
+    });
+
+    test('sets request.timestamp to null when the message has no timestamp', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: null } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
+    });
+
+    test('custom receives the parsed timestamp', async ({ rabbitMQMessage, context }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      router.route(defineRabbitMQRoute({ filters: { custom: filterSpy } }).handle(async () => {}));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'Sep 21, 2026, 2:13:20 PM' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ timestamp: new Date('2026-09-21T14:13:20Z') }));
+    });
+
+    test('custom receives a null timestamp when the message has none', async ({ rabbitMQMessage, context }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      router.route(defineRabbitMQRoute({ filters: { custom: filterSpy } }).handle(async () => {}));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: null } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
+    });
+
+    test('still handles a message whose timestamp cannot be parsed', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      router.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'not a timestamp' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
     });
 
     test('decodes base64 message data', async ({ rabbitMQMessage, context }) => {

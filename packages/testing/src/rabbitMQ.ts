@@ -7,10 +7,20 @@ import { type FixtureMap, fixture } from './fixtureHelper.js';
 
 // RabbitMQ has no @types/aws-lambda types, so we define the event shapes locally
 
+// Amazon MQ delivers a string header as its UTF-8 bytes. A timestamp header is the only plain string.
+type RabbitMQHeaderValue =
+  | { bytes: number[] }
+  | string
+  | number
+  | boolean
+  | null
+  | RabbitMQHeaderValue[]
+  | { [key: string]: RabbitMQHeaderValue };
+
 interface RabbitMQBasicProperties {
-  contentType?: string;
+  contentType: string | null;
   contentEncoding: string | null;
-  headers: Record<string, unknown>;
+  headers: Record<string, RabbitMQHeaderValue>;
   deliveryMode: number | null;
   priority: number | null;
   correlationId: string | null;

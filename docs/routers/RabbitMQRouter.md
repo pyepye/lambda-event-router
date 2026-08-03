@@ -96,16 +96,17 @@ rabbitMQRouter.route({
 | `eventSourceArn` | `FilterStringMatcher` | Matches the ARN of the broker the event came from |
 | `queue` | `FilterStringMatcher` | Matches the queue name, with the virtual host split off. See [Queue names](#queue-names) |
 | `virtualHost` | `FilterStringMatcher` | Matches the virtual host the queue lives on. See [Queue names](#queue-names) |
-| `contentType` | `FilterStringMatcher` | Matches `basicProperties.contentType`, when the message has one |
-| `custom` | `(input: RabbitMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `queue`, the `virtualHost`, the `contentType`, the decoded `message` and the raw `record`. Can be async |
+| `contentType` | `FilterStringMatcher` | Matches `basicProperties.contentType`, when it is not `null` |
+| `custom` | `(input: RabbitMQFilterInput) => boolean \| Promise<boolean>` | Anything the other keys cannot express, given the `queue`, the `virtualHost`, the `contentType`, the parsed `timestamp`, the decoded `message` and the raw `record`. Can be async |
 
 `FilterStringMatcher` is `string | RegExp | Array<string | RegExp>`. See
 [filters](/docs/routing#filters) for how each form matches, including the `*` wildcard.
 
 **A message with no content type never matches a `contentType` filter.** Content type is an optional
-AMQP property, so a publisher can leave it off. When it is absent the router skips a `contentType`
-filter rather than matching it, the same way an absent virtual host skips a `virtualHost` filter. So
-`contentType: '*'` picks out the messages that have a content type, not every message.
+AMQP property, so a publisher can leave it off, and Amazon MQ then sends `contentType: null`. The
+router skips a `contentType` filter for that message rather than matching it, the same way an absent
+virtual host skips a `virtualHost` filter. So `contentType: '*'` picks out the messages that have a
+content type, not every message, and `custom` sees `contentType` as `null`.
 
 `custom` is the only key that reaches `basicProperties`, so priority, headers, `correlationId`
 and the `redelivered` flag are filterable through it and nowhere else.
@@ -156,6 +157,7 @@ export async function processOrder(
 | `queue` | `string` | The queue name, without the virtual host |
 | `virtualHost` | `string \| undefined` | The virtual host the queue lives on. `undefined` when the queue key carries none |
 | `body` | `TBody` | The decoded data parsed as JSON. Data that is not JSON reaches you as the raw string |
+| `timestamp` | `Date \| null` | The AMQP `timestamp` property as a `Date`. See [Timestamp](#timestamp) |
 | `record` | `RabbitMQMessage` | The untouched message from AWS, so `data` is still base64 |
 | `context` | `Context` | The Lambda context |
 
@@ -165,6 +167,37 @@ carries no RabbitMQ types. `Context` does come from `aws-lambda`.
 **`message` and `record` differ by one field.** `message.data` is the decoded text and `record.data` is
 the base64 AWS sent, so reading `record.data` for your message body hands you base64. `basicProperties`
 and `redelivered` are the same on both.
+
+### Timestamp
+
+Amazon MQ sends the AMQP `timestamp` property as text such as `Sep 21, 2026, 2:13:20 PM`. The text is
+UTC but carries no time zone, so `new Date()` on it gives the wrong instant anywhere that is not
+running in UTC.
+
+The router parses it for you as UTC, so `request.timestamp` is `2026-09-21T14:13:20.000Z` for that
+text. The original text stays on `basicProperties.timestamp`.
+
+`request.timestamp` is `null` when the publisher set no timestamp, and also when the text is in a
+format the router does not recognise. The message is still handled either way.
+
+A `custom` filter gets the same parsed value as `timestamp` on its input.
+
+### Headers
+
+**A string header arrives as bytes, not text.** Amazon MQ sends `orderPriority: 'urgent'` as
+`{ bytes: [117, 114, 103, 101, 110, 116] }`, which is the UTF-8 encoding of the string. That goes for a
+string inside a header array or a nested table too. Decode one with
+`Buffer.from(value.bytes).toString('utf-8')`.
+
+Numbers of every AMQP size, booleans and `null` arrive as they are. A decimal arrives as a plain number,
+so `12345` with two places reads as `123.45`. A byte array arrives as signed bytes, so `255` reads as
+`-1`.
+
+A timestamp header is the one plain string, in the same format as the
+[`timestamp` property](#timestamp). The router does not parse headers, so it stays as text.
+
+`RabbitMQHeaderValue` types each value, so TypeScript makes you check for `bytes` before you read a
+string header.
 
 ### Response type
 
@@ -328,6 +361,7 @@ All exported from `@lambda-event-router/mq`.
 | `RabbitMQMiddleware<TBody>` | Router and route middleware |
 | `RabbitMQMessage` | One message, as `request.message` and `request.record` |
 | `RabbitMQBasicProperties` | The AMQP properties on a message |
+| `RabbitMQHeaderValue` | One value in `basicProperties.headers`. See [Headers](#headers) |
 | `RabbitMQEvent` | The whole event, with its messages keyed by queue |
 
 The `RabbitMQRouter` class and the `createRabbitMQRouter` and `defineRabbitMQRoute` functions come from
