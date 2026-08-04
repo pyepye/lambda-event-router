@@ -173,6 +173,7 @@ export type {
 } from './connect.js';
 export { createConnectEvent, createConnectHandlerEvent } from './connect.js';
 export { createMockContext } from './context.js';
+export type { MockSchema } from './createMockSchema.js';
 export { createMockSchema } from './createMockSchema.js';
 export { deepMerge } from './deepMerge.js';
 export type { DeepPartial } from './deepPartial.js';
@@ -254,6 +255,7 @@ export type {
   CreateS3BatchHandlerEventOptions,
   CreateS3HandlerEventOptions,
   S3BatchHandlerEvent,
+  S3BatchTaskOverrides,
   S3BatchV2Event,
   S3BatchV2EventTask,
   S3BatchV2TaskOverrides,

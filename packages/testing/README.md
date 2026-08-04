@@ -1,80 +1,52 @@
 # @lambda-event-router/testing
 
-Testing utilities for lambda-event-router. Provides event creators, record builders, and test fixtures for all supported AWS services.
+Test helpers for lambda-event-router. Builds realistic AWS events with sensible defaults, so you only set
+the fields your test cares about.
 
 ## Install
 
 ```bash
-npm install --save-dev @lambda-event-router/testing
+npm install --save-dev @lambda-event-router/testing vitest
 ```
 
 ## Quick Start
 
+Import `test` from this package in place of `test` from `vitest`. Every builder is then a fixture in the
+test callback.
+
 ```ts
+import { createSQSRouter } from '@lambda-event-router/sqs'
 import { test } from '@lambda-event-router/testing'
+import { expect, vi } from 'vitest'
 
-test('handles SQS message', async ({ sqsRecord, sqsEvent, context }) => {
-  const record = sqsRecord({ body: { name: 'Test Item' } })
-  const event = sqsEvent({ records: [record] })
+const queueArn = 'arn:aws:sqs:eu-west-2:123456789012:orders'
+const processOrder = vi.fn()
 
-  await handler(event, context)
+const sqsRouter = createSQSRouter()
+sqsRouter.route({ filters: { eventSourceArn: queueArn }, handler: processOrder })
+
+test('processes an order message', async ({ sqsRecord, sqsHandlerEvent }) => {
+  const record = sqsRecord({ eventSourceARN: queueArn, body: { orderId: '123' } })
+  const { event, context } = sqsHandlerEvent({ records: [record] })
+
+  await sqsRouter.handleEvent(event, context)
+
+  expect(processOrder).toHaveBeenCalledWith(expect.objectContaining({ body: { orderId: '123' } }))
 })
 ```
 
 ## Usage
 
-### Creating events
+### Builders
+
+Every fixture is also exported as a `create` function. Record builders take overrides, event builders
+take an array of records and handler event builders take `{ records, context }`.
 
 ```ts
-import {
-  createSQSEvent,
-  createSNSEvent,
-  createKinesisEvent,
-  createDynamoDBEvent,
-  createS3Event,
-  createEventBridgeEvent,
-} from '@lambda-event-router/testing'
+import { createSQSEvent, createSQSRecord } from '@lambda-event-router/testing'
 
-const sqsEvent = createSQSEvent({ records: [{ body: '{"name": "test"}' }] })
-const snsEvent = createSNSEvent({ records: [{ Sns: { Message: '{"name": "test"}' } }] })
-```
-
-### All event builders
-
-`allEventBuilders()` returns every event builder as a `[name, build]` pair, so one assertion can run
-across all of them.
-
-```ts
-import { allEventBuilders } from '@lambda-event-router/testing'
-
-const ownEvents = ['createSQSEvent']
-
-test.each(allEventBuilders())('%s', async (name, build) => {
-  const event = build()
-  const isOwnEvent = ownEvents.includes(name)
-
-  const claimed = await createSQSRouter().canHandleEvent(event)
-
-  expect(claimed).toBe(isOwnEvent)
-})
-```
-
-Each router test file ends with this, asserting the router claims its own events and nobody else's. Adding a builder
-here fails those tests until every router says whether it claims the new event.
-
-### Creating records
-
-```ts
-import {
-  createSQSRecord,
-  createSNSRecord,
-  createKinesisRecord,
-  createDynamoDBInsertRecord,
-  createDynamoDBModifyRecord,
-  createDynamoDBRemoveRecord,
-} from '@lambda-event-router/testing'
-
-const record = createSQSRecord({ body: '{"orderId": "123"}' })
+const record = createSQSRecord({ body: { orderId: '123' } })
+const event = createSQSEvent([record])
 ```
 
 ### Mock context
@@ -82,29 +54,19 @@ const record = createSQSRecord({ body: '{"orderId": "123"}' })
 ```ts
 import { createMockContext } from '@lambda-event-router/testing'
 
-const context = createMockContext()
+const context = createMockContext({ functionName: 'orders' })
 ```
 
-### Vitest fixtures
+### Mock schemas
 
-This package exports `test`. A pre-configured version of [Vitest's `test.extend`](https://vitest.dev/guide/test-context.html#test-extend) with fixtures for every supported AWS service pre-loaded. Use it as a drop-in replacement for `test` from `vitest`. Any fixture you destructure in the test callback is lazily created for you:
+`createMockSchema` returns a Standard Schema whose `validate` is a `vi.fn()`. With no arguments it passes
+every input through. Pass a result to force a failure:
 
 ```ts
-import { test } from '@lambda-event-router/testing'
+import { createMockSchema } from '@lambda-event-router/testing'
 
-test('handles SQS message', async ({ sqsRecord, sqsEvent, context }) => {
-  const record = sqsRecord({ body: { name: 'Test Item' } })
-  const event = sqsEvent({ records: [record] })
-
-  await handler(event, context)
-})
+const bodySchema = createMockSchema({ issues: [{ message: 'orderId is required' }] })
 ```
 
-Under the hood this is equivalent to:
-
-```ts
-import { test as viTest } from 'vitest'
-import { sqsFixtures, contextFixtures } from '@lambda-event-router/testing'
-
-const test = viTest.extend({ ...sqsFixtures, ...contextFixtures })
-```
+For the full list of builders and where to import each event type from, see the
+[testing docs](../../docs/testing/index.md).

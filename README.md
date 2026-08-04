@@ -160,6 +160,11 @@ sqsRouter.route({
 ```
 
 
+## Testing
+
+[`@lambda-event-router/testing`](packages/testing/README.md) builds AWS events for your tests, with a Vitest fixture for every supported service. See the [testing docs](docs/testing/index.md) for the builders, mock context and mock schemas.
+
+
 ## Examples
 
 The [service-examples](service-examples/) directory has one deployable app per AWS service. Each one has a README with the deploy steps, a script that triggers it and a walk through the logs it produces.

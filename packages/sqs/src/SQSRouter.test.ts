@@ -540,7 +540,7 @@ suite('SQSRouter', () => {
       const body = { action: 'processOrder', orderId: '12345' };
       const record = sqsRecord({
         eventSourceARN: eventSourceArn,
-        body: JSON.stringify(body), // TODO: Fixture should stringify
+        body,
         messageAttributes: {
           eventType: { stringValue: 'order.created', stringListValues: [], binaryListValues: [], dataType: 'String' },
         },

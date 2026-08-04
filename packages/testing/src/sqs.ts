@@ -10,14 +10,20 @@ export interface SQSHandlerEvent {
   context: Context;
 }
 
-export type SQSRecordOverrides = DeepPartial<AWSSQSRecord> & {
+export type SQSRecordOverrides = Omit<DeepPartial<AWSSQSRecord>, 'body'> & {
   body?: string | Record<string, unknown> | null;
 };
 
+function stringifyBody(bodyOverride: SQSRecordOverrides['body']): string | undefined {
+  if (bodyOverride === undefined || typeof bodyOverride === 'string') {
+    return bodyOverride;
+  }
+  return JSON.stringify(bodyOverride);
+}
+
 export function createSQSRecord(overrides: SQSRecordOverrides = {}): AWSSQSRecord {
   const { body: bodyOverride, ...restOverrides } = overrides;
-  const hasBodyOverride = Object.hasOwn(overrides, 'body');
-  const body = hasBodyOverride && typeof bodyOverride !== 'string' ? JSON.stringify(bodyOverride) : bodyOverride;
+  const body = stringifyBody(bodyOverride);
 
   const defaults: AWSSQSRecord = {
     messageId: crypto.randomUUID(),

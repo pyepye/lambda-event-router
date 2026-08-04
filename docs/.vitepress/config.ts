@@ -78,6 +78,10 @@ export default defineConfig({
           ],
         },
         {
+          text: 'Testing',
+          items: [{ text: 'Testing', link: '/testing/' }],
+        },
+        {
           text: 'Examples',
           items: [
             { text: 'Service examples', link: '/examples/' },
