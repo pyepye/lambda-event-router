@@ -1,20 +1,20 @@
-import{C as i,o as n,c as d,ak as s,E as r}from"./chunks/framework.Ct7YXsF8.js";const c=JSON.parse('{"title":"VPCLatticeRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/VPCLatticeRouter.md","filePath":"routers/VPCLatticeRouter.md"}'),h={name:"routers/VPCLatticeRouter.md"},k=Object.assign(h,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
+import{C as i,o as n,c as d,ak as s,E as h}from"./chunks/framework.Ct7YXsF8.js";const k=JSON.parse('{"title":"APIGatewayRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/APIGatewayRouter.md","filePath":"routers/APIGatewayRouter.md"}'),r={name:"routers/APIGatewayRouter.md"},c=Object.assign(r,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
 import { LambdaRouter } from '@lambda-event-router/base'
 
-import { latticeRouter } from './vpclattice.js'
+import { apiRouter } from './api.js'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [latticeRouter],
+  routers: [apiRouter],
 })
 
-export const handler: Handler = lambdaRouter.handler()`},{path:"vpclattice.ts",code:`import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice'
+export const handler: Handler = lambdaRouter.handler()`},{path:"api.ts",code:`import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
 
 import { createOrder, getOrder, listOrders } from './handlers/orders.js'
 import { ListOrdersQuerySchema, NewOrderSchema, OrderSchema } from './schemas/order.js'
 
-export const latticeRouter = createVPCLatticeRouter()
+export const apiRouter = createAPIGatewayRouter()
 
-latticeRouter
+apiRouter
   .get({
     filters: { path: '/orgs/:orgId/orders' },
     querySchema: ListOrdersQuerySchema,
@@ -30,9 +30,9 @@ latticeRouter
     bodySchema: NewOrderSchema,
     responseSchema: OrderSchema,
     handler: createOrder,
-  })`},{path:"handlers/orders.ts",code:`import { logger } from '@lambda-event-router/base'
-import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
-import { Created, NotFound, Ok } from '@lambda-event-router/vpclattice'
+  })`},{path:"handlers/orders.ts",code:`import type { ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
+import { Created, NotFound, Ok } from '@lambda-event-router/apigateway'
+import { logger } from '@lambda-event-router/base'
 
 import { orders } from '../orders.js'
 import type { ListOrdersQuery, NewOrder, Order } from '../schemas/order.js'
@@ -42,7 +42,7 @@ type OrderPath = { orgId: string; orderId: string }
 
 export async function listOrders(
   request: ApiRequest<OrgPath, ListOrdersQuery>,
-): Promise<ApiResponse<Order[]>> {
+): Promise<HandlerResponse<Order[]>> {
   const { orgId } = request.path
   // The schema marks status optional with no default, so the handler picks one when it is absent
   const status = request.query.status ?? 'OPEN'
@@ -50,7 +50,7 @@ export async function listOrders(
   return Ok(await orders.list(orgId, status))
 }
 
-export async function getOrder(request: ApiRequest<OrderPath>): Promise<ApiResponse<Order>> {
+export async function getOrder(request: ApiRequest<OrderPath>): Promise<HandlerResponse<Order>> {
   const { orgId, orderId } = request.path
 
   const order = await orders.get(orgId, orderId)
@@ -63,7 +63,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<ApiRespo
 
 export async function createOrder(
   request: ApiRequest<OrgPath, Record<string, string | undefined>, NewOrder>,
-): Promise<ApiResponse<Order>> {
+): Promise<HandlerResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body
 
@@ -90,4 +90,4 @@ export const ListOrdersQuerySchema = z.object({
 
 export type Order = z.infer<typeof OrderSchema>
 export type NewOrder = z.infer<typeof NewOrderSchema>
-export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(l,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",171)),r(a,{files:t,id:"lattice-example","default-file":"vpclattice.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",3))])}}});export{c as __pageData,k as default};
+export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(p,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",170)),h(a,{files:t,id:"apigateway-example","default-file":"api.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",3))])}}});export{k as __pageData,c as default};

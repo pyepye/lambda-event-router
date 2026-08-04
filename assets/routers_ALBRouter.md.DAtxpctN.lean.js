@@ -1,20 +1,21 @@
-import{C as i,o as n,c as d,ak as s,E as h}from"./chunks/framework.Ct7YXsF8.js";const k=JSON.parse('{"title":"APIGatewayRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/APIGatewayRouter.md","filePath":"routers/APIGatewayRouter.md"}'),r={name:"routers/APIGatewayRouter.md"},c=Object.assign(r,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
+import{C as i,o as n,c as d,ak as s,E as r}from"./chunks/framework.Ct7YXsF8.js";const k=JSON.parse('{"title":"ALBRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/ALBRouter.md","filePath":"routers/ALBRouter.md"}'),h={name:"routers/ALBRouter.md"},c=Object.assign(h,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
 import { LambdaRouter } from '@lambda-event-router/base'
 
-import { apiRouter } from './api.js'
+import { albRouter } from './alb.js'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter],
+  routers: [albRouter],
 })
 
-export const handler: Handler = lambdaRouter.handler()`},{path:"api.ts",code:`import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
+export const handler: Handler = lambdaRouter.handler()`},{path:"alb.ts",code:`import { createALBRouter } from '@lambda-event-router/alb'
 
+import { requireOidcIdentity } from './middleware/requireOidcIdentity.js'
 import { createOrder, getOrder, listOrders } from './handlers/orders.js'
 import { ListOrdersQuerySchema, NewOrderSchema, OrderSchema } from './schemas/order.js'
 
-export const apiRouter = createAPIGatewayRouter()
+export const albRouter = createALBRouter({ middleware: [requireOidcIdentity] })
 
-apiRouter
+albRouter
   .get({
     filters: { path: '/orgs/:orgId/orders' },
     querySchema: ListOrdersQuerySchema,
@@ -30,8 +31,24 @@ apiRouter
     bodySchema: NewOrderSchema,
     responseSchema: OrderSchema,
     handler: createOrder,
-  })`},{path:"handlers/orders.ts",code:`import type { ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
-import { Created, NotFound, Ok } from '@lambda-event-router/apigateway'
+  })`},{path:"middleware/requireOidcIdentity.ts",code:`import { Unauthorised } from '@lambda-event-router/alb'
+import { logger } from '@lambda-event-router/base'
+import type { HTTPMiddleware } from '@lambda-event-router/alb'
+
+// The load balancer sets this once an authenticate-oidc rule has run
+export const requireOidcIdentity: HTTPMiddleware = async (request, next) => {
+  const identity = request.headers['x-amzn-oidc-identity']
+  if (!identity) {
+    logger.warn(\`Rejected a \${request.method} with no OIDC identity header\`)
+    throw Unauthorised()
+  }
+
+  // Verify x-amzn-oidc-data before authorising on any claim it carries
+  logger.appendKeys({ identity })
+
+  return next(request)
+}`},{path:"handlers/orders.ts",code:`import type { ApiRequest, HandlerResponse } from '@lambda-event-router/alb'
+import { Created, NotFound, Ok } from '@lambda-event-router/alb'
 import { logger } from '@lambda-event-router/base'
 
 import { orders } from '../orders.js'
@@ -90,4 +107,4 @@ export const ListOrdersQuerySchema = z.object({
 
 export type Order = z.infer<typeof OrderSchema>
 export type NewOrder = z.infer<typeof NewOrderSchema>
-export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(p,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",167)),h(a,{files:t,id:"apigateway-example","default-file":"api.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",3))])}}});export{k as __pageData,c as default};
+export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(l,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",162)),r(a,{files:t,id:"alb-example","default-file":"alb.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",4))])}}});export{k as __pageData,c as default};

@@ -1,21 +1,20 @@
-import{C as i,o as n,c as d,ak as s,E as r}from"./chunks/framework.Ct7YXsF8.js";const k=JSON.parse('{"title":"ALBRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/ALBRouter.md","filePath":"routers/ALBRouter.md"}'),h={name:"routers/ALBRouter.md"},c=Object.assign(h,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
+import{C as i,o as n,c as d,ak as s,E as r}from"./chunks/framework.Ct7YXsF8.js";const c=JSON.parse('{"title":"VPCLatticeRouter","description":"","frontmatter":{},"headers":[],"relativePath":"routers/VPCLatticeRouter.md","filePath":"routers/VPCLatticeRouter.md"}'),h={name:"routers/VPCLatticeRouter.md"},k=Object.assign(h,{setup(o){const t=[{path:"index.ts",code:`import type { Handler } from 'aws-lambda'
 import { LambdaRouter } from '@lambda-event-router/base'
 
-import { albRouter } from './alb.js'
+import { latticeRouter } from './vpclattice.js'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [albRouter],
+  routers: [latticeRouter],
 })
 
-export const handler: Handler = lambdaRouter.handler()`},{path:"alb.ts",code:`import { createALBRouter } from '@lambda-event-router/alb'
+export const handler: Handler = lambdaRouter.handler()`},{path:"vpclattice.ts",code:`import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice'
 
-import { requireOidcIdentity } from './middleware/requireOidcIdentity.js'
 import { createOrder, getOrder, listOrders } from './handlers/orders.js'
 import { ListOrdersQuerySchema, NewOrderSchema, OrderSchema } from './schemas/order.js'
 
-export const albRouter = createALBRouter({ middleware: [requireOidcIdentity] })
+export const latticeRouter = createVPCLatticeRouter()
 
-albRouter
+latticeRouter
   .get({
     filters: { path: '/orgs/:orgId/orders' },
     querySchema: ListOrdersQuerySchema,
@@ -31,25 +30,9 @@ albRouter
     bodySchema: NewOrderSchema,
     responseSchema: OrderSchema,
     handler: createOrder,
-  })`},{path:"middleware/requireOidcIdentity.ts",code:`import { Unauthorised } from '@lambda-event-router/alb'
-import { logger } from '@lambda-event-router/base'
-import type { HTTPMiddleware } from '@lambda-event-router/alb'
-
-// The load balancer sets this once an authenticate-oidc rule has run
-export const requireOidcIdentity: HTTPMiddleware = async (request, next) => {
-  const identity = request.headers['x-amzn-oidc-identity']
-  if (!identity) {
-    logger.warn(\`Rejected a \${request.method} with no OIDC identity header\`)
-    throw Unauthorised()
-  }
-
-  // Verify x-amzn-oidc-data before authorising on any claim it carries
-  logger.appendKeys({ identity })
-
-  return next(request)
-}`},{path:"handlers/orders.ts",code:`import type { ApiRequest, HandlerResponse } from '@lambda-event-router/alb'
-import { Created, NotFound, Ok } from '@lambda-event-router/alb'
-import { logger } from '@lambda-event-router/base'
+  })`},{path:"handlers/orders.ts",code:`import { logger } from '@lambda-event-router/base'
+import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
+import { Created, NotFound, Ok } from '@lambda-event-router/vpclattice'
 
 import { orders } from '../orders.js'
 import type { ListOrdersQuery, NewOrder, Order } from '../schemas/order.js'
@@ -59,7 +42,7 @@ type OrderPath = { orgId: string; orderId: string }
 
 export async function listOrders(
   request: ApiRequest<OrgPath, ListOrdersQuery>,
-): Promise<HandlerResponse<Order[]>> {
+): Promise<ApiResponse<Order[]>> {
   const { orgId } = request.path
   // The schema marks status optional with no default, so the handler picks one when it is absent
   const status = request.query.status ?? 'OPEN'
@@ -67,7 +50,7 @@ export async function listOrders(
   return Ok(await orders.list(orgId, status))
 }
 
-export async function getOrder(request: ApiRequest<OrderPath>): Promise<HandlerResponse<Order>> {
+export async function getOrder(request: ApiRequest<OrderPath>): Promise<ApiResponse<Order>> {
   const { orgId, orderId } = request.path
 
   const order = await orders.get(orgId, orderId)
@@ -80,7 +63,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<HandlerR
 
 export async function createOrder(
   request: ApiRequest<OrgPath, Record<string, string | undefined>, NewOrder>,
-): Promise<HandlerResponse<Order>> {
+): Promise<ApiResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body
 
@@ -107,4 +90,4 @@ export const ListOrdersQuerySchema = z.object({
 
 export type Order = z.infer<typeof OrderSchema>
 export type NewOrder = z.infer<typeof NewOrderSchema>
-export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(l,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",159)),r(a,{files:t,id:"alb-example","default-file":"alb.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",4))])}}});export{k as __pageData,c as default};
+export type ListOrdersQuery = z.infer<typeof ListOrdersQuerySchema>`}];return(l,e)=>{const a=i("CodeFileViewer");return n(),d("div",null,[e[0]||(e[0]=s("",174)),r(a,{files:t,id:"lattice-example","default-file":"vpclattice.ts","line-numbers":"","collapse-toggle":"","fixed-height":""}),e[1]||(e[1]=s("",3))])}}});export{c as __pageData,k as default};
