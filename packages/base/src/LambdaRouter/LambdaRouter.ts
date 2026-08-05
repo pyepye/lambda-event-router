@@ -1,5 +1,6 @@
 import type { Context, Handler } from 'aws-lambda';
 
+import { NoRouteMatchedError } from '../errors';
 import { logger as log } from '../logger';
 import type { EventTypeRouter } from './types.js';
 
@@ -56,17 +57,24 @@ export class LambdaRouter {
   }
 
   private async handleEvent(event: unknown, context: Context): Promise<unknown> {
+    let noRouteMatchedError: NoRouteMatchedError | undefined;
+
     for (const router of this.routers) {
       const canHandleEvent = await router.canHandleEvent(event);
-      if (canHandleEvent) {
-        // TODO: Add an error type stating that an router had no handler for an event. If we see this error here
-        //       we can catch it and then move to the next router. This means we could have multiple routers
-        //       of the same type, which could be useful to for having different routers for different use cases.
-        //       E.g. Have a APIRouter one which supports unauthenticated paths and another authenticated or one
-        //            that has specific CORS settings or middleware and an other that doesn't.
-        return router.handleEvent(event, context);
+      if (!canHandleEvent) continue;
+
+      try {
+        return await router.handleEvent(event, context);
+      } catch (error) {
+        // Only a no-route miss may fall through to the next router. Anything else, a failing schema
+        // included, fails the invocation.
+        if (!NoRouteMatchedError.isNoRouteMatchedError(error)) throw error;
+        noRouteMatchedError = error;
       }
     }
+
+    // Rethrow the router's own error so a single claiming router reports its own miss.
+    if (noRouteMatchedError) throw noRouteMatchedError;
     throw new Error('No router found for event');
   }
 }

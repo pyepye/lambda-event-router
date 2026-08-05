@@ -1,7 +1,11 @@
 import type { Context } from 'aws-lambda';
 
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
 import { createMockContext, createSQSEvent } from '@lambda-event-router/testing';
 
+import { createEventRouter } from '../EventRouter/index.js';
+import { NoRouteMatchedError } from '../errors/index.js';
 import { Logger, setLogger } from '../logger/index.js';
 import { createLambdaRouter, LambdaRouter } from './LambdaRouter.js';
 import type { EventTypeRouter } from './types.js';
@@ -99,6 +103,87 @@ suite('LambdaRouter', () => {
 
       expect(orderedRouters[0]).toBe(sqsRouter);
       expect(orderedRouters[1]).toBe(eventRouter);
+    });
+  });
+
+  suite('falling through on NoRouteMatchedError', () => {
+    function createClaimingRouter(handleEvent: EventTypeRouter['handleEvent']): EventTypeRouter {
+      return {
+        canHandleEvent(_event: unknown): _event is unknown {
+          return true;
+        },
+        handleEvent,
+      };
+    }
+
+    test('tries the next router when the first claims the event and matches no route', async () => {
+      const first = createClaimingRouter(vi.fn().mockRejectedValue(new NoRouteMatchedError('No route matched')));
+      const second = createClaimingRouter(vi.fn().mockResolvedValue('second'));
+
+      const handler = createLambdaRouter({ routers: [first, second] }).handler();
+      const result = await handler({ command: 'generate-report' }, createMockContext(), vi.fn());
+
+      expect(result).toBe('second');
+      expect(second.handleEvent).toHaveBeenCalledOnce();
+    });
+
+    test('propagates any other error and never tries the next router', async () => {
+      const first = createClaimingRouter(vi.fn().mockRejectedValue(new Error('handler blew up')));
+      const second = createClaimingRouter(vi.fn().mockResolvedValue('second'));
+
+      const handler = createLambdaRouter({ routers: [first, second] }).handler();
+
+      await expect(handler({}, createMockContext(), vi.fn())).rejects.toThrow('handler blew up');
+      expect(second.handleEvent).not.toHaveBeenCalled();
+    });
+
+    test('rethrows the last no-route error when every router that claimed the event missed', async () => {
+      const first = createClaimingRouter(vi.fn().mockRejectedValue(new NoRouteMatchedError('first router missed')));
+      const second = createClaimingRouter(vi.fn().mockRejectedValue(new NoRouteMatchedError('second router missed')));
+
+      const handler = createLambdaRouter({ routers: [first, second] }).handler();
+
+      await expect(handler({}, createMockContext(), vi.fn())).rejects.toThrow('second router missed');
+    });
+
+    test('still throws No router found for event when nothing claims it', async () => {
+      const declining: EventTypeRouter = {
+        canHandleEvent(_event: unknown): _event is unknown {
+          return false;
+        },
+        handleEvent: vi.fn(),
+      };
+
+      const handler = createLambdaRouter({ routers: [declining] }).handler();
+
+      await expect(handler({}, createMockContext(), vi.fn())).rejects.toThrow('No router found for event');
+      expect(declining.handleEvent).not.toHaveBeenCalled();
+    });
+
+    test('does not fall through when a route matches and its schema rejects', async () => {
+      const eventSchema: StandardSchemaV1<{ orderId: string }> = {
+        '~standard': {
+          version: 1,
+          vendor: 'test',
+          validate: () => ({ issues: [{ message: 'orderId is required' }] }),
+        },
+      };
+
+      const validating = createEventRouter().route({
+        filters: { customFilter: () => true },
+        eventSchema,
+        handler: vi.fn(),
+      });
+
+      const secondHandler = vi.fn().mockResolvedValue('second');
+      const second = createEventRouter().route({ filters: { customFilter: () => true }, handler: secondHandler });
+
+      const handler = createLambdaRouter({ routers: [validating, second] }).handler();
+
+      await expect(handler({ nothingUseful: true }, createMockContext(), vi.fn())).rejects.toThrow(
+        'Schema validation failed for event',
+      );
+      expect(secondHandler).not.toHaveBeenCalled();
     });
   });
 

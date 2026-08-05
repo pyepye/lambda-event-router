@@ -2,6 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
+import { NoRouteMatchedError } from '../errors';
 import type { EventTypeRouter } from '../LambdaRouter';
 import { handleEventWithMiddleware } from '../middleware';
 import { isObject, validateSchema } from '../utils';
@@ -194,7 +195,7 @@ export class EventRouter<TResponse = unknown> implements EventTypeRouter<unknown
   async handleEvent(event: unknown, context: Context): Promise<TResponse> {
     const route = await this.matchRoute(event);
     if (!route) {
-      throw new Error('No route matched for event');
+      throw new NoRouteMatchedError('No route matched for event');
     }
 
     const validatedEvent = await validateSchema(event, route.eventSchema, 'Schema validation failed for event');

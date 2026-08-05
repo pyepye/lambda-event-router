@@ -134,6 +134,8 @@ export const handler = lambdaRouter.handler()
 
 `EventRouter` is always sorted to the end of `routers`, so a dedicated router gets first refusal on its own events.
 
+A router that claims an event and then finds none of its own routes match throws `NoRouteMatchedError`, exported from `@lambda-event-router/base`, and `LambdaRouter` tries the next router rather than failing. This is what lets `EventRouter` and `StepFunctionsRouter` share one Lambda. Any other error fails the invocation, a failing `eventSchema` included. An event no router handles throws `No router found for event`.
+
 #### Global middleware
 
 Middleware on `LambdaRouter` runs for every event, whichever router takes it. It gets the raw event and the Lambda context rather than a request object, because no router has been picked yet. There is no exported type for it, so declare `next` yourself.

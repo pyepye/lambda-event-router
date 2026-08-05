@@ -1,7 +1,7 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { EventTypeRouter } from '@lambda-event-router/base';
-import { isObject, validateSchema } from '@lambda-event-router/base';
+import { isObject, NoRouteMatchedError, validateSchema } from '@lambda-event-router/base';
 
 import type {
   StepFunctionsFilters,
@@ -120,7 +120,7 @@ export class StepFunctionsRouter implements EventTypeRouter<unknown, unknown> {
   async handleEvent(event: unknown): Promise<unknown> {
     const route = await this.matchRoute(event);
     if (!route) {
-      throw new Error('No route matched for Step Functions event');
+      throw new NoRouteMatchedError('No route matched for Step Functions event');
     }
 
     if (route.isTaskTokenRoute) {

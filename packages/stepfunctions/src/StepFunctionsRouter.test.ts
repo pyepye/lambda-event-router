@@ -394,6 +394,12 @@ suite('StepFunctionsRouter', () => {
       );
     });
 
+    test('throws a NoRouteMatchedError when no route matches', async () => {
+      const error = await router.handleEvent({ action: 'unknown' }).catch((thrown: unknown) => thrown);
+
+      expect(base.NoRouteMatchedError.isNoRouteMatchedError(error)).toBe(true);
+    });
+
     test('extracts TaskToken and passes { taskToken, input } to a task token handler', async () => {
       const handler = vi.fn().mockResolvedValue({ sent: true });
       router.route(
