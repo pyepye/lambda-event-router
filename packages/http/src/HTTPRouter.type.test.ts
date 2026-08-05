@@ -51,3 +51,14 @@ suite('defineRoute body types', () => {
     defineRoute({ filters: { method: 'GET', path: '/items' }, bodySchema }).handle(handlesUndefinedBody);
   });
 });
+
+suite('defineRoute path filter', () => {
+  test('accepts a path whose params all have a name', () => {
+    defineRoute({ filters: { method: 'GET', path: '/files/:name.json' } }).handle(handlesUndefinedBody);
+  });
+
+  test('rejects a param name that starts with a digit', () => {
+    // @ts-expect-error - '1abc' is not a param name
+    defineRoute({ filters: { method: 'GET', path: '/items/:1abc' } });
+  });
+});

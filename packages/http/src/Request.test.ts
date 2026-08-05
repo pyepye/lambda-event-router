@@ -17,7 +17,7 @@ function createRoute(overrides: Partial<InternalRoute> = {}): InternalRoute {
     path: '/',
     pattern: /^\/$/,
     pathParamNames: [],
-    pathParamMask: [],
+    segmentKinds: [],
     registrationIndex: 0,
     handler: vi.fn(),
     middleware: [],

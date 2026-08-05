@@ -114,6 +114,49 @@ suite('PathRouter', () => {
       expect(result.pattern.test('/orders/.*')).toBe(true);
       expect(result.pattern.test('/orders/anything/deep')).toBe(false);
     });
+
+    test('ends a param name at the first character that cannot be in an identifier', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/files/:name.json');
+
+      expect(result.pathParamNames).toEqual(['name']);
+      expect(result.pattern.test('/files/report.json')).toBe(true);
+      expect(result.pattern.test('/files/report.txt')).toBe(false);
+    });
+
+    test('allows letters, digits, underscore and dollar in a param name', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/items/:_item$Id2');
+
+      expect(result.pathParamNames).toEqual(['_item$Id2']);
+    });
+
+    test('ends a param name at a non-ASCII character', () => {
+      // @ts-expect-error - testing private method directly
+      const result = router.compilePath('/:café');
+
+      expect(result.pathParamNames).toEqual(['caf']);
+      expect(result.pattern.test('/xé')).toBe(true);
+    });
+
+    test('throws when a param name starts with a digit', () => {
+      // @ts-expect-error - testing private method directly
+      expect(() => router.compilePath('/items/:1abc')).toThrow("Path '/items/:1abc' has a ':' without a param name");
+    });
+
+    test('throws when a colon has no param name after it', () => {
+      // @ts-expect-error - testing private method directly
+      expect(() => router.compilePath('/items/:')).toThrow("Path '/items/:' has a ':' without a param name");
+      // @ts-expect-error - testing private method directly
+      expect(() => router.compilePath('/items/:/sub')).toThrow("Path '/items/:/sub' has a ':' without a param name");
+    });
+
+    test('throws when a route is registered with a colon that has no param name', () => {
+      // @ts-expect-error - '-' cannot start a param name
+      expect(() => router.get({ filters: { path: '/items/:-' }, handler: vi.fn() })).toThrow(
+        "Path '/items/:-' has a ':' without a param name",
+      );
+    });
   });
 
   suite('addRoute', () => {
@@ -187,6 +230,29 @@ suite('PathRouter', () => {
 
       expect(result).not.toBeNull();
       expect(result?.params).toEqual({ itemId: 'item-1', subId: 'sub-2' });
+    });
+
+    test('extracts a param followed by a literal suffix in the same segment', async () => {
+      router.get({ filters: { path: '/files/:name.json' }, handler: vi.fn() });
+
+      const result = await router.match('GET', '/files/report.v2.json');
+
+      expect(result?.params).toEqual({ name: 'report.v2' });
+    });
+
+    test('extracts a param that follows a literal prefix in the same segment', async () => {
+      router.get({ filters: { path: '/api/v:version' }, handler: vi.fn() });
+
+      expect((await router.match('GET', '/api/v2'))?.params).toEqual({ version: '2' });
+      expect(await router.match('GET', '/api/x2')).toBeNull();
+    });
+
+    test('gives the extra text to the first of two params in one segment', async () => {
+      router.get({ filters: { path: '/files/:name.:ext' }, handler: vi.fn() });
+      router.get({ filters: { path: '/range/:from-:to' }, handler: vi.fn() });
+
+      expect((await router.match('GET', '/files/a.b.json'))?.params).toEqual({ name: 'a.b', ext: 'json' });
+      expect((await router.match('GET', '/range/a-b-c'))?.params).toEqual({ from: 'a-b', to: 'c' });
     });
 
     test('does not match a partial path', async () => {
@@ -385,6 +451,40 @@ suite('PathRouter', () => {
   });
 
   suite('specificity', () => {
+    test('a param with a literal suffix beats a bare param at the same position, in either order', async () => {
+      const suffixHandler = vi.fn();
+      const paramHandler = vi.fn();
+      const bareFirst = new PathRouter();
+      bareFirst.get({ filters: { path: '/files/:id' }, handler: paramHandler });
+      bareFirst.get({ filters: { path: '/files/:name.json' }, handler: suffixHandler });
+      router.get({ filters: { path: '/files/:name.json' }, handler: suffixHandler });
+      router.get({ filters: { path: '/files/:id' }, handler: paramHandler });
+
+      for (const candidate of [bareFirst, router]) {
+        expect((await candidate.match('GET', '/files/report.json'))?.route.handler).toBe(suffixHandler);
+        expect((await candidate.match('GET', '/files/report'))?.route.handler).toBe(paramHandler);
+      }
+    });
+
+    test('ranks a literal above a segment mixing literal and param, which ranks above a bare param', async () => {
+      const literalHandler = vi.fn();
+      const mixedHandler = vi.fn();
+      const paramHandler = vi.fn();
+      const paramFirst = new PathRouter();
+      paramFirst.get({ filters: { path: '/:id' }, handler: paramHandler });
+      paramFirst.get({ filters: { path: '/v:version' }, handler: mixedHandler });
+      paramFirst.get({ filters: { path: '/v1' }, handler: literalHandler });
+      router.get({ filters: { path: '/v1' }, handler: literalHandler });
+      router.get({ filters: { path: '/v:version' }, handler: mixedHandler });
+      router.get({ filters: { path: '/:id' }, handler: paramHandler });
+
+      for (const candidate of [paramFirst, router]) {
+        expect((await candidate.match('GET', '/v1'))?.route.handler).toBe(literalHandler);
+        expect((await candidate.match('GET', '/v2'))?.route.handler).toBe(mixedHandler);
+        expect((await candidate.match('GET', '/x2'))?.route.handler).toBe(paramHandler);
+      }
+    });
+
     test('a literal segment beats a param at the same position, registered param first', async () => {
       const paramHandler = vi.fn();
       const literalHandler = vi.fn();

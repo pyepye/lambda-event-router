@@ -16,14 +16,45 @@ export type DefaultBody<TMethod extends AnyHttpMethod> = TMethod extends BodyMet
   ? unknown
   : undefined;
 
-type ExtractParams<T extends string> = T extends `${string}:${infer Param}/${infer Rest}`
-  ? { [K in Param | keyof ExtractParams<Rest>]: string }
-  : T extends `${string}:${infer Param}`
-    ? { [K in Param]: string }
-    : Record<never, never>;
+type Characters<T extends string> = T extends `${infer Char}${infer Rest}` ? Char | Characters<Rest> : never;
+type Letter = Characters<'abcdefghijklmnopqrstuvwxyz'>;
+type Digit = Characters<'0123456789'>;
+// Matches PARAM_NAME in PathRouter: an ASCII identifier
+type ParamNameStart = Letter | Uppercase<Letter> | '_' | '$';
+type ParamNameChar = ParamNameStart | Digit;
 
-// Clean up the extracted params into a proper object type
-export type PathParams<T extends string> = ExtractParams<T> extends infer O ? { [K in keyof O]: O[K] } : never;
+// Reads the param name from the start of the text after a ':'
+type ReadParamName<T extends string, TName extends string = ''> = T extends `${infer Char}${infer Rest}`
+  ? Char extends ParamNameChar
+    ? ReadParamName<Rest, `${TName}${Char}`>
+    : TName
+  : TName;
+
+// The text after each ':' in the path, where a param name should start
+type AfterColons<T extends string> = T extends `${string}:${infer After}` ? After | AfterColons<After> : never;
+
+type ParamNames<T extends string> =
+  AfterColons<T> extends infer After extends string
+    ? After extends `${ParamNameStart}${string}`
+      ? ReadParamName<After>
+      : never
+    : never;
+
+type HasUnnamedParam<T extends string> = true extends (
+  AfterColons<T> extends infer After
+    ? After extends `${ParamNameStart}${string}`
+      ? false
+      : true
+    : never
+)
+  ? true
+  : false;
+
+// A path is accepted as is, unless a ':' in it has no param name. Then the error names the path
+export type ValidPath<T extends string> =
+  HasUnnamedParam<T> extends true ? `Path '${T}' has a ':' without a param name` : T;
+
+export type PathParams<T extends string> = { [K in ParamNames<T>]: string };
 
 export type HandlerResponse<TResponse = unknown> = ApiResponse<TResponse> | TResponse;
 
@@ -109,7 +140,7 @@ export interface HTTPFilterInput<TEvent = unknown> {
 
 export interface HTTPFilters<TPathString extends string = string, TMethod extends AnyHttpMethod = AnyHttpMethod> {
   method: TMethod;
-  path: TPathString;
+  path: ValidPath<TPathString>;
   custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
 }
 

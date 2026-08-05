@@ -27,6 +27,7 @@ import type {
   NormalizedHTTPEvent,
   PathParams,
   RouteDefinition,
+  ValidPath,
 } from './types.js';
 
 // Compute response type from schema - if no schema provided, body is untyped (unknown)
@@ -48,7 +49,7 @@ interface RouteInput<
 > {
   filters: {
     method: TMethod;
-    path: TPathString;
+    path: ValidPath<TPathString>;
     custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   };
   middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];

@@ -2,7 +2,7 @@ import { createMockSchema } from '@lambda-event-router/testing';
 
 import { PathRouter } from './PathRouter.js';
 import { NoContent } from './Response.js';
-import type { ApiRequest, HandlerResponse, HTTPFilterInput } from './types.js';
+import type { ApiRequest, HandlerResponse, HTTPFilterInput, PathParams } from './types.js';
 
 interface Item {
   name: string;
@@ -147,5 +147,77 @@ suite('PathRouter body types', () => {
   test('a handler annotation does not set the body type', () => {
     // @ts-expect-error - only a bodySchema narrows the body, so an Item handler needs one
     router.post({ filters, handler: handlesItemBody });
+  });
+});
+
+suite('PathParams', () => {
+  test('ends a param name at the first character that cannot be in an identifier', () => {
+    expectTypeOf<PathParams<'/files/:name.json'>>().toEqualTypeOf<{ name: string }>();
+    expectTypeOf<PathParams<'/range/:from-:to'>>().toEqualTypeOf<{ from: string; to: string }>();
+    expectTypeOf<PathParams<'/files/:name.:ext'>>().toEqualTypeOf<{ name: string; ext: string }>();
+  });
+
+  test('reads a param that follows a literal prefix in the same segment', () => {
+    expectTypeOf<PathParams<'/api/v:version'>>().toEqualTypeOf<{ version: string }>();
+  });
+
+  test('allows letters, digits, underscore and dollar in a param name', () => {
+    expectTypeOf<PathParams<'/items/:_item$Id2/sub/:subId'>>().toEqualTypeOf<{ _item$Id2: string; subId: string }>();
+  });
+
+  test('ends a param name at a non-ASCII character', () => {
+    expectTypeOf<PathParams<'/:café'>>().toEqualTypeOf<{ caf: string }>();
+  });
+
+  test('gives no params for a literal path', () => {
+    expectTypeOf<PathParams<'/items'>>().toEqualTypeOf<Record<never, never>>();
+  });
+});
+
+suite('PathRouter path filter', () => {
+  let router: PathRouter;
+
+  beforeEach(() => {
+    router = new PathRouter();
+  });
+
+  test('accepts a path whose params all have a name', () => {
+    expect(router.get({ filters: { path: '/files/:name.json' }, handler: vi.fn() })).toBe(router);
+  });
+
+  test('accepts a path typed as a plain string', () => {
+    const path: string = '/items/:id';
+
+    expect(router.get({ filters: { path }, handler: vi.fn() })).toBe(router);
+  });
+
+  test('rejects a param name that starts with a digit', () => {
+    expect(() =>
+      router.get({
+        // @ts-expect-error - '1abc' is not a param name
+        filters: { path: '/items/:1abc' },
+        handler: vi.fn(),
+      }),
+    ).toThrow("Path '/items/:1abc' has a ':' without a param name");
+  });
+
+  test('rejects a colon with no param name after it', () => {
+    expect(() =>
+      router.post({
+        // @ts-expect-error - a ':' at the end of a path has no param name
+        filters: { path: '/items/:' },
+        handler: vi.fn(),
+      }),
+    ).toThrow("Path '/items/:' has a ':' without a param name");
+  });
+
+  test('rejects a bad param name on route()', () => {
+    expect(() =>
+      router.route({
+        // @ts-expect-error - '-' cannot start a param name
+        filters: { method: 'GET', path: '/items/:-' },
+        handler: vi.fn(),
+      }),
+    ).toThrow("Path '/items/:-' has a ':' without a param name");
   });
 });

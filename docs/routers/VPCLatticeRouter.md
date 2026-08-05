@@ -71,6 +71,8 @@ paths overlap. `GET /orders/:orderId` and `POST /orders/latest` never collide.
 Where they do share a method, routes match by path specificity rather than registration order: a literal
 segment beats a param at the same position, compared left to right. So `GET /orders/latest` takes
 `/orders/latest` while `GET /orders/:orderId` catches every other id, whichever order you register them in.
+A segment that mixes literal text with a param sits between the two, so `/files/:name.json` beats
+`/files/:id` for `/files/report.json`.
 Two routes of the same shape differing only in a param name, such as `GET /orders/:orderId` and `GET
 /orders/:id`, match the same paths and cannot be ranked, so the one you registered first wins and the
 second never runs. Giving one of them a `custom` ranks it first, because a `custom` can only reject a
@@ -162,8 +164,12 @@ it, and prefer the [request object](#request-object) for anything you only want 
 
 ### Path patterns
 
-A `:name` segment matches one segment and gives your handler that value under `name`. `PathParams` reads the
-same syntax to type `request.path`, so naming the params is what types them.
+A `:name` param matches text inside one segment and gives your handler that value under `name`. The name
+uses ASCII letters, digits, `_` and `$`, and can't start with a digit. It ends at the first character
+outside that set, so `/files/:name.json` has a param called `name` followed by the literal text `.json`.
+
+`PathParams` reads the same syntax to type `request.path`. For `/orders/:orderId` your handler gets
+`request.path.orderId` typed as a `string`.
 
 | Pattern | Request | `request.path` |
 | --- | --- | --- |
@@ -174,16 +180,24 @@ same syntax to type `request.path`, so naming the params is what types them.
 | `/orders` | `/orders/` | `{}`, a trailing slash comes off both sides |
 | `/orders/{orderId}` | `/orders/9` | No match |
 | `/orders/{orderId}` | `/orders/{orderId}` | `{}` |
-| `/files/:name.json` | `/files/report.json` | `{ 'name.json': 'report.json' }` |
+| `/files/:name.json` | `/files/report.json` | `{ name: 'report' }` |
+| `/files/:name.json` | `/files/report.txt` | No match, `.json` is literal text |
+| `/api/v:version` | `/api/v2` | `{ version: '2' }` |
+| `/files/:name.:ext` | `/files/a.b.json` | `{ name: 'a.b', ext: 'json' }` |
 | `/v1.0/orders` | `/v1X0/orders` | No match, the `.` is a literal dot |
 
-The two `{name}` rows and `/files/:name.json` are traps rather than features.
+The two `{name}` rows are traps rather than features.
 
 **`{name}` is not path param syntax here.** It is a literal, which types nothing and matches only a request
 for that exact string. Use `:orderId`.
 
-**A param runs to the end of its segment,** so it cannot have a suffix. `/files/:name.json` names the param
-`name.json` and hands you the whole segment, rather than matching a `.json` extension.
+**A `:` without a valid name after it throws when you register the route.** `/items/:1abc` and `/items/:`
+both throw. TypeScript also flags them on the `path` filter, so you see the mistake in your editor first.
+
+**A non-ASCII letter ends the name.** `/:café` has a param called `caf` followed by the literal text `é`.
+
+**When two params share a segment, the first one takes any extra text.** `/files/:name.:ext` gives
+`name` as `a.b` and `ext` as `json` for `/files/a.b.json`.
 
 **A `.`, `+` or other regex metacharacter in a literal segment matches itself.** The literal parts of a
 pattern are escaped before it is compiled to a regular expression, so `/v1.0/orders` matches `/v1.0/orders`

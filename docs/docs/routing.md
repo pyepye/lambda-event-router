@@ -161,8 +161,7 @@ apiGatewayRouter.route({
   handler: getCustomerOrder,
 })
 
-// Naming the params in path is what types them, so the handler gets
-// { customerId: string; orderId: string }
+// request.path is typed as { customerId: string; orderId: string }
 ```
 
 :::
@@ -256,6 +255,7 @@ runs every matching route, so it is not ranked at all.
 
 HTTP routers (API Gateway, ALB, VPC Lattice) rank paths instead. Literal segments beat params at the same
 position, left to right: `/orders/latest` beats `/orders/:orderId`, and `/a/:x` beats `/:y/b` for `/a/b`.
+A segment that mixes literal text with a param, like `:name.json`, ranks between a literal and a bare param.
 A `custom` also beats the same path without one. Identical paths use registration order.
 
 **The difference is that paths are ordered; filter objects aren't.** HTTP routers can therefore resolve

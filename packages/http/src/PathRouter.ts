@@ -14,14 +14,17 @@ import type {
   NoBodyMethod,
   PathParams,
   RouteDefinition,
+  ValidPath,
 } from './types.js';
+
+type SegmentKind = 'literal' | 'mixed' | 'param';
 
 export interface InternalRoute {
   method: HttpMethod;
   path: string;
   pattern: RegExp;
   pathParamNames: string[]; // path param names in order, mapped to the pattern's capture groups
-  pathParamMask: boolean[]; // true where a segment is a path param, walked left to right to rank specificity
+  segmentKinds: SegmentKind[]; // one per segment, walked left to right to rank specificity
   registrationIndex: number; // position the route was registered in, which ranking does not disturb
   custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
   handler: ApiHandler<unknown, unknown, unknown, unknown>;
@@ -32,7 +35,7 @@ export interface InternalRoute {
 }
 
 interface PathRouterFilters<TPathString extends string> {
-  path: TPathString;
+  path: ValidPath<TPathString>;
   custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
 }
 
@@ -104,9 +107,24 @@ function normalizePath(path: string): string {
   return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path;
 }
 
-function describePathSegments(path: string): boolean[] {
+// A param name is an ASCII identifier: a letter, '_' or '$', then letters, digits, '_' or '$'
+const PARAM_NAME = '[A-Za-z_$][A-Za-z0-9_$]*';
+// A whole segment that is one param and nothing else, like ':id'
+const BARE_PARAM_SEGMENT: RegExp = new RegExp(`^:${PARAM_NAME}$`);
+// Either a :param, a ':' with no valid name after it, or a run of literal characters
+const PATH_TOKEN: RegExp = new RegExp(`:(${PARAM_NAME})|:|[^:]+`, 'g');
+
+// A segment that mixes literal text with a param matches fewer paths than a bare param
+const SEGMENT_KIND_RANK: Record<SegmentKind, number> = { literal: 0, mixed: 1, param: 2 };
+
+function describeSegment(segment: string): SegmentKind {
+  if (!segment.includes(':')) return 'literal';
+  return BARE_PARAM_SEGMENT.test(segment) ? 'param' : 'mixed';
+}
+
+function describePathSegments(path: string): SegmentKind[] {
   const segments = path === '/' ? [] : path.replace(/^\//, '').split('/');
-  return segments.map((segment) => segment.startsWith(':'));
+  return segments.map(describeSegment);
 }
 
 // Rank routes most specific first. Literal segments should sort above a param at the same position (compared
@@ -114,13 +132,16 @@ function describePathSegments(path: string): boolean[] {
 function compareRouteSpecificity(a: InternalRoute, b: InternalRoute): number {
   // Length first keeps the comparison total. Comparing only the shared prefix ranks a short path equal to two
   // longer ones that differ from each other, which Array.sort cannot place consistently
-  if (a.pathParamMask.length !== b.pathParamMask.length) {
-    return a.pathParamMask.length - b.pathParamMask.length;
+  if (a.segmentKinds.length !== b.segmentKinds.length) {
+    return a.segmentKinds.length - b.segmentKinds.length;
   }
 
-  for (const [index, aIsParam] of a.pathParamMask.entries()) {
-    if (aIsParam !== b.pathParamMask[index]) {
-      return aIsParam ? 1 : -1;
+  for (const [index, aKind] of a.segmentKinds.entries()) {
+    const bKind = b.segmentKinds[index];
+    /* v8 ignore next -- @preserve - Guard is for TS. Both routes have the same number of segments here */
+    if (bKind === undefined) continue;
+    if (aKind !== bKind) {
+      return SEGMENT_KIND_RANK[aKind] - SEGMENT_KIND_RANK[bKind];
     }
   }
 
@@ -179,7 +200,7 @@ export class PathRouter {
     const { custom } = config.filters;
     const path = normalizePath(config.filters.path);
     const { pattern, pathParamNames } = this.compilePath(path);
-    const pathParamMask = describePathSegments(path);
+    const segmentKinds = describePathSegments(path);
 
     this.routes.push({
       method,
@@ -187,7 +208,7 @@ export class PathRouter {
       registrationIndex: this.routes.length,
       pattern,
       pathParamNames,
-      pathParamMask,
+      segmentKinds,
       custom,
       handler: config.handler as ApiHandler<unknown, unknown, unknown, unknown>,
       middleware: config.middleware ?? [],
@@ -210,14 +231,17 @@ export class PathRouter {
 
   private compilePath(path: string): { pattern: RegExp; pathParamNames: string[] } {
     const pathParamNames: string[] = [];
-    // Match either a :param or a run of literal characters, and escape the literals so a regex
-    // metacharacter in a path (a dot in a version, a file extension, a '+') matches itself.
-    const patternStr = path.replace(/:([^/]+)|[^:]+/g, (segment, paramName?: string) => {
+    // Escape the literals so a regex metacharacter in a path (a dot in a version, a file extension, a '+')
+    // matches itself. A greedy param gives any extra text to the first of two params in one segment.
+    const patternStr = path.replace(PATH_TOKEN, (token, paramName?: string) => {
       if (paramName !== undefined) {
         pathParamNames.push(paramName);
         return '([^/]+)';
       }
-      return segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (token === ':') {
+        throw new Error(`Path '${path}' has a ':' without a param name`);
+      }
+      return token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     });
     return {
       pattern: new RegExp(`^${patternStr}$`),
