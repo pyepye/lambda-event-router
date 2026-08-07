@@ -1,6 +1,6 @@
 # @lambda-event-router/sns
 
-SNS notification routing by topic ARN, subject, and message attributes with schema validation.
+Routes each SNS notification to a handler by topic, subject or message attribute. The router parses the message and converts its attributes before your handler runs.
 
 **Supported AWS Services:** `Amazon SNS`
 

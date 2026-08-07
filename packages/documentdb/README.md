@@ -1,6 +1,6 @@
 # @lambda-event-router/documentdb
 
-DocumentDB Change Streams routing by operation type (insert, update, replace, delete) with typed document schemas.
+Routes each change in a DocumentDB change stream batch to a handler by operation type. Your handler gets validated plain objects, one change at a time and in order.
 
 **Supported AWS Services:** `Amazon DocumentDB`
 

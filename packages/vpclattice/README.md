@@ -1,6 +1,6 @@
 # @lambda-event-router/vpclattice
 
-VPC Lattice HTTP routing with path parameters, schema validation, and response helpers.
+Routes VPC Lattice requests to handlers by method and path. Both payload versions give your handler the same request object, and the router builds the response.
 
 **Supported AWS Services:** `Amazon VPC Lattice`
 

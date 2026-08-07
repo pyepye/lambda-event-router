@@ -1,6 +1,6 @@
 # @lambda-event-router/ses
 
-SES email receipt routing by receipt status.
+Routes inbound SES email to handlers by receipt status. Your handler gets the sender, subject and recipients already taken out of the event.
 
 **Supported AWS Services:** `Amazon SES`
 
@@ -129,7 +129,3 @@ defineRoute({
 
 `STOP_RULE` skips the rest of the current rule, `STOP_RULE_SET` skips every remaining rule. This only
 takes effect when the receipt rule invokes your Lambda synchronously (`RequestResponse`).
-
-## Examples
-
-See the [service-examples/ses](../../service-examples/ses) directory for complete working examples.

@@ -1,6 +1,6 @@
 # @lambda-event-router/firehose
 
-Kinesis Data Firehose transformation routing. Routes records for processing and returns Ok, Failed, or Dropped results.
+Routes each record in a Firehose transformation batch to a handler. The router decodes the data and turns your return value into the keep, drop or fail result Firehose needs.
 
 **Supported AWS Services:** `Amazon Data Firehose`
 

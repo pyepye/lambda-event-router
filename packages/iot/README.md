@@ -1,6 +1,6 @@
 # @lambda-event-router/iot
 
-IoT Core rule action routing for Lambda function actions.
+Handles IoT Core rule actions. They arrive as plain Lambda invocations, so you route them with `EventRouter` from `@lambda-event-router/base`.
 
 **Supported AWS Services:** `AWS IoT Core`
 
@@ -18,7 +18,3 @@ npm install @lambda-event-router/base @lambda-event-router/iot
 ## Quick Start
 
 IoT Core events are handled via the base `EventRouter` since they arrive as generic Lambda invocations. See the [`@lambda-event-router/base`](../base/README.md) package for usage with `defineEventRoute` and custom filters.
-
-## Examples
-
-See the [service-examples/iot](../../service-examples/iot) directory for complete working examples.

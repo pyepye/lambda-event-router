@@ -1,6 +1,6 @@
 # @lambda-event-router/appsync
 
-AppSync routing for resolvers, authorizers and Event API handlers.
+Routes AppSync resolver calls to handlers by GraphQL type and field. The package also has routers for AppSync authorizers and the Events API.
 
 **Supported AWS Services:** `AWS AppSync`
 

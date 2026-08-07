@@ -1,6 +1,6 @@
 # @lambda-event-router/connect
 
-Amazon Connect contact flow routing by channel and initiation method.
+Routes Amazon Connect contact flow calls to handlers by channel and initiation method. Your handler returns a map of values to the flow.
 
 **Supported AWS Services:** `Amazon Connect`
 

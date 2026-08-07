@@ -1,6 +1,6 @@
 # @lambda-event-router/cloudwatch
 
-CloudWatch Logs subscription routing by log group, subscription filter and message type.
+Routes CloudWatch Logs subscription deliveries to handlers by log group, subscription filter or message type. The router decodes the gzipped payload into log events for you.
 
 **Supported AWS Services:** `Amazon CloudWatch Logs`
 

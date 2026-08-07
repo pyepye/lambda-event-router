@@ -1,6 +1,6 @@
 # @lambda-event-router/stepfunctions
 
-Step Functions task routing for Lambda task states.
+Routes Step Functions task states to handlers. Task input has no fixed shape, so you match each task with a `custom` filter over the payload.
 
 **Supported AWS Services:** `AWS Step Functions`
 

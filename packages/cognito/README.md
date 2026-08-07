@@ -1,6 +1,6 @@
 # @lambda-event-router/cognito
 
-Cognito User Pool trigger routing with typed methods for each trigger source (PreSignUp, PostAuth, CustomMessage, etc.).
+Routes Cognito User Pool triggers to a handler for each trigger source, such as PreSignUp or PostAuthentication. Your handler gets the event to change and return.
 
 **Supported AWS Services:** `Amazon Cognito`
 

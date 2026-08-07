@@ -1,6 +1,6 @@
 # @lambda-event-router/apigateway
 
-Provides routers for API Gateway event sources: REST APIs, HTTP APIs, Lambda Authorizers and WebSocket connections.
+Routes API Gateway requests to handlers by method and path. REST APIs and both HTTP API payload versions give your handler the same request object. The package also has routers for Lambda authorizers and WebSocket APIs.
 
 **Supported AWS Services:** `Amazon API Gateway`
 

@@ -1,6 +1,6 @@
 # @lambda-event-router/config
 
-AWS Config rule evaluation routing for configuration change and scheduled evaluations.
+Routes AWS Config rule evaluations to handlers by rule name, resource type or resource id. There is one router for configuration changes and one for scheduled evaluations.
 
 **Supported AWS Services:** `AWS Config`
 

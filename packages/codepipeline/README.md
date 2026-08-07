@@ -1,6 +1,6 @@
 # @lambda-event-router/codepipeline
 
-CodePipeline job handler for custom pipeline actions.
+Routes CodePipeline custom action jobs to handlers. The router reports success or failure back to the pipeline for you.
 
 **Supported AWS Services:** `AWS CodePipeline`
 

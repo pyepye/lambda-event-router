@@ -1,6 +1,6 @@
 # @lambda-event-router/alb
 
-Application Load Balancer HTTP routing with path parameters, schema validation, and response helpers.
+Routes Application Load Balancer requests to handlers by method and path. Your handler returns a body, and the router builds the response the load balancer expects.
 
 **Supported AWS Services:** `Application Load Balancer`
 

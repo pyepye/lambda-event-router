@@ -1,6 +1,6 @@
 # @lambda-event-router/codecommit
 
-CodeCommit repository event routing by repository, branch, and the kind of change.
+Routes CodeCommit repository triggers to handlers by repository, branch and kind of change. Every matching route runs, each with the references it asked for.
 
 **Supported AWS Services:** `AWS CodeCommit`
 
@@ -67,7 +67,3 @@ codecommitRouter
 
 Every route that matches runs, so a record can reach more than one handler with a different subset of
 the references each time.
-
-## Examples
-
-See the [service-examples/codecommit](../../service-examples/codecommit) directory for complete working examples.

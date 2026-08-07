@@ -1,6 +1,6 @@
 # @lambda-event-router/cloudformation
 
-CloudFormation custom resource routing for Create, Update, and Delete request types.
+Routes CloudFormation custom resource requests to a handler for each request type: Create, Update or Delete.
 
 **Supported AWS Services:** `AWS CloudFormation`
 
@@ -112,7 +112,3 @@ defineRoute({
   },
 })
 ```
-
-## Examples
-
-See the [service-examples/cloudformation](../../service-examples/cloudformation) directory for complete working examples.

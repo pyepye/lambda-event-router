@@ -1,6 +1,6 @@
 # @lambda-event-router/s3
 
-S3 notification routing by bucket, key pattern and event name, with convenience methods for the object, lifecycle, tagging and ACL events. A separate router for S3 Batch Operations.
+Routes S3 object notifications to handlers by bucket, key pattern and event name. A second router handles S3 Batch Operations tasks and builds the result the job expects.
 
 **Supported AWS Services:** `Amazon S3`
 

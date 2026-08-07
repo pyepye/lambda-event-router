@@ -1,6 +1,6 @@
 # @lambda-event-router/lex
 
-Amazon Lex V2 dialog and fulfillment code hook routing.
+Routes Lex V2 code hook calls to handlers by intent, hook and bot. Your handler gets one turn of the conversation and returns the dialog action.
 
 **Supported AWS Services:** `Amazon Lex`
 

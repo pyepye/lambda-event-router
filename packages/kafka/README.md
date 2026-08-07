@@ -1,6 +1,6 @@
 # @lambda-event-router/kafka
 
-Apache Kafka routing for both Amazon MSK and self-managed clusters, with schema validation, topic and broker filtering and batch failure support.
+Routes each record in a Kafka batch to a handler by topic or broker, for Amazon MSK and self-managed clusters. The router decodes the key, value and headers, and runs records in order.
 
 **Supported AWS Services:** `Amazon MSK` | `Self-managed Apache Kafka`
 

@@ -1,6 +1,10 @@
 # @lambda-event-router/secretsmanager
 
-Secrets Manager rotation step routing with typed methods for each rotation step.
+Routes each Secrets Manager rotation step to its own handler. Secrets Manager calls your Lambda once per step, and you register a handler for each of the four steps.
+
+**Supported AWS Services:** `AWS Secrets Manager`
+
+**Available Routers:** `SecretsManagerRouter`
 
 ## Install
 

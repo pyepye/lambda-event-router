@@ -1,6 +1,6 @@
 # @lambda-event-router/eventbridge
 
-EventBridge event routing by source, detail type, account, region, and resources with schema validation.
+Routes EventBridge events to handlers by source, detail type, account, Region or resource. Your handler gets the validated `detail` payload. Through CloudTrail it also covers AWS services that cannot trigger Lambda directly.
 
 **Supported AWS Services:** `Amazon EventBridge`
 

@@ -1,6 +1,6 @@
 # @lambda-event-router/sqs
 
-SQS message routing with schema validation, message attribute filtering, and batch failure support.
+Routes each message in an SQS batch to a handler by queue or message attribute. The router parses and validates the body, and can report failed messages back to SQS.
 
 **Supported AWS Services:** `Amazon SQS`
 

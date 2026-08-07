@@ -1,6 +1,6 @@
 # @lambda-event-router/mq
 
-Amazon MQ routing for both ActiveMQ and RabbitMQ brokers.
+Routes each Amazon MQ message to a handler, for ActiveMQ and RabbitMQ brokers. The router decodes the body, so your handler sees one message and never the batch.
 
 **Supported AWS Services:** `Amazon MQ`
 

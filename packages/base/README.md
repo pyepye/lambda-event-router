@@ -1,6 +1,6 @@
 # @lambda-event-router/base
 
-Main dispatcher that routes AWS Lambda events to service-specific routers. This is the core package that ties all service routers together.
+The core package. `LambdaRouter` is the handler you export, and it passes each event to the router that owns it. `EventRouter` handles events that have no AWS envelope, such as direct invocations.
 
 **Supported AWS Services:** `AWS Lambda` (every event source via `LambdaRouter`, direct invocation and custom envelopes via `EventRouter`)
 
@@ -17,74 +17,54 @@ npm install @lambda-event-router/base
 
 ## Quick Start
 
-This example is for the EventRouter. See [Usage](#usage) for examples of the other routers
+Create a router for each AWS service your Lambda receives events from, then register them all on one `LambdaRouter`. Export its handler.
 
 ```ts
 // main handler
-import { createEventRouter, defineEventRoute, isObject, LambdaRouter, logger } from '@lambda-event-router/base'
-import { z } from 'zod'
+import { LambdaRouter } from '@lambda-event-router/base'
+import { apiRouter } from './api'
+import { sqsRouter } from './sqs'
 
-const eventRouter = createEventRouter()
-
-// Inline functions allows Typescript to automatic infer types
-const processOrder = defineEventRoute({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.action === 'process-order',
-  },
-  eventSchema: z.object({
-    action: z.literal('process-order'),
-    orderId: z.string(),
-  }),
-}).handle(async ({ event }) => {
-  logger.info(`Processing order ${event.orderId}`)
-  return { orderId: event.orderId, status: 'processed' }
+const lambdaRouter = new LambdaRouter({
+  routers: [apiRouter, sqsRouter],
 })
-eventRouter.route(processOrder)
 
-const lambdaRouter = new LambdaRouter({ routers: [eventRouter] })
 export const handler = lambdaRouter.handler()
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+```ts
+// api.ts
+import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
+import { getOrder } from './order/get'
+
+export const apiRouter = createAPIGatewayRouter()
+
+apiRouter.route({
+  filters: { method: 'GET', path: '/order/:id' },
+  handler: getOrder,
+})
+```
 
 ```ts
-import { createEventRouter, isObject, logger } from '@lambda-event-router/base'
-import type { EventRequest } from '@lambda-event-router/base'
-import { z } from 'zod'
+// sqs.ts
+import { createSQSRouter } from '@lambda-event-router/sqs'
+import { processOrder } from './order/process'
+import { refundOrder } from './order/refund'
 
-const eventRouter = createEventRouter()
+export const sqsRouter = createSQSRouter()
 
-const OrderSchema = z.object({
-  action: z.literal('process-order'),
-  orderId: z.string(),
-})
-type Order = z.infer<typeof OrderSchema>
-
-// Separate handler to define routes and handlers in different places
-eventRouter.route({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.action === 'process-order',
-  },
-  eventSchema: OrderSchema,
+sqsRouter.route({
+  filters: { messageAttributes: { Type: 'ProcessOrder' } },
   handler: processOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processOrder({ event }: EventRequest<Order>) {
-  logger.info(`Processing order ${event.orderId}`)
-  return { orderId: event.orderId, status: 'processed' }
-}
+sqsRouter.route({
+  filters: { messageAttributes: { Type: 'RefundOrder' } },
+  handler: refundOrder,
+})
 ```
 
-`custom` is given the raw event, typed `unknown`. Narrow it with `isObject` before reading anything. Filters pick the route, and `eventSchema` runs only once one has matched. A coerced or defaulted field therefore arrives in the form the caller sent it.
-
-Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
-
-```ts
-const eventRouter = createEventRouter<void>()
-
-eventRouter.route({ filters: {}, handler: onSchedule })
-```
+`LambdaRouter` works out which router owns each event, and that router picks the route. See the [service routers](../../README.md#packages--supported-aws-services) for the other packages.
 
 
 ## Routers
@@ -101,25 +81,6 @@ eventRouter.route({ filters: {}, handler: onSchedule })
 
 `LambdaRouter` is the Lambda entry point. Every other router gets registered on it and
 `lambdaRouter.handler()` is what you export.
-
-#### Combining multiple service routers
-
-```ts
-import { LambdaRouter } from '@lambda-event-router/base'
-import { createSQSRouter } from '@lambda-event-router/sqs'
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge'
-
-const sqsRouter = createSQSRouter()
-const eventBridgeRouter = createEventBridgeRouter()
-
-// Register routes on each router...
-
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter, eventBridgeRouter],
-})
-
-export const handler = lambdaRouter.handler()
-```
 
 `createLambdaRouter({ routers: [...] })` is the same call in the factory form the service routers use.
 
@@ -223,8 +184,19 @@ async function generateReport({ event }: EventRequest<Report>) {
 }
 ```
 
+`custom` is given the raw event, typed `unknown`. Narrow it with `isObject` before reading anything. Filters pick the route, and `eventSchema` runs only once one has matched. A coerced or defaulted field therefore arrives in the form the caller sent it.
+
+Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
+
+```ts
+const eventRouter = createEventRouter<void>()
+
+eventRouter.route({ filters: {}, handler: onSchedule })
+```
+
 Route middleware on a route carrying an `eventSchema` needs the payload type. Use `EventRouterMiddleware<Report>` rather than the bare alias. The bare one defaults its payload to `unknown`, which leaves `request.event` unreadable inside the middleware.
 
 ## Examples
 
-See the [service-examples/base](../../service-examples/base) directory for complete working examples.
+- [service-examples](../../service-examples) has one deployable app per AWS service. Each one registers its service routers on a `LambdaRouter`.
+- [full-examples](../../full-examples) has apps that chain several AWS services, with one `LambdaRouter` combining several routers in each Lambda.

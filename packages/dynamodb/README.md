@@ -1,6 +1,6 @@
 # @lambda-event-router/dynamodb
 
-DynamoDB Streams routing by event name (INSERT, MODIFY, REMOVE) with typed image schemas and batch failure support.
+Routes each record in a DynamoDB Streams batch to a handler by event name, table or key. The router converts the images to plain objects and validates them against your schemas.
 
 **Supported AWS Services:** `Amazon DynamoDB`
 

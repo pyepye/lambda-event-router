@@ -1,6 +1,6 @@
 # @lambda-event-router/kinesis
 
-Kinesis Data Streams routing with schema validation, partition key filtering, and batch failure support.
+Routes each record in a Kinesis Data Streams batch to a handler by stream or partition key. The router decodes the data, unpacks aggregated records and runs them in order.
 
 **Supported AWS Services:** `Amazon Kinesis Data Streams`
 
