@@ -58,7 +58,7 @@ import { createOrder, createOrderSchema } from './createOrder'
 const apiRouter = createAPIGatewayRouter()
 
 apiRouter.route({
-  filter: {
+  filters: {
     method: 'GET',
     path: '/order/:id/',
   },
@@ -66,7 +66,7 @@ apiRouter.route({
 })
 
 apiRouter.route({
-  filter: {
+  filters: {
     method: 'POST',
     path: '/order/:id/',
   },
@@ -84,12 +84,12 @@ import { refundOrder } from './order/refund'
 const sqsRouter = createSQSRouter()
 
 sqsRouter.route({
-  filter: { messageAttributes: { Type: ['ProcessOrder'] } },
+  filters: { messageAttributes: { Type: ['ProcessOrder'] } },
   handler: processOrder,
 })
 
 sqsRouter.route({
-  filter: { messageAttributes: { Type: ['RefundOrder'] } },
+  filters: { messageAttributes: { Type: ['RefundOrder'] } },
   handler: refundOrder,
 })
 ```
