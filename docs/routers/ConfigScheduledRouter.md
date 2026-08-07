@@ -135,7 +135,7 @@ export async function runTagAudit(request: ConfigScheduledRequest): Promise<void
 | `resultToken` | `string` | The token you pass to `PutEvaluations` to report the result |
 | `configRuleName` | `string` | The Config rule that invoked the Lambda |
 | `accountId` | `string` | The AWS account the evaluation runs in |
-| `ruleParameters` | `TParams` | The rule's parameters, parsed from JSON. Defaults to `{}` |
+| `ruleParameters` | `TParams` | The rule's parameters, parsed from JSON. Defaults to `{}`, because Config sends none for a rule without parameters |
 | `event` | `ConfigEvent` | The untouched event from AWS |
 | `context` | `Context` | The Lambda context |
 
@@ -248,8 +248,11 @@ An evaluation that matches no route throws `No route matched for scheduled confi
 handler that throws propagates the error out of the Lambda. One event carries one scheduled
 evaluation, so there is no batch and nothing partial to report.
 
-AWS Config invokes your function directly and does not read a return value, so a throw surfaces to
-Config as a failed evaluation rather than being redelivered the way an asynchronous source would.
+AWS Config invokes your function asynchronously and does not read a return value. A throw fails the
+invocation, so Lambda's asynchronous retries apply, twice by default, before the event is dropped. The
+account then has no result for the rule, and Config shows the rule as `INSUFFICIENT_DATA`.
+
+To record an outcome you expect, report it with `PutEvaluations` rather than throwing.
 
 ## Reporting evaluations
 

@@ -144,7 +144,7 @@ oversized change gives you a `ConfigOversizedRequest` with a summary and no conf
 | --- | --- | --- |
 | `configurationItem` | `ConfigurationItem<TConfig>` on a normal change, `undefined` on an oversized one | The changed resource, including its `configuration` |
 | `configurationItemSummary` | `ConfigurationItemSummary` on an oversized change, `undefined` on a normal one | Metadata only, with no `configuration`. Fetch the full item yourself when you need it |
-| `ruleParameters` | `TParams` | The rule's parameters, parsed from JSON. Defaults to `{}` |
+| `ruleParameters` | `TParams` | The rule's parameters, parsed from JSON. Defaults to `{}`, because Config sends none for a rule without parameters |
 | `resultToken` | `string` | The token you pass to `PutEvaluations` to report the result |
 | `configRuleName` | `string` | The Config rule that invoked the Lambda |
 | `event` | `ConfigEvent` | The untouched event from AWS |
@@ -152,6 +152,10 @@ oversized change gives you a `ConfigOversizedRequest` with a summary and no conf
 
 `Context` comes from `aws-lambda`. `ConfigEvent`, `ConfigurationItem` and `ConfigurationItemSummary`
 come from this package.
+
+A deleted resource arrives as a normal change. Its `configurationItemStatus` is `ResourceDeleted`, its
+`configuration` is `null` and its `tags` are empty. A route with a `configurationSchema` fails
+validation on it, so add a `configurationItemStatus` filter to keep deletions off that route.
 
 A route's filters do not pin the notification type, so a route can match both a normal and an
 oversized change. An inferred handler is handed the union of both shapes and narrows on
@@ -183,7 +187,11 @@ import { logger } from '@lambda-event-router/base'
 import { defineRoute } from '@lambda-event-router/config'
 
 export const encryptionRoute = defineRoute({
-  filters: { configRuleName: 'rds-encryption', resourceType: 'AWS::RDS::DBInstance' },
+  filters: {
+    configRuleName: 'rds-encryption',
+    resourceType: 'AWS::RDS::DBInstance',
+    configurationItemStatus: ['OK', 'ResourceDiscovered'],
+  },
   configurationSchema,
 }).handle(async ({ configurationItem, configurationItemSummary, resultToken }) => {
   if (!configurationItem) {
@@ -241,7 +249,11 @@ import { configurationSchema } from './schemas/rules'
 const configRouter = createConfigRouter()
 
 configRouter.route({
-  filters: { configRuleName: 'rds-encryption', resourceType: 'AWS::RDS::DBInstance' },
+  filters: {
+    configRuleName: 'rds-encryption',
+    resourceType: 'AWS::RDS::DBInstance',
+    configurationItemStatus: ['OK', 'ResourceDiscovered'],
+  },
   configurationSchema,
   handler: evaluateEncryption,
 })
@@ -291,8 +303,12 @@ A change that matches no route throws `No route matched for config rule <name>`,
 throws propagates the error out of the Lambda. One event carries one change, so there is no batch and
 nothing partial to report.
 
-AWS Config invokes your function directly and does not read a return value, so a throw surfaces to
-Config as a failed evaluation rather than being redelivered the way an asynchronous source would.
+AWS Config invokes your function asynchronously and does not read a return value. A throw fails the
+invocation, so Lambda's asynchronous retries apply, twice by default, before the event is dropped. The
+resource then has no result for the rule, and Config shows the rule as `INSUFFICIENT_DATA`.
+
+To record an outcome you expect, such as a resource that cannot be checked, report it with
+`PutEvaluations` rather than throwing.
 
 ## Reporting evaluations
 
@@ -309,7 +325,13 @@ configRouter.route(
   defineRoute({ filters: { configRuleName: 'rds-encryption' } }).handle(
     async ({ configurationItem, resultToken }) => {
       if (!configurationItem) return
-      const compliant = configurationItem.configuration.storageEncrypted === true
+      const { configuration } = configurationItem
+
+      // A deleted resource arrives with a null configuration, and no longer needs a verdict
+      let complianceType: 'COMPLIANT' | 'NON_COMPLIANT' | 'NOT_APPLICABLE' = 'NOT_APPLICABLE'
+      if (configuration) {
+        complianceType = configuration.storageEncrypted === true ? 'COMPLIANT' : 'NON_COMPLIANT'
+      }
 
       await config.send(
         new PutEvaluationsCommand({
@@ -318,7 +340,7 @@ configRouter.route(
             {
               ComplianceResourceType: configurationItem.resourceType,
               ComplianceResourceId: configurationItem.resourceId,
-              ComplianceType: compliant ? 'COMPLIANT' : 'NON_COMPLIANT',
+              ComplianceType: complianceType,
               OrderingTimestamp: new Date(configurationItem.configurationItemCaptureTime),
             },
           ],
@@ -380,7 +402,11 @@ All exported from `@lambda-event-router/config`.
 | `ConfigRouteDefinition` | A full route passed to `route()` |
 | `ConfigRouterOptions` | Options for `createConfigRouter` |
 | `ConfigurationItem` | The changed resource on a normal change |
+| `ConfigurationItemRelationship` | One entry in `configurationItem.relationships` |
 | `ConfigurationItemSummary` | The metadata on an oversized change |
+| `InvokingEvent` | The parsed `event.invokingEvent` of a change |
+| `ConfigurationItemDiff` | What changed, from `invokingEvent.configurationItemDiff` |
+| `ConfigChangeType` | `CREATE`, `UPDATE` or `DELETE` |
 | `ConfigEvent` | The untouched event from AWS |
 | `ConfigResponse` | The handler return type, `undefined` |
 
@@ -391,8 +417,10 @@ place.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
-| `TConfig` | `configurationItem.configuration`, from `configurationSchema` | `Record<string, unknown>` |
+| `TConfig` | `configurationItem.configuration`, from `configurationSchema` | `Record<string, unknown> \| null` |
 | `TParams` | `ruleParameters`, from `ruleParametersSchema` | `Record<string, string>` |
+
+The default allows `null`, because a deleted resource carries no configuration.
 
 `ConfigRequest<TConfig, TParams>` and `ConfigMiddleware<TConfig, TParams>` take both, and
 `ConfigurationItem<TConfig>` takes the first, so you can pass only `TConfig` and leave `TParams` on
@@ -436,7 +464,11 @@ export const configRouter = createConfigRouter()
 configRouter
   .route(
     defineRoute({
-      filters: { configRuleName: 'rds-encryption', resourceType: 'AWS::RDS::DBInstance' },
+      filters: {
+        configRuleName: 'rds-encryption',
+        resourceType: 'AWS::RDS::DBInstance',
+        configurationItemStatus: ['OK', 'ResourceDiscovered'],
+      },
       configurationSchema: rdsConfigSchema,
     }).handle(async ({ configurationItem, configurationItemSummary, resultToken }) => {
       if (!configurationItem) {
@@ -449,7 +481,11 @@ configRouter
   )
   .route(
     defineRoute({
-      filters: { configRuleName: 'required-tags', resourceType: 'AWS::EC2::Instance' },
+      filters: {
+        configRuleName: 'required-tags',
+        resourceType: 'AWS::EC2::Instance',
+        configurationItemStatus: ['OK', 'ResourceDiscovered'],
+      },
       ruleParametersSchema: tagParamsSchema,
     }).handle(async ({ configurationItem, ruleParameters, resultToken }) => {
       if (!configurationItem) return

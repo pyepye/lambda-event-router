@@ -11,47 +11,80 @@ export type ConfigMessageType =
   | 'OversizedConfigurationItemChangeNotification'
   | 'ScheduledNotification';
 
-export interface ConfigurationItem<TConfig = Record<string, unknown>> {
+export interface ConfigurationItemRelationship {
+  resourceType: string;
+  resourceId: string | null;
+  resourceName: string | null;
+  name: string;
+}
+
+// A deleted resource arrives with a null configuration, so the default allows for it
+export interface ConfigurationItem<TConfig = Record<string, unknown> | null> {
   resourceType: string;
   resourceId: string;
+  resourceName: string | null;
   configurationItemStatus: string;
   configurationItemCaptureTime: string;
   configuration: TConfig;
   tags: Record<string, string>;
   ARN: string;
   awsAccountId: string;
+  configurationStateId: number;
   configurationStateMd5Hash: string;
-  resourceCreationTime: string;
+  resourceCreationTime: string | null;
   awsRegion: string;
-  availabilityZone?: string;
+  availabilityZone: string | null;
   configurationItemVersion: string;
+  configurationItemDeliveryTime: string | null;
+  recordingFrequency: string | null;
   supplementaryConfiguration: Record<string, unknown>;
   relatedEvents: string[];
-  relationships: Array<{
-    resourceType: string;
-    resourceId: string;
-    relationshipName: string;
-  }>;
+  relationships: ConfigurationItemRelationship[];
 }
 
 export interface ConfigurationItemSummary {
+  changeType: string;
   resourceType: string;
   resourceId: string;
+  resourceName: string | null;
   configurationItemStatus: string;
   configurationItemCaptureTime: string;
-  changeType: string;
   ARN: string;
   awsAccountId: string;
+  configurationStateId: number;
+  configurationStateMd5Hash: string;
+  resourceCreationTime: string | null;
   awsRegion: string;
-  configurationStateId: string;
+  availabilityZone: string | null;
+  configurationItemVersion: string;
+  configurationItemDeliveryTime: string | null;
+  recordingFrequency: string | null;
 }
 
+export type ConfigChangeType = 'CREATE' | 'UPDATE' | 'DELETE';
+
+export interface ConfigurationItemDiff {
+  changeType: ConfigChangeType;
+  changedProperties: Record<
+    string,
+    {
+      previousValue: unknown;
+      updatedValue: unknown;
+      changeType: ConfigChangeType;
+    }
+  >;
+}
+
+// A change carries configurationItem and configurationItemDiff, which is null for a newly recorded
+// item. An oversized change carries configurationItemSummary and s3DeliverySummary instead
 export interface InvokingEvent {
   messageType: ConfigMessageType;
   configurationItem?: ConfigurationItem;
+  configurationItemDiff?: ConfigurationItemDiff | null;
   configurationItemSummary?: ConfigurationItemSummary;
-  notificationCreationTime?: string;
-  recordVersion?: string;
+  s3DeliverySummary?: Record<string, unknown> | null;
+  notificationCreationTime: string;
+  recordVersion: string;
 }
 
 export interface ConfigHandlerContext {
@@ -59,7 +92,7 @@ export interface ConfigHandlerContext {
   context: Context;
 }
 
-export interface ConfigRequest<TConfig = Record<string, unknown>, TParams = Record<string, string>> {
+export interface ConfigRequest<TConfig = Record<string, unknown> | null, TParams = Record<string, string>> {
   configurationItem: ConfigurationItem<TConfig>;
   configurationItemSummary?: undefined;
   ruleParameters: TParams;
@@ -79,14 +112,14 @@ export interface ConfigOversizedRequest<TParams = Record<string, string>> {
   context: Context;
 }
 
-export type ConfigMiddleware<TConfig = Record<string, unknown>, TParams = Record<string, string>> = Middleware<
+export type ConfigMiddleware<TConfig = Record<string, unknown> | null, TParams = Record<string, string>> = Middleware<
   ConfigRequest<TConfig, TParams> | ConfigOversizedRequest<TParams>,
   void
 >;
 
 // Takes both shapes, so a handler written for one will not assign to a route whose filters can
 // deliver the other. Narrow on request.configurationItem inside the handler
-export type ConfigChangeHandler<TConfig = Record<string, unknown>, TParams = Record<string, string>> = (
+export type ConfigChangeHandler<TConfig = Record<string, unknown> | null, TParams = Record<string, string>> = (
   request: ConfigRequest<TConfig, TParams> | ConfigOversizedRequest<TParams>,
 ) => Promise<void>;
 
@@ -105,7 +138,7 @@ export interface ConfigChangeFilters {
   custom?: (input: ConfigChangeFilterInput) => boolean | Promise<boolean>;
 }
 
-export interface ConfigRouteDefinition<TConfig = Record<string, unknown>, TParams = Record<string, string>> {
+export interface ConfigRouteDefinition<TConfig = Record<string, unknown> | null, TParams = Record<string, string>> {
   filters: ConfigChangeFilters;
   ruleParametersSchema?: StandardSchemaV1<unknown, TParams>;
   configurationSchema?: StandardSchemaV1<unknown, TConfig>;
@@ -131,7 +164,7 @@ export interface ConfigRouteInput<
   TParamsSchema extends StandardSchemaV1 | undefined = undefined,
   TConfigSchema extends StandardSchemaV1 | undefined = undefined,
   TParams = Record<string, string>,
-  TConfig = Record<string, unknown>,
+  TConfig = Record<string, unknown> | null,
 > {
   filters: ConfigChangeFilters;
   ruleParametersSchema?: TParamsSchema;

@@ -3,6 +3,7 @@ export type {
   ConfigChangeFilterInput,
   ConfigChangeFilters,
   ConfigChangeHandler,
+  ConfigChangeType,
   ConfigMessageType,
   ConfigMiddleware,
   ConfigOversizedRequest,
@@ -10,5 +11,8 @@ export type {
   ConfigRouteDefinition,
   ConfigRouterOptions,
   ConfigurationItem,
+  ConfigurationItemDiff,
+  ConfigurationItemRelationship,
   ConfigurationItemSummary,
+  InvokingEvent,
 } from './types.js';

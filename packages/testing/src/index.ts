@@ -148,12 +148,15 @@ export {
   createCognitoVerifyAuthChallengeResponseHandlerEvent,
 } from './cognito.js';
 export type {
+  ConfigChangeType,
   ConfigEvent,
   ConfigEventOverrides,
   ConfigHandlerEvent,
   ConfigMessageType,
   ConfigurationItem,
+  ConfigurationItemDiff,
   ConfigurationItemOverrides,
+  ConfigurationItemRelationship,
   ConfigurationItemSummary,
   ConfigurationItemSummaryOverrides,
   CreateConfigHandlerEventOptions,

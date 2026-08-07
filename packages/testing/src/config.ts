@@ -10,52 +10,75 @@ export type ConfigMessageType =
   | 'OversizedConfigurationItemChangeNotification'
   | 'ScheduledNotification';
 
+export interface ConfigurationItemRelationship {
+  resourceType: string;
+  resourceId: string | null;
+  resourceName: string | null;
+  name: string;
+}
+
 export interface ConfigurationItem {
   resourceType: string;
   resourceId: string;
+  resourceName: string | null;
   configurationItemStatus: string;
   configurationItemCaptureTime: string;
-  configuration: Record<string, unknown>;
+  configuration: Record<string, unknown> | null;
   tags: Record<string, string>;
   ARN: string;
   awsAccountId: string;
+  configurationStateId: number;
   configurationStateMd5Hash: string;
-  resourceCreationTime: string;
+  resourceCreationTime: string | null;
   awsRegion: string;
-  availabilityZone?: string;
+  availabilityZone: string | null;
   configurationItemVersion: string;
+  configurationItemDeliveryTime: string | null;
+  recordingFrequency: string | null;
   supplementaryConfiguration: Record<string, unknown>;
   relatedEvents: string[];
-  relationships: Array<{
-    resourceType: string;
-    resourceId: string;
-    relationshipName: string;
-  }>;
+  relationships: ConfigurationItemRelationship[];
 }
 
 export interface ConfigurationItemSummary {
+  changeType: string;
   resourceType: string;
   resourceId: string;
+  resourceName: string | null;
   configurationItemStatus: string;
   configurationItemCaptureTime: string;
-  changeType: string;
   ARN: string;
   awsAccountId: string;
+  configurationStateId: number;
+  configurationStateMd5Hash: string;
+  resourceCreationTime: string | null;
   awsRegion: string;
-  configurationStateId: string;
+  availabilityZone: string | null;
+  configurationItemVersion: string;
+  configurationItemDeliveryTime: string | null;
+  recordingFrequency: string | null;
+}
+
+export type ConfigChangeType = 'CREATE' | 'UPDATE' | 'DELETE';
+
+export interface ConfigurationItemDiff {
+  changeType: ConfigChangeType;
+  changedProperties: Record<string, { previousValue: unknown; updatedValue: unknown; changeType: ConfigChangeType }>;
 }
 
 export interface InvokingEvent {
   messageType: ConfigMessageType;
   configurationItem?: ConfigurationItem;
+  configurationItemDiff?: ConfigurationItemDiff | null;
   configurationItemSummary?: ConfigurationItemSummary;
-  notificationCreationTime?: string;
-  recordVersion?: string;
+  s3DeliverySummary?: Record<string, unknown> | null;
+  notificationCreationTime: string;
+  recordVersion: string;
 }
 
 export interface ConfigEvent {
   invokingEvent: string;
-  ruleParameters: string;
+  ruleParameters?: string;
   resultToken: string;
   eventLeftScope: boolean;
   executionRoleArn: string;
@@ -64,6 +87,7 @@ export interface ConfigEvent {
   configRuleId: string;
   accountId: string;
   version: string;
+  evaluationMode: string;
 }
 
 export type ConfigurationItemOverrides = DeepPartial<ConfigurationItem>;
@@ -72,16 +96,21 @@ export function createConfigurationItem(overrides: ConfigurationItemOverrides = 
   const defaults: ConfigurationItem = {
     resourceType: 'AWS::EC2::Instance',
     resourceId: 'i-1234567890abcdef0',
+    resourceName: null,
     configurationItemStatus: 'ResourceDiscovered',
     configurationItemCaptureTime: '2024-01-01T00:00:00.000Z',
     configuration: { instanceType: 't2.micro', imageId: 'ami-12345678' },
     tags: { Name: 'test-instance' },
     ARN: 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0',
     awsAccountId: '123456789012',
-    configurationStateMd5Hash: 'abc123',
+    configurationStateId: 1704067200000,
+    configurationStateMd5Hash: '',
     resourceCreationTime: '2024-01-01T00:00:00.000Z',
     awsRegion: 'us-east-1',
+    availabilityZone: 'us-east-1a',
     configurationItemVersion: '1.3',
+    configurationItemDeliveryTime: null,
+    recordingFrequency: null,
     supplementaryConfiguration: {},
     relatedEvents: [],
     relationships: [],
@@ -96,15 +125,22 @@ export function createConfigurationItemSummary(
   overrides: ConfigurationItemSummaryOverrides = {},
 ): ConfigurationItemSummary {
   const defaults: ConfigurationItemSummary = {
+    changeType: 'UPDATE',
     resourceType: 'AWS::EC2::Instance',
     resourceId: 'i-1234567890abcdef0',
-    configurationItemStatus: 'ResourceDiscovered',
+    resourceName: null,
+    configurationItemStatus: 'OK',
     configurationItemCaptureTime: '2024-01-01T00:00:00.000Z',
-    changeType: 'UPDATE',
     ARN: 'arn:aws:ec2:us-east-1:123456789012:instance/i-1234567890abcdef0',
     awsAccountId: '123456789012',
+    configurationStateId: 1704067200000,
+    configurationStateMd5Hash: '',
+    resourceCreationTime: '2024-01-01T00:00:00.000Z',
     awsRegion: 'us-east-1',
-    configurationStateId: 'state-123',
+    availabilityZone: 'us-east-1a',
+    configurationItemVersion: '1.3',
+    configurationItemDeliveryTime: null,
+    recordingFrequency: null,
   };
 
   return deepMerge(defaults, overrides);
@@ -121,6 +157,7 @@ export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigE
   const defaultInvokingEvent: InvokingEvent = {
     messageType: 'ConfigurationItemChangeNotification',
     configurationItem: createConfigurationItem(),
+    configurationItemDiff: null,
     notificationCreationTime: '2024-01-01T00:00:00.000Z',
     recordVersion: '1.3',
   };
@@ -129,11 +166,10 @@ export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigE
     ? deepMerge(defaultInvokingEvent, invokingEventOverride)
     : defaultInvokingEvent;
 
-  const ruleParameters = ruleParametersOverride ?? {};
-
+  // Config leaves ruleParameters out when the rule has none
   const defaults: ConfigEvent = {
     invokingEvent: JSON.stringify(invokingEvent),
-    ruleParameters: JSON.stringify(ruleParameters),
+    ...(ruleParametersOverride ? { ruleParameters: JSON.stringify(ruleParametersOverride) } : {}),
     resultToken: 'result-token-123',
     eventLeftScope: false,
     executionRoleArn: 'arn:aws:iam::123456789012:role/config-role',
@@ -142,6 +178,7 @@ export function createConfigEvent(overrides: ConfigEventOverrides = {}): ConfigE
     configRuleId: 'config-rule-abc123',
     accountId: '123456789012',
     version: '1.0',
+    evaluationMode: 'DETECTIVE',
   };
 
   return deepMerge(defaults, restOverrides);

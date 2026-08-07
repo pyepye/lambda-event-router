@@ -406,6 +406,16 @@ suite('ConfigScheduledRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: {} }));
     });
 
+    test('a rule with no parameters sends no ruleParameters key, and the handler gets {}', async ({ context }) => {
+      const handler = vi.fn();
+      router.route(defineConfigScheduledRoute({ filters: {} }).handle(handler));
+
+      const { ruleParameters: _, ...event } = createScheduledConfigEvent();
+      await router.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: {} }));
+    });
+
     test('throws when no route matches', async ({ context }) => {
       router.route(defineConfigScheduledRoute({ filters: { configRuleName: 'specific-rule' } }).handle(async () => {}));
 

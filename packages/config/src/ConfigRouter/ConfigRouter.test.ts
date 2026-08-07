@@ -1,3 +1,4 @@
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
@@ -9,8 +10,15 @@ import {
   test,
 } from '@lambda-event-router/testing';
 
+import type { ConfigEvent } from '../types.js';
 import { ConfigRouter, createConfigRouter, defineRoute } from './ConfigRouter.js';
-import type { ConfigChangeFilterInput, ConfigOversizedRequest, ConfigRequest } from './types.js';
+import type {
+  ConfigChangeFilterInput,
+  ConfigOversizedRequest,
+  ConfigRequest,
+  ConfigurationItem,
+  ConfigurationItemSummary,
+} from './types.js';
 
 type ConfigRequestUnion = ConfigRequest | ConfigOversizedRequest;
 type ConfigNext = (request: ConfigRequestUnion) => Promise<void>;
@@ -873,5 +881,216 @@ suite('ConfigRouter.canHandleEvent', () => {
     const claimed = await createConfigRouter().canHandleEvent(event);
 
     expect(claimed).toBe(isOwnEvent);
+  });
+});
+
+// Values below are taken from events AWS Config delivered to the service example
+suite('delivered event shapes', () => {
+  const lambdaArn = 'arn:aws:lambda:eu-west-2:739650895623:function:ler-example-config-report-builder';
+
+  const deletedLambdaItem = {
+    relatedEvents: [],
+    relationships: [],
+    configuration: null,
+    supplementaryConfiguration: {},
+    tags: {},
+    configurationItemVersion: '1.3',
+    configurationItemCaptureTime: '2026-09-24T00:46:57.765Z',
+    configurationStateId: 1790210817765,
+    awsAccountId: '739650895623',
+    configurationItemStatus: 'ResourceDeleted',
+    resourceType: 'AWS::Lambda::Function',
+    resourceId: 'ler-example-config-report-builder',
+    resourceName: 'ler-example-config-report-builder',
+    ARN: lambdaArn,
+    awsRegion: 'eu-west-2',
+    availabilityZone: null,
+    configurationStateMd5Hash: '',
+    resourceCreationTime: null,
+    configurationItemDeliveryTime: null,
+    recordingFrequency: null,
+  } satisfies ConfigurationItem;
+
+  const oversizedBucketSummary = {
+    changeType: 'CREATE',
+    configurationItemVersion: '1.3',
+    configurationItemCaptureTime: '2026-09-24T00:57:36.160Z',
+    configurationStateId: 1790211456160,
+    awsAccountId: '739650895623',
+    configurationItemStatus: 'ResourceDiscovered',
+    resourceType: 'AWS::S3::Bucket',
+    resourceId: 'ler-example-config-probebucket90ff141f-qeghkewxe8en',
+    resourceName: 'ler-example-config-probebucket90ff141f-qeghkewxe8en',
+    ARN: 'arn:aws:s3:::ler-example-config-probebucket90ff141f-qeghkewxe8en',
+    awsRegion: 'eu-west-2',
+    availabilityZone: 'Regional',
+    configurationStateMd5Hash: '',
+    resourceCreationTime: '2026-09-24T00:55:37.000Z',
+    configurationItemDeliveryTime: null,
+    recordingFrequency: null,
+  } satisfies ConfigurationItemSummary;
+
+  // Accepts any object, so the only thing it turns away is the null a deletion carries
+  const objectSchema: StandardSchemaV1<unknown, Record<string, unknown>> = {
+    '~standard': {
+      version: 1,
+      vendor: 'test',
+      validate: (value: unknown) =>
+        typeof value === 'object' && value !== null
+          ? { value: value as Record<string, unknown> }
+          : { issues: [{ message: 'Expected an object' }] },
+    },
+  };
+
+  function deliveredEvent(invokingEvent: Record<string, unknown>, ruleParameters?: string): ConfigEvent {
+    return {
+      version: '1.0',
+      invokingEvent: JSON.stringify({ notificationCreationTime: '2026-09-24T00:46:58.813Z', ...invokingEvent }),
+      ...(ruleParameters === undefined ? {} : { ruleParameters }),
+      resultToken: 'result-token',
+      eventLeftScope: invokingEvent.messageType === 'ConfigurationItemChangeNotification',
+      executionRoleArn: 'arn:aws:iam::739650895623:role/ler-example-config-RecorderRole',
+      configRuleArn: 'arn:aws:config:eu-west-2:739650895623:config-rule/config-rule-ekfflz',
+      configRuleName: 'ler-example-config-memory-limit',
+      configRuleId: 'config-rule-ekfflz',
+      accountId: '739650895623',
+      evaluationMode: 'DETECTIVE',
+    };
+  }
+
+  function deletion(): ConfigEvent {
+    return deliveredEvent(
+      {
+        configurationItemDiff: { changeType: 'DELETE', changedProperties: {} },
+        configurationItem: deletedLambdaItem,
+        messageType: 'ConfigurationItemChangeNotification',
+        recordVersion: '1.3',
+      },
+      '{"maxMemoryMb":"1024"}',
+    );
+  }
+
+  // The fixture declares the same shapes as types.ts, and cannot import them. This fails to compile
+  // if the two drift apart.
+  test('fixture events satisfy the package types', ({ configEvent, configurationItem, configurationItemSummary }) => {
+    const event: ConfigEvent = configEvent();
+    const item: ConfigurationItem = configurationItem();
+    const summary: ConfigurationItemSummary = configurationItemSummary();
+
+    expect([event.evaluationMode, item.configurationStateId, summary.configurationStateId]).toEqual([
+      'DETECTIVE',
+      1704067200000,
+      1704067200000,
+    ]);
+  });
+
+  test('a rule with no parameters sends no ruleParameters key, and the handler gets {}', async ({ context }) => {
+    const handler = vi.fn();
+    const router = createConfigRouter().route(defineRoute({ filters: {} }).handle(handler));
+
+    const event = deliveredEvent({
+      configurationItemDiff: null,
+      configurationItem: { ...deletedLambdaItem, configurationItemStatus: 'OK', configuration: {} },
+      messageType: 'ConfigurationItemChangeNotification',
+      recordVersion: '1.3',
+    });
+    expect(event).not.toHaveProperty('ruleParameters');
+
+    await router.handleEvent(event, context());
+
+    expect(handler).toHaveBeenCalledWith(expect.objectContaining({ ruleParameters: {} }));
+  });
+
+  test('a deleted resource reaches a route with no configurationSchema with a null configuration', async ({
+    context,
+  }) => {
+    const handler = vi.fn();
+    const router = createConfigRouter().route(defineRoute({ filters: {} }).handle(handler));
+
+    await router.handleEvent(deletion(), context());
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configurationItem: expect.objectContaining({ configuration: null, tags: {}, availabilityZone: null }),
+      }),
+    );
+  });
+
+  test('a deleted resource fails a configurationSchema that does not accept null', async ({ context }) => {
+    const handler = vi.fn();
+    const router = createConfigRouter().route(
+      defineRoute({ filters: {}, configurationSchema: objectSchema }).handle(handler),
+    );
+
+    await expect(router.handleEvent(deletion(), context())).rejects.toThrow(
+      'Schema validation failed for configuration',
+    );
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  test('a configurationItemStatus filter turns a deleted resource away', async ({ context }) => {
+    const router = createConfigRouter().route(
+      defineRoute({ filters: { configurationItemStatus: ['OK', 'ResourceDiscovered'] } }).handle(vi.fn()),
+    );
+
+    await expect(router.handleEvent(deletion(), context())).rejects.toThrow(
+      'No route matched for config rule ler-example-config-memory-limit',
+    );
+  });
+
+  test('relationships and the diff reach the handler as Config sends them', async ({ context }) => {
+    const handler = vi.fn();
+    const router = createConfigRouter().route(defineRoute({ filters: {} }).handle(handler));
+    const relationship = {
+      resourceId: null,
+      resourceName: 'ler-example-config-CheckoutApiFnServiceRole',
+      resourceType: 'AWS::IAM::Role',
+      name: 'Is associated with ',
+    };
+
+    const event = deliveredEvent({
+      configurationItemDiff: {
+        changeType: 'UPDATE',
+        changedProperties: {
+          'Configuration.memorySize': { previousValue: 256, updatedValue: 512, changeType: 'UPDATE' },
+        },
+      },
+      configurationItem: {
+        ...deletedLambdaItem,
+        configurationItemStatus: 'OK',
+        configuration: { memorySize: 512 },
+        relationships: [relationship],
+      },
+      messageType: 'ConfigurationItemChangeNotification',
+      recordVersion: '1.3',
+    });
+
+    await router.handleEvent(event, context());
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({
+        configurationItem: expect.objectContaining({ relationships: [relationship] }),
+      }),
+    );
+  });
+
+  test('an oversized summary reaches a resourceType route with every field Config sends', async ({ context }) => {
+    const handler = vi.fn();
+    const router = createConfigRouter().route(
+      defineRoute({ filters: { resourceType: 'AWS::S3::Bucket' } }).handle(handler),
+    );
+
+    const event = deliveredEvent({
+      configurationItemSummary: oversizedBucketSummary,
+      s3DeliverySummary: null,
+      messageType: 'OversizedConfigurationItemChangeNotification',
+      recordVersion: '1.0',
+    });
+
+    await router.handleEvent(event, context());
+
+    expect(handler).toHaveBeenCalledWith(
+      expect.objectContaining({ configurationItem: undefined, configurationItemSummary: oversizedBucketSummary }),
+    );
   });
 });

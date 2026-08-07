@@ -35,7 +35,7 @@ export function defineRoute<
     : Record<string, string>,
   TConfig = TConfigSchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TConfigSchema>
-    : Record<string, unknown>,
+    : Record<string, unknown> | null,
 >(config: ConfigRouteInput<TParamsSchema, TConfigSchema, TParams, TConfig>): ConfigRouteBuilder<TConfig, TParams> {
   return {
     handle(
@@ -81,7 +81,7 @@ export class ConfigRouter implements EventTypeRouter<ConfigEvent, ConfigResponse
     }
   }
 
-  route<TConfig = Record<string, unknown>, TParams = Record<string, string>>(
+  route<TConfig = Record<string, unknown> | null, TParams = Record<string, string>>(
     definition: ConfigRouteDefinition<TConfig, TParams>,
   ): this {
     this.routes.push(definition as InternalConfigRoute);
