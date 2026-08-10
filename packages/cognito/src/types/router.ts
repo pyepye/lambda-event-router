@@ -77,7 +77,7 @@ export type CognitoEvent =
 // =============================================================================
 
 // Generic Cognito request type for handlers
-export type CognitoRequest<TUserAttributes extends UserAttributes = UserAttributes> =
+export type CognitoRequest<TUserAttributes = UserAttributes> =
   | PreSignUpRequest<TUserAttributes>
   | PreAuthenticationRequest<TUserAttributes>
   | PostAuthenticationRequest<TUserAttributes>
@@ -92,7 +92,7 @@ export type CognitoRequest<TUserAttributes extends UserAttributes = UserAttribut
 
 // Route definition for generic .route() method
 // Handlers receive a cloned event, modify it, and return it
-export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> {
+export interface CognitoRouteDefinition<TUserAttributes> {
   filters?: CognitoFilters<CognitoTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -104,7 +104,7 @@ export interface CognitoRouteDefinition<TUserAttributes extends UserAttributes> 
 // =============================================================================
 
 // Mapped type: trigger source -> request type
-type TriggerRequestMap<TUserAttributes extends UserAttributes = UserAttributes> = {
+type TriggerRequestMap<TUserAttributes = UserAttributes> = {
   [K in PreSignUpTriggerSource]: PreSignUpRequest<TUserAttributes>;
 } & { [K in PreAuthenticationTriggerSource]: PreAuthenticationRequest<TUserAttributes> } & {
   [K in PostAuthenticationTriggerSource]: PostAuthenticationRequest<TUserAttributes>;
@@ -120,7 +120,7 @@ type TriggerRequestMap<TUserAttributes extends UserAttributes = UserAttributes> 
 
 export type RequestForTrigger<
   TTrigger extends CognitoTriggerSource,
-  TUserAttributes extends UserAttributes = UserAttributes,
+  TUserAttributes = UserAttributes,
 > = TriggerRequestMap<TUserAttributes>[TTrigger];
 
 // Mapped type: trigger source -> event type
@@ -142,17 +142,14 @@ export type EventForTrigger<TTrigger extends CognitoTriggerSource> = TriggerEven
 // Route definition types
 // =============================================================================
 
-export type CognitoMiddleware<TUserAttributes extends UserAttributes = UserAttributes> = Middleware<
+export type CognitoMiddleware<TUserAttributes = UserAttributes> = Middleware<
   CognitoRequest<TUserAttributes>,
   CognitoEvent
 >;
 
 // Route definition returned by defineRoute().handle()
 // Handlers receive a cloned event, modify it, and return it
-export interface TypedRouteDefinition<
-  TTrigger extends CognitoTriggerSource,
-  TUserAttributes extends UserAttributes = UserAttributes,
-> {
+export interface TypedRouteDefinition<TTrigger extends CognitoTriggerSource, TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<TTrigger>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -174,7 +171,7 @@ export interface RouteInputFilters<TTrigger extends CognitoTriggerSource> {
 export interface RouteInput<
   TTrigger extends CognitoTriggerSource,
   TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
-  TUserAttributes extends UserAttributes = UserAttributes,
+  TUserAttributes = UserAttributes,
 > {
   filters?: RouteInputFilters<TTrigger>;
   userAttributesSchema?: TUserAttributesSchema;
@@ -183,7 +180,7 @@ export interface RouteInput<
 
 // Route builder returned by defineRoute
 // Handlers receive a cloned event, modify it, and return it
-export interface RouteBuilder<TTrigger extends CognitoTriggerSource, TUserAttributes extends UserAttributes> {
+export interface RouteBuilder<TTrigger extends CognitoTriggerSource, TUserAttributes> {
   handle(
     handler: (request: RequestForTrigger<TTrigger, TUserAttributes>) => Promise<EventForTrigger<TTrigger>>,
   ): TypedRouteDefinition<TTrigger, TUserAttributes>;

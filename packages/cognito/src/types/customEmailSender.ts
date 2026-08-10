@@ -12,7 +12,7 @@ export type CustomEmailSenderTriggerSource = CustomEmailSenderTriggerEvent['trig
 export type CustomEmailSenderResponse = undefined;
 
 // CustomEmailSender request - simplified to just essential fields
-export interface CustomEmailSenderRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CustomEmailSenderRequest<TUserAttributes = UserAttributes> {
   triggerSource: CustomEmailSenderTriggerSource;
   userAttributes: TUserAttributes;
   event: CustomEmailSenderTriggerEvent;
@@ -21,12 +21,12 @@ export interface CustomEmailSenderRequest<TUserAttributes extends UserAttributes
 
 // CustomEmailSender handler type
 // Handlers modify the cloned event and return it
-export type CustomEmailSenderHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type CustomEmailSenderHandler<TUserAttributes = UserAttributes> = (
   request: CustomEmailSenderRequest<TUserAttributes>,
 ) => Promise<CustomEmailSenderTriggerEvent>;
 
 // CustomEmailSender route definition
-export interface CustomEmailSenderRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CustomEmailSenderRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomEmailSenderTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

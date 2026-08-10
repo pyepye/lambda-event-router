@@ -12,7 +12,7 @@ export type PreTokenGenerationTriggerSource = PreTokenGenerationTriggerEvent['tr
 export type PreTokenGenerationResponse = PreTokenGenerationTriggerEvent['response'];
 
 // PreTokenGeneration request - simplified to just essential fields
-export interface PreTokenGenerationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreTokenGenerationRequest<TUserAttributes = UserAttributes> {
   triggerSource: PreTokenGenerationTriggerSource;
   userAttributes: TUserAttributes;
   event: PreTokenGenerationTriggerEvent;
@@ -21,12 +21,12 @@ export interface PreTokenGenerationRequest<TUserAttributes extends UserAttribute
 
 // PreTokenGeneration handler type
 // Handlers modify the cloned event and return it
-export type PreTokenGenerationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type PreTokenGenerationHandler<TUserAttributes = UserAttributes> = (
   request: PreTokenGenerationRequest<TUserAttributes>,
 ) => Promise<PreTokenGenerationTriggerEvent>;
 
 // PreTokenGeneration route definition
-export interface PreTokenGenerationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreTokenGenerationRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreTokenGenerationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

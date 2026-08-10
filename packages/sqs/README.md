@@ -51,18 +51,23 @@ OR use a the separate syntax to split router and handlers across files:
 ```ts
 // sqs.ts
 import { createSQSRouter } from '@lambda-event-router/sqs'
+import type { SQSRequest } from '@lambda-event-router/sqs'
+import { z } from 'zod'
+
+const ItemSchema = z.object({ name: z.string(), price: z.number() })
+type Item = z.infer<typeof ItemSchema>
 
 const sqsRouter = createSQSRouter()
 
 // Separate handler to define routes and handlers in different places
 sqsRouter.route({
   filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: BodySchema,
+  bodySchema: ItemSchema,
   handler: processOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processOrder({ body }) {
+// An annotated handler names its own types
+export async function processOrder({ body }: SQSRequest<Item>) {
   console.log(`Creating item: ${body.name} - $${body.price}`)
 }
 ```
@@ -93,6 +98,11 @@ sqsRouter.route(processOrder)
 
 ```ts
 import { createSQSRouter } from '@lambda-event-router/sqs'
+import type { SQSRequest } from '@lambda-event-router/sqs'
+import type { z } from 'zod'
+
+type Item = z.infer<typeof BodySchema>
+type Attributes = z.infer<typeof MessageAttributesSchema>
 
 const sqsRouter = createSQSRouter()
 

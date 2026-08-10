@@ -8,7 +8,7 @@ export type SQSMessageAttributeValue = string | string[] | number | Buffer;
 export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;
 export type SQSMessageAttributeFilter = FilterStringMatcher | number | number[];
 
-export interface SQSRequest<TBody = unknown, TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes> {
+export interface SQSRequest<TBody = unknown, TMessageAttributes = SQSMessageAttributes> {
   body: TBody;
   messageAttributes: TMessageAttributes;
   record: AWSSQSRecord;
@@ -17,15 +17,14 @@ export interface SQSRequest<TBody = unknown, TMessageAttributes extends SQSMessa
 
 export type SQSResponse = undefined;
 
-export type SQSRecordHandler<
-  TBody = unknown,
-  TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
-> = (request: SQSRequest<TBody, TMessageAttributes>) => Promise<void>;
+export type SQSRecordHandler<TBody = unknown, TMessageAttributes = SQSMessageAttributes> = (
+  request: SQSRequest<TBody, TMessageAttributes>,
+) => Promise<void>;
 
-export type SQSMiddleware<
-  TBody = unknown,
-  TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
-> = Middleware<SQSRequest<TBody, TMessageAttributes>, void>;
+export type SQSMiddleware<TBody = unknown, TMessageAttributes = SQSMessageAttributes> = Middleware<
+  SQSRequest<TBody, TMessageAttributes>,
+  void
+>;
 
 export interface SQSFilterInput {
   body: unknown;
@@ -39,10 +38,7 @@ export interface SQSFilters {
   custom?: (input: SQSFilterInput) => boolean | Promise<boolean>;
 }
 
-export interface SQSRouteDefinition<
-  TBody = unknown,
-  TMessageAttributes extends SQSMessageAttributes = SQSMessageAttributes,
-> {
+export interface SQSRouteDefinition<TBody = unknown, TMessageAttributes = SQSMessageAttributes> {
   filters: SQSFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;

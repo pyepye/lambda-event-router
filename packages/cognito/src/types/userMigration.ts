@@ -13,7 +13,7 @@ export type UserMigrationResponse = UserMigrationTriggerEvent['response'];
 
 // UserMigration request - simplified to just essential fields
 // Note: userAttributes will be empty for migration as user doesn't exist yet
-export interface UserMigrationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface UserMigrationRequest<TUserAttributes = UserAttributes> {
   triggerSource: UserMigrationTriggerSource;
   userAttributes: TUserAttributes;
   event: UserMigrationTriggerEvent;
@@ -22,12 +22,12 @@ export interface UserMigrationRequest<TUserAttributes extends UserAttributes = U
 
 // UserMigration handler type
 // Handlers modify the cloned event and return it
-export type UserMigrationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type UserMigrationHandler<TUserAttributes = UserAttributes> = (
   request: UserMigrationRequest<TUserAttributes>,
 ) => Promise<UserMigrationTriggerEvent>;
 
 // UserMigration route definition
-export interface UserMigrationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface UserMigrationRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<UserMigrationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

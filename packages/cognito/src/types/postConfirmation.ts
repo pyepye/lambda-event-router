@@ -9,7 +9,7 @@ import type { CognitoMiddleware } from './router.js';
 export type PostConfirmationTriggerSource = PostConfirmationTriggerEvent['triggerSource'];
 
 // PostConfirmation request - simplified to just essential fields
-export interface PostConfirmationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PostConfirmationRequest<TUserAttributes = UserAttributes> {
   triggerSource: PostConfirmationTriggerSource;
   userAttributes: TUserAttributes;
   event: PostConfirmationTriggerEvent;
@@ -21,12 +21,12 @@ export type PostConfirmationResponse = undefined;
 
 // PostConfirmation handler type
 // Handlers modify the cloned event and return it
-export type PostConfirmationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type PostConfirmationHandler<TUserAttributes = UserAttributes> = (
   request: PostConfirmationRequest<TUserAttributes>,
 ) => Promise<PostConfirmationTriggerEvent>;
 
 // PostConfirmation route definition
-export interface PostConfirmationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PostConfirmationRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<PostConfirmationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

@@ -12,7 +12,7 @@ export type PreSignUpTriggerSource = PreSignUpTriggerEvent['triggerSource'];
 export type PreSignUpResponse = PreSignUpTriggerEvent['response'];
 
 // PreSignUp request - simplified to just essential fields
-export interface PreSignUpRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreSignUpRequest<TUserAttributes = UserAttributes> {
   triggerSource: PreSignUpTriggerSource;
   userAttributes: TUserAttributes;
   event: PreSignUpTriggerEvent;
@@ -21,12 +21,12 @@ export interface PreSignUpRequest<TUserAttributes extends UserAttributes = UserA
 
 // PreSignUp handler type
 // Handlers modify the cloned event and return it
-export type PreSignUpHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type PreSignUpHandler<TUserAttributes = UserAttributes> = (
   request: PreSignUpRequest<TUserAttributes>,
 ) => Promise<PreSignUpTriggerEvent>;
 
 // PreSignUp route definition
-export interface PreSignUpRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreSignUpRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreSignUpTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

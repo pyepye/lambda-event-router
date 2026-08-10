@@ -51,18 +51,23 @@ OR use a the separate syntax to split router and handlers across files:
 ```ts
 // sns.ts
 import { createSNSRouter } from '@lambda-event-router/sns'
+import type { SNSRequest } from '@lambda-event-router/sns'
+import { z } from 'zod'
+
+const ItemSchema = z.object({ name: z.string(), price: z.number() })
+type Item = z.infer<typeof ItemSchema>
 
 const snsRouter = createSNSRouter()
 
 // Separate handler to define routes and handlers in different places
 snsRouter.route({
   filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
-  bodySchema: BodySchema,
+  bodySchema: ItemSchema,
   handler: processNotification,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processNotification({ body }) {
+// An annotated handler names its own types
+export async function processNotification({ body }: SNSRequest<Item>) {
   console.log(`Creating item: ${body.name} - $${body.price}`)
 }
 ```
@@ -93,6 +98,11 @@ snsRouter.route(processNotification)
 
 ```ts
 import { createSNSRouter } from '@lambda-event-router/sns'
+import type { SNSRequest } from '@lambda-event-router/sns'
+import type { z } from 'zod'
+
+type Item = z.infer<typeof BodySchema>
+type Attributes = z.infer<typeof MessageAttributesSchema>
 
 const snsRouter = createSNSRouter()
 

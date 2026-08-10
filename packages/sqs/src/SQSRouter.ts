@@ -42,8 +42,8 @@ interface RouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-  TMessageAttributes extends SQSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
-    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SQSMessageAttributes
+  TMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema>
     : SQSMessageAttributes,
 > {
   filters: SQSFilters;
@@ -52,7 +52,7 @@ interface RouteInput<
   middleware?: Middleware<SQSRequest<TBody, TMessageAttributes>, void>[];
 }
 
-interface RouteBuilder<TBody, TMessageAttributes extends SQSMessageAttributes> {
+interface RouteBuilder<TBody, TMessageAttributes> {
   handle(handler: SQSRecordHandler<TBody, TMessageAttributes>): SQSRouteDefinition<TBody, TMessageAttributes>;
 }
 
@@ -60,8 +60,8 @@ export function defineRoute<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-  TMessageAttributes extends SQSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
-    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SQSMessageAttributes
+  TMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema>
     : SQSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
@@ -99,7 +99,7 @@ export class SQSRouter implements EventTypeRouter<SQSEvent, undefined | SQSBatch
     return firstRecord.eventSource === 'aws:sqs';
   }
 
-  route<TBody, TMessageAttributes extends SQSMessageAttributes>(
+  route<TBody, TMessageAttributes = SQSMessageAttributes>(
     definition: SQSRouteDefinition<TBody, TMessageAttributes>,
   ): this {
     this.routes.push({

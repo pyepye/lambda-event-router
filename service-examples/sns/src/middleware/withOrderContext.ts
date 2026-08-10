@@ -1,5 +1,5 @@
 import { logger } from '@lambda-event-router/base';
-import type { SNSMessageAttributes, SNSMiddleware } from '@lambda-event-router/sns';
+import type { SNSMiddleware } from '@lambda-event-router/sns';
 
 import type { TOrder, TOrderAttributes } from '../utils/schemas.js';
 
@@ -8,10 +8,7 @@ import type { TOrder, TOrderAttributes } from '../utils/schemas.js';
 // Typed to the route's body and attributes so it slots onto processOrder without widening it. Both type
 // arguments are needed even though only the body is read, because the `next` callback makes the
 // middleware type invariant in the request.
-export const withOrderContext: SNSMiddleware<TOrder, TOrderAttributes & SNSMessageAttributes> = async (
-  request,
-  next,
-) => {
+export const withOrderContext: SNSMiddleware<TOrder, TOrderAttributes> = async (request, next) => {
   logger.appendKeys({ orderId: request.body.orderId });
   await next(request);
 };

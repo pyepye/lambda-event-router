@@ -8,7 +8,7 @@ export type SNSRawMessageAttributes = AWSSNSMessageAttributes;
 export type SNSMessageAttributeValue = string | Buffer;
 export type SNSMessageAttributes = Record<string, SNSMessageAttributeValue>;
 
-export interface SNSRequest<TBody = unknown, TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes> {
+export interface SNSRequest<TBody = unknown, TMessageAttributes = SNSMessageAttributes> {
   body: TBody;
   messageAttributes: TMessageAttributes;
   record: SNSEventRecord;
@@ -17,15 +17,14 @@ export interface SNSRequest<TBody = unknown, TMessageAttributes extends SNSMessa
 
 export type SNSResponse = undefined;
 
-export type SNSMiddleware<
-  TBody = unknown,
-  TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes,
-> = Middleware<SNSRequest<TBody, TMessageAttributes>, void>;
+export type SNSMiddleware<TBody = unknown, TMessageAttributes = SNSMessageAttributes> = Middleware<
+  SNSRequest<TBody, TMessageAttributes>,
+  void
+>;
 
-export type SNSRecordHandler<
-  TBody = unknown,
-  TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes,
-> = (request: SNSRequest<TBody, TMessageAttributes>) => Promise<void>;
+export type SNSRecordHandler<TBody = unknown, TMessageAttributes = SNSMessageAttributes> = (
+  request: SNSRequest<TBody, TMessageAttributes>,
+) => Promise<void>;
 
 export interface SNSFilterInput {
   body: unknown;
@@ -40,10 +39,7 @@ export interface SNSFilters {
   custom?: (input: SNSFilterInput) => boolean | Promise<boolean>;
 }
 
-export interface SNSRouteDefinition<
-  TBody = unknown,
-  TMessageAttributes extends SNSMessageAttributes = SNSMessageAttributes,
-> {
+export interface SNSRouteDefinition<TBody = unknown, TMessageAttributes = SNSMessageAttributes> {
   filters: SNSFilters;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   messageAttributesSchema?: StandardSchemaV1<unknown, TMessageAttributes>;

@@ -72,8 +72,8 @@ export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } fro
 export function defineRoute<
   const TTrigger extends CognitoTriggerSource,
   TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
-  TUserAttributes extends UserAttributes = TUserAttributesSchema extends StandardSchemaV1
-    ? StandardSchemaV1.InferOutput<TUserAttributesSchema> & UserAttributes
+  TUserAttributes = TUserAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TUserAttributesSchema>
     : UserAttributes,
 >(config: RouteInput<TTrigger, TUserAttributesSchema, TUserAttributes>): RouteBuilder<TTrigger, TUserAttributes> {
   return {
@@ -205,8 +205,8 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
 
   // Generic route method
   // Handlers receive a cloned event, modify it, and return it
-  route<TUserAttributes extends UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this;
-  route<TTrigger extends CognitoTriggerSource, TUserAttributes extends UserAttributes>(
+  route<TUserAttributes = UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this;
+  route<TTrigger extends CognitoTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
   ): this;
   route(
@@ -227,37 +227,37 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   // Convenience methods for each trigger type
   // =============================================================================
 
-  preSignUp<TTrigger extends PreSignUpTriggerSource, TUserAttributes extends UserAttributes>(
+  preSignUp<TTrigger extends PreSignUpTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | PreSignUpRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, PRE_SIGN_UP_TRIGGER_SOURCES);
   }
 
-  preAuthentication<TTrigger extends PreAuthenticationTriggerSource, TUserAttributes extends UserAttributes>(
+  preAuthentication<TTrigger extends PreAuthenticationTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | PreAuthenticationRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, PRE_AUTHENTICATION_TRIGGER_SOURCES);
   }
 
-  postAuthentication<TTrigger extends PostAuthenticationTriggerSource, TUserAttributes extends UserAttributes>(
+  postAuthentication<TTrigger extends PostAuthenticationTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | PostAuthenticationRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, POST_AUTHENTICATION_TRIGGER_SOURCES);
   }
 
-  postConfirmation<TTrigger extends PostConfirmationTriggerSource, TUserAttributes extends UserAttributes>(
+  postConfirmation<TTrigger extends PostConfirmationTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | PostConfirmationRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, POST_CONFIRMATION_TRIGGER_SOURCES);
   }
 
-  defineAuthChallenge<TTrigger extends DefineAuthChallengeTriggerSource, TUserAttributes extends UserAttributes>(
+  defineAuthChallenge<TTrigger extends DefineAuthChallengeTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | DefineAuthChallengeRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, DEFINE_AUTH_CHALLENGE_TRIGGER_SOURCES);
   }
 
-  createAuthChallenge<TTrigger extends CreateAuthChallengeTriggerSource, TUserAttributes extends UserAttributes>(
+  createAuthChallenge<TTrigger extends CreateAuthChallengeTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | CreateAuthChallengeRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, CREATE_AUTH_CHALLENGE_TRIGGER_SOURCES);
@@ -265,7 +265,7 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
 
   verifyAuthChallengeResponse<
     TTrigger extends VerifyAuthChallengeResponseTriggerSource,
-    TUserAttributes extends UserAttributes,
+    TUserAttributes = UserAttributes,
   >(
     definition:
       | TypedRouteDefinition<TTrigger, TUserAttributes>
@@ -274,25 +274,25 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
     return this.addTriggerRoute(definition as InternalRouteInput, VERIFY_AUTH_CHALLENGE_RESPONSE_TRIGGER_SOURCES);
   }
 
-  customMessage<TTrigger extends CustomMessageTriggerSource, TUserAttributes extends UserAttributes>(
+  customMessage<TTrigger extends CustomMessageTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | CustomMessageRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, CUSTOM_MESSAGE_TRIGGER_SOURCES);
   }
 
-  customEmailSender<TTrigger extends CustomEmailSenderTriggerSource, TUserAttributes extends UserAttributes>(
+  customEmailSender<TTrigger extends CustomEmailSenderTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | CustomEmailSenderRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, CUSTOM_EMAIL_SENDER_TRIGGER_SOURCES);
   }
 
-  preTokenGeneration<TTrigger extends PreTokenGenerationTriggerSource, TUserAttributes extends UserAttributes>(
+  preTokenGeneration<TTrigger extends PreTokenGenerationTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | PreTokenGenerationRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, PRE_TOKEN_GENERATION_TRIGGER_SOURCES);
   }
 
-  userMigration<TTrigger extends UserMigrationTriggerSource, TUserAttributes extends UserAttributes>(
+  userMigration<TTrigger extends UserMigrationTriggerSource, TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<TTrigger, TUserAttributes> | UserMigrationRouteDefinition<TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, USER_MIGRATION_TRIGGER_SOURCES);
@@ -304,203 +304,203 @@ export class CognitoRouter implements EventTypeRouter<CognitoEvent, CognitoRespo
   // =============================================================================
 
   // PreSignUp individual methods
-  preSignUpSignUp<TUserAttributes extends UserAttributes>(
+  preSignUpSignUp<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PreSignUp_SignUp', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_SignUp']);
   }
 
-  preSignUpAdminCreateUser<TUserAttributes extends UserAttributes>(
+  preSignUpAdminCreateUser<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PreSignUp_AdminCreateUser', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_AdminCreateUser']);
   }
 
-  preSignUpExternalProvider<TUserAttributes extends UserAttributes>(
+  preSignUpExternalProvider<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PreSignUp_ExternalProvider', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_ExternalProvider']);
   }
 
   // PreAuthentication individual method
-  preAuthenticationAuthentication<TUserAttributes extends UserAttributes>(
+  preAuthenticationAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PreAuthentication_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PreAuthentication_Authentication']);
   }
 
   // PostAuthentication individual method
-  postAuthenticationAuthentication<TUserAttributes extends UserAttributes>(
+  postAuthenticationAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PostAuthentication_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PostAuthentication_Authentication']);
   }
 
   // PostConfirmation individual methods
-  postConfirmationConfirmSignUp<TUserAttributes extends UserAttributes>(
+  postConfirmationConfirmSignUp<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PostConfirmation_ConfirmSignUp', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PostConfirmation_ConfirmSignUp']);
   }
 
-  postConfirmationConfirmForgotPassword<TUserAttributes extends UserAttributes>(
+  postConfirmationConfirmForgotPassword<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'PostConfirmation_ConfirmForgotPassword', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['PostConfirmation_ConfirmForgotPassword']);
   }
 
   // DefineAuthChallenge individual method
-  defineAuthChallengeAuthentication<TUserAttributes extends UserAttributes>(
+  defineAuthChallengeAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'DefineAuthChallenge_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['DefineAuthChallenge_Authentication']);
   }
 
   // CreateAuthChallenge individual method
-  createAuthChallengeAuthentication<TUserAttributes extends UserAttributes>(
+  createAuthChallengeAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CreateAuthChallenge_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CreateAuthChallenge_Authentication']);
   }
 
   // VerifyAuthChallengeResponse individual method
-  verifyAuthChallengeResponseAuthentication<TUserAttributes extends UserAttributes>(
+  verifyAuthChallengeResponseAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'VerifyAuthChallengeResponse_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['VerifyAuthChallengeResponse_Authentication']);
   }
 
   // CustomMessage individual methods
-  customMessageSignUp<TUserAttributes extends UserAttributes>(
+  customMessageSignUp<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_SignUp', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_SignUp']);
   }
 
-  customMessageAdminCreateUser<TUserAttributes extends UserAttributes>(
+  customMessageAdminCreateUser<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_AdminCreateUser', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_AdminCreateUser']);
   }
 
-  customMessageResendCode<TUserAttributes extends UserAttributes>(
+  customMessageResendCode<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_ResendCode', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_ResendCode']);
   }
 
-  customMessageForgotPassword<TUserAttributes extends UserAttributes>(
+  customMessageForgotPassword<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_ForgotPassword', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_ForgotPassword']);
   }
 
-  customMessageUpdateUserAttribute<TUserAttributes extends UserAttributes>(
+  customMessageUpdateUserAttribute<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_UpdateUserAttribute', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_UpdateUserAttribute']);
   }
 
-  customMessageVerifyUserAttribute<TUserAttributes extends UserAttributes>(
+  customMessageVerifyUserAttribute<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_VerifyUserAttribute', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_VerifyUserAttribute']);
   }
 
-  customMessageAuthentication<TUserAttributes extends UserAttributes>(
+  customMessageAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomMessage_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_Authentication']);
   }
 
   // CustomEmailSender individual methods
-  customEmailSenderSignUp<TUserAttributes extends UserAttributes>(
+  customEmailSenderSignUp<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_SignUp', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_SignUp']);
   }
 
-  customEmailSenderResendCode<TUserAttributes extends UserAttributes>(
+  customEmailSenderResendCode<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_ResendCode', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_ResendCode']);
   }
 
-  customEmailSenderForgotPassword<TUserAttributes extends UserAttributes>(
+  customEmailSenderForgotPassword<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_ForgotPassword', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_ForgotPassword']);
   }
 
-  customEmailSenderUpdateUserAttribute<TUserAttributes extends UserAttributes>(
+  customEmailSenderUpdateUserAttribute<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_UpdateUserAttribute', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_UpdateUserAttribute']);
   }
 
-  customEmailSenderVerifyUserAttribute<TUserAttributes extends UserAttributes>(
+  customEmailSenderVerifyUserAttribute<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_VerifyUserAttribute', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_VerifyUserAttribute']);
   }
 
-  customEmailSenderAdminCreateUser<TUserAttributes extends UserAttributes>(
+  customEmailSenderAdminCreateUser<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_AdminCreateUser', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_AdminCreateUser']);
   }
 
-  customEmailSenderAuthentication<TUserAttributes extends UserAttributes>(
+  customEmailSenderAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_Authentication']);
   }
 
-  customEmailSenderAccountTakeOverNotification<TUserAttributes extends UserAttributes>(
+  customEmailSenderAccountTakeOverNotification<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'CustomEmailSender_AccountTakeOverNotification', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_AccountTakeOverNotification']);
   }
 
   // PreTokenGeneration individual methods
-  preTokenGenerationHostedAuth<TUserAttributes extends UserAttributes>(
+  preTokenGenerationHostedAuth<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'TokenGeneration_HostedAuth', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_HostedAuth']);
   }
 
-  preTokenGenerationAuthentication<TUserAttributes extends UserAttributes>(
+  preTokenGenerationAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'TokenGeneration_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_Authentication']);
   }
 
-  preTokenGenerationNewPasswordChallenge<TUserAttributes extends UserAttributes>(
+  preTokenGenerationNewPasswordChallenge<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'TokenGeneration_NewPasswordChallenge', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_NewPasswordChallenge']);
   }
 
-  preTokenGenerationAuthenticateDevice<TUserAttributes extends UserAttributes>(
+  preTokenGenerationAuthenticateDevice<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'TokenGeneration_AuthenticateDevice', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_AuthenticateDevice']);
   }
 
-  preTokenGenerationRefreshTokens<TUserAttributes extends UserAttributes>(
+  preTokenGenerationRefreshTokens<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'TokenGeneration_RefreshTokens', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_RefreshTokens']);
   }
 
   // UserMigration individual methods
-  userMigrationAuthentication<TUserAttributes extends UserAttributes>(
+  userMigrationAuthentication<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'UserMigration_Authentication', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['UserMigration_Authentication']);
   }
 
-  userMigrationForgotPassword<TUserAttributes extends UserAttributes>(
+  userMigrationForgotPassword<TUserAttributes = UserAttributes>(
     definition: TypedRouteDefinition<'UserMigration_ForgotPassword', TUserAttributes>,
   ): this {
     return this.addTriggerRoute(definition as InternalRouteInput, ['UserMigration_ForgotPassword']);

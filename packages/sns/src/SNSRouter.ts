@@ -26,7 +26,7 @@ import type {
 interface InternalRoute {
   filters: SNSFilters;
   bodySchema?: StandardSchemaV1;
-  messageAttributesSchema?: StandardSchemaV1<unknown, SNSMessageAttributes>;
+  messageAttributesSchema?: StandardSchemaV1;
   middleware: Middleware<SNSRequest, void>[];
   handler: SNSRecordHandler;
 }
@@ -35,8 +35,8 @@ interface RouteInput<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-  TMessageAttributes extends SNSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
-    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SNSMessageAttributes
+  TMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema>
     : SNSMessageAttributes,
 > {
   filters: SNSFilters;
@@ -45,7 +45,7 @@ interface RouteInput<
   middleware?: Middleware<SNSRequest<TBody, TMessageAttributes>, void>[];
 }
 
-interface RouteBuilder<TBody, TMessageAttributes extends SNSMessageAttributes> {
+interface RouteBuilder<TBody, TMessageAttributes> {
   handle(handler: SNSRecordHandler<TBody, TMessageAttributes>): SNSRouteDefinition<TBody, TMessageAttributes>;
 }
 
@@ -53,8 +53,8 @@ export function defineRoute<
   TBodySchema extends StandardSchemaV1 | undefined = undefined,
   TMessageAttributesSchema extends StandardSchemaV1 | undefined = undefined,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : unknown,
-  TMessageAttributes extends SNSMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
-    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema> & SNSMessageAttributes
+  TMessageAttributes = TMessageAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TMessageAttributesSchema>
     : SNSMessageAttributes,
 >(config: RouteInput<TBodySchema, TMessageAttributesSchema>): RouteBuilder<TBody, TMessageAttributes> {
   return {
@@ -84,7 +84,7 @@ export class SNSRouter implements EventTypeRouter<SNSEvent, undefined> {
     return firstRecord.EventSource === 'aws:sns';
   }
 
-  route<TBody, TMessageAttributes extends SNSMessageAttributes>(
+  route<TBody, TMessageAttributes = SNSMessageAttributes>(
     definition: SNSRouteDefinition<TBody, TMessageAttributes>,
   ): this {
     this.routes.push({

@@ -1,7 +1,7 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
 import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
-import type { SNSMessageAttributes, SNSRequest } from './types.js';
+import type { SNSMessageAttributes, SNSMiddleware, SNSRequest } from './types.js';
 
 const TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:orders';
 
@@ -61,6 +61,76 @@ suite('defineRoute type inference', () => {
     }).handle(async () => {});
 
     expect(definition.middleware).toEqual([logDelivery]);
+  });
+});
+
+interface DryRunAttributes {
+  dryRun: boolean;
+}
+
+suite('coerced message attributes', () => {
+  test('types an inferred handler with the attribute schema output', () => {
+    const builder = defineRoute({
+      filters: { topicArn: TOPIC_ARN },
+      messageAttributesSchema: createMockSchema<DryRunAttributes>(),
+    });
+
+    type Handler = Parameters<typeof builder.handle>[0];
+    type Request = Parameters<Handler>[0];
+
+    expectTypeOf<Request['messageAttributes']>().toEqualTypeOf<DryRunAttributes>();
+  });
+
+  test('keeps the converted attributes when a route has no attribute schema', () => {
+    const builder = defineRoute({ filters: { topicArn: TOPIC_ARN } });
+
+    type Handler = Parameters<typeof builder.handle>[0];
+    type Request = Parameters<Handler>[0];
+
+    expectTypeOf<Request['messageAttributes']>().toEqualTypeOf<SNSMessageAttributes>();
+  });
+
+  test('types an inferred route() handler with the converted attributes when it has no attribute schema', () => {
+    const router = createSNSRouter().route({
+      filters: { topicArn: TOPIC_ARN },
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async ({ messageAttributes }): Promise<void> => {
+        expectTypeOf(messageAttributes).toEqualTypeOf<SNSMessageAttributes>();
+      },
+    });
+
+    expect(router).toBeDefined();
+  });
+
+  test('accepts an annotated handler for a coerced attribute schema', () => {
+    async function processNotification({ messageAttributes }: SNSRequest<unknown, DryRunAttributes>): Promise<void> {
+      expectTypeOf(messageAttributes.dryRun).toEqualTypeOf<boolean>();
+    }
+
+    const router = createSNSRouter().route({
+      filters: { topicArn: TOPIC_ARN },
+      messageAttributesSchema: createMockSchema<DryRunAttributes>(),
+      handler: processNotification,
+    });
+
+    expect(router).toBeInstanceOf(SNSRouter);
+  });
+
+  test('accepts a route middleware typed to a coerced attribute schema', () => {
+    type DryRunRequest = SNSRequest<unknown, DryRunAttributes>;
+
+    async function skipDryRun(request: DryRunRequest, next: (request: unknown) => Promise<void>): Promise<void> {
+      if (!request.messageAttributes.dryRun) await next(request);
+    }
+
+    const definition = defineRoute({
+      filters: { topicArn: TOPIC_ARN },
+      messageAttributesSchema: createMockSchema<DryRunAttributes>(),
+      middleware: [skipDryRun],
+    }).handle(async () => {});
+
+    expectTypeOf(skipDryRun).toMatchTypeOf<SNSMiddleware<unknown, DryRunAttributes>>();
+    expect(definition.middleware).toEqual([skipDryRun]);
   });
 });
 

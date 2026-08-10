@@ -12,7 +12,7 @@ export type CustomMessageTriggerSource = CustomMessageTriggerEvent['triggerSourc
 export type CustomMessageResponse = CustomMessageTriggerEvent['response'];
 
 // CustomMessage request - simplified to just essential fields
-export interface CustomMessageRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CustomMessageRequest<TUserAttributes = UserAttributes> {
   triggerSource: CustomMessageTriggerSource;
   userAttributes: TUserAttributes;
   event: CustomMessageTriggerEvent;
@@ -21,12 +21,12 @@ export interface CustomMessageRequest<TUserAttributes extends UserAttributes = U
 
 // CustomMessage handler type
 // Handlers modify the cloned event and return it
-export type CustomMessageHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type CustomMessageHandler<TUserAttributes = UserAttributes> = (
   request: CustomMessageRequest<TUserAttributes>,
 ) => Promise<CustomMessageTriggerEvent>;
 
 // CustomMessage route definition
-export interface CustomMessageRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CustomMessageRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<CustomMessageTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];

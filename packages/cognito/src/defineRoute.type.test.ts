@@ -16,7 +16,10 @@ import { createMockSchema } from '@lambda-event-router/testing';
 
 import { createCognitoRouter, defineRoute } from './CognitoRouter.js';
 import type {
+  CognitoEvent,
   CognitoFilterInput,
+  CognitoMiddleware,
+  CognitoRequest,
   CognitoTriggerSource,
   CreateAuthChallengeRequest,
   CustomEmailSenderRequest,
@@ -34,6 +37,11 @@ import type {
   UserMigrationRequest,
   VerifyAuthChallengeResponseRequest,
 } from './types/index.js';
+
+interface VerifiedAttributes {
+  email: string;
+  emailVerified: boolean;
+}
 
 suite('defineRoute type inference', () => {
   suite('trigger source narrowing', () => {
@@ -447,6 +455,27 @@ suite('defineRoute type inference', () => {
 
       expectTypeOf<Request['userAttributes']>().toEqualTypeOf<CustomAttributes>();
     });
+
+    test('types an inferred handler with a coerced attribute schema output', () => {
+      const builder = defineRoute({
+        filters: { triggerSource: ['PreSignUp_SignUp'] },
+        userAttributesSchema: createMockSchema<VerifiedAttributes>(),
+      });
+
+      type Handler = Parameters<typeof builder.handle>[0];
+      type Request = Parameters<Handler>[0];
+
+      expectTypeOf<Request['userAttributes']>().toEqualTypeOf<VerifiedAttributes>();
+    });
+
+    test('keeps the raw attributes when a route has no attribute schema', () => {
+      const builder = defineRoute({ filters: { triggerSource: ['PreSignUp_SignUp'] } });
+
+      type Handler = Parameters<typeof builder.handle>[0];
+      type Request = Parameters<Handler>[0];
+
+      expectTypeOf<Request['userAttributes']>().toEqualTypeOf<UserAttributes>();
+    });
   });
 });
 
@@ -483,5 +512,57 @@ suite('route', () => {
     const router = createCognitoRouter().route({ handler: onPreSignUp });
 
     expect(router).toBeDefined();
+  });
+
+  test('types an inferred route() handler with the raw attributes when it has no attribute schema', () => {
+    const router = createCognitoRouter().route({
+      filters: { triggerSource: 'PreSignUp_SignUp' },
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async ({ event, userAttributes }): Promise<CognitoEvent> => {
+        expectTypeOf(userAttributes).toEqualTypeOf<UserAttributes>();
+        return event;
+      },
+    });
+
+    expect(router).toBeDefined();
+  });
+
+  test('accepts an annotated handler for a coerced attribute schema', () => {
+    async function onPreSignUp({
+      event,
+      userAttributes,
+    }: PreSignUpRequest<VerifiedAttributes>): Promise<PreSignUpTriggerEvent> {
+      expectTypeOf(userAttributes.emailVerified).toEqualTypeOf<boolean>();
+      return event;
+    }
+
+    const router = createCognitoRouter().route({
+      filters: { triggerSource: 'PreSignUp_SignUp' },
+      userAttributesSchema: createMockSchema<VerifiedAttributes>(),
+      handler: onPreSignUp,
+    });
+
+    expect(router).toBeDefined();
+  });
+
+  test('accepts a route middleware typed to a coerced attribute schema', () => {
+    type VerifiedRequest = CognitoRequest<VerifiedAttributes>;
+
+    async function requireVerified(
+      request: VerifiedRequest,
+      next: (request: unknown) => Promise<CognitoEvent>,
+    ): Promise<CognitoEvent> {
+      if (!request.userAttributes.emailVerified) throw new Error('Email not verified');
+      return next(request);
+    }
+
+    const definition = defineRoute({
+      filters: { triggerSource: 'PreSignUp_SignUp' },
+      userAttributesSchema: createMockSchema<VerifiedAttributes>(),
+      middleware: [requireVerified],
+    }).handle(async ({ event }) => event);
+
+    expectTypeOf(requireVerified).toMatchTypeOf<CognitoMiddleware<VerifiedAttributes>>();
+    expect(definition.middleware).toEqual([requireVerified]);
   });
 });

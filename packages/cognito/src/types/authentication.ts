@@ -26,7 +26,7 @@ export type VerifyAuthChallengeResponseTriggerSource = VerifyAuthChallengeRespon
 // PreAuthentication
 // =============================================================================
 
-export interface PreAuthenticationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreAuthenticationRequest<TUserAttributes = UserAttributes> {
   triggerSource: PreAuthenticationTriggerSource;
   userAttributes: TUserAttributes;
   event: PreAuthenticationTriggerEvent;
@@ -36,11 +36,11 @@ export interface PreAuthenticationRequest<TUserAttributes extends UserAttributes
 export type PreAuthenticationResponse = PreAuthenticationTriggerEvent['response'];
 
 // Handlers modify the cloned event and return it
-export type PreAuthenticationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type PreAuthenticationHandler<TUserAttributes = UserAttributes> = (
   request: PreAuthenticationRequest<TUserAttributes>,
 ) => Promise<PreAuthenticationTriggerEvent>;
 
-export interface PreAuthenticationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PreAuthenticationRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<PreAuthenticationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -51,7 +51,7 @@ export interface PreAuthenticationRouteDefinition<TUserAttributes extends UserAt
 // PostAuthentication
 // =============================================================================
 
-export interface PostAuthenticationRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PostAuthenticationRequest<TUserAttributes = UserAttributes> {
   triggerSource: PostAuthenticationTriggerSource;
   userAttributes: TUserAttributes;
   event: PostAuthenticationTriggerEvent;
@@ -61,11 +61,11 @@ export interface PostAuthenticationRequest<TUserAttributes extends UserAttribute
 export type PostAuthenticationResponse = PostAuthenticationTriggerEvent['response'];
 
 // Handlers modify the cloned event and return it
-export type PostAuthenticationHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type PostAuthenticationHandler<TUserAttributes = UserAttributes> = (
   request: PostAuthenticationRequest<TUserAttributes>,
 ) => Promise<PostAuthenticationTriggerEvent>;
 
-export interface PostAuthenticationRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface PostAuthenticationRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<PostAuthenticationTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -76,7 +76,7 @@ export interface PostAuthenticationRouteDefinition<TUserAttributes extends UserA
 // DefineAuthChallenge
 // =============================================================================
 
-export interface DefineAuthChallengeRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface DefineAuthChallengeRequest<TUserAttributes = UserAttributes> {
   triggerSource: DefineAuthChallengeTriggerSource;
   userAttributes: TUserAttributes;
   event: DefineAuthChallengeTriggerEvent;
@@ -86,11 +86,11 @@ export interface DefineAuthChallengeRequest<TUserAttributes extends UserAttribut
 export type DefineAuthChallengeResponse = DefineAuthChallengeTriggerEvent['response'];
 
 // Handlers modify the cloned event and return it
-export type DefineAuthChallengeHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type DefineAuthChallengeHandler<TUserAttributes = UserAttributes> = (
   request: DefineAuthChallengeRequest<TUserAttributes>,
 ) => Promise<DefineAuthChallengeTriggerEvent>;
 
-export interface DefineAuthChallengeRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface DefineAuthChallengeRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<DefineAuthChallengeTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -101,7 +101,7 @@ export interface DefineAuthChallengeRouteDefinition<TUserAttributes extends User
 // CreateAuthChallenge
 // =============================================================================
 
-export interface CreateAuthChallengeRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CreateAuthChallengeRequest<TUserAttributes = UserAttributes> {
   triggerSource: CreateAuthChallengeTriggerSource;
   userAttributes: TUserAttributes;
   event: CreateAuthChallengeTriggerEvent;
@@ -111,11 +111,11 @@ export interface CreateAuthChallengeRequest<TUserAttributes extends UserAttribut
 export type CreateAuthChallengeResponse = CreateAuthChallengeTriggerEvent['response'];
 
 // Handlers modify the cloned event and return it
-export type CreateAuthChallengeHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type CreateAuthChallengeHandler<TUserAttributes = UserAttributes> = (
   request: CreateAuthChallengeRequest<TUserAttributes>,
 ) => Promise<CreateAuthChallengeTriggerEvent>;
 
-export interface CreateAuthChallengeRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface CreateAuthChallengeRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<CreateAuthChallengeTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
@@ -126,7 +126,7 @@ export interface CreateAuthChallengeRouteDefinition<TUserAttributes extends User
 // VerifyAuthChallengeResponse
 // =============================================================================
 
-export interface VerifyAuthChallengeResponseRequest<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface VerifyAuthChallengeResponseRequest<TUserAttributes = UserAttributes> {
   triggerSource: VerifyAuthChallengeResponseTriggerSource;
   userAttributes: TUserAttributes;
   event: VerifyAuthChallengeResponseTriggerEvent;
@@ -136,11 +136,11 @@ export interface VerifyAuthChallengeResponseRequest<TUserAttributes extends User
 export type VerifyAuthChallengeResponseResponse = VerifyAuthChallengeResponseTriggerEvent['response'];
 
 // Handlers modify the cloned event and return it
-export type VerifyAuthChallengeResponseHandler<TUserAttributes extends UserAttributes = UserAttributes> = (
+export type VerifyAuthChallengeResponseHandler<TUserAttributes = UserAttributes> = (
   request: VerifyAuthChallengeResponseRequest<TUserAttributes>,
 ) => Promise<VerifyAuthChallengeResponseTriggerEvent>;
 
-export interface VerifyAuthChallengeResponseRouteDefinition<TUserAttributes extends UserAttributes = UserAttributes> {
+export interface VerifyAuthChallengeResponseRouteDefinition<TUserAttributes = UserAttributes> {
   filters?: CognitoFilters<VerifyAuthChallengeResponseTriggerSource>;
   userAttributesSchema?: StandardSchemaV1<unknown, TUserAttributes>;
   middleware?: CognitoMiddleware<NoInfer<TUserAttributes>>[];
