@@ -383,8 +383,8 @@ functions come from the same place.
 | --- | --- | --- |
 | `TUserAttributes` | `request.userAttributes`, and the `userAttributesSchema` output | `UserAttributes` |
 
-`TUserAttributes` has to extend `UserAttributes`, so its values stay strings. You only need it for
-[annotated handlers](#annotated-handlers) with a validated schema, as in `PreSignUpRequest<Attributes>`.
+You only need it for [annotated handlers](#annotated-handlers) with a validated schema, as in
+`PreSignUpRequest<Attributes>`.
 Inference covers it otherwise.
 
 ## Trigger sources

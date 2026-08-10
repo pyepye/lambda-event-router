@@ -231,8 +231,8 @@ sqsRouter.route({
 ```
 
 Derive the type from the schema with `z.infer` rather than hand-writing an interface that mirrors it.
-Typing the message attributes as well means intersecting the schema output with `SQSMessageAttributes`,
-and [annotated handlers](/docs/handlers#annotated-handlers) has the worked version.
+To type the message attributes as well, pass `z.infer` of the attribute schema as the second
+parameter. [Annotated handlers](/docs/handlers#annotated-handlers) has the worked version.
 
 ## Schema validation
 
@@ -346,8 +346,7 @@ The three types above that take parameters take the same two, in the same order.
 | `TMessageAttributes` | `request.messageAttributes` | `SQSMessageAttributes` |
 
 Pass just the first and the second falls back to its default, so `SQSRequest<Order>` types the body and
-leaves message attributes loose. `TMessageAttributes` has to extend `SQSMessageAttributes`, so its
-values can only be a string, a string array, a number or a `Buffer`.
+leaves message attributes loose.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers both.
 

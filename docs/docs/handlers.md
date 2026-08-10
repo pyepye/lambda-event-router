@@ -284,7 +284,8 @@ const HANDLER_BODY = `  const total = body.items.reduce((sum, { price, quantity 
 const inferredFiles = [
   {
     path: 'routes/processOrder.ts',
-    code: `import { defineRoute } from '@lambda-event-router/sqs'
+    code: `import { logger } from '@lambda-event-router/base'
+import { defineRoute } from '@lambda-event-router/sqs'
 
 import { OrderAttributesSchema, OrderSchema } from '../schemas/order.js'
 import { notifications, orders } from '../services/orders.js'
@@ -318,7 +319,8 @@ sqsRouter.route(processOrderRoute)`,
 const annotatedFiles = [
   {
     path: 'handlers/processOrder.ts',
-    code: `import type { SQSMessageAttributes, SQSRequest, SQSResponse } from '@lambda-event-router/sqs'
+    code: `import { logger } from '@lambda-event-router/base'
+import type { SQSRequest, SQSResponse } from '@lambda-event-router/sqs'
 import type { z } from 'zod'
 
 import { OrderAttributesSchema, OrderSchema } from '../schemas/order.js'
@@ -326,7 +328,7 @@ import { notifications, orders } from '../services/orders.js'
 
 // The types defineRoute would have inferred, named here instead
 type Order = z.infer<typeof OrderSchema>
-type OrderAttributes = z.infer<typeof OrderAttributesSchema> & SQSMessageAttributes
+type OrderAttributes = z.infer<typeof OrderAttributesSchema>
 
 export async function processOrder(request: SQSRequest<Order, OrderAttributes>): Promise<SQSResponse> {
   const { body, messageAttributes } = request
@@ -382,12 +384,6 @@ Same four files, same schemas, same handler body. Both differ in one thing only,
 
 Derive those types from the schema with `z.infer` rather than writing an interface that mirrors it, so
 the two cannot drift.
-
-**A message attribute type is only accepted if every value is a `string`, a `string[]`, a `number` or a
-`Buffer`.**
-`z.infer` on `OrderAttributesSchema` gives `{ dryRun: boolean }`, which `SQSRequest` rejects on its
-own. Intersecting it with `SQSMessageAttributes` satisfies the constraint and leaves `dryRun` as a
-`boolean`. Inferred handlers never meet this, because `defineRoute` applies the intersection for you.
 
 Most routers take the payload first and its attributes second, the way
 `SQSRequest<TBody, TMessageAttributes>` does, and later parameters have defaults so passing only the
