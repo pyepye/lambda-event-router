@@ -23,7 +23,7 @@ npm install @lambda-event-router/base @lambda-event-router/http
 import { defineRoute } from '@lambda-event-router/http'
 import { z } from 'zod'
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const getItemRoute = defineRoute({
   filters: {
     method: 'GET',
@@ -37,7 +37,7 @@ const getItemRoute = defineRoute({
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { defineRoute } from '@lambda-event-router/http'

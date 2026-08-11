@@ -2,7 +2,7 @@ import { createDocumentDBRouter } from './DocumentDBRouter.js';
 import type { DocumentDBInsertRequest, DocumentDBRequest, DocumentDBRouteDefinition } from './types.js';
 
 suite('route()', () => {
-  test('narrows an inline handler from the operationType filter', () => {
+  test('narrows an inferred handler from the operationType filter', () => {
     createDocumentDBRouter().route({
       filters: { operationType: 'insert' },
       handler: async ({ fullDocument }: DocumentDBInsertRequest): Promise<void> => {
@@ -11,7 +11,7 @@ suite('route()', () => {
     });
   });
 
-  test('rejects an inline handler the operationType filter does not deliver', () => {
+  test('rejects an inferred handler the operationType filter does not deliver', () => {
     createDocumentDBRouter().route({
       filters: { operationType: 'delete' },
       // @ts-expect-error - a delete change reaches this handler, and it cannot read one
@@ -21,7 +21,7 @@ suite('route()', () => {
     });
   });
 
-  test('hands an unfiltered inline handler every operation', () => {
+  test('hands an unfiltered inferred handler every operation', () => {
     createDocumentDBRouter().route({
       filters: {},
       handler: async (request: DocumentDBRequest): Promise<void> => {

@@ -35,7 +35,7 @@ import { createCodePipelineRouter, defineRoute } from '@lambda-event-router/code
 
 const codepipelineRouter = createCodePipelineRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processJob = defineRoute({
   filters: {
     functionName: 'deploy',
@@ -46,7 +46,7 @@ const processJob = defineRoute({
 codepipelineRouter.route(processJob)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // codepipeline.ts
@@ -55,7 +55,6 @@ import type { CodePipelineRequest } from '@lambda-event-router/codepipeline'
 
 const codepipelineRouter = createCodePipelineRouter()
 
-// Separate handler to define routes and handlers in different places
 codepipelineRouter.route({
   filters: {
     functionName: 'deploy',
@@ -63,7 +62,7 @@ codepipelineRouter.route({
   handler: processJob,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function processJob({ jobId }: CodePipelineRequest) {
   console.log(`Processing job ${jobId}`)
 }
@@ -72,7 +71,7 @@ export async function processJob({ jobId }: CodePipelineRequest) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createCodePipelineRouter, defineRoute } from '@lambda-event-router/codepipeline'
@@ -90,7 +89,7 @@ const processJob = defineRoute({
 codepipelineRouter.route(processJob)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createCodePipelineRouter } from '@lambda-event-router/codepipeline'

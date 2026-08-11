@@ -55,7 +55,7 @@ cognitoRouter.preSignUp({
 filter, so reach for it to match across families or as a catch-all. Leave `filters` off and it matches
 every Cognito event.
 
-An inline handler on `route()` is typed against the wide `CognitoRequest` union. Pin `triggerSource`
+An inferred handler on `route()` is typed against the wide `CognitoRequest` union. Pin `triggerSource`
 to one source and a handler annotated for that trigger assigns too.
 
 ```ts
@@ -224,7 +224,7 @@ cognitoRouter.preSignUp(autoConfirmRoute)
 ```
 
 A `defineRoute` route carries its own pinned `triggerSource`, so register it through the family method
-for that trigger. The convenience methods infer the same way for an inline handler, so
+for that trigger. The convenience methods infer the same way for an inferred handler, so
 `preSignUp({ handler })` is already typed to the family without `defineRoute` at all. See
 [inferred handlers](/docs/handlers#inferred-handlers), where the same source is written both ways to
 compare.

@@ -67,7 +67,7 @@ suite('defineRoute', () => {
 });
 
 suite('route', () => {
-  test('narrows an inline handler from an ObjectCreated eventName filter', () => {
+  test('narrows an inferred handler from an ObjectCreated eventName filter', () => {
     const router = createS3Router().route({
       filters: { eventName: 'ObjectCreated:Put' },
       handler: async ({ objectSize }: S3ObjectCreatedRequest): Promise<void> => {

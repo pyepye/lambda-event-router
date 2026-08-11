@@ -35,7 +35,7 @@ import { createCloudWatchLogsRouter, defineRoute } from '@lambda-event-router/cl
 
 const cloudwatchRouter = createCloudWatchLogsRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processLogs = defineRoute({
   filters: {
     logGroup: '/aws/lambda/my-function',
@@ -47,7 +47,7 @@ const processLogs = defineRoute({
 cloudwatchRouter.route(processLogs)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // cloudwatch.ts
@@ -56,13 +56,12 @@ import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch'
 
 const cloudwatchRouter = createCloudWatchLogsRouter()
 
-// Separate handler to define routes and handlers in different places
 cloudwatchRouter.dataMessage({
   filters: { logGroup: '/aws/lambda/my-function' },
   handler: processLogs,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function processLogs({ logGroup, logStream, logEvents }: CloudWatchLogsRequest) {
   console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
 }
@@ -71,7 +70,7 @@ export async function processLogs({ logGroup, logStream, logEvents }: CloudWatch
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createCloudWatchLogsRouter, defineRoute } from '@lambda-event-router/cloudwatch'
@@ -90,7 +89,7 @@ const processLogs = defineRoute({
 cloudwatchRouter.route(processLogs)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'

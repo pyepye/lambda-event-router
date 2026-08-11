@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const eventBridgeRouter = createEventBridgeRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processOrder = defineRoute({
   filters: {
     source: 'myapp.orders',
@@ -49,7 +49,7 @@ const processOrder = defineRoute({
 eventBridgeRouter.route(processOrder)
 ```
 
-OR use the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // eventbridge.ts
@@ -61,7 +61,6 @@ const OrderDetailSchema = z.object({ orderId: z.string(), customerId: z.string()
 
 const eventBridgeRouter = createEventBridgeRouter()
 
-// Separate handler to define routes and handlers in different places
 eventBridgeRouter.route({
   filters: {
     source: 'myapp.orders',
@@ -82,7 +81,7 @@ export async function processOrder({ source, detailType, detail }: EventBridgeRe
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createEventBridgeRouter, defineRoute } from '@lambda-event-router/eventbridge'
@@ -102,10 +101,14 @@ const processOrder = defineRoute({
 eventBridgeRouter.route(processOrder)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createEventBridgeRouter } from '@lambda-event-router/eventbridge'
+import type { EventBridgeRequest } from '@lambda-event-router/eventbridge'
+import type { z } from 'zod'
+
+type OrderDetail = z.infer<typeof OrderDetailSchema>
 
 const eventBridgeRouter = createEventBridgeRouter()
 
@@ -118,7 +121,7 @@ eventBridgeRouter.route({
   handler: processOrder,
 })
 
-async function processOrder({ detailType, detail }) {
+async function processOrder({ detailType, detail }: EventBridgeRequest<OrderDetail>) {
   console.log(`Order ${detail.orderId} - ${detailType}`)
 }
 ```

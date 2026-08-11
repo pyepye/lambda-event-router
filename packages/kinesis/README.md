@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const kinesisRouter = createKinesisRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processRecord = defineRoute({
   filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: z.object({ orderId: z.string(), total: z.number() }),
@@ -46,23 +46,27 @@ const processRecord = defineRoute({
 kinesisRouter.route(processRecord)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // kinesis.ts
 import { createKinesisRouter } from '@lambda-event-router/kinesis'
+import type { KinesisRequest } from '@lambda-event-router/kinesis'
+import { z } from 'zod'
+
+const DataSchema = z.object({ orderId: z.string(), total: z.number() })
+type Order = z.infer<typeof DataSchema>
 
 const kinesisRouter = createKinesisRouter()
 
-// Separate handler to define routes and handlers in different places
 kinesisRouter.route({
   filters: { eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream' },
   dataSchema: DataSchema,
   handler: processRecord,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processRecord({ data, partitionKey, sequenceNumber }) {
+// An annotated handler names its own types
+export async function processRecord({ data, partitionKey, sequenceNumber }: KinesisRequest<Order>) {
   console.log(`Order ${data.orderId}: $${data.total} (partition: ${partitionKey})`)
 }
 ```
@@ -70,7 +74,7 @@ export async function processRecord({ data, partitionKey, sequenceNumber }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createKinesisRouter, defineRoute } from '@lambda-event-router/kinesis'
@@ -87,10 +91,14 @@ const processRecord = defineRoute({
 kinesisRouter.route(processRecord)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createKinesisRouter } from '@lambda-event-router/kinesis'
+import type { KinesisRequest } from '@lambda-event-router/kinesis'
+import type { z } from 'zod'
+
+type Order = z.infer<typeof DataSchema>
 
 const kinesisRouter = createKinesisRouter()
 
@@ -100,7 +108,7 @@ kinesisRouter.route({
   handler: processRecord,
 })
 
-async function processRecord({ data, partitionKey, sequenceNumber }) {
+async function processRecord({ data, partitionKey, sequenceNumber }: KinesisRequest<Order>) {
   console.log(`Order ${data.orderId}: $${data.total} (partition: ${partitionKey})`)
 }
 ```

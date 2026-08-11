@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const snsRouter = createSNSRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processNotification = defineRoute({
   filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: z.object({ name: z.string(), price: z.number() }),
@@ -46,7 +46,7 @@ const processNotification = defineRoute({
 snsRouter.route(processNotification)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // sns.ts
@@ -59,7 +59,6 @@ type Item = z.infer<typeof ItemSchema>
 
 const snsRouter = createSNSRouter()
 
-// Separate handler to define routes and handlers in different places
 snsRouter.route({
   filters: { topicArn: 'arn:aws:sns:us-east-1:123456789:my-topic' },
   bodySchema: ItemSchema,
@@ -75,7 +74,7 @@ export async function processNotification({ body }: SNSRequest<Item>) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createSNSRouter, defineRoute } from '@lambda-event-router/sns'
@@ -94,7 +93,7 @@ const processNotification = defineRoute({
 snsRouter.route(processNotification)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createSNSRouter } from '@lambda-event-router/sns'
@@ -113,7 +112,7 @@ snsRouter.route({
   handler: processNotification,
 })
 
-async function processNotification({ body, messageAttributes }) {
+async function processNotification({ body, messageAttributes }: SNSRequest<Item, Attributes>) {
   console.log(`Creating item: ${body.name} - $${body.price}`)
   console.log(`dryRun: ${messageAttributes.dryRun}`)
 }

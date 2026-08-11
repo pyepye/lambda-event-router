@@ -259,7 +259,7 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('types an inline handler on a taskToken route', () => {
+    test('types an inferred handler on a taskToken route', () => {
       const result = router.route({
         filters: { taskToken: true },
         // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
@@ -272,7 +272,7 @@ suite('StepFunctionsRouter', () => {
       expect(result).toBe(router);
     });
 
-    test('types an inline handler on a regular route', () => {
+    test('types an inferred handler on a regular route', () => {
       const result = router.route({
         filters: {},
         // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts

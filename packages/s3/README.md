@@ -35,7 +35,7 @@ import { createS3Router, defineRoute } from '@lambda-event-router/s3'
 
 const s3Router = createS3Router()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processUpload = defineRoute({
   filters: {
     eventName: 'ObjectCreated:*',
@@ -48,7 +48,7 @@ const processUpload = defineRoute({
 s3Router.route(processUpload)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // s3.ts
@@ -56,7 +56,6 @@ import { createS3Router, type S3ObjectCreatedRequest } from '@lambda-event-route
 
 const s3Router = createS3Router()
 
-// Separate handler to define routes and handlers in different places
 s3Router.objectCreated({
   filters: {
     bucket: 'my-uploads-bucket',
@@ -65,7 +64,7 @@ s3Router.objectCreated({
   handler: processUpload,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function processUpload({ bucket, key, objectSize, eventName }: S3ObjectCreatedRequest) {
   console.log(`${eventName}: ${key} in ${bucket} (${objectSize} bytes)`)
 }
@@ -76,7 +75,7 @@ export async function processUpload({ bucket, key, objectSize, eventName }: S3Ob
 
 ### S3Router
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createS3Router, defineRoute } from '@lambda-event-router/s3'
@@ -98,7 +97,7 @@ s3Router.route(processUpload)
 
 The `eventName` filter picks the request type, so `objectSize` above is a `number`. Leave `eventName` off and you get `S3BaseRequest`, since any notification can reach the route.
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createS3Router, type S3ObjectCreatedRequest } from '@lambda-event-router/s3'

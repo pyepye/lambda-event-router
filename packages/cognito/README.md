@@ -35,7 +35,7 @@ import { createCognitoRouter, defineRoute } from '@lambda-event-router/cognito'
 
 const cognitoRouter = createCognitoRouter()
 
-// Inline functions let TypeScript infer the types
+// An inferred handler takes its types from the route
 const handlePreSignUp = defineRoute({
   filters: {
     triggerSource: 'PreSignUp_SignUp',
@@ -48,7 +48,7 @@ const handlePreSignUp = defineRoute({
 cognitoRouter.route(handlePreSignUp)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // cognito.ts
@@ -58,12 +58,11 @@ import type { PreSignUpTriggerEvent } from 'aws-lambda'
 
 const cognitoRouter = createCognitoRouter()
 
-// Separate handler to define routes and handlers in different places
 cognitoRouter.preSignUp({
   handler: handlePreSignUp,
 })
 
-// A separate handler needs its request type annotated
+// An annotated handler names its own types
 export async function handlePreSignUp({ event }: PreSignUpRequest): Promise<PreSignUpTriggerEvent> {
   console.log(`Pre-signup: ${event.userName}`)
   event.response.autoConfirmUser = true
@@ -74,7 +73,7 @@ export async function handlePreSignUp({ event }: PreSignUpRequest): Promise<PreS
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createCognitoRouter, defineRoute } from '@lambda-event-router/cognito'
@@ -94,7 +93,7 @@ const handlePreSignUp = defineRoute({
 cognitoRouter.route(handlePreSignUp)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createCognitoRouter } from '@lambda-event-router/cognito'

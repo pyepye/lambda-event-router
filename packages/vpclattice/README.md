@@ -51,7 +51,7 @@ latticeRouter.route(
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createVPCLatticeRouter, defineRoute } from '@lambda-event-router/vpclattice'
@@ -75,7 +75,7 @@ const updateItemRoute = defineRoute({
 latticeRouter.route(updateItemRoute)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
@@ -91,7 +91,7 @@ latticeRouter.post({
   handler: updateItem,
 })
 
-// A separate handler needs its types spelling out, since there is no schema in scope to infer from
+// An annotated handler names its own types
 export async function updateItem(
   request: ApiRequest<{ orgId: string; itemId: string }, Record<string, string | undefined>, Item>,
 ): Promise<ApiResponse<Item & { orgId: string }>> {

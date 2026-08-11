@@ -127,7 +127,7 @@ The `EventRouter` handles events that don't have a dedicated service router, suc
 
 It refuses any event it recognises as a known AWS source, so adding one cannot take events away from the rest of your Lambda. That includes the EventBridge envelope, so use `EventBridgeRouter` for bus, pipe and rule events and this router for Scheduler.
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createEventRouter, defineEventRoute, isObject, logger } from '@lambda-event-router/base'
@@ -154,7 +154,7 @@ const generateReport = defineEventRoute({
 eventRouter.route(generateReport)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createEventRouter, isObject, logger } from '@lambda-event-router/base'

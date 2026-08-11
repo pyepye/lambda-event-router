@@ -35,7 +35,7 @@ import { createSESRouter, defineRoute } from '@lambda-event-router/ses'
 
 const sesRouter = createSESRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processEmail = defineRoute({
   filters: {
     spamVerdict: 'PASS',
@@ -46,22 +46,22 @@ const processEmail = defineRoute({
 sesRouter.route(processEmail)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // ses.ts
 import { createSESRouter } from '@lambda-event-router/ses'
+import type { SESRequest } from '@lambda-event-router/ses'
 
 const sesRouter = createSESRouter()
 
-// Separate handler to define routes and handlers in different places
 sesRouter.route({
   filters: { spamVerdict: 'PASS' },
   handler: processEmail,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processEmail({ mail, receipt }) {
+// An annotated handler names its own types
+export async function processEmail({ mail, receipt }: SESRequest) {
   console.log(`Email from ${mail.source}: ${mail.commonHeaders.subject}`)
 }
 ```
@@ -69,7 +69,7 @@ export async function processEmail({ mail, receipt }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createSESRouter, defineRoute } from '@lambda-event-router/ses'
@@ -85,10 +85,11 @@ const processEmail = defineRoute({
 sesRouter.route(processEmail)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createSESRouter } from '@lambda-event-router/ses'
+import type { SESRequest } from '@lambda-event-router/ses'
 
 const sesRouter = createSESRouter()
 
@@ -97,7 +98,7 @@ sesRouter.route({
   handler: processEmail,
 })
 
-async function processEmail({ mail, receipt }) {
+async function processEmail({ mail, receipt }: SESRequest) {
   console.log(`Email from ${mail.source}: ${mail.commonHeaders.subject}`)
 }
 ```

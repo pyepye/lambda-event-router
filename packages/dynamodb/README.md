@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const dynamodbRouter = createDynamoDBRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processNewOrder = defineRoute({
   filters: {
     eventName: 'INSERT',
@@ -49,15 +49,19 @@ const processNewOrder = defineRoute({
 dynamodbRouter.route(processNewOrder)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // dynamodb.ts
 import { createDynamoDBRouter } from '@lambda-event-router/dynamodb'
+import type { DynamoDBInsertRequest } from '@lambda-event-router/dynamodb'
+import { z } from 'zod'
+
+const NewOrderSchema = z.object({ orderId: z.string(), customerId: z.string() })
+type NewOrder = z.infer<typeof NewOrderSchema>
 
 const dynamodbRouter = createDynamoDBRouter()
 
-// Separate handler to define routes and handlers in different places
 dynamodbRouter.insert({
   filters: {
     eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789:table/orders/stream/2024-01-01',
@@ -66,8 +70,8 @@ dynamodbRouter.insert({
   handler: processNewOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processNewOrder({ newImage }) {
+// An annotated handler names its own types
+export async function processNewOrder({ newImage }: DynamoDBInsertRequest<Record<string, unknown>, NewOrder>) {
   console.log(`New order: ${newImage.orderId} for ${newImage.customerId}`)
 }
 ```
@@ -75,7 +79,7 @@ export async function processNewOrder({ newImage }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createDynamoDBRouter, defineRoute } from '@lambda-event-router/dynamodb'
@@ -95,10 +99,14 @@ const processNewOrder = defineRoute({
 dynamodbRouter.route(processNewOrder)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createDynamoDBRouter } from '@lambda-event-router/dynamodb'
+import type { DynamoDBInsertRequest } from '@lambda-event-router/dynamodb'
+import type { z } from 'zod'
+
+type NewOrder = z.infer<typeof NewOrderSchema>
 
 const dynamodbRouter = createDynamoDBRouter()
 
@@ -110,7 +118,7 @@ dynamodbRouter.insert({
   handler: processNewOrder,
 })
 
-async function processNewOrder({ newImage }) {
+async function processNewOrder({ newImage }: DynamoDBInsertRequest<Record<string, unknown>, NewOrder>) {
   console.log(`New order: ${newImage.orderId} for ${newImage.customerId}`)
 }
 ```

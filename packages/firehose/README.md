@@ -31,62 +31,63 @@ export const handler = lambdaRouter.handler()
 
 ```ts
 // firehose.ts
-import { createFirehoseRouter, defineRoute } from '@lambda-event-router/firehose'
+import { createFirehoseRouter, defineRoute, Ok } from '@lambda-event-router/firehose'
 
 const firehoseRouter = createFirehoseRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processRecord = defineRoute({
   filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
 }).handle(async ({ data }) => {
-  // Transform and return the record
+  return Ok(data)
 })
 firehoseRouter.route(processRecord)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // firehose.ts
-import { createFirehoseRouter } from '@lambda-event-router/firehose'
+import { createFirehoseRouter, Ok } from '@lambda-event-router/firehose'
+import type { FirehoseRequest } from '@lambda-event-router/firehose'
 
 const firehoseRouter = createFirehoseRouter()
 
-// Separate handler to define routes and handlers in different places
 firehoseRouter.route({
   filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
   handler: processRecord,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processRecord({ data }) {
-  // Transform and return the record
+// An annotated handler names its own types
+export async function processRecord({ data }: FirehoseRequest) {
+  return Ok(data)
 }
 ```
 
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
-import { createFirehoseRouter, defineRoute } from '@lambda-event-router/firehose'
+import { createFirehoseRouter, defineRoute, Ok } from '@lambda-event-router/firehose'
 
 const firehoseRouter = createFirehoseRouter()
 
 const processRecord = defineRoute({
   filters: { deliveryStreamArn: 'arn:aws:firehose:us-east-1:123456789:deliverystream/my-stream' },
 }).handle(async ({ data }) => {
-  // Transform and return the record
+  return Ok(data)
 })
 
 firehoseRouter.route(processRecord)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
-import { createFirehoseRouter } from '@lambda-event-router/firehose'
+import { createFirehoseRouter, Ok } from '@lambda-event-router/firehose'
+import type { FirehoseRequest } from '@lambda-event-router/firehose'
 
 const firehoseRouter = createFirehoseRouter()
 
@@ -95,8 +96,8 @@ firehoseRouter.route({
   handler: processRecord,
 })
 
-async function processRecord({ data }) {
-  // Transform and return the record
+async function processRecord({ data }: FirehoseRequest) {
+  return Ok(data)
 }
 ```
 

@@ -37,7 +37,7 @@ import { z } from 'zod'
 
 const stepFunctionsRouter = createStepFunctionsRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processOrder = defineRoute({
   filters: {
     custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
@@ -49,16 +49,20 @@ const processOrder = defineRoute({
 stepFunctionsRouter.route(processOrder)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // stepfunctions.ts
 import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
+import type { StepFunctionsRequest } from '@lambda-event-router/stepfunctions'
+import { z } from 'zod'
+
+const EventSchema = z.object({ taskType: z.literal('process-order'), orderId: z.string() })
+type Order = z.infer<typeof EventSchema>
 
 const stepFunctionsRouter = createStepFunctionsRouter()
 
-// Separate handler to define routes and handlers in different places
 stepFunctionsRouter.route({
   filters: {
     custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
@@ -67,8 +71,8 @@ stepFunctionsRouter.route({
   handler: processOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processOrder({ event }) {
+// An annotated handler names its own types
+export async function processOrder({ event }: StepFunctionsRequest<Order>) {
   console.log(`Processing order ${event.orderId}`)
 }
 ```
@@ -76,7 +80,7 @@ export async function processOrder({ event }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { isObject } from '@lambda-event-router/base'
@@ -96,11 +100,15 @@ const processOrder = defineRoute({
 stepFunctionsRouter.route(processOrder)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
+import type { StepFunctionsRequest } from '@lambda-event-router/stepfunctions'
+import type { z } from 'zod'
+
+type Order = z.infer<typeof EventSchema>
 
 const stepFunctionsRouter = createStepFunctionsRouter()
 
@@ -112,7 +120,7 @@ stepFunctionsRouter.route({
   handler: processOrder,
 })
 
-async function processOrder({ event }) {
+async function processOrder({ event }: StepFunctionsRequest<Order>) {
   console.log(`Processing order ${event.orderId}`)
 }
 ```

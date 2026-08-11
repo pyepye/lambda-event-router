@@ -39,7 +39,7 @@ import { createConfigRouter, defineRoute } from '@lambda-event-router/config'
 
 const configRouter = createConfigRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const evaluateResource = defineRoute({
   filters: {
     configRuleName: 'my-custom-rule',
@@ -52,7 +52,7 @@ const evaluateResource = defineRoute({
 configRouter.route(evaluateResource)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // config.ts
@@ -60,13 +60,12 @@ import { createConfigRouter } from '@lambda-event-router/config'
 
 const configRouter = createConfigRouter()
 
-// Separate handler to define routes and handlers in different places
 configRouter.route({
   filters: { configRuleName: 'my-custom-rule' },
   handler: evaluateResource,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function evaluateResource({ configurationItem, ruleParameters }: ConfigRequest | ConfigOversizedRequest) {
   if (!configurationItem) return
   console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
@@ -88,7 +87,7 @@ See the [AWS Config Resource Type Reference](https://docs.aws.amazon.com/config/
 
 ### ConfigRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createConfigRouter, defineRoute } from '@lambda-event-router/config'
@@ -108,7 +107,7 @@ const evaluateResource = defineRoute({
 configRouter.route(evaluateResource)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createConfigRouter } from '@lambda-event-router/config'
@@ -141,7 +140,7 @@ defineRoute({
 
 ### ConfigScheduledRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createConfigScheduledRouter, defineConfigScheduledRoute } from '@lambda-event-router/config'
@@ -157,10 +156,11 @@ scheduledRouter.route(
 )
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createConfigScheduledRouter } from '@lambda-event-router/config'
+import type { ConfigScheduledRequest } from '@lambda-event-router/config'
 
 const scheduledRouter = createConfigScheduledRouter()
 
@@ -169,7 +169,7 @@ scheduledRouter.route({
   handler: runComplianceCheck,
 })
 
-async function runComplianceCheck({ accountId }) {
+async function runComplianceCheck({ accountId }: ConfigScheduledRequest) {
   console.log(`Running scheduled compliance check for ${accountId}`)
 }
 ```

@@ -42,7 +42,7 @@ const apiRouter = createAPIGatewayRouter()
 
 const ItemSchema = z.object({ name: z.string(), price: z.number() })
 
-// Inline functions allow Typescript to infer the types automatically
+// An inferred handler takes its types from the route
 const updateItem = defineRoute({
   filters: {
     method: 'PUT',
@@ -55,7 +55,7 @@ const updateItem = defineRoute({
 apiRouter.route(updateItem)
 ```
 
-OR use the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // api.ts
@@ -67,7 +67,6 @@ const apiRouter = createAPIGatewayRouter()
 const ItemSchema = z.object({ name: z.string(), price: z.number() })
 type Item = z.infer<typeof ItemSchema>
 
-// Separate handler to define routes and handlers in different places
 apiRouter.put({
   filters: {
     path: '/org/:orgId/items/:itemId',
@@ -76,7 +75,7 @@ apiRouter.put({
   handler: updateItem,
 })
 
-// A separate handler needs its types spelling out, since there is no schema in scope to infer from
+// An annotated handler names its own types
 export async function updateItem(
   request: ApiRequest<{ orgId: string; itemId: string }, Record<string, string | undefined>, Item>,
 ): Promise<Item & { orgId: string }> {
@@ -120,7 +119,7 @@ export const handler = lambdaRouter.handler()
 ```
 
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 // api.ts
@@ -145,7 +144,7 @@ const updateItemRoute = defineRoute({
 apiRouter.route(updateItemRoute);
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 // api.ts
@@ -237,7 +236,7 @@ authRouter.route(
 )
 ```
 
-#### Separate handlers
+#### Annotated handlers
 ```ts
 import type { APIGatewayAuthorizerResult } from 'aws-lambda'
 import type { LambdaAuthorizerRequestRequest, LambdaAuthorizerTokenRequest } from '@lambda-event-router/apigateway'
@@ -316,7 +315,7 @@ A WebSocket API invokes the Lambda three ways over a connection's life, so route
 and on the `routeKey` API Gateway picked. `connect()`, `disconnect()` and `message()` fill in the
 `eventType` and take the rest of the filters themselves.
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createWebSocketRouter, defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway'
@@ -336,7 +335,7 @@ wsRouter.route(
 )
 ```
 
-#### Separate handlers
+#### Annotated handlers
 ```ts
 import type {
   WebSocketConnectRequest,

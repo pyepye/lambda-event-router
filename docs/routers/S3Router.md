@@ -255,7 +255,7 @@ is written both ways to compare.
 
 The `eventName` filter picks the request type. Filter to `ObjectCreated:*` and you get `objectSize` and
 `eTag`. Filter to `ObjectRestore:Completed` and you get `restoreEventData`. Every other event gives you
-the base request, and `route()` narrows an inline handler the same way.
+the base request, and `route()` narrows an inferred handler the same way.
 
 **A route with no `eventName` filter gets `S3BaseRequest`.** Any notification can reach it, so
 `objectSize` is not on the type. A filter naming two event families works the same way and gives you

@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const sqsRouter = createSQSRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processOrder = defineRoute({
   filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: z.object({ name: z.string(), price: z.number() }),
@@ -46,7 +46,7 @@ const processOrder = defineRoute({
 sqsRouter.route(processOrder)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // sqs.ts
@@ -59,7 +59,6 @@ type Item = z.infer<typeof ItemSchema>
 
 const sqsRouter = createSQSRouter()
 
-// Separate handler to define routes and handlers in different places
 sqsRouter.route({
   filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
   bodySchema: ItemSchema,
@@ -75,7 +74,7 @@ export async function processOrder({ body }: SQSRequest<Item>) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createSQSRouter, defineRoute } from '@lambda-event-router/sqs'
@@ -94,7 +93,7 @@ const processOrder = defineRoute({
 sqsRouter.route(processOrder)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createSQSRouter } from '@lambda-event-router/sqs'
@@ -113,7 +112,7 @@ sqsRouter.route({
   handler: processOrder,
 })
 
-async function processOrder({ body, messageAttributes }) {
+async function processOrder({ body, messageAttributes }: SQSRequest<Item, Attributes>) {
   console.log(`Creating item: ${body.name} - $${body.price}`)
   console.log(`dryRun: ${messageAttributes.dryRun}`)
 }

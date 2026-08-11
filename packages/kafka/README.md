@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const kafkaRouter = createKafkaRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processMessage = defineRoute({
   filters: { topic: 'order-events' },
   valueSchema: z.object({ orderId: z.string(), total: z.number() }),
@@ -46,23 +46,27 @@ const processMessage = defineRoute({
 kafkaRouter.route(processMessage)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // kafka.ts
 import { createKafkaRouter } from '@lambda-event-router/kafka'
+import type { KafkaRequest } from '@lambda-event-router/kafka'
+import { z } from 'zod'
+
+const ValueSchema = z.object({ orderId: z.string(), total: z.number() })
+type Order = z.infer<typeof ValueSchema>
 
 const kafkaRouter = createKafkaRouter()
 
-// Separate handler to define routes and handlers in different places
 kafkaRouter.route({
   filters: { topic: 'order-events' },
   valueSchema: ValueSchema,
   handler: processMessage,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processMessage({ value, key, topic, partition, offset }) {
+// An annotated handler names its own types
+export async function processMessage({ value, key, topic, partition, offset }: KafkaRequest<Order>) {
   console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
 }
 ```
@@ -70,7 +74,7 @@ export async function processMessage({ value, key, topic, partition, offset }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createKafkaRouter, defineRoute } from '@lambda-event-router/kafka'
@@ -87,10 +91,14 @@ const processMessage = defineRoute({
 kafkaRouter.route(processMessage)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createKafkaRouter } from '@lambda-event-router/kafka'
+import type { KafkaRequest } from '@lambda-event-router/kafka'
+import type { z } from 'zod'
+
+type Order = z.infer<typeof ValueSchema>
 
 const kafkaRouter = createKafkaRouter()
 
@@ -100,7 +108,7 @@ kafkaRouter.route({
   handler: processMessage,
 })
 
-async function processMessage({ value, key, topic, partition, offset }) {
+async function processMessage({ value, key, topic, partition, offset }: KafkaRequest<Order>) {
   console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
 }
 ```

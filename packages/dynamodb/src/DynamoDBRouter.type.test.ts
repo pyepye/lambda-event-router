@@ -2,7 +2,7 @@ import { createDynamoDBRouter } from './DynamoDBRouter.js';
 import type { DynamoDBInsertRequest, DynamoDBRequest, DynamoDBRouteDefinition } from './types.js';
 
 suite('route()', () => {
-  test('narrows an inline handler from the eventName filter', () => {
+  test('narrows an inferred handler from the eventName filter', () => {
     createDynamoDBRouter().route({
       filters: { eventName: 'INSERT' },
       handler: async ({ newImage }: DynamoDBInsertRequest): Promise<void> => {
@@ -11,7 +11,7 @@ suite('route()', () => {
     });
   });
 
-  test('rejects an inline handler the eventName filter does not deliver', () => {
+  test('rejects an inferred handler the eventName filter does not deliver', () => {
     createDynamoDBRouter().route({
       filters: { eventName: 'REMOVE' },
       // @ts-expect-error - a REMOVE record reaches this handler, and it cannot read one
@@ -21,7 +21,7 @@ suite('route()', () => {
     });
   });
 
-  test('hands an unfiltered inline handler every event', () => {
+  test('hands an unfiltered inferred handler every event', () => {
     createDynamoDBRouter().route({
       filters: {},
       handler: async (request: DynamoDBRequest): Promise<void> => {

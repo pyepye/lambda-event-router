@@ -39,7 +39,7 @@ import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
 
 export const appSyncRouter = createAppSyncRouter()
 
-// An inline handler lets TypeScript infer the request from the route
+// An inferred handler takes its types from the route
 const getItem = defineRoute({
   filters: {
     parentTypeName: 'Query',
@@ -51,7 +51,7 @@ const getItem = defineRoute({
 appSyncRouter.route(getItem)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // appsync.ts
@@ -60,7 +60,6 @@ import { createAppSyncRouter } from '@lambda-event-router/appsync'
 
 export const appSyncRouter = createAppSyncRouter()
 
-// Separate handler to define routes and handlers in different places
 appSyncRouter.route({
   filters: {
     parentTypeName: 'Query',
@@ -69,7 +68,7 @@ appSyncRouter.route({
   handler: getItem,
 })
 
-// A separate handler has to name its request type, since there is no route to infer it from
+// An annotated handler names its own types
 export async function getItem({ arguments: args }: AppSyncResolverRequest) {
   return { id: args.id, name: 'Example Item' }
 }
@@ -90,7 +89,7 @@ export async function getItem({ arguments: args }: AppSyncResolverRequest) {
 
 ### AppSyncRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
@@ -109,7 +108,7 @@ const getItem = defineRoute({
 appSyncRouter.route(getItem)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import type { AppSyncResolverRequest } from '@lambda-event-router/appsync'
@@ -189,7 +188,7 @@ Handlers still return the field's value. An entry that throws fails the whole ba
 
 ### AppSyncAuthorizerRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createAppSyncAuthorizerRouter, defineAuthorizerRoute, Authorized, Denied } from '@lambda-event-router/appsync'
@@ -215,7 +214,7 @@ authRouter
   .route(defineAuthorizerRoute().handle(authoriseEveryoneElse))
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import type { AppSyncAuthorizerRequest } from '@lambda-event-router/appsync'
@@ -235,7 +234,7 @@ async function validateToken({ authorizationToken }: AppSyncAuthorizerRequest) {
 
 ### AppSyncEventsRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createAppSyncEventsRouter, defineEventsRoute } from '@lambda-event-router/appsync'
@@ -254,7 +253,7 @@ eventsRouter.route(
 `channelPath` matches the channel path, so it takes `/default/*`. To match by the namespace name
 instead, use `channelNamespace: 'default'`.
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import type { AppSyncEventsRequest } from '@lambda-event-router/appsync'

@@ -35,7 +35,7 @@ import { createCloudFormationRouter, defineRoute } from '@lambda-event-router/cl
 
 const cloudformationRouter = createCloudFormationRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const handleCreate = defineRoute({
   filters: {
     requestType: 'Create',
@@ -46,7 +46,7 @@ const handleCreate = defineRoute({
 cloudformationRouter.route(handleCreate)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // cloudformation.ts
@@ -54,13 +54,12 @@ import { createCloudFormationRouter } from '@lambda-event-router/cloudformation'
 
 const cloudformationRouter = createCloudFormationRouter()
 
-// Separate handler to define routes and handlers in different places
 cloudformationRouter.route({
   filters: { requestType: 'Create' },
   handler: handleCreate,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function handleCreate({ requestType, resourceProperties, stackId }) {
   console.log(`Creating custom resource in stack ${stackId}`)
 }
@@ -69,7 +68,7 @@ export async function handleCreate({ requestType, resourceProperties, stackId })
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createCloudFormationRouter, defineRoute } from '@lambda-event-router/cloudformation'
@@ -85,7 +84,7 @@ const handleCreate = defineRoute({
 cloudformationRouter.route(handleCreate)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createCloudFormationRouter } from '@lambda-event-router/cloudformation'

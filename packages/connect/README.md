@@ -35,7 +35,7 @@ import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
 
 const connectRouter = createConnectRouter()
 
-// An inline handler lets TypeScript infer the request type
+// An inferred handler takes its types from the route
 const handleInboundCall = defineRoute({
   filters: {
     channel: 'VOICE',
@@ -47,7 +47,7 @@ const handleInboundCall = defineRoute({
 connectRouter.route(handleInboundCall)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // connect.ts
@@ -56,13 +56,12 @@ import type { ConnectRequest } from '@lambda-event-router/connect'
 
 const connectRouter = createConnectRouter()
 
-// Separate handler to define routes and handlers in different places
 connectRouter.voice({
   filters: { initiationMethod: 'INBOUND' },
   handler: handleInboundCall,
 })
 
-// A separate handler has to be typed with ConnectRequest
+// An annotated handler names its own types
 export async function handleInboundCall({ contactData }: ConnectRequest) {
   console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
 }
@@ -71,7 +70,7 @@ export async function handleInboundCall({ contactData }: ConnectRequest) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
@@ -90,7 +89,7 @@ const handleInboundCall = defineRoute({
 connectRouter.route(handleInboundCall)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createConnectRouter } from '@lambda-event-router/connect'

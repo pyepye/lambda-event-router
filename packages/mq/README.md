@@ -39,7 +39,7 @@ import { createActiveMQRouter, defineActiveMQRoute } from '@lambda-event-router/
 
 const activeMQRouter = createActiveMQRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processMessage = defineActiveMQRoute({
   filters: {
     destination: 'order-queue',
@@ -50,7 +50,7 @@ const processMessage = defineActiveMQRoute({
 activeMQRouter.route(processMessage)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // mq.ts
@@ -58,13 +58,12 @@ import { createActiveMQRouter, type ActiveMQRequest } from '@lambda-event-router
 
 const activeMQRouter = createActiveMQRouter()
 
-// Separate handler to define routes and handlers in different places
 activeMQRouter.route({
   filters: { destination: 'order-queue' },
   handler: processMessage,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
+// An annotated handler names its own types
 export async function processMessage({ body, destination }: ActiveMQRequest) {
   console.log(`Message from ${destination}`, body)
 }
@@ -83,7 +82,7 @@ export async function processMessage({ body, destination }: ActiveMQRequest) {
 
 ### ActiveMQRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createActiveMQRouter, defineActiveMQRoute } from '@lambda-event-router/mq'
@@ -101,7 +100,7 @@ const processMessage = defineActiveMQRoute({
 activeMQRouter.route(processMessage)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createActiveMQRouter, type ActiveMQRequest } from '@lambda-event-router/mq'
@@ -162,7 +161,7 @@ A string header arrives as its UTF-8 bytes, such as `{ bytes: [117, 114, 103, 10
 
 ### RabbitMQRouter
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createRabbitMQRouter, defineRabbitMQRoute } from '@lambda-event-router/mq'
@@ -180,7 +179,7 @@ const processMessage = defineRabbitMQRoute({
 rabbitMQRouter.route(processMessage)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createRabbitMQRouter, type RabbitMQRequest } from '@lambda-event-router/mq'

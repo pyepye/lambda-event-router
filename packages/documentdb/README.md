@@ -36,7 +36,7 @@ import { z } from 'zod'
 
 const documentdbRouter = createDocumentDBRouter()
 
-// Inline functions allows Typescript to automatic infer types
+// An inferred handler takes its types from the route
 const processNewOrder = defineRoute({
   filters: {
     operationType: 'insert',
@@ -50,23 +50,27 @@ const processNewOrder = defineRoute({
 documentdbRouter.route(processNewOrder)
 ```
 
-OR use a the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // documentdb.ts
 import { createDocumentDBRouter } from '@lambda-event-router/documentdb'
+import type { DocumentDBInsertRequest } from '@lambda-event-router/documentdb'
+import { z } from 'zod'
+
+const OrderSchema = z.object({ orderId: z.string(), total: z.number() })
+type Order = z.infer<typeof OrderSchema>
 
 const documentdbRouter = createDocumentDBRouter()
 
-// Separate handler to define routes and handlers in different places
 documentdbRouter.insert({
   filters: { database: 'mydb', collection: 'orders' },
   fullDocumentSchema: OrderSchema,
   handler: processNewOrder,
 })
 
-// Types do need to be explicitly defined - they can not be inferred by Typescript
-export async function processNewOrder({ fullDocument }) {
+// An annotated handler names its own types
+export async function processNewOrder({ fullDocument }: DocumentDBInsertRequest<Record<string, unknown>, Order>) {
   console.log(`New order: ${fullDocument.orderId}`)
 }
 ```
@@ -74,7 +78,7 @@ export async function processNewOrder({ fullDocument }) {
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createDocumentDBRouter, defineRoute } from '@lambda-event-router/documentdb'
@@ -95,10 +99,14 @@ const processNewOrder = defineRoute({
 documentdbRouter.route(processNewOrder)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createDocumentDBRouter } from '@lambda-event-router/documentdb'
+import type { DocumentDBInsertRequest } from '@lambda-event-router/documentdb'
+import type { z } from 'zod'
+
+type Order = z.infer<typeof OrderSchema>
 
 const documentdbRouter = createDocumentDBRouter()
 
@@ -108,7 +116,7 @@ documentdbRouter.insert({
   handler: processNewOrder,
 })
 
-async function processNewOrder({ fullDocument }) {
+async function processNewOrder({ fullDocument }: DocumentDBInsertRequest<Record<string, unknown>, Order>) {
   console.log(`New order: ${fullDocument.orderId}`)
 }
 ```

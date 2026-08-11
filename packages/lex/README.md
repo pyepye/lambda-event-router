@@ -35,7 +35,7 @@ import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
 
 const lexRouter = createLexRouter()
 
-// Inline handlers let TypeScript infer the request type
+// An inferred handler takes its types from the route
 const handleFulfillment = defineRoute({
   filters: {
     invocationSource: 'FulfillmentCodeHook',
@@ -52,7 +52,7 @@ const handleFulfillment = defineRoute({
 lexRouter.route(handleFulfillment)
 ```
 
-Or use the separate syntax to split router and handlers across files:
+Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // lex.ts
@@ -66,7 +66,7 @@ lexRouter.fulfillmentCodeHook({
   handler: handleFulfillment,
 })
 
-// A separate handler needs its request type annotated - it cannot be inferred
+// An annotated handler names its own types
 async function handleFulfillment({ intentName, inputTranscript }: LexFulfillmentCodeHookRequest): Promise<LexResponse> {
   console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
   return {
@@ -81,7 +81,7 @@ async function handleFulfillment({ intentName, inputTranscript }: LexFulfillment
 
 ## Usage
 
-#### Inline handlers
+#### Inferred handlers
 
 ```ts
 import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
@@ -105,7 +105,7 @@ const handleFulfillment = defineRoute({
 lexRouter.route(handleFulfillment)
 ```
 
-#### Separate handlers
+#### Annotated handlers
 
 ```ts
 import { createLexRouter } from '@lambda-event-router/lex'
