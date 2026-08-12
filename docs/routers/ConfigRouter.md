@@ -96,7 +96,7 @@ separate keys cannot express.
 configRouter.route({
   filters: {
     custom: ({ resourceType, resourceId }) =>
-      resourceType === 'AWS::S3::Bucket' || resourceId.startsWith('prod-'),
+      resourceType === 'AWS::S3::Bucket' || resourceId?.startsWith('prod-') === true,
   },
   handler: evaluateResource,
 })

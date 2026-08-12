@@ -43,6 +43,7 @@ const handleInboundCall = defineRoute({
   },
 }).handle(async ({ contactData }) => {
   console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
+  return { greeting: 'Welcome back' }
 })
 connectRouter.route(handleInboundCall)
 ```
@@ -64,6 +65,7 @@ connectRouter.voice({
 // An annotated handler names its own types
 export async function handleInboundCall({ contactData }: ConnectRequest) {
   console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
+  return { greeting: 'Welcome back' }
 }
 ```
 
@@ -84,6 +86,7 @@ const handleInboundCall = defineRoute({
   },
 }).handle(async ({ contactData }) => {
   console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
+  return { greeting: 'Welcome back' }
 })
 
 connectRouter.route(handleInboundCall)
@@ -104,6 +107,7 @@ connectRouter.voice({
 
 async function handleInboundCall({ contactData }: ConnectRequest) {
   console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
+  return { greeting: 'Welcome back' }
 }
 ```
 

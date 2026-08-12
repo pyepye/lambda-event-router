@@ -116,11 +116,13 @@ async function processRecord({ data, partitionKey, sequenceNumber }: KinesisRequ
 #### Filters
 
 ```ts
+import { isObject } from '@lambda-event-router/base'
+
 defineRoute({
   filters: {
     eventSourceArn: 'arn:aws:kinesis:us-east-1:123456789:stream/my-stream',
     partitionKey: ['orders', 'inventory'],
-    custom: ({ data }) => data.priority === 'HIGH',
+    custom: ({ data }) => isObject(data) && data.priority === 'HIGH',
   },
 })
 ```

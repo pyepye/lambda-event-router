@@ -173,8 +173,11 @@ Event API has no fields to deny.
 `identity.handlerContext`.
 
 ```ts
+import { isObject } from '@lambda-event-router/base'
+
 export async function onOrderPublish({ identity, events }: AppSyncEventsRequest) {
-  const teamId = identity?.handlerContext?.teamId
+  const handlerContext = isObject(identity) ? identity.handlerContext : undefined
+  const teamId = isObject(handlerContext) ? handlerContext.teamId : undefined
   return { events }
 }
 ```
