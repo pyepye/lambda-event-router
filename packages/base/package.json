@@ -2,7 +2,7 @@
   "name": "@lambda-event-router/base",
   "version": "0.1.0",
   "description": "Dispatches AWS Lambda events to source-specific routers",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/LambdaRouter",
+  "homepage": "https://pyepye.github.io/lambda-event-router/",
   "type": "module",
   "exports": {
     ".": {

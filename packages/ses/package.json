@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/ses",
   "version": "0.1.0",
   "description": "SES handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/SESRouter",
   "type": "module",
   "exports": {
     ".": {

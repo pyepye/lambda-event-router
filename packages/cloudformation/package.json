@@ -2,7 +2,7 @@
   "name": "@lambda-event-router/cloudformation",
   "version": "0.1.0",
   "description": "CloudFormation handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/packages",
+  "homepage": "https://pyepye.github.io/lambda-event-router/packages?search=cloudformation",
   "type": "module",
   "exports": {
     ".": {

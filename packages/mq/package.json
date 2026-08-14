@@ -2,7 +2,7 @@
   "name": "@lambda-event-router/mq",
   "version": "0.1.0",
   "description": "Amazon MQ handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/ActiveMQRouter",
+  "homepage": "https://pyepye.github.io/lambda-event-router/packages?search=mq",
   "type": "module",
   "exports": {
     ".": {

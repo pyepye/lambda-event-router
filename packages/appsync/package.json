@@ -2,7 +2,7 @@
   "name": "@lambda-event-router/appsync",
   "version": "0.1.0",
   "description": "AppSync handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/AppSyncRouter",
+  "homepage": "https://pyepye.github.io/lambda-event-router/packages?search=appsync",
   "type": "module",
   "exports": {
     ".": {

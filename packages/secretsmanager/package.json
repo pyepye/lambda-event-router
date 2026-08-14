@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/secretsmanager",
   "version": "0.1.0",
   "description": "Secrets Manager rotation handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter",
   "type": "module",
   "exports": {
     ".": {

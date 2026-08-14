@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/stepfunctions",
   "version": "0.1.0",
   "description": "Step Functions handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/StepFunctionsRouter",
   "type": "module",
   "exports": {
     ".": {

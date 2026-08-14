@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/sns",
   "version": "0.1.0",
   "description": "SNS handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/SNSRouter",
   "type": "module",
   "exports": {
     ".": {

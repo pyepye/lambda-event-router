@@ -2,7 +2,7 @@
   "name": "@lambda-event-router/config",
   "version": "0.1.0",
   "description": "AWS Config handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/ConfigRouter",
+  "homepage": "https://pyepye.github.io/lambda-event-router/packages?search=config",
   "type": "module",
   "exports": {
     ".": {
