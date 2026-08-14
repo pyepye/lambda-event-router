@@ -1,6 +1,6 @@
 # Full example: HTTP API + DynamoDB + SQS fan-out chain
 
-A deployable CDK app that exercises every router in the library through a longer, realistic fan-out flow:
+A deployable CDK app that chains the API Gateway, DynamoDB and SQS routers through one order flow:
 
 ```
 Client
@@ -19,7 +19,9 @@ Client
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-Five distinct router-handled boxes (createOrder, orderProcessor, decrementStock, sendConfirmationEmail, stockMonitor) running on two Lambda functions (`apiFn` and `workerFn`). A future PR will register a global `LambdaRouter` middleware to observe all of these from a single attachment point - that is the reason this example is deliberately long.
+Five routes (`createOrder`, `orderProcessor`, `decrementStock`, `sendConfirmationEmail` and `stockMonitor`)
+run on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where one `LambdaRouter`
+combines all three routers. Each function only receives its own events, so the right router picks them up.
 
 It also has tracing middleware configured as an example to show how it can be used.
 
@@ -27,7 +29,7 @@ It also has tracing middleware configured as an example to show how it can be us
 
 - AWS account with credentials on the shell
 - CDK bootstrap already run for the target account / region
-- Node 22 and pnpm installed
+- Node 24 and pnpm installed
 
 ## Permissions
 
