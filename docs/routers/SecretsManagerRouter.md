@@ -123,7 +123,7 @@ secretsManagerRouter.route({
 | --- | --- | --- |
 | `step` | `SecretsManagerRotationEventStep \| SecretsManagerRotationEventStep[]` | Exact match against the rotation step: `createSecret`, `setSecret`, `testSecret` or `finishSecret`. Not a pattern, so list every step you want |
 | `secretId` | `FilterStringMatcher` | Matches the ARN of the secret being rotated, and its name on its own |
-| `custom` | `(input: SecretsManagerFilterInput) => boolean \| Promise<boolean>` | Given the secret id, the step and the client request token. Anything the other filters cannot express. Can be async |
+| `custom` | `(input: SecretsManagerFilterInput) => boolean \| Promise<boolean>` | Given the secret id, the secret name, the step and the client request token. Anything the other filters cannot express. Can be async |
 
 `step` is an exact-match union, not a pattern, so a value has to be one of the four steps. Only
 `secretId` is a `FilterStringMatcher`, which is `string | RegExp | Array<string | RegExp>`. See
@@ -131,7 +131,7 @@ secretsManagerRouter.route({
 
 **secretId can match either the ARN or the secret name**. Events contain the ARN which includes a 6 character suffix
 (`arn:aws:secretsmanager:<region>:<account>:secret:<name>-<sixcharacters>`) added to the name by Secrets Manager.
-THe secretId matches against both, allowing patterns like `prod/database/*` to work.
+The secretId matches against both, allowing patterns like `prod/database/*` to work.
 
 **`custom` is the only filter that reaches the client request token.** It receives the secret id,
 the secret name, the step and that token, so use it to match on the token that no built-in key

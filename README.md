@@ -7,6 +7,8 @@ A TypeScript framework for routing AWS Lambda events. You define routers for the
 
 This is useful when you want a single Lambda (or a set of Lambdas with shared code) to handle events from multiple sources. Instead of writing your own event detection logic, you declare filters and handlers and let the router do the matching.
 
+The full documentation is at [pyepye.github.io/lambda-event-router](https://pyepye.github.io/lambda-event-router/).
+
 <br />
 
 
@@ -30,7 +32,7 @@ export const handler = lambdaRouter.handler()
 - **Multi-source routing** - Combine routers from different AWS services in a single Lambda handler
 - **Type-safe** - Full TypeScript support with handler types inferred from the schemas and filters on the route
 - **Declarative filters** - Route events by service-specific data - ARN, eventType, topic, bucket, event name, detail type and custom filter functions. Where two routes overlap, the more specific one is tried first, whatever order you registered them in
-- **Native support for 26 AWS services** - Includes dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and more. Any service that emits Lambda events is supported out of the box.
+- **Native support for 25 AWS services** - Includes dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and more. Any service that emits Lambda events is supported out of the box.
 - **Works with any AWS service** - Even services without native Lambda support can be integrated using CloudTrail and EventBridge using the EventBridgeRouter.
 - **Schema validation** - Built-in validation for request bodies, message attributes, path params and more. Works with any Standard Schema library
 - **Well tested** - Clear tests covering most code branches for each event type
