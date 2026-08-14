@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/iot",
   "version": "0.1.0",
   "description": "IoT Core handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/EventRouter",
   "type": "module",
   "exports": {
     ".": {

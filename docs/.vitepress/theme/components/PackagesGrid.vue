@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { withBase } from 'vitepress';
 import { filterPills, iconUrl, type PackageEntry, packages } from '../data/packages';
 
@@ -24,6 +24,14 @@ const filteredPackages = computed<PackageEntry[]>(function filterPackages() {
     results.push(entry);
   }
   return results;
+});
+
+// A package's `homepage` links here as ?search=<package>, so the page opens filtered to its routers
+onMounted(function applySearchParam() {
+  const search = new URLSearchParams(window.location.search).get('search');
+  if (search) {
+    searchQuery.value = search;
+  }
 });
 
 function isServiceActive(service: string): boolean {

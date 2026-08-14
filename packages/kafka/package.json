@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/kafka",
   "version": "0.1.0",
   "description": "Apache Kafka handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/KafkaRouter",
   "type": "module",
   "exports": {
     ".": {

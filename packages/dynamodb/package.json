@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/dynamodb",
   "version": "0.1.0",
   "description": "DynamoDB Stream handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/DynamoDBRouter",
   "type": "module",
   "exports": {
     ".": {

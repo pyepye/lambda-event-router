@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/http",
   "version": "0.1.0",
   "description": "Abstract HTTP handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/packages",
   "type": "module",
   "exports": {
     ".": {

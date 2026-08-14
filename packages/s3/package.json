@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/s3",
   "version": "0.1.0",
   "description": "S3 handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/S3Router",
   "type": "module",
   "exports": {
     ".": {

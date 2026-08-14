@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/firehose",
   "version": "0.1.0",
   "description": "Firehose handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/FirehoseRouter",
   "type": "module",
   "exports": {
     ".": {

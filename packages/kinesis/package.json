@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/kinesis",
   "version": "0.1.0",
   "description": "Kinesis handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/KinesisRouter",
   "type": "module",
   "exports": {
     ".": {

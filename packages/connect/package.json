@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/connect",
   "version": "0.1.0",
   "description": "Amazon Connect handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/ConnectRouter",
   "type": "module",
   "exports": {
     ".": {

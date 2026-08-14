@@ -2,6 +2,7 @@
   "name": "@lambda-event-router/documentdb",
   "version": "0.1.0",
   "description": "DocumentDB Change Stream handler for lambda-event-router",
+  "homepage": "https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter",
   "type": "module",
   "exports": {
     ".": {
