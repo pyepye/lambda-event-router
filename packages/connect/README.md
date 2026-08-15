@@ -6,6 +6,8 @@ Routes Amazon Connect contact flow calls to handlers by channel and initiation m
 
 **Available Routers:** `ConnectRouter`
 
+**Docs:** [ConnectRouter](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/connect
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { connectRouter } from './connect'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [connectRouter]
+  routers: [connectRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -33,113 +34,31 @@ export const handler = lambdaRouter.handler()
 // connect.ts
 import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
 
-const connectRouter = createConnectRouter()
+export const connectRouter = createConnectRouter()
 
-// An inferred handler takes its types from the route
-const handleInboundCall = defineRoute({
+const greetInboundCaller = defineRoute({
   filters: {
     channel: 'VOICE',
     initiationMethod: 'INBOUND',
+    instanceArn: 'arn:aws:connect:eu-west-2:123456789012:instance/abcd1234-ab12-cd34-ef56-abcdef123456',
   },
 }).handle(async ({ contactData }) => {
-  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
-  return { greeting: 'Welcome back' }
-})
-connectRouter.route(handleInboundCall)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// connect.ts
-import { createConnectRouter } from '@lambda-event-router/connect'
-import type { ConnectRequest } from '@lambda-event-router/connect'
-
-const connectRouter = createConnectRouter()
-
-connectRouter.voice({
-  filters: { initiationMethod: 'INBOUND' },
-  handler: handleInboundCall,
-})
-
-// An annotated handler names its own types
-export async function handleInboundCall({ contactData }: ConnectRequest) {
-  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
-  return { greeting: 'Welcome back' }
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
-
-const connectRouter = createConnectRouter()
-
-const handleInboundCall = defineRoute({
-  filters: {
-    channel: 'VOICE',
-    initiationMethod: 'INBOUND',
-  },
-}).handle(async ({ contactData }) => {
-  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
+  console.log(`Inbound call from ${contactData.CustomerEndpoint?.Address}`)
   return { greeting: 'Welcome back' }
 })
 
-connectRouter.route(handleInboundCall)
+connectRouter.route(greetInboundCaller)
 ```
 
-#### Annotated handlers
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter#annotated-handlers).
 
-```ts
-import { createConnectRouter } from '@lambda-event-router/connect'
-import type { ConnectRequest } from '@lambda-event-router/connect'
+## Documentation
 
-const connectRouter = createConnectRouter()
-
-connectRouter.voice({
-  filters: { initiationMethod: 'INBOUND' },
-  handler: handleInboundCall,
-})
-
-async function handleInboundCall({ contactData }: ConnectRequest) {
-  console.log(`Inbound voice call from ${contactData.CustomerEndpoint?.Address}`)
-  return { greeting: 'Welcome back' }
-}
-```
-
-#### Helper methods
-
-```ts
-// Channels
-connectRouter.voice()
-connectRouter.chat()
-connectRouter.email()
-connectRouter.task()
-
-// Initiation methods
-connectRouter.inbound()
-connectRouter.outbound()
-connectRouter.transfer()
-connectRouter.callback()
-connectRouter.api()
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    channel: ['VOICE', 'CHAT', 'EMAIL', 'TASK'],
-    initiationMethod: ['INBOUND', 'OUTBOUND', 'TRANSFER', 'CALLBACK', 'API'],
-    custom: ({ event }) => event.Details.ContactData.Queue?.Name === 'support',
-  },
-})
-```
+- [ConnectRouter](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter) covers every filter, responses
+  and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/connect](../../service-examples/connect) directory for complete working examples.
+See [service-examples/connect](../../service-examples/connect) for a deployable app.

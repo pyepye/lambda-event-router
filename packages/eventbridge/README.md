@@ -6,6 +6,8 @@ Routes EventBridge events to handlers by source, detail type, account, Region or
 
 **Available Routers:** `EventBridgeRouter`
 
+**Docs:** [EventBridgeRouter](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/eventbridge
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { eventBridgeRouter } from './eventbridge'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [eventBridgeRouter]
+  routers: [eventBridgeRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -34,171 +35,33 @@ export const handler = lambdaRouter.handler()
 import { createEventBridgeRouter, defineRoute } from '@lambda-event-router/eventbridge'
 import { z } from 'zod'
 
-const eventBridgeRouter = createEventBridgeRouter()
+export const eventBridgeRouter = createEventBridgeRouter()
 
-// An inferred handler takes its types from the route
-const processOrder = defineRoute({
+const orderCreated = defineRoute({
   filters: {
     source: 'myapp.orders',
     detailType: 'Order Created',
-  },
-  detailSchema: z.object({ orderId: z.string(), customerId: z.string() }),
-}).handle(async ({ source, detailType, detail }) => {
-  console.log(`Order ${detail.orderId} created for ${detail.customerId}`)
-})
-eventBridgeRouter.route(processOrder)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// eventbridge.ts
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge'
-import type { EventBridgeRequest } from '@lambda-event-router/eventbridge'
-import { z } from 'zod'
-
-const OrderDetailSchema = z.object({ orderId: z.string(), customerId: z.string() })
-
-const eventBridgeRouter = createEventBridgeRouter()
-
-eventBridgeRouter.route({
-  filters: {
-    source: 'myapp.orders',
-    detailType: 'Order Created',
-  },
-  detailSchema: OrderDetailSchema,
-  handler: processOrder,
-})
-
-// route() can not infer the detail type, so annotate the request yourself
-type OrderDetail = z.infer<typeof OrderDetailSchema>
-
-export async function processOrder({ source, detailType, detail }: EventBridgeRequest<OrderDetail>) {
-  console.log(`Order ${detail.orderId} created for ${detail.customerId}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createEventBridgeRouter, defineRoute } from '@lambda-event-router/eventbridge'
-
-const eventBridgeRouter = createEventBridgeRouter()
-
-const processOrder = defineRoute({
-  filters: {
-    source: 'myapp.orders',
-    detailType: ['Order Created', 'Order Updated'],
-  },
-  detailSchema: OrderDetailSchema,
-}).handle(async ({ detailType, detail }) => {
-  console.log(`Order ${detail.orderId} - ${detailType}`)
-})
-
-eventBridgeRouter.route(processOrder)
-```
-
-#### Annotated handlers
-
-```ts
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge'
-import type { EventBridgeRequest } from '@lambda-event-router/eventbridge'
-import type { z } from 'zod'
-
-type OrderDetail = z.infer<typeof OrderDetailSchema>
-
-const eventBridgeRouter = createEventBridgeRouter()
-
-eventBridgeRouter.route({
-  filters: {
-    source: 'myapp.orders',
-    detailType: ['Order Created', 'Order Updated'],
-  },
-  detailSchema: OrderDetailSchema,
-  handler: processOrder,
-})
-
-async function processOrder({ detailType, detail }: EventBridgeRequest<OrderDetail>) {
-  console.log(`Order ${detail.orderId} - ${detailType}`)
-}
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    source: 'aws.ec2',
-    detailType: 'EC2 Instance State-change Notification',
     account: '123456789012',
-    region: 'us-east-1',
-    resource: 'arn:aws:ec2:us-east-1:123456789:instance/i-1234',
-    custom: ({ detail }) => isObject(detail) && detail.state === 'running',
+    region: 'eu-west-2',
+    resource: 'arn:aws:events:eu-west-2:123456789012:event-bus/orders',
   },
+  detailSchema: z.object({ orderId: z.string(), total: z.number() }),
+}).handle(async ({ detail }) => {
+  console.log(`Processing order ${detail.orderId} for ${detail.total}`)
 })
+
+eventBridgeRouter.route(orderCreated)
 ```
 
-#### Middleware
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter#annotated-handlers).
 
-Register middleware on the router to cover every route, or on a single route. Type route middleware to
-the route's schema, so `EventBridgeMiddleware<Order>` rather than `EventBridgeMiddleware`.
+## Documentation
 
-```ts
-import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge'
-
-const withOrderContext: EventBridgeMiddleware<Order> = async (request, next) => {
-  console.log(`Order ${request.detail.orderId}`)
-  return next(request)
-}
-```
-
-#### AWS service events
-
-```ts
-// EC2 state changes - types are automatically inferred
-defineRoute({
-  filters: {
-    source: 'aws.ec2',
-    detailType: 'EC2 Instance State-change Notification',
-  },
-}).handle(async ({ detail, account, region, time }) => {
-  console.log(`Instance ${detail['instance-id']} changed to ${detail.state}`)
-})
-
-// Scheduled rules
-defineRoute({
-  filters: {
-    source: 'aws.events',
-    detailType: 'Scheduled Event',
-  },
-}).handle(async ({ time, resources }) => {
-  console.log(`Scheduled rule triggered at ${time}`)
-})
-```
-
-#### Custom events with schema
-
-```ts
-const OrderDetailSchema = z.object({
-  orderId: z.string(),
-  customerId: z.string(),
-  amount: z.number(),
-})
-
-defineRoute({
-  filters: {
-    source: 'myapp.orders',
-    detailType: ['Order Created', 'Order Updated'],
-  },
-  detailSchema: OrderDetailSchema,
-}).handle(async ({ detailType, detail }) => {
-  console.log(`Order ${detail.orderId} - ${detailType}`)
-})
-```
+- [EventBridgeRouter](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter) covers every filter, schema validation,
+  typed detail for AWS events and failures and retries.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/eventbridge](../../service-examples/eventbridge) directory for complete working examples.
+See [service-examples/eventbridge](../../service-examples/eventbridge) for a deployable app.

@@ -6,6 +6,8 @@ Routes CodePipeline custom action jobs to handlers. The router reports success o
 
 **Available Routers:** `CodePipelineRouter`
 
+**Docs:** [CodePipelineRouter](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter)
+
 ## Install
 
 ```bash
@@ -14,16 +16,15 @@ npm install @lambda-event-router/base @lambda-event-router/codepipeline
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
-import { codepipelineRouter } from './codepipeline'
+import { codePipelineRouter } from './codepipeline'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [codepipelineRouter]
+  routers: [codePipelineRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -33,115 +34,31 @@ export const handler = lambdaRouter.handler()
 // codepipeline.ts
 import { createCodePipelineRouter, defineRoute } from '@lambda-event-router/codepipeline'
 
-const codepipelineRouter = createCodePipelineRouter()
+export const codePipelineRouter = createCodePipelineRouter()
 
-// An inferred handler takes its types from the route
-const processJob = defineRoute({
+const runDeploy = defineRoute({
   filters: {
     functionName: 'deploy',
-  },
-}).handle(async ({ jobId }) => {
-  console.log(`Processing job ${jobId}`)
-})
-codepipelineRouter.route(processJob)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// codepipeline.ts
-import { createCodePipelineRouter } from '@lambda-event-router/codepipeline'
-import type { CodePipelineRequest } from '@lambda-event-router/codepipeline'
-
-const codepipelineRouter = createCodePipelineRouter()
-
-codepipelineRouter.route({
-  filters: {
-    functionName: 'deploy',
-  },
-  handler: processJob,
-})
-
-// An annotated handler names its own types
-export async function processJob({ jobId }: CodePipelineRequest) {
-  console.log(`Processing job ${jobId}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createCodePipelineRouter, defineRoute } from '@lambda-event-router/codepipeline'
-
-const codepipelineRouter = createCodePipelineRouter()
-
-const processJob = defineRoute({
-  filters: {
-    functionName: 'deploy',
-  },
-}).handle(async ({ jobId }) => {
-  console.log(`Processing job ${jobId}`)
-})
-
-codepipelineRouter.route(processJob)
-```
-
-#### Annotated handlers
-
-```ts
-import { createCodePipelineRouter } from '@lambda-event-router/codepipeline'
-import type { CodePipelineRequest } from '@lambda-event-router/codepipeline'
-
-const codepipelineRouter = createCodePipelineRouter()
-
-codepipelineRouter.route({
-  filters: {
-    functionName: 'deploy',
-  },
-  handler: processJob,
-})
-
-async function processJob({ jobId }: CodePipelineRequest) {
-  console.log(`Processing job ${jobId}`)
-}
-```
-
-#### Helper methods
-
-```ts
-codepipelineRouter.continuation()
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    functionName: 'validate',
     hasInputArtifacts: true,
     hasContinuationToken: false,
-    custom: ({ userParameters }) => userParameters !== undefined,
   },
+}).handle(async ({ jobId }) => {
+  console.log(`Deploying for job ${jobId}`)
+  return { outputVariables: { deployedRegion: 'eu-west-2' } }
 })
+
+codePipelineRouter.route(runDeploy)
 ```
 
-#### Middleware
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter#annotated-handlers).
 
-Register middleware on the router to cover every route, or on a single route. Type route middleware to
-the route's schema, so `CodePipelineMiddleware<DeployParameters>` rather than `CodePipelineMiddleware`.
+## Documentation
 
-```ts
-import type { CodePipelineMiddleware } from '@lambda-event-router/codepipeline'
-
-const withDeployContext: CodePipelineMiddleware<DeployParameters> = async (request, next) => {
-  console.log(`Deploying to ${request.userParameters.environment}`)
-  return next(request)
-}
-```
+- [CodePipelineRouter](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter) covers every filter, schema validation, responses
+  and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/codepipeline](../../service-examples/codepipeline) directory for complete working examples.
+See [service-examples/codepipeline](../../service-examples/codepipeline) for a deployable app.

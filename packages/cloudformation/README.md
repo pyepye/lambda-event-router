@@ -14,7 +14,6 @@ npm install @lambda-event-router/base @lambda-event-router/cloudformation
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
 
 ```ts

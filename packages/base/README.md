@@ -6,14 +6,13 @@ The core package. `LambdaRouter` is the handler you export, and it passes each e
 
 **Available Routers:** `LambdaRouter` | `EventRouter`
 
-(See [Routers](#routers) for more details)
+**Docs:** [LambdaRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaRouter) | [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter)
 
 ## Install
 
 ```bash
 npm install @lambda-event-router/base
 ```
-
 
 ## Quick Start
 
@@ -64,137 +63,37 @@ sqsRouter.route({
 })
 ```
 
-`LambdaRouter` works out which router owns each event, and that router picks the route. See the [service routers](../../README.md#packages--supported-aws-services) for the other packages.
+`LambdaRouter` works out which router owns each event, and that router picks the route.
 
-
-## Routers
-
-| AWS Service | Event Source | Router | Usage
-|---|---|---|---|
-| AWS Lambda | Multiple event sources | `LambdaRouter` | [LambdaRouter](#lambdarouter) |
-| AWS Lambda | Direct invocation / generic events | `EventRouter` | [EventRouter](#eventrouter) |
-
-
-## Usage
-
-### LambdaRouter
-
-`LambdaRouter` is the Lambda entry point. Every other router gets registered on it and
-`lambdaRouter.handler()` is what you export.
-
-`createLambdaRouter({ routers: [...] })` is the same call in the factory form the service routers use.
-
-#### Options
-
-| Option | Type | Required | Default | Description |
-|---|---|---|---|---|
-| `routers` | `EventTypeRouter[]` | Yes | | Every router this Lambda can receive events for |
-| `middleware` | `Array<(event, context, next) => Promise<unknown>>` | No | `[]` | Runs for every event, before a router is picked |
-
-`EventRouter` is always sorted to the end of `routers`, so a dedicated router gets first refusal on its own events.
-
-A router that claims an event and then finds none of its own routes match throws `NoRouteMatchedError`, exported from `@lambda-event-router/base`, and `LambdaRouter` tries the next router rather than failing. This is what lets `EventRouter` and `StepFunctionsRouter` share one Lambda. Any other error fails the invocation, a failing `eventSchema` included. An event no router handles throws `No router found for event`.
-
-#### Global middleware
-
-Middleware on `LambdaRouter` runs for every event, whichever router takes it. It gets the raw event and the Lambda context rather than a request object, because no router has been picked yet. There is no exported type for it, so declare `next` yourself.
+Events with no AWS envelope, such as a direct `Invoke` or an EventBridge Scheduler payload, go to
+`EventRouter`. It has no fields to filter on, so a `custom` filter identifies each route:
 
 ```ts
-import type { Context } from 'aws-lambda'
-import { LambdaRouter, logger } from '@lambda-event-router/base'
-
-type LambdaNext = (event: unknown, context: Context) => Promise<unknown>
-
-const withTiming = async (event: unknown, context: Context, next: LambdaNext): Promise<unknown> => {
-  const startedAt = Date.now()
-
-  try {
-    return await next(event, context)
-  } finally {
-    logger.info(`Invocation finished in ${Date.now() - startedAt}ms`)
-  }
-}
-
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter],
-  middleware: [withTiming],
-})
-```
-
-### EventRouter
-
-The `EventRouter` handles events that don't have a dedicated service router, such as direct Lambda invocations, EventBridge Scheduler payloads, Step Functions tasks, or IoT Core rule actions.
-
-It refuses any event it recognises as a known AWS source, so adding one cannot take events away from the rest of your Lambda. That includes the EventBridge envelope, so use `EventBridgeRouter` for bus, pipe and rule events and this router for Scheduler.
-
-#### Inferred handlers
-
-```ts
-import { createEventRouter, defineEventRoute, isObject, logger } from '@lambda-event-router/base'
+// events.ts
+import { createEventRouter, defineEventRoute, isObject } from '@lambda-event-router/base'
 import { z } from 'zod'
 
-const eventRouter = createEventRouter()
-
-const ReportSchema = z.object({
-  command: z.literal('generate-report'),
-  reportId: z.string(),
-  format: z.enum(['pdf', 'csv']),
-})
+export const eventRouter = createEventRouter()
 
 const generateReport = defineEventRoute({
   filters: {
     custom: ({ event }) => isObject(event) && event.command === 'generate-report',
   },
-  eventSchema: ReportSchema,
+  eventSchema: z.object({ command: z.literal('generate-report'), reportId: z.string() }),
 }).handle(async ({ event }) => {
-  logger.info(`Generating ${event.format} report ${event.reportId}`)
-  return { reportId: event.reportId, format: event.format }
+  console.log(`Generating report ${event.reportId}`)
+  return { reportId: event.reportId }
 })
 
 eventRouter.route(generateReport)
 ```
 
-#### Annotated handlers
+## Documentation
 
-```ts
-import { createEventRouter, isObject, logger } from '@lambda-event-router/base'
-import type { EventRequest } from '@lambda-event-router/base'
-import { z } from 'zod'
-
-const eventRouter = createEventRouter()
-
-const ReportSchema = z.object({
-  command: z.literal('generate-report'),
-  reportId: z.string(),
-  format: z.enum(['pdf', 'csv']),
-})
-type Report = z.infer<typeof ReportSchema>
-
-eventRouter.route({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.command === 'generate-report',
-  },
-  eventSchema: ReportSchema,
-  handler: generateReport,
-})
-
-async function generateReport({ event }: EventRequest<Report>) {
-  logger.info(`Generating ${event.format} report ${event.reportId}`)
-  return { reportId: event.reportId, format: event.format }
-}
-```
-
-`custom` is given the raw event, typed `unknown`. Narrow it with `isObject` before reading anything. Filters pick the route, and `eventSchema` runs only once one has matched. A coerced or defaulted field therefore arrives in the form the caller sent it.
-
-Where nothing reads the return value, such as an EventBridge Scheduler payload or an asynchronous `Invoke`, set the response type to `void`:
-
-```ts
-const eventRouter = createEventRouter<void>()
-
-eventRouter.route({ filters: {}, handler: onSchedule })
-```
-
-Route middleware on a route carrying an `eventSchema` needs the payload type. Use `EventRouterMiddleware<Report>` rather than the bare alias. The bare one defaults its payload to `unknown`, which leaves `request.event` unreadable inside the middleware.
+- [LambdaRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaRouter) covers picking a router, options, middleware and custom routers.
+- [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter) covers which events reach it, filters, schema validation and
+  failures.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

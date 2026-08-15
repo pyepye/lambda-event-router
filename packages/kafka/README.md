@@ -6,6 +6,8 @@ Routes each record in a Kafka batch to a handler by topic or broker, for Amazon 
 
 **Available Routers:** `KafkaRouter`
 
+**Docs:** [KafkaRouter](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/kafka
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { kafkaRouter } from './kafka'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [kafkaRouter]
+  routers: [kafkaRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -34,125 +35,31 @@ export const handler = lambdaRouter.handler()
 import { createKafkaRouter, defineRoute } from '@lambda-event-router/kafka'
 import { z } from 'zod'
 
-const kafkaRouter = createKafkaRouter()
+export const kafkaRouter = createKafkaRouter()
 
-// An inferred handler takes its types from the route
-const processMessage = defineRoute({
-  filters: { topic: 'order-events' },
-  valueSchema: z.object({ orderId: z.string(), total: z.number() }),
-}).handle(async ({ value, key, topic, partition, offset }) => {
-  console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
-})
-kafkaRouter.route(processMessage)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// kafka.ts
-import { createKafkaRouter } from '@lambda-event-router/kafka'
-import type { KafkaRequest } from '@lambda-event-router/kafka'
-import { z } from 'zod'
-
-const ValueSchema = z.object({ orderId: z.string(), total: z.number() })
-type Order = z.infer<typeof ValueSchema>
-
-const kafkaRouter = createKafkaRouter()
-
-kafkaRouter.route({
-  filters: { topic: 'order-events' },
-  valueSchema: ValueSchema,
-  handler: processMessage,
-})
-
-// An annotated handler names its own types
-export async function processMessage({ value, key, topic, partition, offset }: KafkaRequest<Order>) {
-  console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createKafkaRouter, defineRoute } from '@lambda-event-router/kafka'
-
-const kafkaRouter = createKafkaRouter()
-
-const processMessage = defineRoute({
-  filters: { topic: 'order-events' },
-  valueSchema: ValueSchema,
-}).handle(async ({ value, key, topic, partition, offset }) => {
-  console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
-})
-
-kafkaRouter.route(processMessage)
-```
-
-#### Annotated handlers
-
-```ts
-import { createKafkaRouter } from '@lambda-event-router/kafka'
-import type { KafkaRequest } from '@lambda-event-router/kafka'
-import type { z } from 'zod'
-
-type Order = z.infer<typeof ValueSchema>
-
-const kafkaRouter = createKafkaRouter()
-
-kafkaRouter.route({
-  filters: { topic: 'order-events' },
-  valueSchema: ValueSchema,
-  handler: processMessage,
-})
-
-async function processMessage({ value, key, topic, partition, offset }: KafkaRequest<Order>) {
-  console.log(`Order ${value.orderId} from ${topic}[${partition}] at offset ${offset}`)
-}
-```
-
-#### Filters
-
-`custom` is given the decoded headers, the topic and the raw record. Headers arrive keyed by name on
-`headers`, with every entry in order on `headerList` for a name a producer sends twice. The message
-value is not on it, since that is only parsed once a route has matched.
-
-`tombstone: true` takes only records with no value, which on a compacted topic are deletes. `false`
-takes only records carrying a value. Leave it off to take both.
-
-A record with an empty value is not a tombstone. An empty payload is data, not a delete.
-
-Lambda sends a batch reported through `batchItemFailures` back as its `records` alone, with no
-`eventSourceArn` and no `bootstrapServers`. Those two filters have nothing to test on a redelivered
-record and let it through, so a retry reaches the same route as the first attempt.
-
-```ts
-defineRoute({
+const stockMoved = defineRoute({
   filters: {
-    topic: ['order-events', 'order-retries'],
-    eventSourceArn: 'arn:aws:kafka:us-east-1:123456789:cluster/my-cluster',
-    bootstrapServer: 'broker1:9092',
-    custom: ({ headers }) => headers.priority === 'HIGH',
+    topic: 'stock-movements',
+    tombstone: false,
+    eventSourceArn: 'arn:aws:kafka:eu-west-2:123456789012:cluster/warehouse/abcd1234-5678-90ab-cdef-1234567890ab-2',
+    bootstrapServer: 'b-1.warehouse.abc123.c2.kafka.eu-west-2.amazonaws.com:9098',
   },
+  valueSchema: z.object({ sku: z.string(), quantity: z.number() }),
+}).handle(async ({ value }) => {
+  console.log(`Moved ${value.quantity} of ${value.sku}`)
 })
+
+kafkaRouter.route(stockMoved)
 ```
 
-#### Middleware
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter#annotated-handlers).
 
-Register middleware on the router to cover every route, or on a single route. Type route middleware to
-the route's schema, so `KafkaMiddleware<StockMovement>` rather than `KafkaMiddleware`.
+## Documentation
 
-```ts
-import type { KafkaMiddleware } from '@lambda-event-router/kafka'
-
-const withWarehouseContext: KafkaMiddleware<StockMovement> = async (request, next) => {
-  console.log(`Movement of ${request.value.sku}`)
-  return next(request)
-}
-```
+- [KafkaRouter](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter) covers every filter, tombstones, message headers, and failures and retries.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/kafka](../../service-examples/kafka) directory for complete working examples.
+See [service-examples/kafka](../../service-examples/kafka) for a deployable app.

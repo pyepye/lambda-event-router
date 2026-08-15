@@ -1,12 +1,12 @@
 # @lambda-event-router/config
 
-Routes AWS Config rule evaluations to handlers by rule name, resource type or resource id. There is one router for configuration changes and one for scheduled evaluations.
+Routes AWS Config rule evaluations to handlers by rule name, resource type, resource id or item status. There is one router for configuration changes and one for scheduled evaluations.
 
 **Supported AWS Services:** `AWS Config`
 
 **Available Routers:** `ConfigRouter` | `ConfigScheduledRouter`
 
-(See [Routers](#routers) for more details)
+**Docs:** [ConfigRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter) | [ConfigScheduledRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigScheduledRouter)
 
 ## Install
 
@@ -16,18 +16,16 @@ npm install @lambda-event-router/base @lambda-event-router/config
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
-
-This example is for the ConfigRouter. See [Usage](#usage) for examples of the other routers
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
 import { configRouter } from './config'
+import { scheduledRouter } from './scheduled'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [configRouter]
+  routers: [configRouter, scheduledRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -37,162 +35,51 @@ export const handler = lambdaRouter.handler()
 // config.ts
 import { createConfigRouter, defineRoute } from '@lambda-event-router/config'
 
-const configRouter = createConfigRouter()
+export const configRouter = createConfigRouter()
 
-// An inferred handler takes its types from the route
-const evaluateResource = defineRoute({
+const evaluateInstance = defineRoute({
   filters: {
-    configRuleName: 'my-custom-rule',
+    configRuleName: 'required-tags',
+    resourceType: 'AWS::EC2::Instance',
+    resourceId: 'i-0abc123def4567890',
+    configurationItemStatus: 'OK',
   },
-}).handle(async ({ configurationItem, ruleParameters }) => {
-  // A rule's filters cannot tell a normal change from an oversized one, so narrow first
-  if (!configurationItem) return
-  console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
-})
-configRouter.route(evaluateResource)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// config.ts
-import { createConfigRouter } from '@lambda-event-router/config'
-
-const configRouter = createConfigRouter()
-
-configRouter.route({
-  filters: { configRuleName: 'my-custom-rule' },
-  handler: evaluateResource,
+}).handle(async ({ configRuleName, resultToken }) => {
+  console.log(`Evaluating ${configRuleName}, report with token ${resultToken}`)
 })
 
-// An annotated handler names its own types
-export async function evaluateResource({ configurationItem, ruleParameters }: ConfigRequest | ConfigOversizedRequest) {
-  if (!configurationItem) return
-  console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
-}
+configRouter.route(evaluateInstance)
 ```
 
-
-## Routers
-
-| AWS Service | Event Source | Router | Usage
-|---|---|---|---|
-| AWS Config | Configuration Change | `ConfigRouter` | [ConfigRouter](#configrouter) |
-| AWS Config | Scheduled Evaluation | `ConfigScheduledRouter` | [ConfigScheduledRouter](#configscheduledrouter) |
-
-See the [AWS Config Resource Type Reference](https://docs.aws.amazon.com/config/latest/developerguide/resource-config-reference.html) for the full schema of each supported resource type.
-
-
-## Usage
-
-### ConfigRouter
-
-#### Inferred handlers
-
 ```ts
-import { createConfigRouter, defineRoute } from '@lambda-event-router/config'
-
-const configRouter = createConfigRouter()
-
-const evaluateResource = defineRoute({
-  filters: {
-    configRuleName: 'my-custom-rule',
-  },
-}).handle(async ({ configurationItem, ruleParameters }) => {
-  // A rule's filters cannot tell a normal change from an oversized one, so narrow first
-  if (!configurationItem) return
-  console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
-})
-
-configRouter.route(evaluateResource)
-```
-
-#### Annotated handlers
-
-```ts
-import { createConfigRouter } from '@lambda-event-router/config'
-
-const configRouter = createConfigRouter()
-
-configRouter.route({
-  filters: {
-    configRuleName: 'my-custom-rule',
-  },
-  handler: evaluateResource,
-})
-
-async function evaluateResource({ configurationItem, ruleParameters }: ConfigRequest | ConfigOversizedRequest) {
-  if (!configurationItem) return
-  console.log(`Evaluating ${configurationItem.resourceType}: ${configurationItem.resourceId}`)
-}
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    configRuleName: 'my-custom-rule',
-    custom: ({ resourceType }) => resourceType === 'AWS::EC2::Instance',
-  },
-})
-```
-
-### ConfigScheduledRouter
-
-#### Inferred handlers
-
-```ts
+// scheduled.ts
 import { createConfigScheduledRouter, defineConfigScheduledRoute } from '@lambda-event-router/config'
 
-const scheduledRouter = createConfigScheduledRouter()
+export const scheduledRouter = createConfigScheduledRouter()
 
-scheduledRouter.route(
-  defineConfigScheduledRoute({
-    filters: { configRuleName: 'compliance-check' },
-  }).handle(async ({ accountId }) => {
-    console.log(`Running scheduled compliance check for ${accountId}`)
-  })
-)
-```
-
-#### Annotated handlers
-
-```ts
-import { createConfigScheduledRouter } from '@lambda-event-router/config'
-import type { ConfigScheduledRequest } from '@lambda-event-router/config'
-
-const scheduledRouter = createConfigScheduledRouter()
-
-scheduledRouter.route({
-  filters: { configRuleName: 'compliance-check' },
-  handler: runComplianceCheck,
+const runTagAudit = defineConfigScheduledRoute({
+  filters: {
+    configRuleName: 'periodic-tag-audit',
+    accountId: '123456789012',
+  },
+}).handle(async ({ accountId, resultToken }) => {
+  console.log(`Auditing account ${accountId}, report with token ${resultToken}`)
 })
 
-async function runComplianceCheck({ accountId }: ConfigScheduledRequest) {
-  console.log(`Running scheduled compliance check for ${accountId}`)
-}
+scheduledRouter.route(runTagAudit)
 ```
 
-### Middleware
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter#annotated-handlers).
 
-Register middleware on the router to cover every route, or on a single route. Type route middleware to
-the route's schemas. Each router has its own alias.
+## Documentation
 
-```ts
-import type { ConfigMiddleware, ConfigScheduledMiddleware } from '@lambda-event-router/config'
-
-const withChangeContext: ConfigMiddleware<Configuration, Params> = async (request, next) => {
-  console.log(`Rule ${request.configRuleName}`)
-  return next(request)
-}
-
-const withAuditContext: ConfigScheduledMiddleware<TagAuditParams> = async (request, next) => {
-  console.log(`Auditing for ${request.ruleParameters.requiredTag}`)
-  return next(request)
-}
-```
+- [ConfigRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter) covers every filter, schema validation, failures and retries
+  and reporting evaluations.
+- [ConfigScheduledRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigScheduledRouter) covers every filter, schema validation
+  and reporting evaluations.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/config](../../service-examples/config) directory for complete working examples.
+See [service-examples/config](../../service-examples/config) for a deployable app.

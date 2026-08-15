@@ -6,6 +6,8 @@ Routes each Secrets Manager rotation step to its own handler. Secrets Manager ca
 
 **Available Routers:** `SecretsManagerRouter`
 
+**Docs:** [SecretsManagerRouter](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter)
+
 ## Install
 
 ```bash
@@ -17,69 +19,44 @@ npm install @lambda-event-router/base @lambda-event-router/secretsmanager
 ## Quick Start
 
 ```ts
+// main handler
+import { LambdaRouter } from '@lambda-event-router/base'
+import { secretsManagerRouter } from './secretsmanager'
+
+const lambdaRouter = new LambdaRouter({
+  routers: [secretsManagerRouter],
+})
+
+export const handler = lambdaRouter.handler()
+```
+
+```ts
+// secretsmanager.ts
 import { createSecretsManagerRouter, defineRoute } from '@lambda-event-router/secretsmanager'
 
-const secretsManagerRouter = createSecretsManagerRouter()
+export const secretsManagerRouter = createSecretsManagerRouter()
 
-secretsManagerRouter
-  .createSecret(createSecretRoute)
-  .setSecret(setSecretRoute)
-  .testSecret(testSecretRoute)
-  .finishSecret(finishSecretRoute)
-```
-
-## Usage
-
-### Typed step methods
-
-```ts
-const secretsManagerRouter = createSecretsManagerRouter()
-
-secretsManagerRouter.createSecret({
-  filters: { secretId: 'prod/database/*' },
-  handler: async ({ secretId, clientRequestToken, step }) => {
-    console.log(`Creating secret ${secretId} - step: ${step}`)
-  },
-})
-
-secretsManagerRouter.setSecret({
-  filters: { secretId: 'prod/database/*' },
-  handler: async ({ secretId }) => {
-    console.log(`Setting secret ${secretId}`)
-  },
-})
-
-secretsManagerRouter.testSecret({
-  filters: { secretId: 'prod/database/*' },
-  handler: async ({ secretId }) => {
-    console.log(`Testing secret ${secretId}`)
-  },
-})
-
-secretsManagerRouter.finishSecret({
-  filters: { secretId: 'prod/database/*' },
-  handler: async ({ secretId }) => {
-    console.log(`Finishing rotation for ${secretId}`)
-  },
-})
-```
-
-### Filters
-
-```ts
-defineRoute({
+const createDatabaseSecret = defineRoute({
   filters: {
     step: 'createSecret',
-    secretId: /^prod\/database\//,
-    custom: ({ secretName }) => secretName.startsWith('prod/'),
+    secretId: 'prod/database/*',
   },
+}).handle(async ({ secretId, clientRequestToken }) => {
+  console.log(`Creating version ${clientRequestToken} of ${secretId}`)
 })
+
+secretsManagerRouter.route(createDatabaseSecret)
 ```
 
-`secretId` is matched against the secret ARN and against the name on its own, so either form works.
-The event itself only ever carries the ARN, which is why `secretName` exists on the request and on
-the filter input.
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter#annotated-handlers).
+
+## Documentation
+
+- [SecretsManagerRouter](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter) covers every filter, failures and retries
+  and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/secretsmanager](../../service-examples/secretsmanager) directory for complete working examples.
+See [service-examples/secretsmanager](../../service-examples/secretsmanager) for a deployable app.

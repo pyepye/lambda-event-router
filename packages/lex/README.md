@@ -6,6 +6,8 @@ Routes Lex V2 code hook calls to handlers by intent, hook and bot. Your handler 
 
 **Available Routers:** `LexRouter`
 
+**Docs:** [LexRouter](https://pyepye.github.io/lambda-event-router/routers/LexRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/lex
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { lexRouter } from './lex'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [lexRouter]
+  routers: [lexRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -33,64 +34,14 @@ export const handler = lambdaRouter.handler()
 // lex.ts
 import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
 
-const lexRouter = createLexRouter()
+export const lexRouter = createLexRouter()
 
-// An inferred handler takes its types from the route
-const handleFulfillment = defineRoute({
+const placePizzaOrder = defineRoute({
   filters: {
+    intentName: 'OrderPizza',
     invocationSource: 'FulfillmentCodeHook',
-  },
-}).handle(async ({ intentName, inputTranscript }) => {
-  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
-  return {
-    sessionState: {
-      dialogAction: { type: 'Close' },
-      intent: { name: intentName, state: 'Fulfilled' },
-    },
-  }
-})
-lexRouter.route(handleFulfillment)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// lex.ts
-import { createLexRouter } from '@lambda-event-router/lex'
-import type { LexFulfillmentCodeHookRequest, LexResponse } from '@lambda-event-router/lex'
-
-const lexRouter = createLexRouter()
-
-lexRouter.fulfillmentCodeHook({
-  filters: {},
-  handler: handleFulfillment,
-})
-
-// An annotated handler names its own types
-async function handleFulfillment({ intentName, inputTranscript }: LexFulfillmentCodeHookRequest): Promise<LexResponse> {
-  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
-  return {
-    sessionState: {
-      dialogAction: { type: 'Close' },
-      intent: { name: intentName, state: 'Fulfilled' },
-    },
-  }
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
-
-const lexRouter = createLexRouter()
-
-const handleFulfillment = defineRoute({
-  filters: {
-    invocationSource: 'FulfillmentCodeHook',
+    botId: 'ABCDEF1234',
+    inputMode: 'Text',
   },
 }).handle(async ({ intentName, inputTranscript }) => {
   console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
@@ -102,62 +53,18 @@ const handleFulfillment = defineRoute({
   }
 })
 
-lexRouter.route(handleFulfillment)
+lexRouter.route(placePizzaOrder)
 ```
 
-#### Annotated handlers
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/LexRouter#annotated-handlers).
 
-```ts
-import { createLexRouter } from '@lambda-event-router/lex'
-import type { LexFulfillmentCodeHookRequest, LexResponse } from '@lambda-event-router/lex'
+## Documentation
 
-const lexRouter = createLexRouter()
-
-lexRouter.fulfillmentCodeHook({
-  filters: {},
-  handler: handleFulfillment,
-})
-
-async function handleFulfillment({ intentName, inputTranscript }: LexFulfillmentCodeHookRequest): Promise<LexResponse> {
-  console.log(`Fulfilling ${intentName}: ${inputTranscript}`)
-  return {
-    sessionState: {
-      dialogAction: { type: 'Close' },
-      intent: { name: intentName, state: 'Fulfilled' },
-    },
-  }
-}
-```
-
-#### Helper methods
-
-`dialogCodeHook` and `fulfillmentCodeHook` preset the `invocationSource` filter for you, so you only pass
-the rest of the filters and a handler.
-
-```ts
-lexRouter.dialogCodeHook({
-  filters: { intentName: 'OrderPizza' },
-  handler: validateSlots,
-})
-
-lexRouter.fulfillmentCodeHook({
-  filters: { intentName: 'OrderPizza' },
-  handler: placeOrder,
-})
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    inputMode: ['Text', 'Speech'],
-    invocationSource: ['DialogCodeHook', 'FulfillmentCodeHook'],
-    custom: ({ event }) => event.sessionState.sessionAttributes?.tier === 'premium',
-  },
-})
-```
+- [LexRouter](https://pyepye.github.io/lambda-event-router/routers/LexRouter) covers every filter, responses
+  and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/lex](../../service-examples/lex) directory for complete working examples.
+See [service-examples/lex](../../service-examples/lex) for a deployable app.

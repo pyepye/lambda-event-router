@@ -16,7 +16,6 @@ npm install @lambda-event-router/base @lambda-event-router/http
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself.
 
-
 ## Quick Start
 
 ```ts

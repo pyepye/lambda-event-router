@@ -6,6 +6,8 @@ Routes each message in an SQS batch to a handler by queue or message attribute. 
 
 **Available Routers:** `SQSRouter`
 
+**Docs:** [SQSRouter](https://pyepye.github.io/lambda-event-router/routers/SQSRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/sqs
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { sqsRouter } from './sqs'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter]
+  routers: [sqsRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -34,141 +35,30 @@ export const handler = lambdaRouter.handler()
 import { createSQSRouter, defineRoute } from '@lambda-event-router/sqs'
 import { z } from 'zod'
 
-const sqsRouter = createSQSRouter()
-
-// An inferred handler takes its types from the route
-const processOrder = defineRoute({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: z.object({ name: z.string(), price: z.number() }),
-}).handle(async ({ body }) => {
-  console.log(`Creating item: ${body.name} - $${body.price}`)
-})
-sqsRouter.route(processOrder)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// sqs.ts
-import { createSQSRouter } from '@lambda-event-router/sqs'
-import type { SQSRequest } from '@lambda-event-router/sqs'
-import { z } from 'zod'
-
-const ItemSchema = z.object({ name: z.string(), price: z.number() })
-type Item = z.infer<typeof ItemSchema>
-
-const sqsRouter = createSQSRouter()
-
-sqsRouter.route({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: ItemSchema,
-  handler: processOrder,
-})
-
-// An annotated handler names its own types
-export async function processOrder({ body }: SQSRequest<Item>) {
-  console.log(`Creating item: ${body.name} - $${body.price}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createSQSRouter, defineRoute } from '@lambda-event-router/sqs'
-
-const sqsRouter = createSQSRouter()
+export const sqsRouter = createSQSRouter()
 
 const processOrder = defineRoute({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: BodySchema,
-  messageAttributesSchema: MessageAttributesSchema,
-}).handle(async ({ body, messageAttributes }) => {
-  console.log(`Creating item: ${body.name} - $${body.price}`)
-  console.log(`dryRun: ${messageAttributes.dryRun}`)
-})
-
-sqsRouter.route(processOrder)
-```
-
-#### Annotated handlers
-
-```ts
-import { createSQSRouter } from '@lambda-event-router/sqs'
-import type { SQSRequest } from '@lambda-event-router/sqs'
-import type { z } from 'zod'
-
-type Item = z.infer<typeof BodySchema>
-type Attributes = z.infer<typeof MessageAttributesSchema>
-
-const sqsRouter = createSQSRouter()
-
-sqsRouter.route({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: BodySchema,
-  messageAttributesSchema: MessageAttributesSchema,
-  handler: processOrder,
-})
-
-async function processOrder({ body, messageAttributes }: SQSRequest<Item, Attributes>) {
-  console.log(`Creating item: ${body.name} - $${body.price}`)
-  console.log(`dryRun: ${messageAttributes.dryRun}`)
-}
-```
-
-#### Filters
-
-```ts
-defineRoute({
   filters: {
-    eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue',
-    messageAttributes: { environment: 'production' },
-    custom: ({ body }) => {
-      if (typeof body !== 'object' || body === null) return false
-      return 'orderId' in body
-    },
+    eventSourceArn: 'arn:aws:sqs:eu-west-2:123456789012:orders',
+    messageAttributes: { Type: 'ProcessOrder' },
   },
-})
-```
-
-#### Message attributes schema
-
-```ts
-const MessageAttributesSchema = z.object({
-  dryRun: z.coerce.boolean().default(false),
+  bodySchema: z.object({ orderId: z.string(), total: z.number() }),
+}).handle(async ({ body }) => {
+  console.log(`Processing order ${body.orderId} for ${body.total}`)
 })
 
-defineRoute({
-  filters: { eventSourceArn: 'arn:aws:sqs:us-east-1:123456789:my-queue' },
-  bodySchema: BodySchema,
-  messageAttributesSchema: MessageAttributesSchema,
-}).handle(async ({ body, messageAttributes }) => {
-  console.log(`dryRun: ${messageAttributes.dryRun}`)
-})
+sqsRouter.route(processOrder)
 ```
 
-#### Message attribute types
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SQSRouter#annotated-handlers).
 
-Attributes reach your handler converted, and a custom label on the data type makes no difference. A
-`Number.float` is read as a `Number` and a `Binary.gif` as `Binary`.
+## Documentation
 
-| Data type | You get |
-| --- | --- |
-| `String` | the string |
-| `String.Array` | a `string[]`, or the raw JSON text when the list holds anything but strings |
-| `Number` | a number, or the original text when the value has more digits than a number holds exactly |
-| `Binary` | a `Buffer`, decoded from base64 |
-
-#### Batch failure reporting
-
-```ts
-const sqsRouter = createSQSRouter({ batchItemFailures: true })
-```
-
-When enabled, failed messages are reported back to SQS as partial batch failures instead of failing the entire batch.
+- [SQSRouter](https://pyepye.github.io/lambda-event-router/routers/SQSRouter) covers every filter, schema validation, message attribute types
+  and batch failure reporting.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/sqs](../../service-examples/sqs) directory for complete working examples.
+See [service-examples/sqs](../../service-examples/sqs) for a deployable app.

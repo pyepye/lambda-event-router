@@ -1,10 +1,12 @@
 # @lambda-event-router/codecommit
 
-Routes CodeCommit repository triggers to handlers by repository, branch and kind of change. Every matching route runs, each with the references it asked for.
+Routes CodeCommit repository triggers to handlers by repository, branch and kind of change. Every matching route runs. Routes added with `push()`, `branchCreated()` or `branchDeleted()` get only that kind of reference.
 
 **Supported AWS Services:** `AWS CodeCommit`
 
 **Available Routers:** `CodeCommitRouter`
+
+**Docs:** [CodeCommitRouter](https://pyepye.github.io/lambda-event-router/routers/CodeCommitRouter)
 
 ## Install
 
@@ -17,53 +19,40 @@ npm install @lambda-event-router/base @lambda-event-router/codecommit
 ## Quick Start
 
 ```ts
+// main handler
+import { LambdaRouter } from '@lambda-event-router/base'
+import { codeCommitRouter } from './codecommit'
+
+const lambdaRouter = new LambdaRouter({
+  routers: [codeCommitRouter],
+})
+
+export const handler = lambdaRouter.handler()
+```
+
+```ts
+// codecommit.ts
 import { createCodeCommitRouter, defineRoute } from '@lambda-event-router/codecommit'
 
-const codecommitRouter = createCodeCommitRouter()
+export const codeCommitRouter = createCodeCommitRouter()
 
-codecommitRouter.push(
-  defineRoute({
-    filters: {
-      repositoryName: 'my-repo',
-      branch: 'main',
-    },
-  }).handle(async ({ references, userIdentityARN }) => {
-    for (const reference of references) {
-      console.log(`New commit ${reference.commit} on ${reference.ref} by ${userIdentityARN}`)
-    }
-  })
-)
-```
-
-## Usage
-
-### Filters
-
-`branch` matches with `refs/heads/` already stripped, and `repositoryName` matches the last segment of
-the repository ARN.
-
-```ts
-defineRoute({
+const onMainPush = defineRoute({
   filters: {
-    eventSourceArn: 'arn:aws:codecommit:us-east-1:123456789012:my-repo',
-    repositoryName: ['my-repo', 'other-repo'],
-    branch: ['main', 'develop'],
-    custom: ({ userIdentityARN }) => !userIdentityARN.includes('deploy-bot'),
+    eventSourceArn: 'arn:aws:codecommit:eu-west-2:123456789012:checkout-service',
+    repositoryName: 'checkout-service',
+    branch: 'main',
   },
+}).handle(async ({ references, userIdentityARN }) => {
+  console.log(`${userIdentityARN} pushed ${references.map((reference) => reference.commit).join(', ')}`)
 })
+
+codeCommitRouter.push(onMainPush)
 ```
 
-### Reference filters
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CodeCommitRouter#annotated-handlers).
 
-A record carries every ref that moved. `push()`, `branchCreated()` and `branchDeleted()` narrow which of
-them a route sees, and `route()` sees all of them.
+## Documentation
 
-```ts
-codecommitRouter
-  .push({ filters: { repositoryName: 'my-repo' }, handler: onPush })
-  .branchCreated({ filters: { repositoryName: 'my-repo' }, handler: onBranchCreated })
-  .branchDeleted({ filters: { repositoryName: 'my-repo' }, handler: onBranchDeleted })
-```
-
-Every route that matches runs, so a record can reach more than one handler with a different subset of
-the references each time.
+- [CodeCommitRouter](https://pyepye.github.io/lambda-event-router/routers/CodeCommitRouter) covers every filter, failures and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.

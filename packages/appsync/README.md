@@ -6,7 +6,7 @@ Routes AppSync resolver calls to handlers by GraphQL type and field. The package
 
 **Available Routers:** `AppSyncRouter` | `AppSyncAuthorizerRouter` | `AppSyncEventsRouter` | `AppSyncEventsAuthorizerRouter`
 
-(See [Routers](#routers) for more details)
+**Docs:** [AppSyncRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncRouter) | [AppSyncAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncAuthorizerRouter) | [AppSyncEventsRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsRouter) | [AppSyncEventsAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsAuthorizerRouter)
 
 ## Install
 
@@ -16,18 +16,18 @@ npm install @lambda-event-router/base @lambda-event-router/appsync
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
-
-This example is for the AppSyncRouter. See [Usage](#usage) for examples of the other routers
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
 import { appSyncRouter } from './appsync'
+import { authorizerRouter } from './authorizer'
+import { eventsRouter } from './events'
+import { eventsAuthorizerRouter } from './eventsAuthorizer'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [appSyncRouter]
+  routers: [appSyncRouter, authorizerRouter, eventsRouter, eventsAuthorizerRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -39,295 +39,103 @@ import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
 
 export const appSyncRouter = createAppSyncRouter()
 
-// An inferred handler takes its types from the route
-const getItem = defineRoute({
+const getOrder = defineRoute({
   filters: {
     parentTypeName: 'Query',
-    fieldName: 'getItem',
+    fieldName: 'getOrder',
   },
-}).handle(async ({ arguments: args, identity }) => {
-  return { id: args.id, name: 'Example Item' }
+}).handle(async ({ arguments: args }) => {
+  console.log(`Getting order ${args.id}`)
+  return { id: args.id, status: 'SHIPPED' }
 })
-appSyncRouter.route(getItem)
+
+appSyncRouter.route(getOrder)
 ```
 
-Or use an annotated handler, which names its types rather than inferring them:
-
 ```ts
-// appsync.ts
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync'
-import { createAppSyncRouter } from '@lambda-event-router/appsync'
+// authorizer.ts
+import {
+  Authorized,
+  createAppSyncAuthorizerRouter,
+  defineAuthorizerRoute,
+  Denied,
+} from '@lambda-event-router/appsync'
 
-export const appSyncRouter = createAppSyncRouter()
+export const authorizerRouter = createAppSyncAuthorizerRouter()
 
-appSyncRouter.route({
+const authoriseGetOrder = defineAuthorizerRoute({
   filters: {
-    parentTypeName: 'Query',
-    fieldName: 'getItem',
+    apiId: 'abc123',
+    operationName: 'GetOrder',
   },
-  handler: getItem,
+}).handle(async ({ authorizationToken, requestId }) => {
+  console.log(`Authorising request ${requestId}`)
+  return authorizationToken === process.env.API_TOKEN ? Authorized() : Denied()
 })
 
-// An annotated handler names its own types
-export async function getItem({ arguments: args }: AppSyncResolverRequest) {
-  return { id: args.id, name: 'Example Item' }
-}
+authorizerRouter.route(authoriseGetOrder)
 ```
 
-
-## Routers
-
-| AWS Service | Event Source | Router | Usage
-|---|---|---|---|
-| AppSync | Resolver | `AppSyncRouter` | [AppSyncRouter](#appsyncrouter) |
-| AppSync | Authorizer | `AppSyncAuthorizerRouter` | [AppSyncAuthorizerRouter](#appsyncauthorizerrouter) |
-| AppSync | Events | `AppSyncEventsRouter` | [AppSyncEventsRouter](#appsynceventsrouter) |
-| AppSync | Events authorizer | `AppSyncEventsAuthorizerRouter` | [AppSyncEventsAuthorizerRouter](#appsynceventsauthorizerrouter) |
-
-
-## Usage
-
-### AppSyncRouter
-
-#### Inferred handlers
-
 ```ts
-import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
-
-const appSyncRouter = createAppSyncRouter()
-
-const getItem = defineRoute({
-  filters: {
-    parentTypeName: 'Query',
-    fieldName: 'getItem',
-  },
-}).handle(async ({ arguments: args, identity }) => {
-  return { id: args.id, name: 'Example Item' }
-})
-
-appSyncRouter.route(getItem)
-```
-
-#### Annotated handlers
-
-```ts
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync'
-import { createAppSyncRouter } from '@lambda-event-router/appsync'
-
-const appSyncRouter = createAppSyncRouter()
-
-appSyncRouter.route({
-  filters: {
-    parentTypeName: 'Mutation',
-    fieldName: 'createItem',
-  },
-  handler: createItem,
-})
-
-async function createItem({ arguments: args }: AppSyncResolverRequest) {
-  return { id: args.id, name: args.name }
-}
-```
-
-#### Convenience methods
-
-`query()`, `mutation()` and `subscription()` set `parentTypeName` and take the field name at the top
-level. `custom` is the only filter key they take.
-
-```ts
-appSyncRouter
-  .query({ fieldName: 'getItem', handler: getItem })
-  .mutation({ fieldName: 'createItem', handler: createItem })
-  .subscription({ fieldName: 'onItemCreated', handler: onItemCreated })
-```
-
-#### Schema validation and middleware
-
-`argumentsSchema` validates the field's arguments before the handler runs, and `middleware` runs per
-invocation at either level.
-
-```ts
-const appSyncRouter = createAppSyncRouter({ middleware: [withRequestContext] })
-
-appSyncRouter.mutation({
-  fieldName: 'createItem',
-  argumentsSchema: CreateItemSchema,
-  middleware: [withItemContext],
-  handler: createItem,
-})
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    parentTypeName: 'Mutation',
-    fieldName: 'createItem',
-    custom: ({ event }) => event.request.headers['x-tenant'] === 'acme',
-  },
-})
-```
-
-#### Batched resolvers
-
-A resolver with `maxBatchSize` above 0 is sent a list of contexts rather than one. The router routes
-each entry on its own and wraps the results in the list AppSync expects.
-
-```ts
-const appSyncRouter = createAppSyncRouter({ batchItemFailures: true })
-
-appSyncRouter.route({
-  filters: { parentTypeName: 'Item', fieldName: 'relatedItems' },
-  handler: getRelatedItems,
-})
-```
-
-Handlers still return the field's value. An entry that throws fails the whole batch, unless
-`batchItemFailures` is set, which reports it on its own and lets the rest resolve.
-
-### AppSyncAuthorizerRouter
-
-#### Inferred handlers
-
-```ts
-import { createAppSyncAuthorizerRouter, defineAuthorizerRoute, Authorized, Denied } from '@lambda-event-router/appsync'
-
-const authRouter = createAppSyncAuthorizerRouter()
-
-authRouter.route(
-  defineAuthorizerRoute().handle(async ({ authorizationToken }) => {
-    if (isValid(authorizationToken)) return Authorized()
-    return Denied()
-  })
-)
-```
-
-Routes are ranked by how specific they are, so a filtered route beats one with no filters whatever order
-you registered them in. A route with no filters takes everything else, which is the common shape for an
-API with one authorizer. Filter on `apiId` when one function guards several APIs, on `operationName` to
-give a named operation its own decision or with `custom`.
-
-```ts
-authRouter
-  .route(defineAuthorizerRoute({ filters: { operationName: 'AdminAudit' } }).handle(authoriseAdminAudit))
-  .route(defineAuthorizerRoute().handle(authoriseEveryoneElse))
-```
-
-#### Annotated handlers
-
-```ts
-import type { AppSyncAuthorizerRequest } from '@lambda-event-router/appsync'
-import { createAppSyncAuthorizerRouter, Authorized, Denied } from '@lambda-event-router/appsync'
-
-const authRouter = createAppSyncAuthorizerRouter()
-
-authRouter.route({
-  handler: validateToken,
-})
-
-async function validateToken({ authorizationToken }: AppSyncAuthorizerRequest) {
-  if (isValid(authorizationToken)) return Authorized()
-  return Denied()
-}
-```
-
-### AppSyncEventsRouter
-
-#### Inferred handlers
-
-```ts
+// events.ts
 import { createAppSyncEventsRouter, defineEventsRoute } from '@lambda-event-router/appsync'
 
-const eventsRouter = createAppSyncEventsRouter()
+export const eventsRouter = createAppSyncEventsRouter()
 
-eventsRouter.route(
-  defineEventsRoute({
-    filters: { operation: 'PUBLISH', channelPath: '/default/*' },
-  }).handle(async ({ events }) => {
-    return { events }
-  })
-)
-```
-
-`channelPath` matches the channel path, so it takes `/default/*`. To match by the namespace name
-instead, use `channelNamespace: 'default'`.
-
-#### Annotated handlers
-
-```ts
-import type { AppSyncEventsRequest } from '@lambda-event-router/appsync'
-import { createAppSyncEventsRouter } from '@lambda-event-router/appsync'
-
-const eventsRouter = createAppSyncEventsRouter()
-
-eventsRouter.route({
-  filters: { operation: 'SUBSCRIBE', channelPath: '/default/*' },
-  handler: handleSubscribe,
+const publishOrder = defineEventsRoute({
+  filters: {
+    operation: 'PUBLISH',
+    channelPath: '/orders/*',
+    channelNamespace: 'orders',
+  },
+}).handle(async ({ channelPath, events }) => {
+  console.log(`Publishing ${events.length} events to ${channelPath}`)
+  return { events }
 })
 
-// Returning allows the subscription, throwing refuses it
-async function handleSubscribe({ channelPath, identity }: AppSyncEventsRequest) {
-  if (!identity) throw new Error(`Nobody may subscribe to ${channelPath} anonymously`)
-}
+eventsRouter.route(publishOrder)
 ```
 
-#### Convenience methods
-
-`publish()` and `subscribe()` set the `operation` filter and take the channel path at the top level.
-
 ```ts
-eventsRouter
-  .publish({ channelPath: '/default/*', handler: handlePublish })
-  .subscribe({ channelPath: '/default/*', handler: handleSubscribe })
-```
-
-#### Payload schema
-
-Each published event is an `id` and a `payload`, and `payload` is a `JsonValue` because AppSync
-accepts any JSON value a client publishes. `payloadSchema` validates and types it instead.
-
-```ts
-eventsRouter.publish({
-  channelPath: '/orders/*',
-  payloadSchema: OrderSchema,
-  handler: handlePublish,
-})
-```
-
-One payload that fails its schema throws and fails the whole publish. Where you want the rest of the
-batch delivered, leave the schema off and return an `{ id, error }` entry for each event you reject.
-
-### AppSyncEventsAuthorizerRouter
-
-An Event API sends its authorizer a different event from a GraphQL API, so it has a router of its
-own. One function can hold both.
-
-```ts
+// eventsAuthorizer.ts
 import {
   createAppSyncEventsAuthorizerRouter,
+  defineEventsAuthorizerRoute,
   EventsAuthorized,
   EventsDenied,
 } from '@lambda-event-router/appsync'
 
-const eventsAuthorizerRouter = createAppSyncEventsAuthorizerRouter()
+export const eventsAuthorizerRouter = createAppSyncEventsAuthorizerRouter()
 
-eventsAuthorizerRouter
-  .connect({ handler: admitConnection })
-  .publish({ channelPath: '/orders/*', handler: authoriseOrderPublish })
-  .subscribe({ channelPath: '/orders/*', handler: authoriseOrderSubscribe })
+const authoriseOrderPublish = defineEventsAuthorizerRoute({
+  filters: {
+    operation: 'EVENT_PUBLISH',
+    channelPath: '/orders/*',
+    channelNamespace: 'orders',
+  },
+}).handle(async ({ authorizationToken, channelPath }) => {
+  console.log(`Authorising a publish to ${channelPath}`)
+  return authorizationToken === process.env.API_TOKEN ? EventsAuthorized() : EventsDenied()
+})
 
-async function authoriseOrderPublish({ authorizationToken }: AppSyncEventsAuthorizerRequest) {
-  const team = await teams.fromToken(authorizationToken)
-  if (!team) return EventsDenied()
-
-  return EventsAuthorized({ handlerContext: { teamId: team.id } })
-}
+eventsAuthorizerRouter.route(authoriseOrderPublish)
 ```
 
-An Event API reads `handlerContext` and never `resolverContext`, and there is no `deniedFields`. A
-connect names no channel, so a channel filter cannot match one.
+Each handler's types come from its route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/docs/handlers#annotated-handlers).
+
+## Documentation
+
+- [AppSyncRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncRouter) covers every filter, schema validation, nested field resolvers
+  and batched resolvers.
+- [AppSyncAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncAuthorizerRouter) covers every filter, responses
+  and middleware.
+- [AppSyncEventsRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsRouter) covers every filter, responses
+  and middleware.
+- [AppSyncEventsAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsAuthorizerRouter) covers every filter, responses
+  and middleware.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/appsync](../../service-examples/appsync) directory for complete working examples.
+See [service-examples/appsync](../../service-examples/appsync) for a deployable app.

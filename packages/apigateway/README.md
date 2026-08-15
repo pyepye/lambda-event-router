@@ -6,7 +6,7 @@ Routes API Gateway requests to handlers by method and path. REST APIs and both H
 
 **Available Routers:** `APIGatewayRouter` | `LambdaAuthorizerRouter` | `WebSocketRouter`
 
-(See [Routers](#routers) for more details)
+**Docs:** [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) | [LambdaAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaAuthorizerRouter) | [WebSocketRouter](https://pyepye.github.io/lambda-event-router/routers/WebSocketRouter)
 
 ## Install
 
@@ -16,18 +16,17 @@ npm install @lambda-event-router/base @lambda-event-router/apigateway
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
-
-This example is for the APIGatewayRouter. For see [Usage](#usage) for examples of the other routers
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
 import { apiRouter } from './api'
+import { authRouter } from './authorizer'
+import { wsRouter } from './websocket'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter]
+  routers: [apiRouter, authRouter, wsRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -38,384 +37,74 @@ export const handler = lambdaRouter.handler()
 import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigateway'
 import { z } from 'zod'
 
-const apiRouter = createAPIGatewayRouter()
+export const apiRouter = createAPIGatewayRouter()
 
-const ItemSchema = z.object({ name: z.string(), price: z.number() })
-
-// An inferred handler takes its types from the route
-const updateItem = defineRoute({
-  filters: {
-    method: 'PUT',
-    path: '/org/:orgId/items/:itemId',
-  },
-  bodySchema: ItemSchema,
-}).handle(async ({ path, body }) => {
-  return { orgId: path.orgId, name: body.name, price: body.price }
-})
-apiRouter.route(updateItem)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// api.ts
-import { type ApiRequest, createAPIGatewayRouter } from '@lambda-event-router/apigateway'
-import { z } from 'zod'
-
-const apiRouter = createAPIGatewayRouter()
-
-const ItemSchema = z.object({ name: z.string(), price: z.number() })
-type Item = z.infer<typeof ItemSchema>
-
-apiRouter.put({
-  filters: {
-    path: '/org/:orgId/items/:itemId',
-  },
-  bodySchema: ItemSchema,
-  handler: updateItem,
-})
-
-// An annotated handler names its own types
-export async function updateItem(
-  request: ApiRequest<{ orgId: string; itemId: string }, Record<string, string | undefined>, Item>,
-): Promise<Item & { orgId: string }> {
-  const { path, body } = request
-  return { orgId: path.orgId, name: body.name, price: body.price }
-}
-```
-
-
-## Routers
-
-| AWS Service | Event Source | Router | Usage
-|---|---|---|---|
-| API Gateway | REST API | `APIGatewayRouter` | [APIGatewayRouter](#apigatewayrouter) |
-| API Gateway | HTTP API | `APIGatewayRouter` | [APIGatewayRouter](#apigatewayrouter) |
-| API Gateway | Lambda Authorizer | `LambdaAuthorizerRouter` | [LambdaAuthorizerRouter](#lambdaauthorizerrouter) |
-| API Gateway | WebSocket | `WebSocketRouter` | [WebSocketRouter](#websocketrouter) |
-
-`APIGatewayRouter` ignores a Lambda authorizer event. An API and its authorizer can share a Lambda,
-so register the two routers in either order.
-
-See `@lambda-event-router/alb` and `@lambda-event-router/vpclattice` for how to deal with HTTP requests from those services.
-
-
-## Usage
-
-### APIGatewayRouter
-
-The API Gateway router can handle any version of the API Gateway event source (Rest API, HTTP API payload 1.0 and 2.0)
-
-```ts
-
-import { LambdaRouter } from '@lambda-event-router/base'
-import { apiRouter } from './api'
-
-const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter]
-})
-
-export const handler = lambdaRouter.handler()
-```
-
-
-#### Inferred handlers
-
-```ts
-// api.ts
-import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigateway'
-
-const apiRouter = createAPIGatewayRouter()
-
-const updateItemRoute = defineRoute({
+const createOrder = defineRoute({
   filters: {
     method: 'POST',
-    path: '/orgs/:orgId/items/:itemId',
+    path: '/orgs/:orgId/orders',
   },
-  querySchema: QuerySchema,
-  bodySchema: BodySchema,
-  responseSchema: ResponseSchema,
-}).handle(async ({ path, query, body, auth }) => {
-  const { orgId, itemId } = path
-  const { dryRun } = query
-  return { orgId, itemId, name: body.name, price: body.price, dryRun }
+  bodySchema: z.object({ item: z.string(), quantity: z.number() }),
+}).handle(async ({ path, body }) => {
+  console.log(`Creating an order for ${body.quantity} ${body.item} in ${path.orgId}`)
+  return { orgId: path.orgId, item: body.item }
 })
 
-apiRouter.route(updateItemRoute);
+apiRouter.route(createOrder)
 ```
 
-#### Annotated handlers
-
 ```ts
-// api.ts
-import type { ApiRequest, ApiResponse } from '@lambda-event-router/apigateway'
-import { createAPIGatewayRouter, NotFound, Ok } from '@lambda-event-router/apigateway'
+// authorizer.ts
+import { Allow, createLambdaAuthorizerRouter, defineLambdaAuthorizerRoute, Deny } from '@lambda-event-router/apigateway'
 
-const apiRouter = createAPIGatewayRouter()
+export const authRouter = createLambdaAuthorizerRouter()
 
-apiRouter.get({
+const authoriseWrite = defineLambdaAuthorizerRoute({
   filters: {
-    path: '/orgs/:orgId/items/:itemId',
+    type: 'REQUEST',
+    method: 'POST',
   },
-  handler: getItemHandler,
+}).handle(async ({ headers, resourceArn }) => {
+  console.log(`Authorising ${resourceArn}`)
+  return headers['x-api-key'] === 'valid-key' ? Allow('user-123', resourceArn) : Deny('anonymous', resourceArn)
 })
 
-export async function getItemHandler(
-  request: ApiRequest<{ orgId: string; itemId: string }>,
-): Promise<ApiResponse<{ orgId: string; name: string; price: number }>> {
-  const { path } = request
-  const item = await getItem(path.itemId)
-  if (!item) {
-    throw NotFound({ error: `${path.itemId} not found` })
-  }
-  return Ok({ orgId: path.orgId, name: item.name, price: item.price })
-}
+authRouter.route(authoriseWrite)
 ```
 
-#### Helper methods
-
 ```ts
-apiRouter.get()
-apiRouter.put()
-apiRouter.post()
-apiRouter.patch()
-apiRouter.delete()
-apiRouter.head()
-apiRouter.options()
-```
-
-An `options()` route takes precedence over the automatic CORS preflight, so it is how you answer a
-preflight yourself.
-
-#### Responses
-
-The helpers take the response body rather than a message string, so pass the object you want on the
-wire.
-
-```ts
-return { data: ... } // By default this will resolve to a 200 with the body as JSON
-return // By default this will resolve to a 204
-
-return Ok(data)
-return Created(data)
-return NoContent()
-// Non-2xx responses are usually thrown, but they can be returned as well
-throw TemporaryRedirect(location)
-throw PermanentRedirect(location)
-throw BadRequest({ error: 'Missing orgId' })
-throw Unauthorised()
-throw Forbidden()
-throw NotFound({ error: `${itemId} not found` })
-throw Conflict({ error: 'Item already exists' })
-throw UnprocessableContent({ error: 'Price must be positive' })
-throw InternalServerError()
-```
-
-### LambdaAuthorizerRouter
-
-Routes filter on the authorizer `type`, so a TOKEN authorizer gets `authorizationToken` and a REQUEST
-authorizer gets the headers, query, method and path. `Allow` and `Deny` both take the principal and the
-resource ARN to scope the policy to.
-
-Note: an HTTP API on payload format 1.0 loses a repeated header or query param. API Gateway sends
-that authorizer neither multi-value map, so it keeps only the last value of a name it sees twice. Its
-event type is `HttpApiRequestAuthorizerEventV1`, exported from this package.
-
-```ts
-import { createLambdaAuthorizerRouter, defineLambdaAuthorizerRoute, Allow, Deny } from '@lambda-event-router/apigateway'
-
-const authRouter = createLambdaAuthorizerRouter()
-
-authRouter.route(
-  defineLambdaAuthorizerRoute({
-    filters: { type: 'TOKEN' },
-  }).handle(async ({ authorizationToken, resourceArn }) => {
-    if (authorizationToken === 'valid-token') return Allow('user-123', resourceArn)
-    return Deny('anonymous', resourceArn)
-  })
-)
-```
-
-#### Annotated handlers
-```ts
-import type { APIGatewayAuthorizerResult } from 'aws-lambda'
-import type { LambdaAuthorizerRequestRequest, LambdaAuthorizerTokenRequest } from '@lambda-event-router/apigateway'
-import { Allow, createLambdaAuthorizerRouter, Deny } from '@lambda-event-router/apigateway'
-
-const authRouter = createLambdaAuthorizerRouter()
-
-authRouter.token({
-  handler: validateToken,
-})
-
-authRouter.request({
-  method: 'GET',
-  handler: validateRequest,
-})
-
-async function validateToken({
-  authorizationToken,
-  resourceArn,
-}: LambdaAuthorizerTokenRequest): Promise<APIGatewayAuthorizerResult> {
-  if (authorizationToken === 'valid-token') return Allow('user-123', resourceArn)
-  return Deny('anonymous', resourceArn)
-}
-
-async function validateRequest({
-  headers,
-  resourceArn,
-}: LambdaAuthorizerRequestRequest): Promise<APIGatewayAuthorizerResult> {
-  const apiKey = headers['x-api-key']
-  if (apiKey === 'valid-key') return Allow('user-123', resourceArn)
-  return Deny('anonymous', resourceArn)
-}
-```
-
-The narrow request types only reach a handler through `token()` and `request()`. `route()` types its
-handler against `LambdaAuthorizerRequest`, where every field but `type`, `resourceArn`, `event` and
-`context` is optional.
-
-#### Helper methods
-
-```ts
-authRouter.token()
-authRouter.request()
-```
-
-#### Responses
-
-```ts
-return Allow(principalId, resource)
-return Allow(principalId, resource, context) // with additional context
-return Deny(principalId, resource)
-return generatePolicy(principalId, 'Allow', resource) // effect as an argument
-
-// Simple response mode (HTTP API v2 request authorizers only)
-return Authorized()
-return Authorized({ tenantId: 'acme', limits: { rpm: 60 } }) // the context takes nested JSON
-return Denied()
-return true  // shorthand for Authorized()
-return false // shorthand for Denied()
-
-// A policy can be thrown as well, from any depth
-throw Deny(principalId, resource)
-```
-
-Returning a boolean from anything other than an HTTP API v2 request authorizer throws, because there is
-no simple response shape for the other event types to send it as. `Authorized()` and `Denied()` are not
-checked that way. The router hands an object back whatever the event was, so a simple response returned
-from a REST API authorizer reaches API Gateway and the caller gets a 500.
-
-`Denied()` is a `403 Forbidden`. A 401 is a different response, `{ errorMessage: 'Unauthorized' }` from
-an authorizer with no identity sources configured.
-
-### WebSocketRouter
-
-A WebSocket API invokes the Lambda three ways over a connection's life, so routes filter on `eventType`
-and on the `routeKey` API Gateway picked. `connect()`, `disconnect()` and `message()` fill in the
-`eventType` and take the rest of the filters themselves.
-
-#### Inferred handlers
-
-```ts
-import { createWebSocketRouter, defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway'
+// websocket.ts
+import { createWebSocketRouter, defineWebSocketRoute } from '@lambda-event-router/apigateway'
 import { z } from 'zod'
 
-const wsRouter = createWebSocketRouter()
+export const wsRouter = createWebSocketRouter()
 
-const SendMessageSchema = z.object({ action: z.literal('sendMessage'), content: z.string() })
-
-wsRouter.route(
-  defineWebSocketRoute({
-    filters: { eventType: 'MESSAGE', routeKey: 'sendMessage' },
-    bodySchema: SendMessageSchema,
-  }).handle(async ({ connectionId, domainName, stage, body }) => {
-    await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({ echo: body.content }) })
-  })
-)
-```
-
-#### Annotated handlers
-```ts
-import type {
-  WebSocketConnectRequest,
-  WebSocketConnectResponse,
-  WebSocketDisconnectRequest,
-  WebSocketMessageRequest,
-} from '@lambda-event-router/apigateway'
-import { createWebSocketRouter, WebSocketOk, WebSocketUnauthorised } from '@lambda-event-router/apigateway'
-import { z } from 'zod'
-
-const wsRouter = createWebSocketRouter()
-
-const SendMessageSchema = z.object({ action: z.literal('sendMessage'), content: z.string() })
-type SendMessage = z.infer<typeof SendMessageSchema>
-
-wsRouter.connect({
-  handler: onConnect,
+const sendMessage = defineWebSocketRoute({
+  filters: {
+    eventType: 'MESSAGE',
+    routeKey: 'sendMessage',
+  },
+  bodySchema: z.object({ action: z.literal('sendMessage'), content: z.string() }),
+}).handle(async ({ connectionId, body }) => {
+  console.log(`Message from ${connectionId}: ${body.content}`)
 })
 
-wsRouter.disconnect({
-  handler: onDisconnect,
-})
-
-wsRouter.message({
-  filters: { routeKey: 'sendMessage' },
-  bodySchema: SendMessageSchema,
-  handler: onSendMessage,
-})
-
-// Only a CONNECT event carries the query string, and only a CONNECT handler answers with a status code
-async function onConnect({ connectionId, queryStringParameters }: WebSocketConnectRequest): Promise<WebSocketConnectResponse> {
-  if (!queryStringParameters?.token) return WebSocketUnauthorised()
-  // Store connection
-  return WebSocketOk()
-}
-
-async function onDisconnect({ connectionId }: WebSocketDisconnectRequest): Promise<void> {
-  // Remove connection
-}
-
-async function onSendMessage({ connectionId, body }: WebSocketMessageRequest<SendMessage>): Promise<void> {
-  // Handle message
-}
+wsRouter.route(sendMessage)
 ```
 
-#### Helper methods
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter#annotated-handlers).
 
-```ts
-wsRouter.connect()
-wsRouter.disconnect()
-wsRouter.message()
-```
+## Documentation
 
-Each method fills in the `eventType` and takes the rest of the filters, so a `custom` works on all four
-registration paths.
-
-#### Responses
-
-```ts
-return WebSocketOk()          // 200
-throw WebSocketUnauthorised() // 401
-throw WebSocketForbidden()    // 403
-```
-
-Use the `WebSocket` prefixed helpers here, not the HTTP ones this package also exports. A WebSocket
-answer is a status code alone, so returning `Unauthorised()` does not compile and throwing it logs a
-warning.
-
-Only a `$connect` does anything with the status code, where a non-2xx refuses the handshake. Nothing a
-message handler returns reaches the client, so send data back with `postToConnection`.
-
-```ts
-import { postToConnection } from '@lambda-event-router/apigateway'
-
-// domainName, stage and connectionId all come off the request
-await postToConnection({ domainName, stage, connectionId, data: JSON.stringify({ content }) })
-```
-
-`WebSocketRouter` takes router- and route-level middleware, both typed `WebSocketMiddleware<TBody>`.
+- [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) covers every filter, schema validation, CORS
+  and API Gateway event versions.
+- [LambdaAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaAuthorizerRouter) covers every filter, responses
+  and middleware.
+- [WebSocketRouter](https://pyepye.github.io/lambda-event-router/routers/WebSocketRouter) covers every filter, schema validation, responses
+  and sending messages to a client.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/apigateway](../../service-examples/apigateway) directory for complete working examples.
+See [service-examples/apigateway](../../service-examples/apigateway) for a deployable app.

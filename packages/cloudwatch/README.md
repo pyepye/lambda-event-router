@@ -6,6 +6,8 @@ Routes CloudWatch Logs subscription deliveries to handlers by log group, subscri
 
 **Available Routers:** `CloudWatchLogsRouter`
 
+**Docs:** [CloudWatchLogsRouter](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter)
+
 ## Install
 
 ```bash
@@ -14,16 +16,15 @@ npm install @lambda-event-router/base @lambda-event-router/cloudwatch
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
-import { cloudwatchRouter } from './cloudwatch'
+import { cloudWatchLogsRouter } from './cloudwatch'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [cloudwatchRouter]
+  routers: [cloudWatchLogsRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -33,99 +34,30 @@ export const handler = lambdaRouter.handler()
 // cloudwatch.ts
 import { createCloudWatchLogsRouter, defineRoute } from '@lambda-event-router/cloudwatch'
 
-const cloudwatchRouter = createCloudWatchLogsRouter()
-
-// An inferred handler takes its types from the route
-const processLogs = defineRoute({
-  filters: {
-    logGroup: '/aws/lambda/my-function',
-    messageType: 'DATA_MESSAGE',
-  },
-}).handle(async ({ logGroup, logStream, logEvents }) => {
-  console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
-})
-cloudwatchRouter.route(processLogs)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// cloudwatch.ts
-import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'
-import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch'
-
-const cloudwatchRouter = createCloudWatchLogsRouter()
-
-cloudwatchRouter.dataMessage({
-  filters: { logGroup: '/aws/lambda/my-function' },
-  handler: processLogs,
-})
-
-// An annotated handler names its own types
-export async function processLogs({ logGroup, logStream, logEvents }: CloudWatchLogsRequest) {
-  console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createCloudWatchLogsRouter, defineRoute } from '@lambda-event-router/cloudwatch'
-
-const cloudwatchRouter = createCloudWatchLogsRouter()
+export const cloudWatchLogsRouter = createCloudWatchLogsRouter()
 
 const processLogs = defineRoute({
   filters: {
     logGroup: '/aws/lambda/my-function',
+    subscriptionFilter: 'error-alerts',
     messageType: 'DATA_MESSAGE',
   },
-}).handle(async ({ logGroup, logStream, logEvents }) => {
-  console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
+}).handle(async ({ logGroup, logEvents }) => {
+  console.log(`${logEvents.length} events from ${logGroup}`)
 })
 
-cloudwatchRouter.route(processLogs)
+cloudWatchLogsRouter.route(processLogs)
 ```
 
-#### Annotated handlers
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter#annotated-handlers).
 
-```ts
-import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch'
-import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch'
+## Documentation
 
-const cloudwatchRouter = createCloudWatchLogsRouter()
-
-cloudwatchRouter.dataMessage({
-  filters: { logGroup: '/aws/lambda/my-function' },
-  handler: processLogs,
-})
-
-async function processLogs({ logGroup, logStream, logEvents }: CloudWatchLogsRequest) {
-  console.log(`${logEvents.length} events from ${logGroup}/${logStream}`)
-}
-```
-
-#### Helper methods
-
-```ts
-cloudwatchRouter.dataMessage()
-cloudwatchRouter.controlMessage()
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    logGroup: ['/aws/lambda/my-function', '/aws/lambda/other-function'],
-    messageType: 'DATA_MESSAGE',
-    custom: ({ logEvents }) => logEvents.some(e => e.message.includes('ERROR')),
-  },
-})
-```
+- [CloudWatchLogsRouter](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter) covers every filter,
+  convenience methods, the request object and failures and retries.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/cloudwatch](../../service-examples/cloudwatch) directory for complete working examples.
+See [service-examples/cloudwatch](../../service-examples/cloudwatch) for a deployable app.

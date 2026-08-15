@@ -3,6 +3,8 @@
 Test helpers for lambda-event-router. Builds realistic AWS events with sensible defaults, so you only set
 the fields your test cares about.
 
+**Docs:** [Testing](https://pyepye.github.io/lambda-event-router/testing/)
+
 ## Install
 
 ```bash
@@ -35,38 +37,7 @@ test('processes an order message', async ({ sqsRecord, sqsHandlerEvent }) => {
 })
 ```
 
-## Usage
+## Documentation
 
-### Builders
-
-Every fixture is also exported as a `create` function. Record builders take overrides, event builders
-take an array of records and handler event builders take `{ records, context }`.
-
-```ts
-import { createSQSEvent, createSQSRecord } from '@lambda-event-router/testing'
-
-const record = createSQSRecord({ body: { orderId: '123' } })
-const event = createSQSEvent([record])
-```
-
-### Mock context
-
-```ts
-import { createMockContext } from '@lambda-event-router/testing'
-
-const context = createMockContext({ functionName: 'orders' })
-```
-
-### Mock schemas
-
-`createMockSchema` returns a Standard Schema whose `validate` is a `vi.fn()`. With no arguments it passes
-every input through. Pass a result to force a failure:
-
-```ts
-import { createMockSchema } from '@lambda-event-router/testing'
-
-const bodySchema = createMockSchema({ issues: [{ message: 'orderId is required' }] })
-```
-
-For the full list of builders and where to import each event type from, see the
-[testing docs](../../docs/testing/index.md).
+- [Testing](https://pyepye.github.io/lambda-event-router/testing/) covers the fixtures, builders, mock context, mock schemas and where to import
+  each event type from.

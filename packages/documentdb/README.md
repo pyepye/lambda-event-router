@@ -6,6 +6,8 @@ Routes each change in a DocumentDB change stream batch to a handler by operation
 
 **Available Routers:** `DocumentDBRouter`
 
+**Docs:** [DocumentDBRouter](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter)
+
 ## Install
 
 ```bash
@@ -14,16 +16,15 @@ npm install @lambda-event-router/base @lambda-event-router/documentdb
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
 
-
 ## Quick Start
 
 ```ts
 // main handler
 import { LambdaRouter } from '@lambda-event-router/base'
-import { documentdbRouter } from './documentdb'
+import { documentDBRouter } from './documentdb'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [documentdbRouter]
+  routers: [documentDBRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -34,136 +35,36 @@ export const handler = lambdaRouter.handler()
 import { createDocumentDBRouter, defineRoute } from '@lambda-event-router/documentdb'
 import { z } from 'zod'
 
-const documentdbRouter = createDocumentDBRouter()
+export const documentDBRouter = createDocumentDBRouter()
 
-// An inferred handler takes its types from the route
-const processNewOrder = defineRoute({
+const OrderSchema = z.object({ status: z.string() })
+
+const orderUpdated = defineRoute({
   filters: {
-    operationType: 'insert',
-    database: 'mydb',
+    operationType: 'update',
+    eventSourceArn: 'arn:aws:rds:eu-west-2:123456789012:cluster:shop',
+    database: 'shop',
     collection: 'orders',
-  },
-  fullDocumentSchema: z.object({ orderId: z.string(), total: z.number() }),
-}).handle(async ({ fullDocument }) => {
-  console.log(`New order: ${fullDocument.orderId}`)
-})
-documentdbRouter.route(processNewOrder)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// documentdb.ts
-import { createDocumentDBRouter } from '@lambda-event-router/documentdb'
-import type { DocumentDBInsertRequest } from '@lambda-event-router/documentdb'
-import { z } from 'zod'
-
-const OrderSchema = z.object({ orderId: z.string(), total: z.number() })
-type Order = z.infer<typeof OrderSchema>
-
-const documentdbRouter = createDocumentDBRouter()
-
-documentdbRouter.insert({
-  filters: { database: 'mydb', collection: 'orders' },
-  fullDocumentSchema: OrderSchema,
-  handler: processNewOrder,
-})
-
-// An annotated handler names its own types
-export async function processNewOrder({ fullDocument }: DocumentDBInsertRequest<Record<string, unknown>, Order>) {
-  console.log(`New order: ${fullDocument.orderId}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { createDocumentDBRouter, defineRoute } from '@lambda-event-router/documentdb'
-
-const documentdbRouter = createDocumentDBRouter()
-
-const processNewOrder = defineRoute({
-  filters: {
-    operationType: 'insert',
-    database: 'mydb',
-    collection: 'orders',
+    fullDocument: 'updateLookup',
+    fullDocumentBeforeChange: 'whenAvailable',
   },
   fullDocumentSchema: OrderSchema,
-}).handle(async ({ fullDocument }) => {
-  console.log(`New order: ${fullDocument.orderId}`)
+  fullDocumentBeforeChangeSchema: OrderSchema,
+}).handle(async ({ fullDocument, fullDocumentBeforeChange }) => {
+  console.log(`Order was ${fullDocumentBeforeChange.status}, now ${fullDocument.status}`)
 })
 
-documentdbRouter.route(processNewOrder)
+documentDBRouter.route(orderUpdated)
 ```
 
-#### Annotated handlers
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter#annotated-handlers).
 
-```ts
-import { createDocumentDBRouter } from '@lambda-event-router/documentdb'
-import type { DocumentDBInsertRequest } from '@lambda-event-router/documentdb'
-import type { z } from 'zod'
+## Documentation
 
-type Order = z.infer<typeof OrderSchema>
-
-const documentdbRouter = createDocumentDBRouter()
-
-documentdbRouter.insert({
-  filters: { database: 'mydb', collection: 'orders' },
-  fullDocumentSchema: OrderSchema,
-  handler: processNewOrder,
-})
-
-async function processNewOrder({ fullDocument }: DocumentDBInsertRequest<Record<string, unknown>, Order>) {
-  console.log(`New order: ${fullDocument.orderId}`)
-}
-```
-
-#### Helper methods
-
-```ts
-documentdbRouter.insert()
-documentdbRouter.update()
-documentdbRouter.replace()
-documentdbRouter.delete()
-```
-
-#### Operation type filtering
-
-```ts
-// Insert - fullDocument available
-defineRoute({
-  filters: { operationType: 'insert' },
-  fullDocumentSchema: OrderSchema,
-}).handle(async ({ fullDocument }) => { ... })
-
-// Update - fullDocument and updateDescription available
-defineRoute({
-  filters: { operationType: 'update' },
-  fullDocumentSchema: OrderSchema,
-}).handle(async ({ fullDocument, updateDescription }) => { ... })
-
-// Delete
-defineRoute({
-  filters: { operationType: 'delete' },
-}).handle(async ({ documentKey }) => { ... })
-```
-
-#### Filters
-
-```ts
-defineRoute({
-  filters: {
-    operationType: ['insert', 'update'],
-    database: 'mydb',
-    collection: ['orders', 'items'],
-    custom: ({ event }) => event.updateDescription?.updatedFields?.status !== undefined,
-  },
-})
-```
+- [DocumentDBRouter](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter) covers every filter, convenience methods, schema validation, and failures and retries.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/documentdb](../../service-examples/documentdb) directory for complete working examples.
+See [service-examples/documentdb](../../service-examples/documentdb) for a deployable app.

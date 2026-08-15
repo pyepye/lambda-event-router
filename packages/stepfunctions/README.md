@@ -6,6 +6,8 @@ Routes Step Functions task states to handlers. Task input has no fixed shape, so
 
 **Available Routers:** `StepFunctionsRouter`
 
+**Docs:** [StepFunctionsRouter](https://pyepye.github.io/lambda-event-router/routers/StepFunctionsRouter)
+
 ## Install
 
 ```bash
@@ -13,7 +15,6 @@ npm install @lambda-event-router/base @lambda-event-router/stepfunctions
 ```
 
 `@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
-
 
 ## Quick Start
 
@@ -23,7 +24,7 @@ import { LambdaRouter } from '@lambda-event-router/base'
 import { stepFunctionsRouter } from './stepfunctions'
 
 const lambdaRouter = new LambdaRouter({
-  routers: [stepFunctionsRouter]
+  routers: [stepFunctionsRouter],
 })
 
 export const handler = lambdaRouter.handler()
@@ -33,165 +34,30 @@ export const handler = lambdaRouter.handler()
 // stepfunctions.ts
 import { isObject } from '@lambda-event-router/base'
 import { createStepFunctionsRouter, defineRoute } from '@lambda-event-router/stepfunctions'
-import { z } from 'zod'
 
-const stepFunctionsRouter = createStepFunctionsRouter()
+export const stepFunctionsRouter = createStepFunctionsRouter()
 
-// An inferred handler takes its types from the route
-const processOrder = defineRoute({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
-  },
-  eventSchema: z.object({ taskType: z.literal('process-order'), orderId: z.string() }),
-}).handle(async ({ event }) => {
-  console.log(`Processing order ${event.orderId}`)
-})
-stepFunctionsRouter.route(processOrder)
-```
-
-Or use an annotated handler, which names its types rather than inferring them:
-
-```ts
-// stepfunctions.ts
-import { isObject } from '@lambda-event-router/base'
-import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
-import type { StepFunctionsRequest } from '@lambda-event-router/stepfunctions'
-import { z } from 'zod'
-
-const EventSchema = z.object({ taskType: z.literal('process-order'), orderId: z.string() })
-type Order = z.infer<typeof EventSchema>
-
-const stepFunctionsRouter = createStepFunctionsRouter()
-
-stepFunctionsRouter.route({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
-  },
-  eventSchema: EventSchema,
-  handler: processOrder,
-})
-
-// An annotated handler names its own types
-export async function processOrder({ event }: StepFunctionsRequest<Order>) {
-  console.log(`Processing order ${event.orderId}`)
-}
-```
-
-
-## Usage
-
-#### Inferred handlers
-
-```ts
-import { isObject } from '@lambda-event-router/base'
-import { createStepFunctionsRouter, defineRoute } from '@lambda-event-router/stepfunctions'
-
-const stepFunctionsRouter = createStepFunctionsRouter()
-
-const processOrder = defineRoute({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
-  },
-  eventSchema: EventSchema,
-}).handle(async ({ event }) => {
-  console.log(`Processing order ${event.orderId}`)
-})
-
-stepFunctionsRouter.route(processOrder)
-```
-
-#### Annotated handlers
-
-```ts
-import { isObject } from '@lambda-event-router/base'
-import { createStepFunctionsRouter } from '@lambda-event-router/stepfunctions'
-import type { StepFunctionsRequest } from '@lambda-event-router/stepfunctions'
-import type { z } from 'zod'
-
-type Order = z.infer<typeof EventSchema>
-
-const stepFunctionsRouter = createStepFunctionsRouter()
-
-stepFunctionsRouter.route({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.taskType === 'process-order',
-  },
-  eventSchema: EventSchema,
-  handler: processOrder,
-})
-
-async function processOrder({ event }: StepFunctionsRequest<Order>) {
-  console.log(`Processing order ${event.orderId}`)
-}
-```
-
-#### Filters
-
-`custom` reads the raw event and may return a promise.
-
-```ts
-defineRoute({
-  filters: {
-    custom: ({ event }) => isObject(event) && event.taskType === 'validate-input',
-  },
-})
-```
-
-`taskToken` matches on a `TaskToken` in the event. `true` takes callback payloads only, `false` takes
-payloads without one. Leave it out to take either.
-
-```ts
-defineRoute({
+const requestApproval = defineRoute({
   filters: {
     taskToken: true,
-    custom: ({ event }) => isObject(event) && event.taskType === 'approve-order',
+    custom: ({ event }) => isObject(event) && event.taskType === 'humanApproval',
   },
+}).handle(async ({ taskToken }) => {
+  console.log(`Saving task token ${taskToken} until someone approves`)
 })
+
+stepFunctionsRouter.route(requestApproval)
 ```
 
-#### Middleware
+The handler's types come from the route. To name them yourself instead, see
+[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/StepFunctionsRouter#annotated-handlers).
 
-Handlers receive `{ event, context }`, where `context` is the Lambda `Context`. TaskToken handlers
-receive `{ taskToken, input, event, context }`. Middleware runs over that request. Register it on the
-router to cover every route, or on a single route. Router middleware runs before route middleware.
+## Documentation
 
-Type route middleware to the route's `eventSchema`. The validated payload sits on `event` for a regular
-route and on `input` for a TaskToken route, so each has its own alias.
-
-```ts
-import type {
-  StepFunctionsMiddleware,
-  StepFunctionsTaskTokenMiddleware,
-} from '@lambda-event-router/stepfunctions'
-
-const withLogging: StepFunctionsMiddleware = async (request, next) => {
-  console.log(`Handling task ${request.context.awsRequestId}`)
-  return next(request)
-}
-
-const withOrderContext: StepFunctionsMiddleware<unknown, Order> = async (request, next) => {
-  console.log(`Handling order ${request.event.orderId}`)
-  return next(request)
-}
-
-const withApprovalContext: StepFunctionsTaskTokenMiddleware<unknown, Approval> = async (request, next) => {
-  console.log(`Awaiting approval ${request.input.approvalId}`)
-  return next(request)
-}
-
-// Router-level: runs for every route
-const stepFunctionsRouter = createStepFunctionsRouter({ middleware: [withLogging] })
-
-// Route-level: runs for this route only
-const processOrder = defineRoute({
-  filters: { custom: ({ event }) => isObject(event) && event.taskType === 'process-order' },
-  eventSchema: OrderSchema,
-  middleware: [withOrderContext],
-}).handle(async ({ event, context }) => {
-  console.log(`Processing order ${event.orderId} (${context.awsRequestId})`)
-})
-```
+- [StepFunctionsRouter](https://pyepye.github.io/lambda-event-router/routers/StepFunctionsRouter) covers every filter, schema validation, responses
+  and task tokens.
+- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-See the [service-examples/stepfunctions](../../service-examples/stepfunctions) directory for complete working examples.
+See [service-examples/stepfunctions](../../service-examples/stepfunctions) for a deployable app.
