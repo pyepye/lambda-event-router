@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `ConnectRouter` end to end. It models a 
 One Lambda is the code hook for every Invoke AWS Lambda function block in a contact flow. The router
 picks the handler for each block.
 
+The routes are in `src/connect.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

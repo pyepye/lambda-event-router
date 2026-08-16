@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `CognitoRouter` end to end. It models an
 Two user pools send every Lambda trigger to the same worker, and the router dispatches on the
 trigger source.
 
+The routes are in `src/cognito.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `VPCLatticeRouter` end to end. It models
 service reached over a service network. One Lambda serves every route, and a second Lambda inside
 the VPC makes the requests.
 
+The routes are in `src/inventoryRouter.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

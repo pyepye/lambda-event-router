@@ -4,6 +4,8 @@ A deployable CDK app that exercises `S3Router` and `S3BatchRouter` end to end. I
 document vault. One Lambda handles the notifications from two buckets and the tasks of an S3 Batch
 job, with a router registered for each.
 
+The routes are in `src/s3.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

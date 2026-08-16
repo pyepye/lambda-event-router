@@ -3,6 +3,8 @@
 A deployable CDK app that exercises the `ALBRouter` end to end. It models a returns desk behind an
 Application Load Balancer. One Lambda serves every route, and the trigger calls it from your shell.
 
+The routes are in `src/returnsRouter.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `EventBridgeRouter` end to end. It model
 fulfilment bus. One rule forwards four event sources to a single Lambda, and the router decides
 which handler each event reaches.
 
+The routes are in `src/eventbridge.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

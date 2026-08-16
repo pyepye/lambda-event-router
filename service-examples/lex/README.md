@@ -3,6 +3,8 @@
 A deployable CDK app that exercises the `LexRouter` end to end. It models a parcel support bot. One
 Lambda is the code hook for every intent, and the router picks the handler for each turn.
 
+The routes are in `src/lex.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `CloudWatchLogsRouter` end to end. It mo
 service. Five log groups are subscribed to one Lambda, and the router decides what happens to each
 delivery.
 
+The routes are in `src/cloudwatch.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

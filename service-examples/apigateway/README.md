@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `APIGatewayRouter`, `LambdaAuthorizerRou
 `WebSocketRouter` end to end. It models a warehouse fulfilment service across three APIs, and every
 route belongs to one of the three routers.
 
+The routes are in `src/apiRouter.ts`, `src/authorizerRouter.ts` and `src/webSocketRouter.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

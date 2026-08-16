@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `DocumentDBRouter` end to end. It models
 Lambda consumes seven change streams from one Amazon DocumentDB cluster, and the router does the
 per-change dispatch.
 
+The routes are in `src/documentdb.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

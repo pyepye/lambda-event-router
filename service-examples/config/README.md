@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `ConfigRouter` and the `ConfigScheduledR
 It models a platform team's compliance checks for Lambda functions. One Lambda backs ten custom Config
 rules, and the routers decide which handler each evaluation reaches.
 
+The routes are in `src/configRouter.ts` and `src/configScheduledRouter.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

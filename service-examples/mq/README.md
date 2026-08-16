@@ -3,6 +3,8 @@
 A deployable CDK app that exercises both Amazon MQ routers end to end. It models an order and payment
 pipeline. Two brokers feed a Lambda each, and the router does the per-message dispatch.
 
+The routes are in `src/activeMq.ts` and `src/rabbitMq.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

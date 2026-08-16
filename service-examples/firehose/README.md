@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `FirehoseRouter` end to end. It models a
 audit trail. One Lambda transforms records for two delivery streams, and the router does the
 per-record dispatch.
 
+The routes are in `src/firehose.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

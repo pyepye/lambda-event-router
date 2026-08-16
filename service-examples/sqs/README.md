@@ -3,6 +3,8 @@
 A deployable CDK app that exercises the `SQSRouter` end to end. It models a notifications dispatcher.
 One Lambda consumes two SQS queues, and the router does the final per-record dispatch.
 
+The routes are in `src/sqs.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

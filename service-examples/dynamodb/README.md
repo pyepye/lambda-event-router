@@ -3,6 +3,8 @@
 A deployable CDK app that exercises the `DynamoDBRouter` end to end. It models an order service. One
 Lambda consumes two DynamoDB streams, and the router does the per-record dispatch.
 
+The routes are in `src/dynamodb.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

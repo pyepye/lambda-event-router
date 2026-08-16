@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `SecretsManagerRouter` end to end. It mo
 rotation for an internal platform. One Lambda is the rotation function for five secrets, and the
 router dispatches each of the four rotation steps.
 
+The routes are in `src/secretsManager.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

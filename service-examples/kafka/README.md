@@ -3,6 +3,8 @@
 A deployable CDK app that exercises the `KafkaRouter` end to end. It models an order pipeline. One
 Lambda consumes three topics on one Amazon MSK cluster, and the router does the per-record dispatch.
 
+The routes are in `src/kafka.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `CodePipelineRouter` end to end. It mode
 pipeline. Two Lambda functions share one router bundle, and the router decides which handler each
 pipeline job reaches.
 
+The routes are in `src/codepipeline.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

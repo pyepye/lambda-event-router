@@ -4,6 +4,8 @@ A deployable CDK app that exercises the `StepFunctionsRouter` end to end. It mod
 fulfilment workflow. One state machine invokes one Lambda across ten parallel branches, and the
 router decides which handler each payload reaches.
 
+The routes are in `src/stepfunctions.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 

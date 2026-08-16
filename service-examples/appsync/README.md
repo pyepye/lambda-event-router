@@ -4,6 +4,8 @@ A deployable CDK app that exercises all four AppSync routers end to end. It mode
 A GraphQL API serves tickets, an Event API carries live activity, and one Lambda authorizer guards
 both.
 
+The routes are in `src/authorizerRouter.ts`, `src/eventsAuthorizerRouter.ts`, `src/eventsRouter.ts` and `src/resolverRouter.ts`, and the handlers are in `src/handlers/`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
