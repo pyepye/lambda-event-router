@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { withBase } from 'vitepress';
 import { filterPills, iconUrl, type PackageEntry, packages } from '../data/packages';
 
@@ -32,6 +32,18 @@ onMounted(function applySearchParam() {
   if (search) {
     searchQuery.value = search;
   }
+});
+
+// replaceState keeps typing out of the back button's history, and passing history.state keeps
+// the scroll position VitePress stores there
+watch(searchQuery, function syncSearchParam(query) {
+  const url = new URL(window.location.href);
+  if (query.trim()) {
+    url.searchParams.set('search', query);
+  } else {
+    url.searchParams.delete('search');
+  }
+  window.history.replaceState(window.history.state, '', url);
 });
 
 function isServiceActive(service: string): boolean {
