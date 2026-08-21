@@ -1,30 +1,21 @@
+import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
-import { ddb, tableName } from '../config.js';
+import { ddb, TABLE_NAME } from '../config.js';
 import { DbOrderToOrder, DbStockToStock, type TDbOrder, type TOrder, type TOrderLine, type TStock } from './schemas.js';
 
-export function orderPartitionKey(orderId: string): string {
-  return `ORDER#${orderId}`;
-}
-
-export function stockPartitionKey(sku: string): string {
-  return `STOCK#${sku}`;
-}
-
-export async function getOrder(orderId: string): Promise<TOrder> {
+export async function findOrder(orderId: string): Promise<TOrder | undefined> {
   const result = await ddb.send(
     new GetCommand({
-      TableName: tableName,
+      TableName: TABLE_NAME,
       Key: { pk: 'ORDER', sk: orderId },
     }),
   );
-  if (!result.Item) {
-    throw new Error(`Order ${orderId} not found`);
-  }
+  if (!result.Item) return undefined;
   return DbOrderToOrder.parse(result.Item);
 }
 
-export async function createOrder(orderId: string, items: TOrderLine[]): Promise<TOrder> {
+export async function insertOrder(orderId: string, items: TOrderLine[]): Promise<TOrder> {
   const row: TDbOrder = {
     pk: 'ORDER',
     sk: orderId,
@@ -32,21 +23,39 @@ export async function createOrder(orderId: string, items: TOrderLine[]): Promise
     status: 'pending',
     createdAt: new Date().toISOString(),
   };
-  await ddb.send(new PutCommand({ TableName: tableName, Item: row }));
+  await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: row }));
   return DbOrderToOrder.parse(row);
 }
 
-export async function decrementStock(sku: string, qty: number): Promise<TStock> {
-  const result = await ddb.send(
+export async function markOrderProcessed(orderId: string): Promise<void> {
+  await ddb.send(
     new UpdateCommand({
-      TableName: tableName,
-      Key: { pk: 'STOCK', sk: sku },
-      UpdateExpression: 'ADD #quantity :neg',
-      ExpressionAttributeNames: { '#quantity': 'quantity' },
-      ExpressionAttributeValues: { ':neg': -qty },
-      ConditionExpression: 'attribute_exists(pk)',
-      ReturnValues: 'ALL_NEW',
+      TableName: TABLE_NAME,
+      Key: { pk: 'ORDER', sk: orderId },
+      UpdateExpression: 'SET #status = :status',
+      ExpressionAttributeNames: { '#status': 'status' },
+      ExpressionAttributeValues: { ':status': 'processed' },
     }),
   );
-  return DbStockToStock.parse(result.Attributes);
+}
+
+// Returns undefined when the SKU has less than qty in stock, or does not exist.
+export async function removeStock(sku: string, qty: number): Promise<TStock | undefined> {
+  try {
+    const result = await ddb.send(
+      new UpdateCommand({
+        TableName: TABLE_NAME,
+        Key: { pk: 'STOCK', sk: sku },
+        UpdateExpression: 'SET #quantity = #quantity - :qty',
+        ConditionExpression: '#quantity >= :qty',
+        ExpressionAttributeNames: { '#quantity': 'quantity' },
+        ExpressionAttributeValues: { ':qty': qty },
+        ReturnValues: 'ALL_NEW',
+      }),
+    );
+    return DbStockToStock.parse(result.Attributes);
+  } catch (error) {
+    if (error instanceof ConditionalCheckFailedException) return undefined;
+    throw error;
+  }
 }

@@ -1,11 +1,11 @@
 import { createAPIGatewayRouter } from '@lambda-event-router/apigateway';
 
-import { createOrderRoute } from './api-handlers/createOrder.js';
-import { getOrderRoute } from './api-handlers/getOrder.js';
-import { apiTracingMiddleware } from './utils/traceId/apiTracingMiddleware.js';
+import { createOrder } from './api-handlers/createOrder.js';
+import { getOrder } from './api-handlers/getOrder.js';
+import { logApiInvocation } from './middleware/logInvocation.js';
 
 export const apiRouter = createAPIGatewayRouter({
-  middleware: [apiTracingMiddleware],
+  middleware: [logApiInvocation],
 });
 
-apiRouter.route(createOrderRoute).route(getOrderRoute);
+apiRouter.route(createOrder).route(getOrder);

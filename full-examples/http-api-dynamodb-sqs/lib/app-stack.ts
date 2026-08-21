@@ -5,16 +5,16 @@ import { CfnOutput, custom_resources, Duration, RemovalPolicy, Stack, type Stack
 import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { AttributeType, BillingMode, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb';
-import { ManagedPolicy } from 'aws-cdk-lib/aws-iam';
-import { FilterCriteria, FilterRule, LoggingFormat, Runtime, StartingPosition, Tracing } from 'aws-cdk-lib/aws-lambda';
+import { FilterCriteria, FilterRule, LoggingFormat, Runtime, StartingPosition } from 'aws-cdk-lib/aws-lambda';
 import { DynamoEventSource, SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction, type NodejsFunctionProps, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
-import { RetentionDays } from 'aws-cdk-lib/aws-logs';
+import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { Queue } from 'aws-cdk-lib/aws-sqs';
 import type { Construct } from 'constructs';
 
 const DLQ_MAX_RECEIVE_COUNT = 3;
 const STREAM_BATCH_SIZE = 10;
+const STREAM_RETRY_ATTEMPTS = 3;
 const WORKER_BATCH_SIZE = 10;
 const WORKER_BATCHING_WINDOW_SECONDS = 5;
 
@@ -29,7 +29,7 @@ const entry = join(srcDir, 'index.ts');
 
 const sharedBundling: NodejsFunctionProps['bundling'] = {
   format: OutputFormat.ESM,
-  target: 'node22',
+  target: 'node24',
   minify: true,
   sourceMap: true,
   mainFields: ['module', 'main'],
@@ -66,9 +66,15 @@ export class AppStack extends Stack {
       parameters: { RequestItems: { [table.tableName]: seedItems } },
       physicalResourceId: custom_resources.PhysicalResourceId.of(`${table.tableName}-seed`),
     };
+    const seedLogGroup = new LogGroup(this, 'SeedStockLogGroup', {
+      retention: RetentionDays.ONE_DAY,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
     new custom_resources.AwsCustomResource(this, 'SeedStock', {
       onCreate: seedParams,
       onUpdate: seedParams,
+      installLatestAwsSdk: false,
+      logGroup: seedLogGroup,
       policy: custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
         resources: [table.tableArn],
       }),
@@ -80,50 +86,55 @@ export class AppStack extends Stack {
 
     const workQueue = new Queue(this, 'WorkerQueue', {
       visibilityTimeout: Duration.seconds(60),
-      deliveryDelay: Duration.seconds(1), // Give DynamoDB the chance to become eventually consistent
       deadLetterQueue: {
         queue: dlq,
         maxReceiveCount: DLQ_MAX_RECEIVE_COUNT,
       },
     });
 
+    const apiLogGroup = new LogGroup(this, 'ApiLogGroup', {
+      logGroupName: `/aws/lambda/${this.stackName}-api`,
+      retention: RetentionDays.ONE_DAY,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
     const apiFn = new NodejsFunction(this, 'ApiFn', {
       functionName: `${this.stackName}-api`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       memorySize: 512,
       timeout: Duration.seconds(10),
       loggingFormat: LoggingFormat.JSON,
-      logRetention: RetentionDays.ONE_DAY,
+      logGroup: apiLogGroup,
       environment: {
-        QUEUE_URL: workQueue.queueUrl,
         TABLE_NAME: table.tableName,
       },
       bundling: sharedBundling,
-      tracing: Tracing.ACTIVE,
     });
-    apiFn.role?.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'));
     table.grantReadWriteData(apiFn);
-    workQueue.grantSendMessages(apiFn);
+
+    const workerLogGroup = new LogGroup(this, 'WorkerLogGroup', {
+      logGroupName: `/aws/lambda/${this.stackName}-worker`,
+      retention: RetentionDays.ONE_DAY,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
 
     const workerFn = new NodejsFunction(this, 'WorkerFn', {
       functionName: `${this.stackName}-worker`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       memorySize: 512,
       timeout: Duration.seconds(30),
       loggingFormat: LoggingFormat.JSON,
-      logRetention: RetentionDays.ONE_DAY,
+      logGroup: workerLogGroup,
       environment: {
         QUEUE_URL: workQueue.queueUrl,
         TABLE_NAME: table.tableName,
       },
       bundling: sharedBundling,
-      tracing: Tracing.ACTIVE,
     });
-    workerFn.role?.addManagedPolicy(ManagedPolicy.fromAwsManagedPolicyName('AWSXRayDaemonWriteAccess'));
     table.grantReadWriteData(workerFn);
     workQueue.grantSendMessages(workerFn);
 
@@ -131,6 +142,7 @@ export class AppStack extends Stack {
       new DynamoEventSource(table, {
         startingPosition: StartingPosition.LATEST,
         batchSize: STREAM_BATCH_SIZE,
+        retryAttempts: STREAM_RETRY_ATTEMPTS,
         reportBatchItemFailures: true,
         // Two filter expressions are OR'd by Lambda. The router does final dispatch.
         filters: [

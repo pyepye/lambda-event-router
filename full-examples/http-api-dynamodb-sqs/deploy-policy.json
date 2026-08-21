@@ -42,12 +42,6 @@
       "Effect": "Allow",
       "Action": ["logs:DescribeLogGroups", "logs:DescribeLogStreams", "logs:FilterLogEvents", "logs:GetLogEvents"],
       "Resource": "*"
-    },
-    {
-      "Sid": "ReadTraces",
-      "Effect": "Allow",
-      "Action": ["xray:GetTraceSummaries", "xray:BatchGetTraces", "xray:GetTraceGraph", "xray:GetServiceGraph"],
-      "Resource": "*"
     }
   ]
 }

@@ -12,10 +12,11 @@ export const stockMonitor = defineRoute({
   oldImageSchema: DbStockSchema,
 }).handle(async (request) => {
   const { sk: sku, quantity, lowStockThreshold } = request.newImage;
-  await new Promise((resolve) => setTimeout(resolve, 5000));
-  logger.info({ message: 'Stock level changed', sku, quantity });
+  const previousQuantity = request.oldImage.quantity;
 
-  if (quantity <= lowStockThreshold) {
+  logger.info({ message: 'Stock level changed', sku, previousQuantity, quantity });
+
+  if (previousQuantity > lowStockThreshold && quantity <= lowStockThreshold) {
     logger.warn({ message: 'Low stock', sku, quantity, lowStockThreshold });
   }
 });

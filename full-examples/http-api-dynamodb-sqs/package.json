@@ -19,12 +19,9 @@
     "@lambda-event-router/dynamodb": "workspace:*",
     "@lambda-event-router/http": "workspace:*",
     "@lambda-event-router/sqs": "workspace:*",
-    "@aws-lambda-powertools/tracer": "^2.33.0",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/client-sqs": "^3.1034.0",
     "@aws-sdk/lib-dynamodb": "catalog:",
-    "@smithy/types": "catalog:",
-    "aws-xray-sdk-core": "^3.10.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {

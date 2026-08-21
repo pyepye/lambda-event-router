@@ -5,25 +5,28 @@ A deployable CDK app that chains the API Gateway, DynamoDB and SQS routers throu
 ```
 Client
 └── API Gateway (HTTP API)
-    └── apiFn (apiRouter)
-        └── DynamoDB table (NEW_AND_OLD_IMAGES stream)
-            └── workerFn / orderProcessor (dynamoDBRouter, INSERT on ORDER#*)
-                ├── SQS message: decrementStock
+    └── apiFn / createOrder (apiRouter, POST /orders)
+        └── DynamoDB PutItem on pk = ORDER
+            └── workerFn / orderProcessor (dynamoDBRouter, INSERT on pk = ORDER)
+                ├── SQS message: decrementStock (one per item)
                 │   └── workerFn / decrementStock (sqsRouter)
-                │       └── DynamoDB UpdateItem on STOCK#<sku>
-                │           └── workerFn / stockMonitor (dynamoDBRouter, MODIFY on STOCK#*)
+                │       └── DynamoDB UpdateItem on pk = STOCK
+                │           └── workerFn / stockMonitor (dynamoDBRouter, MODIFY on pk = STOCK)
                 └── SQS message: sendConfirmationEmail
                     └── workerFn / sendConfirmationEmail (sqsRouter)
 ```
 
+`GET /orders/:id` reads an order back through the `getOrder` route on `apiFn`.
+
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-Five routes (`createOrder`, `orderProcessor`, `decrementStock`, `sendConfirmationEmail` and `stockMonitor`)
-run on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where one `LambdaRouter`
-combines all three routers. Each function only receives its own events, so the right router picks them up.
+There are 6 routes on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where
+one `LambdaRouter` combines all three routers. Each function receives only its own events, so the
+right router picks them up.
 
-It also has tracing middleware configured as an example to show how it can be used.
+Each router has a small middleware from `src/middleware/logInvocation.ts`. It logs one line before
+every route runs.
 
 ## Prerequisites
 
@@ -37,7 +40,7 @@ It also has tracing middleware configured as an example to show how it can be us
 it to the user or role you run the commands with.
 
 CloudFormation work is done by the CDK bootstrap roles, so the policy only allows assuming those
-roles. The rest covers reading the table, poking the queue, and reading the logs and X-Ray traces.
+roles. The rest covers reading the table, sending to the queue and reading the logs.
 Actions are locked down, resources are not.
 
 The API routes have no authoriser, so the `curl` calls below need no AWS credentials.
@@ -59,20 +62,27 @@ CDK outputs include `ApiUrl`, `TableName`, `QueueUrl` and `DlqUrl`.
 
 ## Playing around
 
-```bash
-export API=https://m5mirjscuf.execute-api.eu-west-2.amazonaws.com
+Set `API` to the `ApiUrl` output from the deploy.
 
-# Place an order touching two SKUs - 2 of widget-a and 1 of widget-b
+```bash
+export API=<ApiUrl>
+
+# 1. Place an order for 2 of widget-a and 1 of widget-b
 curl -X POST -H 'content-type: application/json' \
-  -d '{"items":[{"sku":"widget-a","qty":2},{"sku":"widget-b","qty":1},{"sku":"widget-c","qty":1}]}' \
+  -d '{"items":[{"sku":"widget-a","qty":2},{"sku":"widget-b","qty":1}]}' \
   "$API/orders"
 
-# Read the order back (use the orderId returned by the POST above)
-curl -X GET "$API/orders/<orderId>"
+# 2. Read the order back, using the orderId from step 1. Its status is processed.
+curl "$API/orders/<orderId>"
 
-# Trigger the low-stock warning - widget-c has qty 1
+# 3. Take widget-c from 6 to 4, which is below its threshold of 5
 curl -X POST -H 'content-type: application/json' \
-  -d '{"items":[{"sku":"widget-c","qty":1}]}' \
+  -d '{"items":[{"sku":"widget-c","qty":2}]}' \
+  "$API/orders"
+
+# 4. Ask for more widget-c than there is
+curl -X POST -H 'content-type: application/json' \
+  -d '{"items":[{"sku":"widget-c","qty":10}]}' \
   "$API/orders"
 ```
 
@@ -93,29 +103,39 @@ Widen the window with `--since`, which takes a single unit such as `30m`, `2h` o
 Note: the group names are `/aws/lambda/<stackName>-worker` and `/aws/lambda/<stackName>-api`, so they
 change if you deploy with a different `stackName`.
 
-For the first POST you should see, in order:
+Each route's log line comes after a `Handling ...` line from the middleware. For step 1 you see, in
+order:
 
-1. `orderProcessor` - one log line, `decrementCount: 2, confirmationCount: 1`.
-2. `decrementStock` x2 - one per SKU, with the resulting quantity.
-3. `sendConfirmationEmail` x1 - the order id and item count.
-4. `stockMonitor` x2 - one per modified `STOCK#` row.
+1. `orderProcessor` logs `Order processed` with `messageCount: 3`.
+2. `decrementStock` logs `Stock decremented` twice, once per SKU.
+3. `sendConfirmationEmail` logs `Confirmation email dispatched` once.
+4. `stockMonitor` logs `Stock level changed` twice, once per `STOCK` row.
 
-For the third POST you also get a `Low stock` warning from `stockMonitor` because `widget-c` drops to zero.
+The `decrementStock` and `sendConfirmationEmail` lines can interleave, because they come from the same SQS
+batch.
 
+Step 3 also logs a `Low stock` warning from `stockMonitor`. The warning fires only when the quantity
+goes from above the threshold to at or below it.
+
+Step 4 logs `Not enough stock` from `decrementStock`. The stock does not change, so `stockMonitor`
+does not run, and the message is not retried.
+
+Note: the messages have no idempotency key. If `orderProcessor` fails after it sends some messages, the
+retry sends them all again and takes the stock twice.
 
 ## Database
 
 Single DynamoDB table partitioned by entity prefix:
 
-- `pk = ORDER`, `sk = <orderId>` - order rows: items list, status, createdAt
-- `pk = STOCK`, `sk = <sku>` - stock rows: quantity, lowStockThreshold
+- `pk = ORDER`, `sk = <orderId>` - order rows: items, status and createdAt.
+- `pk = STOCK`, `sk = <sku>` - stock rows: quantity and lowStockThreshold.
 
-`cdk deploy` seeds three stock rows via an `AwsCustomResource` so an order can immediately decrement something:
+`cdk deploy` seeds three stock rows through an `AwsCustomResource`, so an order has stock to take.
+Each row has a low-stock threshold of 5.
 
 - `widget-a` (qty 100)
 - `widget-b` (qty 50)
-- `widget-c` (qty 6, used to demonstrate the low-stock warning)
-
+- `widget-c` (qty 6, used to show the low-stock warning)
 
 ## Iterating
 
@@ -130,3 +150,5 @@ pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs synth  # render 
 ```bash
 pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs destroy
 ```
+
+This deletes the table, both queues and all the log groups.

@@ -3,10 +3,10 @@ import { randomUUID } from 'node:crypto';
 import { Created, defineRoute } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
-import { createOrder } from '../utils/dynamodb.js';
+import { insertOrder } from '../utils/dynamodb.js';
 import { OrderRequestSchema, OrderSchema } from '../utils/schemas.js';
 
-export const createOrderRoute = defineRoute({
+export const createOrder = defineRoute({
   filters: {
     method: 'POST',
     path: '/orders',
@@ -17,9 +17,7 @@ export const createOrderRoute = defineRoute({
   const orderId = randomUUID();
   const { items } = request.body;
 
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-
-  const order = await createOrder(orderId, items);
+  const order = await insertOrder(orderId, items);
 
   logger.info({ message: 'Order created', orderId, lineCount: items.length });
 
