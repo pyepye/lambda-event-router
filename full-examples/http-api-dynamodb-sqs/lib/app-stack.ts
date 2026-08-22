@@ -33,7 +33,7 @@ const sharedBundling: NodejsFunctionProps['bundling'] = {
   minify: true,
   sourceMap: true,
   mainFields: ['module', 'main'],
-  externalModules: ['@aws-sdk/*'],
+  externalModules: [],
   esbuildArgs: { '--conditions': 'module' },
   banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
 };
@@ -53,8 +53,8 @@ export class AppStack extends Stack {
     const seedItems = SEED_STOCK.map((stock) => ({
       PutRequest: {
         Item: {
-          pk: { S: `STOCK` },
-          sk: { S: stock.sku },
+          pk: { S: `STOCK#${stock.sku}` },
+          sk: { S: 'STOCK' },
           quantity: { N: String(stock.quantity) },
           lowStockThreshold: { N: String(stock.lowStockThreshold) },
         },
@@ -140,7 +140,7 @@ export class AppStack extends Stack {
 
     workerFn.addEventSource(
       new DynamoEventSource(table, {
-        startingPosition: StartingPosition.LATEST,
+        startingPosition: StartingPosition.TRIM_HORIZON,
         batchSize: STREAM_BATCH_SIZE,
         retryAttempts: STREAM_RETRY_ATTEMPTS,
         reportBatchItemFailures: true,
@@ -148,11 +148,11 @@ export class AppStack extends Stack {
         filters: [
           FilterCriteria.filter({
             eventName: FilterRule.or('INSERT'),
-            dynamodb: { Keys: { pk: { S: ['ORDER'] } } },
+            dynamodb: { Keys: { pk: { S: FilterRule.beginsWith('ORDER#') } } },
           }),
           FilterCriteria.filter({
             eventName: FilterRule.or('MODIFY'),
-            dynamodb: { Keys: { pk: { S: ['STOCK'] } } },
+            dynamodb: { Keys: { pk: { S: FilterRule.beginsWith('STOCK#') } } },
           }),
         ],
       }),

@@ -6,12 +6,12 @@ A deployable CDK app that chains the API Gateway, DynamoDB and SQS routers throu
 Client
 └── API Gateway (HTTP API)
     └── apiFn / createOrder (apiRouter, POST /orders)
-        └── DynamoDB PutItem on pk = ORDER
-            └── workerFn / orderProcessor (dynamoDBRouter, INSERT on pk = ORDER)
+        └── DynamoDB PutItem on ORDER#<orderId>
+            └── workerFn / orderProcessor (dynamoDBRouter, INSERT on ORDER#*)
                 ├── SQS message: decrementStock (one per item)
                 │   └── workerFn / decrementStock (sqsRouter)
-                │       └── DynamoDB UpdateItem on pk = STOCK
-                │           └── workerFn / stockMonitor (dynamoDBRouter, MODIFY on pk = STOCK)
+                │       └── DynamoDB UpdateItem on STOCK#<sku>
+                │           └── workerFn / stockMonitor (dynamoDBRouter, MODIFY on STOCK#*)
                 └── SQS message: sendConfirmationEmail
                     └── workerFn / sendConfirmationEmail (sqsRouter)
 ```
@@ -109,7 +109,7 @@ order:
 1. `orderProcessor` logs `Order processed` with `messageCount: 3`.
 2. `decrementStock` logs `Stock decremented` twice, once per SKU.
 3. `sendConfirmationEmail` logs `Confirmation email dispatched` once.
-4. `stockMonitor` logs `Stock level changed` twice, once per `STOCK` row.
+4. `stockMonitor` logs `Stock level changed` twice, once per stock row.
 
 The `decrementStock` and `sendConfirmationEmail` lines can interleave, because they come from the same SQS
 batch.
@@ -127,8 +127,8 @@ retry sends them all again and takes the stock twice.
 
 Single DynamoDB table partitioned by entity prefix:
 
-- `pk = ORDER`, `sk = <orderId>` - order rows: items, status and createdAt.
-- `pk = STOCK`, `sk = <sku>` - stock rows: quantity and lowStockThreshold.
+- `pk = ORDER#<orderId>`, `sk = ORDER` - order rows: items, status and createdAt.
+- `pk = STOCK#<sku>`, `sk = STOCK` - stock rows: quantity and lowStockThreshold.
 
 `cdk deploy` seeds three stock rows through an `AwsCustomResource`, so an order has stock to take.
 Each row has a low-stock threshold of 5.

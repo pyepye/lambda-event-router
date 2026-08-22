@@ -2,17 +2,17 @@ import { logger } from '@lambda-event-router/base';
 import { defineRoute } from '@lambda-event-router/dynamodb';
 
 import { markOrderProcessed } from '../utils/dynamodb.js';
-import { DbOrderSchema } from '../utils/schemas.js';
+import { DbOrderToOrder } from '../utils/schemas.js';
 import { type OutboundMessage, sendSQSMessages } from '../utils/sqs.js';
 
 export const orderProcessor = defineRoute({
   filters: {
     eventName: 'INSERT',
-    partitionKey: 'ORDER',
+    partitionKey: 'ORDER#*',
   },
-  newImageSchema: DbOrderSchema,
+  newImageSchema: DbOrderToOrder,
 }).handle(async (request) => {
-  const { sk: orderId, items } = request.newImage;
+  const { orderId, items } = request.newImage;
 
   const messages: OutboundMessage[] = [
     ...items.map((line) => ({

@@ -1,6 +1,6 @@
+import type { HTTPMiddleware } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 import type { DynamoDBMiddleware } from '@lambda-event-router/dynamodb';
-import type { HTTPMiddleware } from '@lambda-event-router/http';
 import type { SQSMiddleware } from '@lambda-event-router/sqs';
 
 export const logApiInvocation: HTTPMiddleware = async (request, next) => {

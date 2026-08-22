@@ -113,9 +113,6 @@ importers:
       '@lambda-event-router/dynamodb':
         specifier: workspace:*
         version: link:../../packages/dynamodb
-      '@lambda-event-router/http':
-        specifier: workspace:*
-        version: link:../../packages/http
       '@lambda-event-router/sqs':
         specifier: workspace:*
         version: link:../../packages/sqs

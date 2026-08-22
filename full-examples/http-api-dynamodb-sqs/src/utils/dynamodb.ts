@@ -2,13 +2,30 @@ import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb';
 import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 
 import { ddb, TABLE_NAME } from '../config.js';
-import { DbOrderToOrder, DbStockToStock, type TDbOrder, type TOrder, type TOrderLine, type TStock } from './schemas.js';
+import {
+  DbOrderToOrder,
+  DbStockToStock,
+  ORDER_PREFIX,
+  STOCK_PREFIX,
+  type TDbOrder,
+  type TOrder,
+  type TOrderLine,
+  type TStock,
+} from './schemas.js';
+
+function orderKey(orderId: string) {
+  return { pk: `${ORDER_PREFIX}${orderId}`, sk: 'ORDER' } as const;
+}
+
+function stockKey(sku: string) {
+  return { pk: `${STOCK_PREFIX}${sku}`, sk: 'STOCK' } as const;
+}
 
 export async function findOrder(orderId: string): Promise<TOrder | undefined> {
   const result = await ddb.send(
     new GetCommand({
       TableName: TABLE_NAME,
-      Key: { pk: 'ORDER', sk: orderId },
+      Key: orderKey(orderId),
     }),
   );
   if (!result.Item) return undefined;
@@ -17,8 +34,7 @@ export async function findOrder(orderId: string): Promise<TOrder | undefined> {
 
 export async function insertOrder(orderId: string, items: TOrderLine[]): Promise<TOrder> {
   const row: TDbOrder = {
-    pk: 'ORDER',
-    sk: orderId,
+    ...orderKey(orderId),
     items,
     status: 'pending',
     createdAt: new Date().toISOString(),
@@ -31,7 +47,7 @@ export async function markOrderProcessed(orderId: string): Promise<void> {
   await ddb.send(
     new UpdateCommand({
       TableName: TABLE_NAME,
-      Key: { pk: 'ORDER', sk: orderId },
+      Key: orderKey(orderId),
       UpdateExpression: 'SET #status = :status',
       ExpressionAttributeNames: { '#status': 'status' },
       ExpressionAttributeValues: { ':status': 'processed' },
@@ -39,13 +55,12 @@ export async function markOrderProcessed(orderId: string): Promise<void> {
   );
 }
 
-// Returns undefined when the SKU has less than qty in stock, or does not exist.
 export async function removeStock(sku: string, qty: number): Promise<TStock | undefined> {
   try {
     const result = await ddb.send(
       new UpdateCommand({
         TableName: TABLE_NAME,
-        Key: { pk: 'STOCK', sk: sku },
+        Key: stockKey(sku),
         UpdateExpression: 'SET #quantity = #quantity - :qty',
         ConditionExpression: '#quantity >= :qty',
         ExpressionAttributeNames: { '#quantity': 'quantity' },
