@@ -29,7 +29,7 @@ const entry = join(srcDir, 'index.ts');
 
 const sharedBundling: NodejsFunctionProps['bundling'] = {
   format: OutputFormat.ESM,
-  target: 'node24',
+  target: 'node22',
   minify: true,
   sourceMap: true,
   mainFields: ['module', 'main'],
@@ -102,7 +102,7 @@ export class AppStack extends Stack {
       functionName: `${this.stackName}-api`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_24_X,
+      runtime: Runtime.NODEJS_22_X,
       memorySize: 512,
       timeout: Duration.seconds(10),
       loggingFormat: LoggingFormat.JSON,
@@ -124,7 +124,7 @@ export class AppStack extends Stack {
       functionName: `${this.stackName}-worker`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_24_X,
+      runtime: Runtime.NODEJS_22_X,
       memorySize: 512,
       timeout: Duration.seconds(30),
       loggingFormat: LoggingFormat.JSON,
