@@ -86,6 +86,9 @@ curl -X POST -H 'content-type: application/json' \
   "$API/orders"
 ```
 
+Note: after a fresh deploy, the first order can take about 30 seconds to reach `processed`.
+Until then step 2 shows `pending`.
+
 ## Checking the logs
 
 Save the worker logs to a file:

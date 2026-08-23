@@ -5,6 +5,7 @@ import { CfnOutput, custom_resources, Duration, RemovalPolicy, Stack, type Stack
 import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { AttributeType, BillingMode, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb';
+import { PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
 import { FilterCriteria, FilterRule, LoggingFormat, Runtime, StartingPosition } from 'aws-cdk-lib/aws-lambda';
 import { DynamoEventSource, SqsEventSource } from 'aws-cdk-lib/aws-lambda-event-sources';
 import { NodejsFunction, type NodejsFunctionProps, OutputFormat } from 'aws-cdk-lib/aws-lambda-nodejs';
@@ -29,7 +30,7 @@ const entry = join(srcDir, 'index.ts');
 
 const sharedBundling: NodejsFunctionProps['bundling'] = {
   format: OutputFormat.ESM,
-  target: 'node22',
+  target: 'node24',
   minify: true,
   sourceMap: true,
   mainFields: ['module', 'main'],
@@ -70,14 +71,30 @@ export class AppStack extends Stack {
       retention: RetentionDays.ONE_DAY,
       removalPolicy: RemovalPolicy.DESTROY,
     });
+    // No logs:CreateLogGroup, so logs written after the stack deletes the group cannot recreate it.
+    const seedRole = new Role(this, 'SeedStockRole', {
+      assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
+      inlinePolicies: {
+        SeedStock: new PolicyDocument({
+          statements: [
+            new PolicyStatement({
+              actions: ['logs:CreateLogStream', 'logs:PutLogEvents'],
+              resources: [seedLogGroup.logGroupArn],
+            }),
+            new PolicyStatement({
+              actions: ['dynamodb:BatchWriteItem'],
+              resources: [table.tableArn],
+            }),
+          ],
+        }),
+      },
+    });
     new custom_resources.AwsCustomResource(this, 'SeedStock', {
       onCreate: seedParams,
       onUpdate: seedParams,
       installLatestAwsSdk: false,
       logGroup: seedLogGroup,
-      policy: custom_resources.AwsCustomResourcePolicy.fromSdkCalls({
-        resources: [table.tableArn],
-      }),
+      role: seedRole,
     });
 
     const dlq = new Queue(this, 'WorkerDlq', {
@@ -102,7 +119,7 @@ export class AppStack extends Stack {
       functionName: `${this.stackName}-api`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       memorySize: 512,
       timeout: Duration.seconds(10),
       loggingFormat: LoggingFormat.JSON,
@@ -124,7 +141,7 @@ export class AppStack extends Stack {
       functionName: `${this.stackName}-worker`,
       entry,
       handler: 'handler',
-      runtime: Runtime.NODEJS_22_X,
+      runtime: Runtime.NODEJS_24_X,
       memorySize: 512,
       timeout: Duration.seconds(30),
       loggingFormat: LoggingFormat.JSON,
