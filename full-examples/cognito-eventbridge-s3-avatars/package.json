@@ -1,0 +1,33 @@
+{
+  "name": "@lambda-event-router/full-example-cognito-eventbridge-s3-avatars",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "bundle": "tsx scripts/bundle.ts",
+    "validate": "sam validate --lint",
+    "deploy": "pnpm run bundle && sam deploy",
+    "destroy": "tsx scripts/emptyBuckets.ts && sam delete --no-prompts"
+  },
+  "dependencies": {
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/cognito": "workspace:*",
+    "@lambda-event-router/eventbridge": "workspace:*",
+    "@lambda-event-router/s3": "workspace:*",
+    "@aws-sdk/client-s3": "^3.1034.0",
+    "jimp": "^1.6.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1034.0",
+    "@aws-sdk/client-cloudtrail": "3.1075.0",
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:"
+  }
+}

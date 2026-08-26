@@ -31,12 +31,7 @@ export const serviceExamples: ExampleEntry[] = [
     name: 'AppSync',
     icons: ['appsync'],
     summary: 'A support desk with a GraphQL API, an Event API and one authorizer',
-    routers: [
-      'AppSyncRouter',
-      'AppSyncAuthorizerRouter',
-      'AppSyncEventsRouter',
-      'AppSyncEventsAuthorizerRouter',
-    ],
+    routers: ['AppSyncRouter', 'AppSyncAuthorizerRouter', 'AppSyncEventsRouter', 'AppSyncEventsAuthorizerRouter'],
     path: 'service-examples/appsync',
   },
   {
@@ -174,5 +169,12 @@ export const fullExamples: ExampleEntry[] = [
     summary: 'An order fan-out chain across five handlers on two Lambdas',
     routers: ['APIGatewayRouter', 'DynamoDBRouter', 'SQSRouter'],
     path: 'full-examples/http-api-dynamodb-sqs',
+  },
+  {
+    name: 'Cognito, EventBridge and S3',
+    icons: ['cognito', 'eventbridge', 's3'],
+    summary: 'User avatars kept in step with a user pool, deployed with AWS SAM',
+    routers: ['CognitoRouter', 'EventBridgeRouter', 'S3Router'],
+    path: 'full-examples/cognito-eventbridge-s3-avatars',
   },
 ];
