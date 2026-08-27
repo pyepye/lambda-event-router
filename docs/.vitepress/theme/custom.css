@@ -1,0 +1,286 @@
+:root {
+  --vp-c-brand-1: #62ad60;
+  --vp-c-brand-2: #559e54;
+  --vp-c-brand-3: #4a8c49;
+  --vp-c-brand-soft: #62ad6024;
+
+  /* Accessible text */
+  --vp-c-brand-text: #2e5c2d;
+}
+
+.dark {
+  --vp-c-brand-1: #7bcf78;
+  --vp-c-brand-2: #62ad60;
+  --vp-c-brand-3: #4a8c49;
+  --vp-c-brand-soft: #7bcf7829;
+
+  --vp-c-text-1: #f0f6fc;
+  --vp-c-text-2: #c9d1d9;
+  --vp-c-text-3: #8b949e;
+
+  /* Ppasses contrast easily in dark mode */
+  --vp-c-brand-text: #7bcf78;
+}
+
+.home-code-tabs {
+  margin: 0 auto;
+  max-width: 960px;
+  padding: 2rem 1rem 4rem;
+}
+
+@media (min-width: 960px) {
+  .VPDoc.VPDoc:not(.has-sidebar) .content {
+    max-width: 1104px;
+  }
+}
+@media (min-width: 1440px) {
+  .VPDoc.VPDoc:not(.has-sidebar) .content {
+    max-width: 1152px;
+  }
+  .VPDoc.VPDoc:not(.has-sidebar) .container {
+    max-width: 1280px;
+  }
+}
+
+/* Required if we want 'event' in the tag line*/
+@media (min-width: 960px) {
+  .VPHome .VPHero.has-image.VPHomeHero .container .main {
+    max-width: 611px;
+  }
+  .VPHero.has-image.VPHomeHero .main h1.heading span.name,
+  .VPHero.has-image.VPHomeHero .main h1.heading span.text {
+    max-width: 611px;
+  }
+  .VPHero.has-image.VPHomeHero .container .image .image-container {
+    transform: translate(0px, -32px);
+  }
+}
+
+
+/* Packages page: custom grid with search and filter pills.
+   Rules are scoped under `.vp-doc` because VitePress wraps extra markdown
+   content in `.vp-doc` (home layout), which otherwise injects prose styles
+   — underlined links, heading sizes, paragraph margins — onto our cards. */
+.vp-doc .packages-grid {
+  margin: 0 auto;
+  max-width: 1152px;
+  padding: 2rem 24px 4rem;
+}
+
+.vp-doc .packages-grid a {
+  text-decoration: none;
+}
+
+.vp-doc .packages-grid a:hover {
+  text-decoration: none;
+}
+
+.vp-doc .packages-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.vp-doc .packages-search {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+
+.vp-doc .packages-search-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.vp-doc .packages-search input {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 15px;
+  line-height: 1.4;
+  color: var(--vp-c-text-1);
+  background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s;
+}
+
+.vp-doc .packages-search input::placeholder {
+  color: var(--vp-c-text-3);
+}
+
+.vp-doc .packages-search input:hover {
+  border-color: var(--vp-c-brand-2);
+}
+
+.vp-doc .packages-search input:focus {
+  outline: none;
+  border-color: var(--vp-c-brand-1);
+  background-color: var(--vp-c-bg);
+}
+
+.vp-doc .packages-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.vp-doc .packages-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--vp-c-text-2);
+  background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.vp-doc .packages-filter-pill:hover {
+  color: var(--vp-c-text-1);
+  border-color: var(--vp-c-brand-2);
+}
+
+.vp-doc .packages-filter-pill.is-active {
+  color: var(--vp-c-brand-text);
+  background-color: var(--vp-c-brand-soft);
+  border-color: var(--vp-c-brand-1);
+}
+
+.vp-doc .packages-filter-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.vp-doc .packages-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.vp-doc .packages-card {
+  display: flex;
+  flex-direction: column;
+  padding: 24px;
+  background-color: var(--vp-c-bg-soft);
+  border: 1px solid var(--vp-c-bg-soft);
+  border-radius: 12px;
+  color: inherit;
+  transition:
+    border-color 0.25s,
+    background-color 0.25s,
+    transform 0.25s;
+}
+
+.vp-doc .packages-card:hover {
+  border-color: var(--vp-c-brand-1);
+  transform: translateY(-2px);
+}
+
+.vp-doc .packages-card-icon {
+  display: flex;
+  align-items: center;
+  height: 56px;
+  margin-bottom: 16px;
+}
+
+.vp-doc .packages-card-icon img {
+  width: 48px;
+  height: 48px;
+  display: block;
+  margin-right: 10px;
+}
+
+.vp-doc .packages-card-title {
+  margin: 0 0 8px;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--vp-c-text-1);
+  border: 0;
+  padding: 0;
+  letter-spacing: normal;
+}
+
+.vp-doc .packages-card-package {
+  margin: 0 0 4px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: var(--vp-font-family-mono);
+  color: var(--vp-c-brand-text);
+  word-break: break-all;
+}
+
+.vp-doc .packages-card-service {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .packages-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 64px 24px;
+  text-align: center;
+  color: var(--vp-c-text-2);
+}
+
+.vp-doc .packages-empty p {
+  margin: 0;
+}
+
+.vp-doc .packages-empty-reset {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--vp-c-brand-text);
+  background-color: var(--vp-c-brand-soft);
+  border: 1px solid var(--vp-c-brand-1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.vp-doc .packages-empty-reset:hover {
+  background-color: var(--vp-c-brand-1);
+  color: var(--vp-c-white);
+}
+
+/* Let the main content fill available width instead of capping at 688px,
+   which causes growing margins as the viewport widens past 1280px. */
+.VPDoc.VPDoc.has-aside .content-container {
+  max-width: none;
+}
+
+/* Reduce gap between main content and aside to give more width to content */
+@media (min-width: 960px) {
+  .VPDoc.has-aside .content {
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+  .VPDoc .aside {
+    padding-left: 16px;
+    max-width: 220px;
+  }
+}

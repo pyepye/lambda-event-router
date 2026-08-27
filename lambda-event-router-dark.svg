@@ -1,0 +1,28 @@
+<svg viewBox="0 0 220 139" xmlns="http://www.w3.org/2000/svg">
+  <style>
+    .lambda1 { fill: #f0f6fc; fill-rule: evenodd; }
+    .lambda2 { fill: #7f848a; }
+    .lambda3 { fill: #3a3f45; }
+  </style>
+  <path class="lambda3" d="M 79 133 L 84.7 122 L 90 133 Z">
+    <title>lambda3-outer-left</title>
+  </path>
+  <path class="lambda3" d="M 102 5 L 130 5 L 174 96 L 191 96 L 215 116 L 191 133 L 163 133 L 175.4 124 L 187 124 L 197 116 L 186 106 L 175 106 L 162 96 L 124 15 L 106.8 15 Z">
+    <title>lambda3-outer</title>
+  </path>
+  <path class="lambda2" d="M 74 5 L 102 5 L 146 96 L 163 96 L 187 116 L 163 133 L 135 133 L 147.4 124 L 159 124 L 169 116 L 158 106 L 147 106 L 134 96 L 96 15 L 78.8 15 Z">
+    <title>lambda2-outer</title>
+  </path>
+  <path class="lambda2" d="M 79.3 111 L 84.7 122 L 79 133 L 51 133 L 55.8 124 L 73 124 Z">
+    <title>lambda2-inner-left2</title>
+  </path>
+  <path class="lambda2" d="M 62.2 76 L 68 88 L 62.3 98 L 56.7 87 Z">
+    <title>lambda2-inner-left1</title>
+  </path>
+  <path class="lambda1" d="M 30 5 L 74 5 L 118 96 L 135 96 L 159 116 L 135 133 L 90 133 L 47 45 L 30 45 L 5 24 Z M 35 15 L 68 15 L 112 106 L 130 106 L 142 116 L 131 124 L 96 124 L 53 35 L 36 35 L 23 24 L 35 15 Z">
+    <title>lambda1-outer</title>
+  </path>
+  <path class="lambda1" d="M 43 60 L 66 105 L 51 133 L 5 133 Z M 43 82 L 55 105 L 45 124 L 22 124 Z">
+    <title>lambda1-foot-outer</title>
+  </path>
+</svg>

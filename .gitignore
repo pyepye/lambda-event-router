@@ -1,0 +1,15 @@
+*.log
+.DS_Store
+
+node_modules/
+**/dist/
+coverage/
+*.tsbuildinfo
+.tsup/
+tsup.config.bundled_*.mjs
+
+tmp/
+
+docs/.vitepress/cache
+docs/.vitepress/temp
+docs/.vitepress/dist
