@@ -14,8 +14,10 @@ Each example uses a different deploy tool, so you can see the router with the on
 | --- | --- |
 | `http-api-dynamodb-sqs` | AWS CDK |
 | `cognito-eventbridge-s3-avatars` | AWS SAM |
+| `secretsmanager-eventbridge-cloudwatch-security` | Terraform |
 
 The router code is the same whichever tool deploys it. Only the bundle step changes. CDK bundles the
 TypeScript itself. For SAM and Terraform, each example has a `bundle` script that runs esbuild first.
 
-SAM suits an app that is mostly Lambda functions and their triggers.
+SAM suits an app that is mostly Lambda functions and their triggers. Terraform suits a team that
+already uses it, or a stack with many resources that are not Lambda.

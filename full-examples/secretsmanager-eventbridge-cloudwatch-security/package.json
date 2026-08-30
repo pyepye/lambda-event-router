@@ -1,0 +1,31 @@
+{
+  "name": "@lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "bundle": "tsx scripts/bundle.ts",
+    "init": "terraform -chdir=terraform init",
+    "plan": "pnpm run bundle && terraform -chdir=terraform plan",
+    "deploy": "pnpm run bundle && terraform -chdir=terraform apply -auto-approve",
+    "destroy": "pnpm run bundle && terraform -chdir=terraform destroy -auto-approve"
+  },
+  "dependencies": {
+    "@lambda-event-router/base": "workspace:*",
+    "@lambda-event-router/cloudwatch": "workspace:*",
+    "@lambda-event-router/eventbridge": "workspace:*",
+    "@lambda-event-router/secretsmanager": "workspace:*",
+    "@aws-sdk/client-cloudwatch": "^3.1075.0",
+    "@aws-sdk/client-secrets-manager": "^3.1034.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:",
+    "@types/node": "catalog:",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.2",
+    "typescript": "catalog:"
+  }
+}

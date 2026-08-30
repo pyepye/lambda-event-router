@@ -177,4 +177,11 @@ export const fullExamples: ExampleEntry[] = [
     routers: ['CognitoRouter', 'EventBridgeRouter', 'S3Router'],
     path: 'full-examples/cognito-eventbridge-s3-avatars',
   },
+  {
+    name: 'Secrets Manager, EventBridge and CloudWatch',
+    icons: ['secrets-manager', 'eventbridge', 'cloudwatch'],
+    summary: 'Three security signals feeding one alarm, deployed with Terraform',
+    routers: ['SecretsManagerRouter', 'EventBridgeRouter', 'CloudWatchLogsRouter'],
+    path: 'full-examples/secretsmanager-eventbridge-cloudwatch-security',
+  },
 ];

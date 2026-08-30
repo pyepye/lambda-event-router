@@ -5,7 +5,8 @@ README in each one has the deploy steps, the commands that trigger it and a walk
 produces.
 
 Each one uses a different deploy tool. `http-api-dynamodb-sqs` uses CDK,
-`cognito-eventbridge-s3-avatars` uses AWS SAM.
+`cognito-eventbridge-s3-avatars` uses AWS SAM and `secretsmanager-eventbridge-cloudwatch-security`
+uses Terraform.
 
 They cover how several routers work together in one codebase, which the service examples do not.
 
