@@ -154,7 +154,7 @@ dynamoRouter.route({
   },
   {
     path: 'api-handlers/putItem.ts',
-    code: `import type { ApiRequest } from '@lambda-event-router/apigateway'
+    code: `import type { APIGatewayAuth, ApiRequest } from '@lambda-event-router/apigateway'
 
 import { type Item, type ItemKeys } from '../schemas/item.js'
 import { items } from '../services/items.js'
@@ -164,7 +164,7 @@ type StoredItem = Item & ItemKeys
 
 // query is unknown because the route sets no querySchema
 export async function putItem(
-  request: ApiRequest<PathParams, unknown, Item>,
+  request: ApiRequest<PathParams, unknown, APIGatewayAuth, Item>,
 ): Promise<StoredItem> {
   const { path, body } = request
 

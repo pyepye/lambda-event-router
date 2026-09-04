@@ -1,7 +1,8 @@
+export { type AuthCheckResult, type AuthFailureReason, type AuthOf, type AuthPreset, noAuth } from './auth.js';
 export { BinaryBody } from './binaryBody.js';
 export { HTTP_STATUS_CODES } from './constants.js';
 export type { CorsConfig, CorsOriginFunction } from './cors.js';
-export { defineRoute, HTTPRouter } from './HTTPRouter.js';
+export { createDefineRoute, type DefineRouteFn, defineRoute, HTTPRouter } from './HTTPRouter.js';
 export {
   BadRequest,
   Conflict,
@@ -22,7 +23,6 @@ export type {
   ApiHandler,
   ApiRequest,
   ApiResponse,
-  Auth,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,

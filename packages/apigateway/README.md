@@ -34,7 +34,7 @@ export const handler = lambdaRouter.handler()
 
 ```ts
 // api.ts
-import { createAPIGatewayRouter, defineRoute } from '@lambda-event-router/apigateway'
+import { createAPIGatewayRouter, defineRoute, lambdaAuth } from '@lambda-event-router/apigateway'
 import { z } from 'zod'
 
 export const apiRouter = createAPIGatewayRouter()
@@ -44,9 +44,10 @@ const createOrder = defineRoute({
     method: 'POST',
     path: '/orgs/:orgId/orders',
   },
+  auth: lambdaAuth(),
   bodySchema: z.object({ item: z.string(), quantity: z.number() }),
-}).handle(async ({ path, body }) => {
-  console.log(`Creating an order for ${body.quantity} ${body.item} in ${path.orgId}`)
+}).handle(async ({ path, body, auth }) => {
+  console.log(`${auth.principalId} is ordering ${body.quantity} ${body.item} in ${path.orgId}`)
   return { orgId: path.orgId, item: body.item }
 })
 
@@ -97,8 +98,8 @@ The handler's types come from the route. To name them yourself instead, see
 
 ## Documentation
 
-- [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) covers every filter, schema validation, CORS
-  and API Gateway event versions.
+- [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) covers every filter, schema validation, auth,
+  CORS and API Gateway event versions.
 - [LambdaAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaAuthorizerRouter) covers every filter, responses
   and middleware.
 - [WebSocketRouter](https://pyepye.github.io/lambda-event-router/routers/WebSocketRouter) covers every filter, schema validation, responses

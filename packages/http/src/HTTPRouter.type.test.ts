@@ -1,14 +1,22 @@
 import { createMockSchema } from '@lambda-event-router/testing';
 
-import { defineRoute } from './HTTPRouter.js';
+import { createDefineRoute, defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { NoContent } from './Response.js';
-import type { ApiRequest, HandlerResponse } from './types.js';
+import type {
+  ApiHandler,
+  ApiRequest,
+  HandlerResponse,
+  HTTPAdapter,
+  HTTPFilterInput,
+  HTTPMiddleware,
+  NormalizedHTTPEvent,
+} from './types.js';
 
 interface Item {
   name: string;
 }
 
-type ItemsRequest<TBody> = ApiRequest<Record<never, never>, Record<string, string | undefined>, TBody>;
+type ItemsRequest<TBody> = ApiRequest<Record<never, never>, Record<string, string | undefined>, unknown, TBody>;
 
 function handlesUndefinedBody(_request: ItemsRequest<undefined>): Promise<HandlerResponse> {
   return Promise.resolve(NoContent());
@@ -60,5 +68,89 @@ suite('defineRoute path filter', () => {
   test('rejects a param name that starts with a digit', () => {
     // @ts-expect-error - '1abc' is not a param name
     defineRoute({ filters: { method: 'GET', path: '/items/:1abc' } });
+  });
+});
+
+suite('HTTP generic order', () => {
+  type Query = Record<string, string | undefined>;
+  type ItemAuth = { principalId: string };
+
+  test('ApiRequest takes auth after query and body after auth', () => {
+    expectTypeOf<ApiRequest<{ id: string }, Query, ItemAuth, Item>['auth']>().toEqualTypeOf<ItemAuth>();
+    expectTypeOf<ApiRequest<{ id: string }, Query, ItemAuth, Item>['body']>().toEqualTypeOf<Item>();
+  });
+
+  test('ApiRequest defaults auth to unknown, which each router package narrows', () => {
+    expectTypeOf<ApiRequest<{ id: string }>['auth']>().toEqualTypeOf<unknown>();
+  });
+
+  test('ApiHandler and HTTPMiddleware take auth after query', () => {
+    expectTypeOf<Parameters<ApiHandler<{ id: string }, Query, ItemAuth, Item>>[0]>().toEqualTypeOf<
+      ApiRequest<{ id: string }, Query, ItemAuth, Item>
+    >();
+    expectTypeOf<Parameters<HTTPMiddleware<{ id: string }, Query, ItemAuth, Item>>[0]>().toEqualTypeOf<
+      ApiRequest<{ id: string }, Query, ItemAuth, Item>
+    >();
+  });
+});
+
+type TeamAuth = { type: 'team'; team: string } | undefined;
+type TeamRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, TeamAuth>;
+
+const teamAdapter: HTTPAdapter<unknown, unknown, TeamAuth> = {
+  canHandleEvent: (event: unknown): event is unknown => event !== undefined,
+  normalize: (): NormalizedHTTPEvent<TeamAuth> => ({
+    method: 'GET',
+    path: '/items',
+    headers: {},
+    multiValueHeaders: {},
+    query: {},
+    multiValueQuery: {},
+    body: undefined,
+    isBase64Encoded: false,
+    auth: { type: 'team', team: 'goods-in' },
+  }),
+  buildResult: (): unknown => undefined,
+};
+
+function readsTeam(input: HTTPFilterInput<unknown, TeamAuth>): boolean {
+  return input.auth?.team === 'goods-in';
+}
+
+function handlesTeamAuth(_request: TeamRequest): Promise<HandlerResponse> {
+  return Promise.resolve(NoContent());
+}
+
+suite('auth type', () => {
+  test('a router hands its adapter auth type to the handler and the custom filter', () => {
+    const router = new HTTPRouter(teamAdapter);
+
+    router.get({ filters: { path: '/items', custom: readsTeam }, handler: handlesTeamAuth });
+    router.route({ filters: { method: 'POST', path: '/items', custom: readsTeam }, handler: handlesTeamAuth });
+  });
+
+  test('a router with unknown auth rejects a handler that expects an auth type', () => {
+    const router = new HTTPRouter<unknown, unknown>(teamAdapter);
+
+    // @ts-expect-error - the router does not promise TeamAuth
+    router.get({ filters: { path: '/items' }, handler: handlesTeamAuth });
+    // @ts-expect-error - the router does not promise TeamAuth to a custom filter either
+    router.get({ filters: { path: '/items', custom: readsTeam }, handler: vi.fn() });
+  });
+
+  test('createDefineRoute types auth for the routes it defines', () => {
+    createDefineRoute<TeamAuth>()({ filters: { method: 'GET', path: '/items' } }).handle(handlesTeamAuth);
+
+    // @ts-expect-error - a route defined with unknown auth does not promise TeamAuth
+    createDefineRoute<unknown>()({ filters: { method: 'GET', path: '/items' } }).handle(handlesTeamAuth);
+  });
+
+  test('a route defined for one auth type registers on a router with that auth type', () => {
+    const router = new HTTPRouter(teamAdapter);
+    const itemsRoute = createDefineRoute<TeamAuth>()({ filters: { method: 'GET', path: '/items' } }).handle(
+      handlesTeamAuth,
+    );
+
+    router.route(itemsRoute);
   });
 });

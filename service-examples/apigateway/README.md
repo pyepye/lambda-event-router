@@ -71,11 +71,11 @@ failure path each router has. They also cover all three payload formats API Gate
 | CORS | An origin function, credentials, exposed headers, an automatic preflight, and a registered `options()` route that wins |
 | Multi-value headers and query | A repeated query param on all three payload formats, and a repeated header on both adapters |
 | HEAD responses | `headStockRecord` builds a body and the router strips it |
-| Auth from a TOKEN authorizer | `createOrder` reads `auth.principalId` and `auth.context` |
-| Auth from a REQUEST authorizer | `getOrder` reads the principal the policy named. `generatePolicy` attaches no context, so `auth.context` is empty |
-| Auth from an HTTP API authorizer | `reconcileStock` reads `auth.context.lambda` |
-| Auth from an API key | `getStockLevel` reads `auth.apiKeyId` |
-| Auth from IAM | `getStockAudit` reads `auth.iam` off a SigV4 signed request |
+| Auth from a TOKEN authorizer | `createOrder` sits behind `staffAuth`, a `lambdaAuth` preset whose schema reads the context |
+| Auth from a REQUEST authorizer | `getOrder` reads the principal the policy named behind `lambdaAuth()`. `generatePolicy` attaches no context, so `auth.context` is empty |
+| Auth from an HTTP API authorizer | `reconcileStock` reads `auth.context` behind a `lambdaAuth` preset with a schema |
+| Auth from an API key | `getStockLevel` reads `auth.apiKey.id` |
+| Auth from IAM | `getStockAudit` reads `auth.iam` off a SigV4 signed request, behind `iamAuth()` |
 | Base64 encoded body | `uploadOrderManifest` takes a manifest as bytes, typed by a `bodySchema` of `BinaryBody` |
 | `type` filter | `token()` and `request()` split the authorizer's two event types |
 | `method` filter on an authorizer route | PUT and PATCH are routed separately from the read route |
@@ -198,7 +198,7 @@ The rest of the log is one line per handler:
 - `Pending orders listed` proves `/orders/pending` is reached despite being registered after
   `/orders/:orderId`.
 - `Order created` carries the TOKEN authorizer's context. API Gateway sends every context value on
-  as a string, so `clearance` arrives as `"3"` rather than 3.
+  as a string, and `staffAuth` reads `clearance` back as the number 3.
 - `Order amended on the warehouse floor` is the custom filter winning. `Order amended` is the same
   method and path without the `x-channel` header.
 - `Order line read` proves both path params reach the handler.
@@ -217,10 +217,9 @@ The rest of the log is one line per handler:
 - `Stock record checked` is the HEAD route. It builds the same response as the GET route and the
   router strips the body.
 - `Stock options described` is the registered `options()` route answering a preflight itself.
-- `Stock adjusted` carries `auth` as `{ context: { lambda: null } }`. The simple-response authorizer
-  answers with a boolean, so API Gateway sends a context whose `lambda` field is null.
-- `Stock reconciled` carries `authorizerContext.lambda` with `costCentre` and `shift`. An HTTP API
-  nests a policy-mode authorizer's context under `lambda`.
+- `Stock adjusted` carries `auth` as `{ type: 'lambda', context: {} }`. The simple-response authorizer
+  answers with a boolean, so it has no context to pass on.
+- `Stock reconciled` carries `authorizerContext` with `costCentre` and `shift`.
 - `Stock record discarded` is the SKU with no units left. The SKU that still holds stock throws
   `Conflict` and logs nothing.
 - `Retired SKU redirected` and `Label redirect issued` are the two redirects.

@@ -6,6 +6,7 @@ import { logger } from '@lambda-event-router/base';
 export const withReturnContext: HTTPMiddleware<
   { returnId: string },
   Record<string, string | undefined>,
+  undefined,
   unknown
 > = async (request, next) => {
   logger.info({

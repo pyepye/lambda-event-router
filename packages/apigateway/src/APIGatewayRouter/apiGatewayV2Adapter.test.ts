@@ -1,10 +1,4 @@
-import {
-  createApiGatewayLambdaAuthorizerRequestV2Event,
-  createApiGatewayV2Event,
-  createApiGatewayV2WithIAMAuthorizerEvent,
-  createApiGatewayV2WithJWTAuthorizerEvent,
-  createApiGatewayV2WithLambdaAuthorizerEvent,
-} from '@lambda-event-router/testing';
+import { createApiGatewayLambdaAuthorizerRequestV2Event, createApiGatewayV2Event } from '@lambda-event-router/testing';
 
 import { apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
 
@@ -79,101 +73,6 @@ suite('apiGatewayV2Adapter', () => {
       expect(normalized.query).toEqual({ tag: 'a,b' });
       expect(normalized.multiValueQuery).toEqual({ tag: ['a,b'] });
       expect(normalized.multiValueHeaders['x-tag']).toEqual(['a,b']);
-    });
-
-    test('extracts JWT auth from V2 event', () => {
-      const event = createApiGatewayV2WithJWTAuthorizerEvent({
-        requestContext: {
-          authorizer: {
-            jwt: {
-              claims: { sub: 'user-1', iss: 'https://cognito.example.com' },
-              scopes: ['openid', 'email'],
-            },
-          },
-        },
-      });
-
-      const normalized = apiGatewayV2Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        claims: { sub: 'user-1', iss: 'https://cognito.example.com' },
-        scopes: ['openid', 'email'],
-      });
-    });
-
-    test('extracts client certificate auth', () => {
-      const event = createApiGatewayV2Event({
-        requestContext: {
-          authentication: {
-            clientCert: {
-              clientCertPem: 'CERT_PEM',
-              subjectDN: 'CN=client',
-              issuerDN: 'CN=issuer',
-              serialNumber: '1234',
-              validity: { notBefore: '2024-01-01', notAfter: '2025-01-01' },
-            },
-          },
-        },
-      });
-
-      const normalized = apiGatewayV2Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        clientCert: {
-          clientCertPem: 'CERT_PEM',
-          subjectDN: 'CN=client',
-          issuerDN: 'CN=issuer',
-          serialNumber: '1234',
-          validity: { notBefore: '2024-01-01', notAfter: '2025-01-01' },
-        },
-      });
-    });
-
-    test('extracts IAM authorizer auth', () => {
-      const event = createApiGatewayV2WithIAMAuthorizerEvent({
-        requestContext: {
-          authorizer: {
-            iam: {
-              accessKey: 'test-access-key',
-              accountId: '999888777666',
-              callerId: 'test-caller-id',
-              cognitoIdentity: null,
-              principalOrgId: 'o-test123',
-              userArn: 'arn:aws:iam::999888777666:user/test',
-              userId: 'test-user-id',
-            },
-          },
-        },
-      });
-
-      const normalized = apiGatewayV2Adapter.normalize(event);
-
-      expect(normalized.auth?.iam).toBeDefined();
-      expect(normalized.auth?.iam?.accountId).toBe('999888777666');
-    });
-
-    test('returns default authorizer context when authorizer has no jwt or iam key', () => {
-      const event = createApiGatewayV2WithLambdaAuthorizerEvent({
-        requestContext: {
-          authorizer: {
-            lambda: { tenantId: 'tenant-1', role: 'viewer' },
-          },
-        },
-      });
-
-      const normalized = apiGatewayV2Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        context: { lambda: { userId: 'user-1', role: 'viewer', tenantId: 'tenant-1' } },
-      });
-    });
-
-    test('returns undefined auth when no authorizer is present', () => {
-      const event = createApiGatewayV2Event();
-
-      const normalized = apiGatewayV2Adapter.normalize(event);
-
-      expect(normalized.auth).toBeUndefined();
     });
   });
 

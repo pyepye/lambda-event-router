@@ -115,6 +115,33 @@ function isRequestV2Event(event: LambdaAuthorizerEvent): event is APIGatewayRequ
   return event.type === 'REQUEST' && 'routeArn' in event;
 }
 
+// HTTP API authorizer events carry a version, or a routeArn on payload 2.0. REST ones carry neither
+function isHttpApiEvent(event: LambdaAuthorizerEvent): boolean {
+  return isRequestV2Event(event) || (isObject(event) && typeof event.version === 'string');
+}
+
+// The path to the first number that is not a whole number, such as 'limits.ratio' or 'rates.1'
+function findFraction(value: unknown, path: string): { path: string; value: number } | undefined {
+  if (typeof value === 'number') return Number.isInteger(value) ? undefined : { path, value };
+  const isContainer = isObject(value) || Array.isArray(value);
+  if (!isContainer) return undefined;
+
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = path === '' ? key : `${path}.${key}`;
+    const fraction = findFraction(child, childPath);
+    if (fraction) return fraction;
+  }
+  return undefined;
+}
+
+function assertNoFractions(result: LambdaAuthorizerResult): void {
+  const fraction = findFraction(result.context, '');
+  if (!fraction) return;
+  throw new Error(
+    `An HTTP API delivers every number that is not a whole number as 0. The authorizer context holds ${fraction.value} at ${fraction.path}, so send it as a string`,
+  );
+}
+
 export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerEvent, LambdaAuthorizerResult> {
   private routes: InternalRoute[] = [];
   private routesOrdered = false;
@@ -210,9 +237,11 @@ export class LambdaAuthorizerRouter implements EventTypeRouter<LambdaAuthorizerE
         );
       }
 
+      if (isHttpApiEvent(event)) assertNoFractions(result);
       return result;
     } catch (error) {
       if (isAuthorizerResponse(error)) {
+        if (isHttpApiEvent(event)) assertNoFractions(error);
         return error;
       }
       throw error;

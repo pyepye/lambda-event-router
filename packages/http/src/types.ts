@@ -1,8 +1,10 @@
-import type { ALBEvent, Context } from 'aws-lambda';
+import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { Middleware } from '@lambda-event-router/base';
+
+import type { AuthPreset } from './auth.js';
 
 // HTTP method types - more restrictive than aws-lambda's string for better type safety
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS' | 'HEAD';
@@ -58,21 +60,7 @@ export type PathParams<T extends string> = { [K in ParamNames<T>]: string };
 
 export type HandlerResponse<TResponse = unknown> = ApiResponse<TResponse> | TResponse;
 
-// TODO: Does this need to be more dynamic based on the type?
-//       If not these types should all come from the actual interfaces like targetGroupArn
-export interface Auth {
-  claims?: Record<string, unknown>;
-  scopes?: string[];
-  principalId?: string;
-  context?: Record<string, unknown>;
-  clientCert?: Record<string, unknown>;
-  iam?: Record<string, unknown>;
-  apiKey?: string;
-  apiKeyId?: string;
-  targetGroupArn?: ALBEvent['requestContext']['elb']['targetGroupArn'];
-}
-
-export interface NormalizedHTTPEvent {
+export interface NormalizedHTTPEvent<TAuth = unknown> {
   method: string;
   path: string;
   headers: Record<string, string | undefined>;
@@ -81,7 +69,7 @@ export interface NormalizedHTTPEvent {
   multiValueQuery: Record<string, string[] | undefined>;
   body: string | undefined;
   isBase64Encoded: boolean;
-  auth: Auth | undefined;
+  auth: TAuth;
 }
 
 export interface FinalizedHTTPResponse {
@@ -91,15 +79,16 @@ export interface FinalizedHTTPResponse {
   isBase64Encoded: boolean;
 }
 
-export interface HTTPAdapter<TEvent, TResult> {
+export interface HTTPAdapter<TEvent, TResult, TAuth = unknown> {
   canHandleEvent(event: unknown): event is TEvent;
-  normalize(event: TEvent): NormalizedHTTPEvent;
+  normalize(event: TEvent): NormalizedHTTPEvent<TAuth>;
   buildResult(response: FinalizedHTTPResponse, event: TEvent): TResult;
 }
 
 export interface ApiRequest<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
+  TAuth = unknown,
   TBody = unknown,
   TEvent = unknown,
 > {
@@ -111,7 +100,7 @@ export interface ApiRequest<
   body: TBody;
   rawBody: string | undefined;
   isBase64Encoded: boolean;
-  auth: Auth | undefined;
+  auth: TAuth;
   headers: Record<string, string | undefined>;
   multiValueHeaders: Record<string, string[] | undefined>;
   event: TEvent;
@@ -126,7 +115,7 @@ export interface ApiResponse<T = unknown> {
 
 export type HTTPResponse<T = unknown> = ApiResponse<T>;
 
-export interface HTTPFilterInput<TEvent = unknown> {
+export interface HTTPFilterInput<TEvent = unknown, TAuth = unknown> {
   method: string;
   path: string;
   headers: Record<string, string | undefined>;
@@ -134,41 +123,50 @@ export interface HTTPFilterInput<TEvent = unknown> {
   query: Record<string, string | undefined>;
   multiValueQuery: Record<string, string[] | undefined>;
   body: string | undefined;
-  auth: Auth | undefined;
+  auth: TAuth;
   event: TEvent;
 }
 
-export interface HTTPFilters<TPathString extends string = string, TMethod extends AnyHttpMethod = AnyHttpMethod> {
+export interface HTTPFilters<
+  TPathString extends string = string,
+  TMethod extends AnyHttpMethod = AnyHttpMethod,
+  TAuth = unknown,
+> {
   method: TMethod;
   path: ValidPath<TPathString>;
-  custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
+  custom?: (input: HTTPFilterInput<unknown, TAuth>) => boolean | Promise<boolean>;
 }
 
 export type HTTPMiddleware<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
+  TAuth = unknown,
   TBody = unknown,
   TResponse = unknown,
-> = Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>;
+> = Middleware<ApiRequest<TPath, TQuery, TAuth, TBody>, HandlerResponse<TResponse>>;
 
 export type ApiHandler<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
+  TAuth = unknown,
   TBody = unknown,
   TResponse = unknown,
-> = (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>;
+> = (request: ApiRequest<TPath, TQuery, TAuth, TBody>) => Promise<HandlerResponse<TResponse>>;
 
 export interface RouteDefinition<
   TPathString extends string = string,
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
+  TAuth = unknown,
   TBody = unknown,
   TResponse = unknown,
   TMethod extends AnyHttpMethod = AnyHttpMethod,
+  TRawAuth = TAuth,
 > {
-  filters: HTTPFilters<TPathString, TMethod>;
-  handler: ApiHandler<TPath, TQuery, NoInfer<TBody>, TResponse>;
-  middleware?: HTTPMiddleware<TPath, TQuery, NoInfer<TBody>, TResponse>[];
+  filters: HTTPFilters<TPathString, TMethod, TRawAuth>;
+  auth?: AuthPreset<TRawAuth, TAuth>;
+  handler: ApiHandler<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, TResponse>;
+  middleware?: HTTPMiddleware<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, TResponse>[];
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;

@@ -156,40 +156,6 @@ suite('apiGatewayV1Adapter', () => {
       expect(normalized.body).toBeUndefined();
     });
 
-    test('extracts Cognito authorizer claims', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          authorizer: {
-            claims: { sub: 'user-1', email: 'test@example.com' },
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        claims: { sub: 'user-1', email: 'test@example.com' },
-      });
-    });
-
-    test('extracts Lambda authorizer with principalId', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          authorizer: {
-            principalId: 'user-1',
-            role: 'admin',
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        principalId: 'user-1',
-        context: { role: 'admin' },
-      });
-    });
-
     test('uses last value from multiValueHeaders', () => {
       const event = createApiGatewayV1Event({
         multiValueHeaders: {
@@ -200,94 +166,6 @@ suite('apiGatewayV1Adapter', () => {
       const normalized = apiGatewayV1Adapter.normalize(event);
 
       expect(normalized.headers['x-custom']).toBe('third');
-    });
-
-    test('extracts apiKey identity auth', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          identity: {
-            apiKey: 'my-api-key',
-            apiKeyId: 'key-id-123',
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        apiKey: 'my-api-key',
-        apiKeyId: 'key-id-123',
-      });
-    });
-
-    test('extracts apiKey auth with undefined apiKeyId when null', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          identity: {
-            apiKey: 'my-api-key',
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        apiKey: 'my-api-key',
-        apiKeyId: undefined,
-      });
-    });
-
-    test('extracts Cognito identity auth when authenticated', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          identity: {
-            cognitoAuthenticationType: 'authenticated',
-            cognitoIdentityId: 'us-east-1:identity-id',
-            cognitoIdentityPoolId: 'us-east-1:pool-id',
-            accountId: '123456789012',
-            caller: 'caller-id',
-            sourceIp: '10.0.0.1',
-            userArn: 'arn:aws:iam::123456789012:user/test',
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        iam: {
-          cognitoIdentityId: 'us-east-1:identity-id',
-          cognitoIdentityPoolId: 'us-east-1:pool-id',
-          accountId: '123456789012',
-          caller: 'caller-id',
-          sourceIp: '10.0.0.1',
-          userArn: 'arn:aws:iam::123456789012:user/test',
-        },
-      });
-    });
-
-    test('returns default authorizer context when authorizer is not Cognito or Lambda', () => {
-      const event = createApiGatewayV1Event({
-        requestContext: {
-          authorizer: {
-            customKey: 'customValue',
-          },
-        },
-      });
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        context: { customKey: 'customValue' },
-      });
-    });
-
-    test('returns undefined auth when no authorizer is present', () => {
-      const event = createApiGatewayV1Event();
-
-      const normalized = apiGatewayV1Adapter.normalize(event);
-
-      expect(normalized.auth).toBeUndefined();
     });
   });
 

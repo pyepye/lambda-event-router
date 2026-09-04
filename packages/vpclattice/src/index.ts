@@ -1,28 +1,22 @@
 export type {
-  ApiHandler,
-  ApiRequest,
   ApiResponse,
-  Auth,
+  AuthOf,
+  AuthPreset,
   CorsConfig,
   CorsOriginFunction,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,
-  HTTPFilterInput,
-  HTTPFilters,
-  HTTPMiddleware,
   HTTPResponse,
   HttpMethod,
   NormalizedHTTPEvent,
   PathParams,
-  RouteDefinition,
 } from '@lambda-event-router/http';
 export {
   BadRequest,
   BinaryBody,
   Conflict,
   Created,
-  defineRoute,
   Forbidden,
   HTTP_STATUS_CODES,
   HTTPRouter,
@@ -37,8 +31,18 @@ export {
   UnprocessableContent,
 } from '@lambda-event-router/http';
 
+export type { VPCLatticeAuth, VPCLatticeIamAuth } from './auth.js';
+export { iamAuth, noAuth } from './presets.js';
+export type {
+  ApiHandler,
+  ApiRequest,
+  HTTPFilterInput,
+  HTTPFilters,
+  HTTPMiddleware,
+  RouteDefinition,
+} from './types.js';
 export type { VPCLatticeRouterOptions } from './VPCLatticeRouter.js';
-export { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
+export { createVPCLatticeRouter, defineRoute, VPCLatticeRouter } from './VPCLatticeRouter.js';
 export type { VPCLatticeEvent } from './vpcLatticeAdapter.js';
 export { vpcLatticeAdapter } from './vpcLatticeAdapter.js';
 export type { VPCLatticeEventV1, VPCLatticeResult } from './vpcLatticeV1Adapter.js';

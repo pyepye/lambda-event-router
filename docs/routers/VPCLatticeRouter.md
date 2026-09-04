@@ -37,6 +37,7 @@ versions, answers 404 for anything you have not registered and sends no CORS hea
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
+| `auth` | `AuthPreset` | No | | The preset every route uses unless it names its own. See [auth presets](#auth-presets) |
 | `middleware` | `HTTPMiddleware[]` | No | `[]` | Runs for every request this router handles, before any route middleware. See [Middleware](#middleware) |
 | `cors` | `CorsConfig` | No | | Answers preflight and adds CORS headers to every response. See [CORS](#cors) |
 
@@ -237,7 +238,7 @@ export async function getOrder(
 | `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
-| `auth` | `Auth \| undefined` | `principalId` and `iam`, on either payload version. See [Auth](#auth) |
+| `auth` | `VPCLatticeAuth` | `principalId` and `iam`, on either payload version. See [Auth](#auth) |
 | `event` | `TEvent` | The untouched event, typed `VPCLatticeEvent` |
 | `context` | `Context` | The Lambda context |
 
@@ -338,7 +339,7 @@ Annotating the request yourself splits route setup from business logic, using
 
 ```ts
 // handlers/orders.ts
-import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
+import type { ApiRequest, ApiResponse, VPCLatticeAuth } from '@lambda-event-router/vpclattice'
 import { Created } from '@lambda-event-router/vpclattice'
 import { z } from 'zod'
 
@@ -346,7 +347,7 @@ export const NewOrderSchema = z.object({ sku: z.string(), quantity: z.number() }
 type NewOrder = z.infer<typeof NewOrderSchema>
 
 export async function createOrder(
-  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, VPCLatticeAuth, NewOrder>,
 ): Promise<ApiResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body
@@ -381,9 +382,9 @@ of the pattern so you are not keeping a second copy of it in step. Check it agai
 patterns](#path-patterns) first, since a pattern ending in a literal segment gives you nothing and writing the
 type out by hand is the answer there.
 
-`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TBody`, so typing only the body means
-passing the query type through as well. [Generic parameters](#generic-parameters) has each one, its default
-and which types take them in a different order.
+`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TAuth`, `TBody`, so typing only the body
+means passing the query and auth types through as well. [Generic parameters](#generic-parameters) has each
+one, its default and which types take them in a different order.
 
 ## Schema validation
 
@@ -521,8 +522,9 @@ See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with t
 
 | Field | Type | Comes from |
 | --- | --- | --- |
+| `type` | `'iam'` | Always `'iam'`, the one kind of caller Lattice names |
 | `principalId` | `string` | `requestContext.identity.principal` on a 2.0 payload, and `Principal=` in the `x-amzn-lattice-identity` header on a 1.0 one |
-| `iam` | `Record<string, unknown>` | A copy of `requestContext.identity` on a 2.0 payload. On a 1.0 payload, the fields of the `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers |
+| `iam` | `VPCLatticeIdentity` | A copy of `requestContext.identity` on a 2.0 payload. On a 1.0 payload, the fields of the `x-amzn-lattice-identity` and `x-amzn-lattice-network` headers |
 
 A signed caller gets the same `iam` behind either listener:
 
@@ -540,14 +542,29 @@ A 1.0 payload has no request context, so the router builds `iam` from the two he
 The router lower cases the first letter of each key to match the 2.0 names, and drops a key with an empty value.
 A 2.0 payload leaves out the same empty fields, so `principalOrgID` only appears when the caller has one.
 
-`Auth` is shared across the HTTP routers, so it declares `claims`, `scopes` and the rest as optional. None of
-them are ever populated here.
-
 **A request Lattice cannot name gets `auth: undefined`,** so a route that needs a caller identity has to handle
 that rather than assume the field is there. A service with an auth type of `NONE`, or one whose auth policy
 grants anonymous access, sends no principal for an unsigned caller. Lattice still sends `sourceVpcArn` for that
 caller, but only on the event. Read it from `request.event.requestContext.identity` on a 2.0 payload, or the
 `x-amzn-lattice-network` header on a 1.0 one.
+
+### Auth presets
+
+`iamAuth()` makes a route refuse a request Lattice could not name, and hands the handler `auth` with no
+`undefined` to check. The router takes it as a default for every route, and `noAuth()` marks a public route.
+
+```ts
+import { createVPCLatticeRouter, iamAuth, noAuth } from '@lambda-event-router/vpclattice'
+
+const orderingRouter = createVPCLatticeRouter({ auth: iamAuth() }) // every route needs a signed caller
+
+orderingRouter.get({ filters: { path: '/orders' }, handler: async ({ auth }) => orders.forCaller(auth.principalId) })
+orderingRouter.get({ filters: { path: '/health' }, auth: noAuth(), handler: health })
+```
+
+An unsigned request on an `iamAuth()` route gets a 401, and the router logs a warning. `noAuth()` hands the
+handler `undefined`, and logs a warning if a caller arrives anyway. These work the same way as the [API
+Gateway presets](/routers/APIGatewayRouter#auth-presets).
 
 ## CORS
 
@@ -736,12 +753,13 @@ and attaching it overrides whatever the path pattern and the schemas would have 
 `path: '/orgs/:orgId/orders'` and a `bodySchema` still compiles with a bare alias attached, and its handler
 gets neither `path.orgId` nor the schema's body.
 
-Spell the parameters out to match the route, in the order [`TPath`, `TQuery`, `TBody`](#generic-parameters).
+Spell the parameters out to match the route, in the order [`TPath`, `TQuery`, `TAuth`, `TBody`](#generic-parameters).
 
 ```ts
 export const withOrgContext: HTTPMiddleware<
   { orgId: string; orderId: string },
   Record<string, string | undefined>,
+  VPCLatticeAuth,
   NewOrder
 > = async (request, next) => {
   logger.appendKeys({ orgId: request.path.orgId, orderId: request.path.orderId })
@@ -766,13 +784,13 @@ All exported from `@lambda-event-router/vpclattice`.
 
 | Type | Description |
 | --- | --- |
-| `ApiRequest<TPath, TQuery, TBody, TEvent>` | The handler argument |
+| `ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>` | The handler argument |
 | `ApiResponse<T>` | `{ statusCode, body, headers? }`, and what a handler returning a full response returns |
 | `HTTPResponse<T>` | An alias of `ApiResponse<T>`, and what the helpers return |
-| `ApiHandler<TPath, TQuery, TBody, TResponse>` | The handler signature |
-| `RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>` | A full route passed to `route()` |
+| `ApiHandler<TPath, TQuery, TAuth, TBody, TResponse>` | The handler signature |
+| `RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod>` | A full route passed to `route()` |
 | `PathParams<TPathString>` | The params a pattern names, so `PathParams<'/orders/:orderId'>` is `{ orderId: string }` |
-| `Auth` | `request.auth` |
+| `VPCLatticeAuth` | `request.auth`, which is `VPCLatticeIamAuth` or `undefined` |
 | `CorsConfig` | The `cors` option |
 | `CorsOriginFunction` | A dynamic `origin`, `(origin, path) => string \| undefined` |
 | `VPCLatticeRouterOptions` | Options for `createVPCLatticeRouter` |
@@ -784,14 +802,14 @@ All exported from `@lambda-event-router/vpclattice`.
 | `VPCLatticeIdentity` | `requestContext.identity` on a V2 event |
 | `VPCLatticeResult` | What the router hands back to Lambda |
 
-`HandlerResponse`, `HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` originate in
-`@lambda-event-router/http` and are re-exported from here, so import them from here rather than naming
-that package. The route definition and request types carry no `VPCLattice` prefix because
+`HandlerResponse`, `HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from
+`@lambda-event-router/http`, with `TAuth` defaulting to `VPCLatticeAuth` here, so import them
+from here rather than naming that package. The route definition and request types carry no `VPCLattice` prefix because
 `APIGatewayRouter` and `ALBRouter` use the same ones.
 
-The `VPCLatticeRouter` class and the `createVPCLatticeRouter` and `defineRoute` functions come from the same
-place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES`, `BinaryBody` and the
-three adapters.
+The `VPCLatticeRouter` class, the `createVPCLatticeRouter` and `defineRoute` functions and the [auth
+presets](#auth-presets) come from the same place, along with the `Response` class, the response helpers,
+`HTTP_STATUS_CODES`, `BinaryBody` and the three adapters.
 
 `HTTPRouter` is exported too, for [pinning a router to one payload version](#event-versions).
 `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter` go with it for writing an adapter of
@@ -799,24 +817,25 @@ your own, and are not something a route needs.
 
 ### Generic parameters
 
-Seven parameters cover every type above, and they do not all appear in the same order.
+Eight parameters cover every type above, and they do not all appear in the same order.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TPathString` | The path pattern itself, which `PathParams` reads | `string` |
 | `TPath` | `request.path` | `PathParams<TPathString>` on `RouteDefinition`, `Record<string, string>` elsewhere |
 | `TQuery` | `request.query` | `Record<string, string \| undefined>` |
+| `TAuth` | `request.auth` | `VPCLatticeAuth` |
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | `unknown` |
 | `TEvent` | `request.event` | `unknown` |
 
-`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TBody`. `ApiRequest`'s fourth is
-`TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives `TPath`
-from it. It takes `TMethod` last.
+`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
+is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
+`TPath` from it. It takes `TMethod` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types the
-path and leaves the query and body loose.
+path and leaves the query, auth and body loose.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers all of them.
 
@@ -871,7 +890,7 @@ latticeRouter
   {
     path: 'handlers/orders.ts',
     code: `import { logger } from '@lambda-event-router/base'
-import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice'
+import type { ApiRequest, ApiResponse, VPCLatticeAuth } from '@lambda-event-router/vpclattice'
 import { Created, NotFound, Ok } from '@lambda-event-router/vpclattice'
 
 import { orders } from '../orders.js'
@@ -902,7 +921,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<ApiRespo
 }
 
 export async function createOrder(
-  request: ApiRequest<OrgPath, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<OrgPath, Record<string, string | undefined>, VPCLatticeAuth, NewOrder>,
 ): Promise<ApiResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body

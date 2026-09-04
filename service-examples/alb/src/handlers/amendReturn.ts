@@ -5,7 +5,7 @@ import { RETURNS } from '../utils/returns.js';
 import type { TReturnAmendment } from '../utils/schemas.js';
 
 export async function amendReturn(
-  request: ApiRequest<{ returnId: string }, Record<string, string | undefined>, TReturnAmendment>,
+  request: ApiRequest<{ returnId: string }, Record<string, string | undefined>, undefined, TReturnAmendment>,
 ): Promise<ApiResponse<{ returnId: string; units: number }>> {
   const record = RETURNS[request.path.returnId];
   if (!record) throw NotFound({ error: `Return ${request.path.returnId} does not exist` });

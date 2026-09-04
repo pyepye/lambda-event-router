@@ -40,18 +40,18 @@ async function processOrder({ body, messageAttributes, record, context }: SQSReq
 ```
 
 ```ts [API Gateway]
-// Path and query params, headers and any authoriser claims, all on the one argument
+// Path and query params, headers and auth, all on the one argument
 async function updateOrder({
   path,
   query,
   body,
   headers,
   auth,
-}: ApiRequest<PathParams, QueryParams, OrderUpdate>) {
+}: ApiRequest<PathParams, QueryParams, JwtAuth, OrderUpdate>) {
   await orders.update(path.orderId, body, {
     notify: query.notify === 'true',
     idempotencyKey: headers['idempotency-key'], // headers are lowercased for you
-    actor: auth?.claims?.sub, // undefined unless an authoriser ran
+    actor: auth.claims.sub,
   })
   // ...
 }

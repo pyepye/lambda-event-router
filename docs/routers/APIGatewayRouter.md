@@ -37,6 +37,7 @@ anything you have not registered and sends no CORS headers.
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
+| `auth` | `AuthPreset` | No | | The preset every route uses unless it names its own. See [auth presets](#auth-presets) |
 | `middleware` | `HTTPMiddleware[]` | No | `[]` | Runs for every request this router handles, before any route middleware. See [Middleware](#middleware) |
 | `cors` | `CorsConfig` | No | | Answers preflight and adds CORS headers to every response. See [CORS](#cors) |
 
@@ -140,7 +141,7 @@ apiRouter.route({
     path: '/orgs/:orgId/orders',
     custom: ({ headers, auth }) => {
       // Only a custom reaches the headers, the auth or the raw event
-      return headers['x-api-version'] === '2' && auth?.scopes?.includes('orders:write') === true
+      return headers['x-api-version'] === '2' && auth?.type === 'jwt' && auth.scopes?.includes('orders:write') === true
     },
   },
   handler: createOrder,
@@ -236,7 +237,7 @@ export async function getOrder(
 | `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers. Read them lower cased. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
-| `auth` | `Auth \| undefined` | Whatever the authorizer put on the event. See [Auth](#auth) |
+| `auth` | `APIGatewayAuth` | Whatever authorised the request. See [Auth](#auth) |
 | `event` | `TEvent` | The untouched event from AWS, for `requestContext`, `stageVariables` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
@@ -336,7 +337,7 @@ Annotating the request yourself splits route setup from business logic, using
 
 ```ts
 // handlers/orders.ts
-import type { ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
+import type { APIGatewayAuth, ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
 import { Created } from '@lambda-event-router/apigateway'
 import { z } from 'zod'
 
@@ -344,7 +345,7 @@ export const NewOrderSchema = z.object({ sku: z.string(), quantity: z.number() }
 type NewOrder = z.infer<typeof NewOrderSchema>
 
 export async function createOrder(
-  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, APIGatewayAuth, NewOrder>,
 ): Promise<HandlerResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body
@@ -379,9 +380,9 @@ out of the pattern so you are not keeping a second copy of it in step. Check it 
 patterns](#path-patterns) first, since a pattern ending in a literal segment gives you nothing and writing
 the type out by hand is the answer there.
 
-`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TBody`, so typing only the body means
-passing the query type through as well. [Generic parameters](#generic-parameters) has each one, its
-default and which types take them in a different order.
+`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TAuth`, `TBody`, so typing only the body
+means passing the query and auth types through as well. [Generic parameters](#generic-parameters) has each
+one, its default and which types take them in a different order.
 
 ## Schema validation
 
@@ -518,34 +519,176 @@ See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with t
 
 ## Auth
 
-`request.auth` is built from whatever authorizer the event went through, so the fields you get depend on
-how the API is secured. It is `undefined` on an unsecured route.
+`request.auth` holds whatever authorised the request, in the same shape whichever API and payload version
+it came through. It is `undefined` on an unsecured route.
 
-| Field | Type | Comes from |
+Check `auth.type` first, and TypeScript narrows `auth` to that variant.
+
+```ts
+async function listOrders({ auth }: ApiRequest) {
+  if (auth?.type !== 'jwt') throw Unauthorised()
+
+  const groups = auth.claims['cognito:groups'] ?? [] // string[]
+  // ...
+}
+```
+
+| `type` | Comes from | Fields |
 | --- | --- | --- |
-| `claims` | `Record<string, unknown>` | A JWT authorizer on an HTTP API, or a Cognito authorizer on a REST API |
-| `scopes` | `string[]` | A JWT authorizer on an HTTP API |
-| `principalId` | `string` | A Lambda authorizer on a REST API |
-| `context` | `Record<string, unknown>` | The rest of a Lambda authorizer's context, on either payload version |
-| `iam` | `Record<string, unknown>` | IAM authorisation, or a Cognito identity pool on a REST API |
-| `clientCert` | `Record<string, unknown>` | Mutual TLS on an HTTP API |
-| `apiKey`, `apiKeyId` | `string` | An API key on a REST API |
+| `lambda` | A Lambda authorizer, on either API | `principalId`, `context` |
+| `cognito` | A Cognito user pool authorizer on a REST API | `claims` |
+| `jwt` | A JWT authorizer on an HTTP API | `claims`, `scopes` |
+| `iam` | IAM authorisation, on either API | `iam` |
+| `apiKey` | An API key on a REST API, with no authorizer | `apiKey` |
+| `clientCert` | Mutual TLS, with no authorizer | `clientCert` |
 
-`principalId` is lifted out of a REST API Lambda authorizer's context and the remainder is left on
-`context`, so a `principalId` you set in the authorizer appears once rather than twice. HTTP API Lambda
-authorizers put everything on `context`.
+An API key and a client certificate can arrive alongside any authorizer. Every variant has optional
+`apiKey` and `clientCert` fields, so `auth?.apiKey?.id` works whatever `type` is.
 
-`scopes` is filled in only when the route declares authorization scopes. Without them API Gateway sends
-`null`, whatever the token's own `scope` claim says. Check the field before reading it rather than
-trusting its `string[]` type.
+### Auth presets
 
-Only one group is populated per request and the checks run in order, so an API key on a REST API wins over
-an authorizer on the same request.
+A preset tells the router which authorizer a route sits behind, and checks the request against it. Your
+handler then gets that variant already narrowed, so there is no `auth.type` check to write.
 
-Nothing validates any of it. A route that needs a claim to be present should check for it, and
-[middleware](#middleware) is a good place to do that once for a group of routes.
+```ts
+import { createAPIGatewayRouter, iamAuth, lambdaAuth, noAuth } from '@lambda-event-router/apigateway'
+import { z } from 'zod'
+
+const orgAuth = lambdaAuth(z.object({ orgId: z.string(), seats: z.coerce.number() }))
+
+const apiRouter = createAPIGatewayRouter({ auth: orgAuth }) // every route uses orgAuth unless it names its own
+
+apiRouter.get({
+  filters: { path: '/orders' },
+  handler: async ({ auth }) => orders.list(auth.context.orgId, auth.context.seats), // seats is a number
+})
+apiRouter.get({ filters: { path: '/audit' }, auth: iamAuth(), handler: readAudit })
+apiRouter.get({ filters: { path: '/health' }, auth: noAuth(), handler: health })
+```
+
+| Preset | Accepts | Takes |
+| --- | --- | --- |
+| `lambdaAuth(schema?)` | A Lambda authorizer | A schema for `context` |
+| `cognitoAuth({ claims })` | A Cognito user pool authorizer | A schema for the claims you rely on |
+| `jwtAuth({ claims })` | A JWT authorizer | A schema for the claims you rely on |
+| `iamAuth()` | IAM authorisation | Nothing |
+| `noAuth()` | Anything, and hands your handler `undefined` | Nothing |
+
+Put `noAuth()` on a public route to take it out of the router default.
+
+A claims schema only needs the claims you care about. The router lays its output over the claims that
+arrived, so `sub`, `exp` and the rest are still there.
+
+A request that fails its preset does not reach the handler. The status depends on the failure:
+
+| Failure | Status | Logged as |
+| --- | --- | --- |
+| No auth arrived | 401 | A warning |
+| The schema refused the context or the claims | 403 | A warning |
+| A different authorizer ran, such as IAM on a `lambdaAuth()` route | 500 | An error |
+
+A different authorizer can only come from the API Gateway setup and the code disagreeing, so the caller
+gets a 500 and nothing about why. Every log names the preset, the reason and any schema issues. The
+response body is the default one from `Unauthorised()`, `Forbidden()` or `InternalServerError()`.
+
+The check runs after the route matches, and before query and body validation. A `custom` filter runs
+before the check, so it sees `auth` as it arrived. Middleware and the handler see the checked auth.
+
+`noAuth()` logs a warning when auth arrives anyway, because that means an authorizer is attached to a
+route the code treats as public.
+
+A preset is a plain value, so define it once and import it wherever it is needed. For an annotated
+handler, `AuthOf` reads the auth type off a preset.
+
+```ts
+import type { ApiRequest, AuthOf } from '@lambda-event-router/apigateway'
+
+import { orgAuth } from './auth.js'
+
+export async function listOrders({ auth }: ApiRequest<{}, Query, AuthOf<typeof orgAuth>>) {
+  return orders.list(auth.context.orgId)
+}
+```
+
+An annotated handler only compiles on a route that promises the auth it expects. That means a route
+with the same preset, or a router whose default is that preset.
+
+`defineRoute` from the package cannot see a router's default. Use `apiRouter.defineRoute` for a route
+that relies on it.
+
+```ts
+export const listOrdersRoute = apiRouter
+  .defineRoute({ filters: { method: 'GET', path: '/orders' } })
+  .handle(async ({ auth }) => orders.list(auth.context.orgId))
+```
+
+A route with no preset, on a router with no default, gets the whole `APIGatewayAuth` union and nothing
+checks it. A route that needs a claim should use a preset with a claims schema.
 [`LambdaAuthorizerRouter`](/routers/LambdaAuthorizerRouter) is the other half of this, for writing the
 authorizer itself.
+
+### Lambda authorizer context
+
+`context` holds what your authorizer returned. API Gateway adds its own fields, and nests the context
+differently on each API. The router takes those back out, so you get the same `context` everywhere.
+
+`principalId` is set on a REST API only. An HTTP API never passes it on, so it is `undefined` there.
+
+The values arrive the way your authorizer answered:
+
+| Authorizer | Values |
+| --- | --- |
+| REST API, or HTTP API with authorizer payload 1.0 | Strings, so `3` arrives as `'3'` |
+| HTTP API with authorizer payload 2.0 | As returned, including arrays and nested objects |
+
+**An HTTP API turns every number that is not a whole number into `0`,** at any depth, whichever payload
+the authorizer uses. Send a fraction as a string instead. An authorizer written with
+[`LambdaAuthorizerRouter`](/routers/LambdaAuthorizerRouter) throws rather than send one.
+
+### Claims
+
+API Gateway hands every claim over as a string, and writes arrays and objects in its own text format. The
+router turns them back into values.
+
+| Claim | Your handler gets |
+| --- | --- |
+| `exp`, `iat`, `nbf`, `auth_time`, `updated_at` | A `Date` |
+| `email_verified`, `phone_number_verified` | A `boolean` |
+| `cognito:groups`, `cognito:roles`, `amr` | A `string[]` |
+| `aud` | A `string`, or a `string[]` when the token names several |
+| `address` | An object of strings |
+| Any other claim sent as an array or an object | An array or an object, with string values |
+| A claim sent as `null` | `null` |
+| Anything else | The string that arrived |
+
+Custom claims keep their names, so a Cognito attribute is `claims['custom:tenantId']`. A number or a boolean
+in a custom claim stays a string, because the value no longer says what type it was. That includes
+Cognito's own Number and Boolean attributes.
+
+**An array item that contains a space cannot be recovered.** API Gateway writes `['a b', 'c']` exactly like
+`['a', 'b', 'c']`, so your handler gets three items. Put values like that in a single claim holding JSON,
+and parse it yourself. A plain string that looks like an array, such as `'[a b]'`, is read as an array
+too. `request.event` still has it as it arrived.
+
+`scopes` is `undefined` on a route with no authorization scopes, even when the token carries some. On a
+route with scopes it lists every scope in the token. The token's own claim stays in `claims.scope`.
+
+### IAM
+
+`iam` has the same fields on every API and payload version.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `accountId` | `string` | The caller's AWS account |
+| `userArn` | `string` | The caller's ARN |
+| `callerId` | `string` | The caller's principal id |
+| `userId` | `string` | The user id API Gateway reports |
+| `accessKey` | `string` | The access key the request was signed with |
+| `principalOrgId` | `string \| undefined` | The caller's organisation, when it has one |
+| `cognitoIdentityId` | `string \| undefined` | Set when the caller came through a Cognito identity pool |
+| `cognitoIdentityPoolId` | `string \| undefined` | Set when the caller came through a Cognito identity pool |
+| `cognitoAuthenticated` | `boolean \| undefined` | `true` for an identity pool user who signed in, `false` for a guest, `undefined` for anyone else |
+| `cognitoAmr` | `string[] \| undefined` | The identity pool's sign in methods, such as `['authenticated', '<provider>', ...]` |
 
 ## CORS
 
@@ -712,13 +855,14 @@ with no parameters defaults `path` to `Record<string, string>`, `query` to the r
 handler. A route with `path: '/orgs/:orgId/orders'` and a `bodySchema` still compiles with a bare alias
 attached, and its handler gets neither `path.orgId` nor the schema's body.
 
-Spell the parameters out to match the route, in the order [`TPath`, `TQuery`,
+Spell the parameters out to match the route, in the order [`TPath`, `TQuery`, `TAuth`,
 `TBody`](#generic-parameters).
 
 ```ts
 export const withOrgContext: HTTPMiddleware<
   { orgId: string; orderId: string },
   Record<string, string | undefined>,
+  APIGatewayAuth,
   NewOrder
 > = async (request, next) => {
   logger.appendKeys({ orgId: request.path.orgId, orderId: request.path.orderId })
@@ -743,31 +887,35 @@ All exported from `@lambda-event-router/apigateway`.
 
 | Type | Description |
 | --- | --- |
-| `ApiRequest<TPath, TQuery, TBody, TEvent>` | The handler argument |
+| `ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>` | The handler argument |
 | `HandlerResponse<TResponse>` | Handler return type, `ApiResponse<TResponse> \| TResponse` |
 | `ApiResponse<T>` | `{ statusCode, body, headers? }` |
 | `HTTPResponse<T>` | An alias of `ApiResponse<T>`, and what the helpers return |
-| `ApiHandler<TPath, TQuery, TBody, TResponse>` | The handler signature |
-| `RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>` | A full route passed to `route()` |
+| `ApiHandler<TPath, TQuery, TAuth, TBody, TResponse>` | The handler signature |
+| `RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod>` | A full route passed to `route()` |
 | `PathParams<TPathString>` | The params a pattern names, so `PathParams<'/orders/:orderId'>` is `{ orderId: string }` |
-| `Auth` | `request.auth` |
+| `APIGatewayAuth` | `request.auth`, a union of `LambdaAuth`, `CognitoAuth`, `JwtAuth`, `IamAuth`, `ApiKeyAuth`, `ClientCertAuth` and `undefined` |
+| `Claims` | `claims` on `CognitoAuth` and `JwtAuth` |
+| `IamIdentity` | `iam` on `IamAuth` |
+| `AuthPreset<TInput, TOutput>` | A preset, which checks `TInput` and hands on `TOutput` |
+| `AuthOf<TPreset>` | The auth a preset hands on |
 | `CorsConfig` | The `cors` option |
 | `CorsOriginFunction` | A dynamic `origin`, `(origin, path) => string \| undefined` |
-| `APIGatewayRouterOptions` | Options for `createAPIGatewayRouter` |
+| `APIGatewayRouterOptions<TDefaultAuth>` | Options for `createAPIGatewayRouter`, including the default `auth` preset |
 | `AnyHttpMethod` | What the `method` filter accepts, upper or lower case |
 | `HttpMethod` | The upper case methods |
 | `APIGatewayEvent` | `request.event`, a union of both payload versions |
 | `APIGatewayResult` | What the router hands back to Lambda |
 | `APIGatewayV1EventType`, `APIGatewayV2EventType` | One payload version each |
 
-`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` originate in `@lambda-event-router/http` and are
-re-exported from here, so import them from here rather than naming that package. The route definition
+`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`, with `TAuth`
+defaulting to `APIGatewayAuth` here, so import them from here rather than naming that package. The route definition
 and request types carry no `APIGateway` prefix because `ALBRouter` and `VPCLatticeRouter` use the same
 ones.
 
-The `APIGatewayRouter` class and the `createAPIGatewayRouter` and `defineRoute` functions come from the
-same place, along with the `Response` class, the response helpers, `HTTP_STATUS_CODES`, `BinaryBody` and
-the three adapters.
+The `APIGatewayRouter` class, the `createAPIGatewayRouter` and `defineRoute` functions and the [auth
+presets](#auth-presets) come from the same place, along with the `Response` class, the response helpers,
+`HTTP_STATUS_CODES`, `BinaryBody` and the three adapters.
 
 `HTTPRouter` is exported too, for [pinning a router to one payload
 version](#api-gateway-event-versions). `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter`
@@ -775,24 +923,25 @@ go with it for writing an adapter of your own, and are not something a route nee
 
 ### Generic parameters
 
-Seven parameters cover every type above, and they do not all appear in the same order.
+Eight parameters cover every type above, and they do not all appear in the same order.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TPathString` | The path pattern itself, which `PathParams` reads | `string` |
 | `TPath` | `request.path` | `PathParams<TPathString>` on `RouteDefinition`, `Record<string, string>` elsewhere |
 | `TQuery` | `request.query` | `Record<string, string \| undefined>` |
+| `TAuth` | `request.auth` | `APIGatewayAuth` |
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | `unknown` |
 | `TEvent` | `request.event` | `unknown` |
 
-`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TBody`. `ApiRequest`'s fourth
+`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
 is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
 `TPath` from it. It takes `TMethod` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types
-the path and leaves the query and body loose.
+the path and leaves the query, auth and body loose.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers all of them.
 
@@ -846,7 +995,7 @@ apiRouter
   },
   {
     path: 'handlers/orders.ts',
-    code: `import type { ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
+    code: `import type { APIGatewayAuth, ApiRequest, HandlerResponse } from '@lambda-event-router/apigateway'
 import { Created, NotFound, Ok } from '@lambda-event-router/apigateway'
 import { logger } from '@lambda-event-router/base'
 
@@ -878,7 +1027,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<HandlerR
 }
 
 export async function createOrder(
-  request: ApiRequest<OrgPath, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<OrgPath, Record<string, string | undefined>, APIGatewayAuth, NewOrder>,
 ): Promise<HandlerResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body

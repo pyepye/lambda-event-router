@@ -1,14 +1,18 @@
-import { type ApiRequest, type ApiResponse, NotFound, Ok } from '@lambda-event-router/apigateway';
+import { type ApiRequest, type ApiResponse, type AuthOf, NotFound, Ok } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
+import type { stockAdjustmentAuth } from '../utils/auth.js';
 import type { TStockAdjustment } from '../utils/schemas.js';
 import { STOCK } from '../utils/warehouse.js';
 
-// Behind the HTTP API's simple-response authorizer. That authorizer answers with a boolean and no
-// context, so `auth` reports what API Gateway puts on the request rather than anything the
-// authorizer chose.
+// Behind the HTTP API's simple-response authorizer, which answers with a boolean and no context.
 export async function adjustStock(
-  request: ApiRequest<{ sku: string }, Record<string, string | undefined>, TStockAdjustment>,
+  request: ApiRequest<
+    { sku: string },
+    Record<string, string | undefined>,
+    AuthOf<typeof stockAdjustmentAuth>,
+    TStockAdjustment
+  >,
 ): Promise<ApiResponse<{ sku: string; quantity: number }>> {
   const record = STOCK[request.path.sku];
   if (!record) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });

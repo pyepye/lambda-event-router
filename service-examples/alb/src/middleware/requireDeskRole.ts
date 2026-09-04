@@ -9,6 +9,7 @@ import { DESK_ROLE_HEADER, RETURNS_DESK_ROLE } from '../utils/constants.js';
 export const requireDeskRole: HTTPMiddleware<
   { carrierId: string },
   Record<string, string | undefined>,
+  undefined,
   unknown
 > = async (request, next) => {
   const role = request.headers[DESK_ROLE_HEADER];

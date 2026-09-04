@@ -136,6 +136,7 @@ suite('vpcLatticeV1Adapter', () => {
       const normalized = vpcLatticeV1Adapter.normalize(event);
 
       expect(normalized.auth).toEqual({
+        type: 'iam',
         principalId: 'arn:aws:sts::123456789012:assumed-role/Ordering/session',
         iam: {
           sourceVpcArn: 'arn:aws:ec2:eu-west-2:123456789012:vpc/vpc-0abc',

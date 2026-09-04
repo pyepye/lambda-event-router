@@ -8,6 +8,7 @@ import { DESK_CLOSED, DESK_STATE_HEADER } from '../utils/constants.js';
 export const withDeskClosure: HTTPMiddleware<
   { returnId: string },
   Record<string, string | undefined>,
+  undefined,
   unknown
 > = async (request, next) => {
   if (request.headers[DESK_STATE_HEADER] === DESK_CLOSED) {

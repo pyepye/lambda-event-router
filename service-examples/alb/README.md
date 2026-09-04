@@ -68,7 +68,7 @@ supports and every failure path it has.
 | Multi-value query and headers | A repeated `carrier` and a repeated `x-desk` on both listeners |
 | Query encoding | ALB hands the query string over percent encoded, so `reason` reaches the handler encoded |
 | Redirect location | ALB expands the relative `Location` the router sets into an absolute URL |
-| Auth | `targetGroupArn` is the only field ALB fills, and it names the listener that served the request |
+| Auth | ALB names no caller, so `auth` is undefined. `targetGroupArn` is read off the raw event |
 | `canHandleEvent` | `check` hands the router an API Gateway event and it is turned away |
 | HEAD responses | `checkReturn` builds a body and the router strips it, and so is the body of a HEAD that matches no route |
 | Binary request body | `replaceReturnNote` gunzips a note ALB base64 encoded, which only works on bytes that arrived whole |
@@ -85,8 +85,8 @@ supports and every failure path it has.
 | Handler failure | `refundReturn` throws an error, which the router answers 500 |
 | Oversized response | `exportReturnLabels` returns 1.1 MB, which is over the 1 MB ALB accepts |
 
-ALB puts no caller identity on the event. `auth.targetGroupArn` is set and every other `auth` field
-is undefined. A route that needs a role reads one from a header instead.
+ALB puts no caller identity on the event, so `auth` is undefined. A route that needs a role reads one
+from a header instead.
 
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. Everything
 the router answers with is asserted by the trigger.
@@ -193,9 +193,8 @@ The rest of the log is one line per handler:
 - `page` is the number 2 on both, since the querySchema coerces it.
 - `reason` is `damaged%20in%20transit` on both. ALB does not decode the query string, so a handler
   that wants the space back has to decode it itself.
-- `principalId` is undefined on both. ALB names no caller, so `targetGroupArn` is the only `auth`
-  field with anything in it. The handler returns the whole `auth` object, so the trigger asserts the
-  target group the listener served from and the absence of a caller.
+- `targetGroupArn` names the target group the listener served from. The handler reads it off the raw
+  event and returns it, so the trigger asserts which listener served the request.
 - `Open returns listed` appears five times per listener. One is the plain read, one carries a
   trailing slash, one scopes to a carrier, and two are the CORS steps.
 - `Carrier read authorised` and `Carrier returns listed` are the read with the desk role.

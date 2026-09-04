@@ -159,20 +159,10 @@ suite('albAdapter', () => {
       expect(normalized.isBase64Encoded).toBe(true);
     });
 
-    test('extracts targetGroupArn into auth', () => {
-      const event = createALBEvent({
-        requestContext: {
-          elb: {
-            targetGroupArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-tg/50dc6c495c0c9188',
-          },
-        },
-      });
+    test('gives no auth, because ALB names no caller on the event', () => {
+      const normalized = albAdapter.normalize(createALBEvent());
 
-      const normalized = albAdapter.normalize(event);
-
-      expect(normalized.auth).toEqual({
-        targetGroupArn: 'arn:aws:elasticloadbalancing:us-east-1:123456789012:targetgroup/my-tg/50dc6c495c0c9188',
-      });
+      expect(normalized.auth).toBeUndefined();
     });
 
     test('returns empty headers when both headers and multiValueHeaders are undefined', () => {

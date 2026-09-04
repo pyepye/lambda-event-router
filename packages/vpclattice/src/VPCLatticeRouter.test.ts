@@ -1,7 +1,7 @@
-import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
+import { NoContent, Ok } from '@lambda-event-router/http';
 import { allEventBuilders, createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 
-import { createVPCLatticeRouter, VPCLatticeRouter } from './VPCLatticeRouter.js';
+import { createVPCLatticeRouter, defineRoute, VPCLatticeRouter } from './VPCLatticeRouter.js';
 
 suite('VPCLatticeRouter', () => {
   let router: VPCLatticeRouter;

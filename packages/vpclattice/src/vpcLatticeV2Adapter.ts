@@ -1,12 +1,12 @@
 import { isObject } from '@lambda-event-router/base';
 import {
-  type Auth,
   buildValueMaps,
   type FinalizedHTTPResponse,
   type HTTPAdapter,
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
+import type { VPCLatticeAuth } from './auth.js';
 import { pathWithoutQuery } from './latticeEvent.js';
 import type { VPCLatticeEventBase, VPCLatticeResult } from './vpcLatticeV1Adapter';
 
@@ -42,13 +42,13 @@ export interface VPCLatticeEventV2 extends VPCLatticeEventBase {
   requestId?: string;
 }
 
-function extractV2Auth(event: VPCLatticeEventV2): Auth | undefined {
+function extractV2Auth(event: VPCLatticeEventV2): VPCLatticeAuth {
   const { identity } = event.requestContext;
   if (!identity?.principal) return undefined;
-  return { principalId: identity.principal, iam: { ...identity } };
+  return { type: 'iam', principalId: identity.principal, iam: { ...identity } };
 }
 
-export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResult> = {
+export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResult, VPCLatticeAuth> = {
   canHandleEvent(event: unknown): event is VPCLatticeEventV2 {
     if (!isObject(event)) return false;
     if (typeof event.path !== 'string') return false;
@@ -62,7 +62,7 @@ export const vpcLatticeV2Adapter: HTTPAdapter<VPCLatticeEventV2, VPCLatticeResul
     return true;
   },
 
-  normalize(event: VPCLatticeEventV2): NormalizedHTTPEvent {
+  normalize(event: VPCLatticeEventV2): NormalizedHTTPEvent<VPCLatticeAuth> {
     // VPC Lattice 2.0 always sends the multi-value form. Collapse to the last value for the flat
     // maps, matching the other adapters, and keep every value in the multi-value maps.
     const headers = buildValueMaps({ multi: event.headers, lowercaseKeys: true });

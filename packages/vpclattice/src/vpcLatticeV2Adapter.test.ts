@@ -173,7 +173,7 @@ suite('vpcLatticeV2Adapter', () => {
 
       const normalized = vpcLatticeV2Adapter.normalize(event);
 
-      expect(normalized.auth).toEqual({ principalId: identity.principal, iam: identity });
+      expect(normalized.auth).toEqual({ type: 'iam', principalId: identity.principal, iam: identity });
     });
 
     test('returns undefined auth when the identity names no principal', () => {

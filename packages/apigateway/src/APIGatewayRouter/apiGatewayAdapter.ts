@@ -4,6 +4,7 @@ import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@l
 
 import { type APIGatewayV1EventType, apiGatewayV1Adapter } from './apiGatewayV1Adapter.js';
 import { type APIGatewayV2EventType, apiGatewayV2Adapter } from './apiGatewayV2Adapter.js';
+import type { APIGatewayAuth } from './auth.js';
 
 export type APIGatewayEvent = APIGatewayV2EventType | APIGatewayV1EventType;
 export type APIGatewayResult = APIGatewayProxyResultV2 | APIGatewayProxyResult;
@@ -12,12 +13,12 @@ function isV2Event(event: APIGatewayEvent): event is APIGatewayV2EventType {
   return 'rawPath' in event;
 }
 
-export const apiGatewayAdapter: HTTPAdapter<APIGatewayEvent, APIGatewayResult> = {
+export const apiGatewayAdapter: HTTPAdapter<APIGatewayEvent, APIGatewayResult, APIGatewayAuth> = {
   canHandleEvent(event: unknown): event is APIGatewayEvent {
     return apiGatewayV2Adapter.canHandleEvent(event) || apiGatewayV1Adapter.canHandleEvent(event);
   },
 
-  normalize(event: APIGatewayEvent): NormalizedHTTPEvent {
+  normalize(event: APIGatewayEvent): NormalizedHTTPEvent<APIGatewayAuth> {
     if (isV2Event(event)) {
       return apiGatewayV2Adapter.normalize(event);
     }

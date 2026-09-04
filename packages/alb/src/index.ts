@@ -1,28 +1,20 @@
 export type {
-  ApiHandler,
-  ApiRequest,
   ApiResponse,
-  Auth,
   CorsConfig,
   CorsOriginFunction,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,
-  HTTPFilterInput,
-  HTTPFilters,
-  HTTPMiddleware,
   HTTPResponse,
   HttpMethod,
   NormalizedHTTPEvent,
   PathParams,
-  RouteDefinition,
 } from '@lambda-event-router/http';
 export {
   BadRequest,
   BinaryBody,
   Conflict,
   Created,
-  defineRoute,
   Forbidden,
   HTTP_STATUS_CODES,
   HTTPRouter,
@@ -38,5 +30,13 @@ export {
 } from '@lambda-event-router/http';
 
 export type { ALBRouterOptions } from './ALBRouter.js';
-export { ALBRouter, createALBRouter } from './ALBRouter.js';
+export { ALBRouter, createALBRouter, defineRoute } from './ALBRouter.js';
 export { albAdapter } from './albAdapter.js';
+export type {
+  ApiHandler,
+  ApiRequest,
+  HTTPFilterInput,
+  HTTPFilters,
+  HTTPMiddleware,
+  RouteDefinition,
+} from './types.js';

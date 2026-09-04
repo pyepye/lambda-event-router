@@ -5,11 +5,13 @@ import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
 import { decodeBody } from './binaryBody.js';
 import type { InternalRoute } from './PathRouter.js';
 import { Response } from './Response.js';
-import type { ApiRequest, Auth, BodyMethod, HttpMethod, NormalizedHTTPEvent } from './types.js';
+import type { ApiRequest, BodyMethod, HttpMethod, NormalizedHTTPEvent } from './types.js';
 
 const BODY_METHODS: ReadonlySet<HttpMethod> = new Set<BodyMethod>(['POST', 'PUT', 'PATCH']);
 
-export class Request {
+export type RouterRequest<TAuth> = ApiRequest<Record<string, string>, Record<string, string | undefined>, TAuth>;
+
+export class Request<TAuth = unknown> {
   readonly headers: Record<string, string | undefined>;
   readonly multiValueHeaders: Record<string, string[] | undefined>;
   readonly method: string;
@@ -19,10 +21,10 @@ export class Request {
   private _bodyParsed = false;
 
   constructor(
-    readonly normalizedEvent: NormalizedHTTPEvent,
+    readonly normalizedEvent: NormalizedHTTPEvent<TAuth>,
     readonly rawEvent: unknown,
     readonly context: Context,
-    readonly route: InternalRoute,
+    readonly route: InternalRoute<TAuth>,
     readonly pathParams: Record<string, string>,
   ) {
     this.headers = normalizedEvent.headers;
@@ -52,12 +54,12 @@ export class Request {
     return this.normalizedEvent.isBase64Encoded;
   }
 
-  get auth(): Auth | undefined {
+  get auth(): TAuth {
     return this.normalizedEvent.auth;
   }
 
   // Parses the body on first read, so a handler that never reads it skips the parse
-  private withLazyBody(apiRequest: ApiRequest): ApiRequest {
+  private withLazyBody(apiRequest: RouterRequest<TAuth>): RouterRequest<TAuth> {
     Object.defineProperty(apiRequest, 'body', {
       enumerable: true,
       configurable: true,
@@ -105,8 +107,8 @@ export class Request {
     return result.data;
   }
 
-  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): ApiRequest {
-    const apiRequest: ApiRequest = {
+  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): RouterRequest<TAuth> {
+    const apiRequest: RouterRequest<TAuth> = {
       method: this.method,
       path: this.pathParams,
       rawPath: this.path,

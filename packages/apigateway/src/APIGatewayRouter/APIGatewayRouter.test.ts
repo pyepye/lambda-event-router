@@ -1,10 +1,12 @@
-import { type ApiRequest, defineRoute, type HandlerResponse, NoContent, Ok, Response } from '@lambda-event-router/http';
+import { type HandlerResponse, NoContent, Ok, Response } from '@lambda-event-router/http';
 import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
-import { APIGatewayRouter, createAPIGatewayRouter } from './APIGatewayRouter.js';
+import { APIGatewayRouter, createAPIGatewayRouter, defineRoute } from './APIGatewayRouter.js';
+import type { APIGatewayAuth } from './auth.js';
+import type { ApiRequest } from './types.js';
 
 type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
-type NoBodyRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, undefined>;
+type NoBodyRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, APIGatewayAuth, undefined>;
 type NoBodyNext = (request: NoBodyRequest) => Promise<HandlerResponse>;
 
 suite('APIGatewayRouter', () => {
@@ -570,9 +572,9 @@ suite('APIGatewayRouter', () => {
       const callOrder: string[] = [];
 
       async function routeMiddleware(
-        request: ApiRequest<Record<string, never>, Record<string, string | undefined>, unknown>,
+        request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
         next: (
-          request: ApiRequest<Record<string, never>, Record<string, string | undefined>, unknown>,
+          request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
         ) => Promise<HandlerResponse<unknown>>,
       ): Promise<HandlerResponse<unknown>> {
         callOrder.push('route-mw');

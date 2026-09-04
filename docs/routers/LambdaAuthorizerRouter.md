@@ -383,8 +383,13 @@ return Deny('anonymous', resourceArn)
 
 Whatever you put in that context reaches the handler behind the API on
 [`request.auth`](/routers/APIGatewayRouter#auth), which is how an authorizer passes a tenant id or a
-plan on without the API looking it up again. API Gateway passes the values through as strings, so a
-number goes out as `3` and arrives as `'3'`.
+plan on without the API looking it up again. A REST API, and an HTTP API with authorizer payload 1.0,
+pass the values on as strings, so `3` arrives as `'3'`. An HTTP API with authorizer payload 2.0 passes
+them on as they are.
+
+**On an HTTP API, a number that is not a whole number reaches your API as `0`.** API Gateway does this at any
+depth and for both authorizer payloads, so the router throws rather than send one. Send a fraction such as
+`1.5` as the string `'1.5'`. A REST API passes it on as `'1.5'`, so the router lets it through there.
 
 **Scope the resource to what you mean to allow, and remember the policy can be cached.** The
 `resourceArn` off the request names one method on one route, so a policy built from it allows that and
@@ -423,7 +428,8 @@ return Denied()                                       // { isAuthorized: false }
 | `Denied()` | `false` | None |
 
 This context takes arrays and nested objects, unlike the [policy context](#policy-helpers), which API
-Gateway holds to flat values.
+Gateway holds to flat values. A number in it still has to be a whole number, as the [policy
+context](#policy-helpers) explains.
 
 **A refusal here is a 403, not a 401.** `{ isAuthorized: false }` is an authorisation failure, and API
 Gateway answers it with `403 Forbidden`. A 401 comes from a different response, `{ errorMessage:

@@ -1,5 +1,6 @@
 import { defineRoute, NotFound, Ok } from '@lambda-event-router/alb';
 import { logger } from '@lambda-event-router/base';
+import type { ALBEvent } from 'aws-lambda';
 
 import { DESK_HEADER, RETURN_VERSION_HEADER } from '../utils/constants.js';
 import { RETURNS } from '../utils/returns.js';
@@ -16,6 +17,7 @@ export const getReturn = defineRoute({
   if (!record) throw NotFound({ error: `Return ${request.path.returnId} does not exist` });
 
   const carriers = request.multiValueQuery.carrier ?? [];
+  const { targetGroupArn } = (request.event as ALBEvent).requestContext.elb;
 
   logger.info({
     message: 'Return read',
@@ -27,8 +29,7 @@ export const getReturn = defineRoute({
     carriers,
     deskHeader: request.headers[DESK_HEADER],
     deskHeaders: request.multiValueHeaders[DESK_HEADER],
-    targetGroupArn: request.auth?.targetGroupArn,
-    principalId: request.auth?.principalId,
+    targetGroupArn,
   });
 
   return Ok(
@@ -38,7 +39,7 @@ export const getReturn = defineRoute({
       carriers,
       deskHeaders: request.multiValueHeaders[DESK_HEADER] ?? [],
       reason: request.query.reason,
-      auth: request.auth,
+      targetGroupArn,
     },
     { [RETURN_VERSION_HEADER]: '3' },
   );

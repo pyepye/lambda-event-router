@@ -2,6 +2,7 @@ import { defineRoute, NotFound, Ok } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
 import { withOrderContext } from '../middleware/withOrderContext.js';
+import { warehouseReadAuth } from '../utils/auth.js';
 import { OrderQuerySchema } from '../utils/schemas.js';
 import { ORDERS } from '../utils/warehouse.js';
 
@@ -9,6 +10,7 @@ import { ORDERS } from '../utils/warehouse.js';
 // a REQUEST authorizer has already put its principal and context on `auth`.
 export const getOrder = defineRoute({
   filters: { method: 'GET', path: '/orders/:orderId' },
+  auth: warehouseReadAuth,
   querySchema: OrderQuerySchema,
   middleware: [withOrderContext],
 }).handle(async (request) => {
@@ -21,8 +23,8 @@ export const getOrder = defineRoute({
     page: request.query.page,
     include: request.query.include,
     tags: request.multiValueQuery.tag,
-    principalId: request.auth?.principalId,
-    authorizerContext: request.auth?.context,
+    principalId: request.auth.principalId,
+    authorizerContext: request.auth.context,
   });
 
   return Ok(order, { 'x-order-version': '3' });

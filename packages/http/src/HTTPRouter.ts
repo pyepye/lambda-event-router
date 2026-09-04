@@ -5,6 +5,7 @@ import type { StandardSchemaV1 } from '@standard-schema/spec';
 import type { EventTypeRouter, Middleware } from '@lambda-event-router/base';
 import { handleEventWithMiddleware, logger, validateSchemaResult } from '@lambda-event-router/base';
 
+import type { AuthPreset } from './auth.js';
 import { buildCorsHeaders, type CorsConfig } from './cors.js';
 import {
   type BodyRouteMethodFn,
@@ -13,7 +14,7 @@ import {
   PathRouter,
   type RouteMethodFn,
 } from './PathRouter.js';
-import { Request } from './Request.js';
+import { Request, type RouterRequest } from './Request.js';
 import { Response } from './Response.js';
 import type {
   AnyHttpMethod,
@@ -40,6 +41,8 @@ interface RouteInput<
   TQuerySchema extends StandardSchemaV1 | undefined,
   TBodySchema extends StandardSchemaV1 | undefined,
   TResponseSchema extends StandardSchemaV1 | undefined,
+  TRawAuth,
+  TRouteAuth,
   TPath = PathParams<TPathString>,
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
@@ -50,22 +53,32 @@ interface RouteInput<
   filters: {
     method: TMethod;
     path: ValidPath<TPathString>;
-    custom?: (input: HTTPFilterInput) => boolean | Promise<boolean>;
+    custom?: (input: HTTPFilterInput<unknown, TRawAuth>) => boolean | Promise<boolean>;
   };
-  middleware?: Middleware<ApiRequest<TPath, TQuery, TBody>, HandlerResponse<TResponse>>[];
+  auth?: AuthPreset<TRawAuth, TRouteAuth>;
+  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, TBody>, HandlerResponse<TResponse>>[];
   querySchema?: TQuerySchema;
   bodySchema?: TBodySchema;
   responseSchema?: TResponseSchema;
 }
 
 // Builder that provides typed handle method
-interface RouteBuilder<TPathString extends string, TPath, TQuery, TBody, TResponse, TMethod extends AnyHttpMethod> {
+interface RouteBuilder<
+  TPathString extends string,
+  TPath,
+  TQuery,
+  TAuth,
+  TBody,
+  TResponse,
+  TMethod extends AnyHttpMethod,
+  TRawAuth,
+> {
   handle(
-    handler: (request: ApiRequest<TPath, TQuery, TBody>) => Promise<HandlerResponse<TResponse>>,
-  ): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>;
+    handler: (request: ApiRequest<TPath, TQuery, TAuth, TBody>) => Promise<HandlerResponse<TResponse>>,
+  ): RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod, TRawAuth>;
 }
 
-export function defineRoute<
+export type DefineRouteFn<TRawAuth, TDefaultAuth extends TRawAuth = TRawAuth> = <
   TPathString extends string,
   TMethod extends AnyHttpMethod,
   TQuerySchema extends StandardSchemaV1 | undefined = undefined,
@@ -77,31 +90,72 @@ export function defineRoute<
     : Record<string, string | undefined>,
   TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : DefaultBody<TMethod>,
   TResponse = ResponseType<TResponseSchema>,
+  TRouteAuth extends TRawAuth = TDefaultAuth,
 >(
-  config: RouteInput<TPathString, TMethod, TQuerySchema, TBodySchema, TResponseSchema>,
-): RouteBuilder<TPathString, TPath, TQuery, TBody, TResponse, TMethod> {
+  config: RouteInput<TPathString, TMethod, TQuerySchema, TBodySchema, TResponseSchema, TRawAuth, TRouteAuth>,
+) => RouteBuilder<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TRawAuth>;
+
+export function createDefineRoute<TRawAuth, TDefaultAuth extends TRawAuth = TRawAuth>(): DefineRouteFn<
+  TRawAuth,
+  TDefaultAuth
+> {
+  return defineRouteWithAuth;
+}
+
+function defineRouteWithAuth<
+  TPathString extends string,
+  TMethod extends AnyHttpMethod,
+  TQuerySchema extends StandardSchemaV1 | undefined = undefined,
+  TBodySchema extends StandardSchemaV1 | undefined = undefined,
+  TResponseSchema extends StandardSchemaV1 | undefined = undefined,
+  TPath = PathParams<TPathString>,
+  TQuery = TQuerySchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TQuerySchema>
+    : Record<string, string | undefined>,
+  TBody = TBodySchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TBodySchema> : DefaultBody<TMethod>,
+  TResponse = ResponseType<TResponseSchema>,
+  TRouteAuth = unknown,
+  TRawAuth = TRouteAuth,
+>(
+  config: RouteInput<TPathString, TMethod, TQuerySchema, TBodySchema, TResponseSchema, TRawAuth, TRouteAuth>,
+): RouteBuilder<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TRawAuth> {
   return {
     // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
-    handle(handler): RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod> {
-      return { ...config, handler } as RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>;
+    handle(handler): RouteDefinition<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TRawAuth> {
+      return { ...config, handler } as RouteDefinition<
+        TPathString,
+        TPath,
+        TQuery,
+        TRouteAuth,
+        TBody,
+        TResponse,
+        TMethod,
+        TRawAuth
+      >;
     },
   };
 }
 
-interface HTTPRouterOptions<TEvent, TResult> {
-  adapter: HTTPAdapter<TEvent, TResult>;
-  middleware?: Middleware<ApiRequest, HandlerResponse>[];
+export const defineRoute: DefineRouteFn<unknown> = createDefineRoute<unknown>();
+
+interface HTTPRouterOptions<TEvent, TResult, TAuth, TDefaultAuth extends TAuth> {
+  adapter: HTTPAdapter<TEvent, TResult, TAuth>;
+  auth?: AuthPreset<TAuth, TDefaultAuth>;
+  middleware?: Middleware<RouterRequest<TAuth>, HandlerResponse>[];
   cors?: CorsConfig;
 }
 
-export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TResult> {
-  private router = new PathRouter();
+export class HTTPRouter<TEvent, TResult, TAuth = unknown, TDefaultAuth extends TAuth = TAuth>
+  implements EventTypeRouter<TEvent, TResult>
+{
+  private router = new PathRouter<TAuth, TDefaultAuth>();
+  private defaultAuth: AuthPreset<TAuth, TDefaultAuth> | undefined;
   private response = new Response();
-  private middleware: Middleware<ApiRequest, HandlerResponse>[];
-  private adapter: HTTPAdapter<TEvent, TResult>;
+  private middleware: Middleware<RouterRequest<TAuth>, HandlerResponse>[];
+  private adapter: HTTPAdapter<TEvent, TResult, TAuth>;
   private corsConfig: CorsConfig | undefined;
 
-  constructor(options: HTTPAdapter<TEvent, TResult> | HTTPRouterOptions<TEvent, TResult>) {
+  constructor(options: HTTPAdapter<TEvent, TResult, TAuth> | HTTPRouterOptions<TEvent, TResult, TAuth, TDefaultAuth>) {
     if ('canHandleEvent' in options) {
       this.adapter = options;
       this.middleware = [];
@@ -112,53 +166,56 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
       this.adapter = options.adapter;
       this.middleware = options.middleware ?? [];
       this.corsConfig = options.cors;
+      this.defaultAuth = options.auth;
     }
   }
 
+  defineRoute: DefineRouteFn<TAuth, TDefaultAuth> = createDefineRoute<TAuth, TDefaultAuth>();
+
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
-  route: RouteMethodFn<this> = (definition) => {
+  route: RouteMethodFn<this, TAuth, TDefaultAuth> = (definition) => {
     this.router.route(definition);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  get: NoBodyRouteMethodFn<this> = (config) => {
+  get: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.get(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  post: BodyRouteMethodFn<this> = (config) => {
+  post: BodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.post(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  put: BodyRouteMethodFn<this> = (config) => {
+  put: BodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.put(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  patch: BodyRouteMethodFn<this> = (config) => {
+  patch: BodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.patch(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  delete: NoBodyRouteMethodFn<this> = (config) => {
+  delete: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.delete(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  head: NoBodyRouteMethodFn<this> = (config) => {
+  head: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.head(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  options: NoBodyRouteMethodFn<this> = (config) => {
+  options: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth> = (config) => {
     this.router.options(config);
     return this;
   };
@@ -217,7 +274,27 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     return { ...response, body: '' };
   }
 
-  private async validateResponse(route: InternalRoute, handlerResponse: unknown): Promise<unknown> {
+  private async checkAuth(route: InternalRoute<TAuth>, auth: TAuth): Promise<TAuth> {
+    const preset = route.auth ?? this.defaultAuth;
+    if (!preset) return auth;
+
+    const result = await preset.check(auth);
+    if (result.success) return result.auth;
+
+    const failure = { preset: preset.name, reason: result.reason, message: result.message, issues: result.issues };
+    if (result.reason === 'missing') {
+      logger.warn('Request auth does not match the auth preset', failure);
+      throw Response.Unauthorised();
+    }
+    if (result.reason === 'invalid') {
+      logger.warn('Request auth does not match the auth preset', failure);
+      throw Response.Forbidden();
+    }
+    logger.error('Request auth does not match the auth preset', failure);
+    throw Response.InternalServerError();
+  }
+
+  private async validateResponse(route: InternalRoute<TAuth>, handlerResponse: unknown): Promise<unknown> {
     if (!route.responseSchema || Response.isHTTPResponse(handlerResponse)) {
       return handlerResponse;
     }
@@ -231,7 +308,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
   }
 
   private async buildPreflightResult(
-    normalizedEvent: NormalizedHTTPEvent,
+    normalizedEvent: NormalizedHTTPEvent<TAuth>,
     event: TEvent,
   ): Promise<TResult | undefined> {
     const methods = this.router.getMethodsForPath(normalizedEvent.path);
@@ -251,7 +328,7 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     const normalizedEvent = this.adapter.normalize(event);
     const { method, path } = normalizedEvent;
 
-    const filterInput: HTTPFilterInput<TEvent> = {
+    const filterInput: HTTPFilterInput<TEvent, TAuth> = {
       method,
       path,
       headers: normalizedEvent.headers,
@@ -281,9 +358,10 @@ export class HTTPRouter<TEvent, TResult> implements EventTypeRouter<TEvent, TRes
     }
 
     const { route, params } = routeData;
-    const request = new Request(normalizedEvent, event, context, route, params);
 
     try {
+      const auth = await this.checkAuth(route, normalizedEvent.auth);
+      const request = new Request({ ...normalizedEvent, auth }, event, context, route, params);
       const query = await request.validateQuery();
       const body = await request.validateBody();
       const requestData = request.buildApiRequest(query, body);

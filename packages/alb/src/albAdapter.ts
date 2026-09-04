@@ -20,7 +20,7 @@ function responseHeaders(
   };
 }
 
-export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
+export const albAdapter: HTTPAdapter<ALBEvent, ALBResult, undefined> = {
   canHandleEvent(event: unknown): event is ALBEvent {
     if (!isObject(event)) return false;
     if (typeof event.path !== 'string') return false; // Guard against VPCLatticeV1, APIGatewayV2
@@ -34,7 +34,7 @@ export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
     return true;
   },
 
-  normalize(event: ALBEvent): NormalizedHTTPEvent {
+  normalize(event: ALBEvent): NormalizedHTTPEvent<undefined> {
     // ALB sends the multi-value form only when the target group has multi-value headers enabled,
     // and the single-value form otherwise. Read both so query and headers survive either mode.
     const headers = buildValueMaps({
@@ -56,7 +56,7 @@ export const albAdapter: HTTPAdapter<ALBEvent, ALBResult> = {
       multiValueQuery: query.multiValue,
       body: event.body ?? undefined,
       isBase64Encoded: event.isBase64Encoded,
-      auth: { targetGroupArn: event.requestContext.elb.targetGroupArn },
+      auth: undefined,
     };
   },
 

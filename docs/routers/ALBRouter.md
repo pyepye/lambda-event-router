@@ -238,7 +238,7 @@ export async function getOrder(
 | `isBase64Encoded` | `boolean` | Whether the service base64 encoded the body it sent |
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
-| `auth` | `Auth` | Always set, and only ever carries `targetGroupArn`. See [Auth](#auth) |
+| `auth` | `undefined` | ALB names no caller. See [Auth](#auth) |
 | `event` | `TEvent` | The untouched `ALBEvent`, for `requestContext` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
@@ -347,7 +347,7 @@ export const NewOrderSchema = z.object({ sku: z.string(), quantity: z.number() }
 type NewOrder = z.infer<typeof NewOrderSchema>
 
 export async function createOrder(
-  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<{ orgId: string }, Record<string, string | undefined>, undefined, NewOrder>,
 ): Promise<HandlerResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body
@@ -382,9 +382,9 @@ out of the pattern so you are not keeping a second copy of it in step. Check it 
 patterns](#path-patterns) first, since a pattern ending in a literal segment gives you nothing and writing
 the type out by hand is the answer there.
 
-`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TBody`, so typing only the body means
-passing the query type through as well. [Generic parameters](#generic-parameters) has each one, its default
-and which types take them in a different order.
+`ApiRequest` takes its parameters in the order `TPath`, `TQuery`, `TAuth`, `TBody`, so typing only the body
+means passing the query and auth types through as well. [Generic parameters](#generic-parameters) has each
+one, its default and which types take them in a different order.
 
 ## Schema validation
 
@@ -524,14 +524,9 @@ See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with t
 
 ## Auth
 
-`request.auth` is always set on this router and only ever carries one field.
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `targetGroupArn` | `string` | The ARN of the target group the request came through |
-
-`Auth` is shared across the HTTP routers, so it declares `claims`, `principalId` and the rest as optional.
-None of them are ever populated here, because an ALB gives the router nothing to read them from.
+`request.auth` is always `undefined` on this router, because an ALB puts no caller on the event. The ARN of
+the target group the request came through is on the raw event, as
+`request.event.requestContext.elb.targetGroupArn`.
 
 Where an ALB does authenticate, with an `authenticate-oidc` or `authenticate-cognito` listener rule, it puts
 the result in request headers instead. Read those off `request.headers`, lower cased.
@@ -669,13 +664,14 @@ with no parameters defaults `path` to `Record<string, string>`, `query` to the r
 handler. A route with `path: '/orgs/:orgId/orders'` and a `bodySchema` still compiles with a bare alias
 attached, and its handler gets neither `path.orgId` nor the schema's body.
 
-Spell the parameters out to match the route, in the order [`TPath`, `TQuery`,
+Spell the parameters out to match the route, in the order [`TPath`, `TQuery`, `TAuth`,
 `TBody`](#generic-parameters).
 
 ```ts
 export const withOrgContext: HTTPMiddleware<
   { orgId: string; orderId: string },
   Record<string, string | undefined>,
+  undefined,
   NewOrder
 > = async (request, next) => {
   logger.appendKeys({ orgId: request.path.orgId, orderId: request.path.orderId })
@@ -700,14 +696,13 @@ All exported from `@lambda-event-router/alb`.
 
 | Type | Description |
 | --- | --- |
-| `ApiRequest<TPath, TQuery, TBody, TEvent>` | The handler argument |
+| `ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>` | The handler argument |
 | `HandlerResponse<TResponse>` | Handler return type, `ApiResponse<TResponse> \| TResponse` |
 | `ApiResponse<T>` | `{ statusCode, body, headers? }` |
 | `HTTPResponse<T>` | An alias of `ApiResponse<T>`, and what the helpers return |
-| `ApiHandler<TPath, TQuery, TBody, TResponse>` | The handler signature |
-| `RouteDefinition<TPathString, TPath, TQuery, TBody, TResponse, TMethod>` | A full route passed to `route()` |
+| `ApiHandler<TPath, TQuery, TAuth, TBody, TResponse>` | The handler signature |
+| `RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod>` | A full route passed to `route()` |
 | `PathParams<TPathString>` | The params a pattern names, so `PathParams<'/orders/:orderId'>` is `{ orderId: string }` |
-| `Auth` | `request.auth` |
 | `CorsConfig` | The `cors` option |
 | `CorsOriginFunction` | A dynamic `origin`, `(origin, path) => string \| undefined` |
 | `ALBRouterOptions` | Options for `createALBRouter` |
@@ -717,8 +712,8 @@ All exported from `@lambda-event-router/alb`.
 `ALBEvent` and `ALBResult` are not re-exported, so `request.event` is typed by `aws-lambda` and you import
 those two from there.
 
-`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` originate in `@lambda-event-router/http` and are
-re-exported from here, so import them from here rather than naming that package. The route definition
+`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`, with `TAuth`
+defaulting to `undefined` here, so import them from here rather than naming that package. The route definition
 and request types carry no `ALB` prefix because `APIGatewayRouter` and `VPCLatticeRouter` use the same
 ones.
 
@@ -731,24 +726,25 @@ one event shape, so unlike API Gateway and Lattice there is no payload version t
 
 ### Generic parameters
 
-Seven parameters cover every type above, and they do not all appear in the same order.
+Eight parameters cover every type above, and they do not all appear in the same order.
 
 | Parameter | Types | Default |
 | --- | --- | --- |
 | `TPathString` | The path pattern itself, which `PathParams` reads | `string` |
 | `TPath` | `request.path` | `PathParams<TPathString>` on `RouteDefinition`, `Record<string, string>` elsewhere |
 | `TQuery` | `request.query` | `Record<string, string \| undefined>` |
+| `TAuth` | `request.auth` | `undefined` |
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | `unknown` |
 | `TEvent` | `request.event` | `unknown` |
 
-`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TBody`. `ApiRequest`'s fourth is
-`TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives `TPath`
-from it. It takes `TMethod` last.
+`ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
+is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
+`TPath` from it. It takes `TMethod` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types the
-path and leaves the query and body loose.
+path and leaves the query, auth and body loose.
 
 You only need these for [annotated handlers](#annotated-handlers). Inference covers all of them.
 
@@ -855,7 +851,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<HandlerR
 }
 
 export async function createOrder(
-  request: ApiRequest<OrgPath, Record<string, string | undefined>, NewOrder>,
+  request: ApiRequest<OrgPath, Record<string, string | undefined>, undefined, NewOrder>,
 ): Promise<HandlerResponse<Order>> {
   const { orgId } = request.path
   const { sku, quantity } = request.body

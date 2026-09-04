@@ -1,7 +1,7 @@
-import { defineRoute, NoContent, Ok } from '@lambda-event-router/http';
+import { NoContent, Ok } from '@lambda-event-router/http';
 import { allEventBuilders, createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
-import { ALBRouter, createALBRouter } from './ALBRouter.js';
+import { ALBRouter, createALBRouter, defineRoute } from './ALBRouter.js';
 
 suite('ALBRouter', () => {
   let router: ALBRouter;

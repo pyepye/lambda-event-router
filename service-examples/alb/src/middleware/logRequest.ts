@@ -12,7 +12,7 @@ export const logRequest: HTTPMiddleware = async (request, next) => {
     method: request.method,
     rawPath: request.rawPath,
     eventForm: event.multiValueHeaders ? 'multi-value' : 'single-value',
-    targetGroupArn: request.auth?.targetGroupArn,
+    targetGroupArn: event.requestContext.elb.targetGroupArn,
   });
 
   return next(request);

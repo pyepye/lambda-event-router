@@ -1,7 +1,4 @@
 import type {
-  APIGatewayEventDefaultAuthorizerContext,
-  APIGatewayEventLambdaAuthorizerContext,
-  APIGatewayProxyCognitoAuthorizer,
   APIGatewayProxyEvent,
   APIGatewayProxyResult,
   APIGatewayProxyWithCognitoAuthorizerEvent,
@@ -10,77 +7,73 @@ import type {
 
 import { isObject } from '@lambda-event-router/base';
 import {
-  type Auth,
   buildValueMaps,
   type FinalizedHTTPResponse,
   type HTTPAdapter,
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
 
+import {
+  type APIGatewayAuth,
+  type APIGatewayAuthorizer,
+  type LambdaAuth,
+  readApiKey,
+  readClaims,
+  readClientCert,
+  readLambdaContext,
+  readScopes,
+  readV1Iam,
+  withExtras,
+} from './auth.js';
+
 export type APIGatewayV1EventType =
   | APIGatewayProxyEvent
   | APIGatewayProxyWithCognitoAuthorizerEvent
   | APIGatewayProxyWithLambdaAuthorizerEvent<unknown>;
 
-type V1AuthorizerContext =
-  | APIGatewayEventDefaultAuthorizerContext
-  | APIGatewayProxyCognitoAuthorizer
-  | APIGatewayEventLambdaAuthorizerContext<unknown>;
-
-function isCognitoAuthorizer(authorizer: V1AuthorizerContext): authorizer is APIGatewayProxyCognitoAuthorizer {
-  return isObject(authorizer) && 'claims' in authorizer;
+// HTTP API integration payload 1.0 carries a version, and REST carries none
+function isHttpApiEvent(event: APIGatewayV1EventType): boolean {
+  return isObject(event) && event.version === '1.0';
 }
 
-function isLambdaAuthorizer(
-  authorizer: V1AuthorizerContext,
-): authorizer is APIGatewayEventLambdaAuthorizerContext<unknown> {
-  return isObject(authorizer) && 'principalId' in authorizer;
+// REST sets principalId and integrationLatency itself, over any context keys of the same name
+function readRestLambdaAuth(authorizer: Record<string, unknown>): LambdaAuth {
+  const { principalId, integrationLatency, ...context } = authorizer;
+  return {
+    type: 'lambda',
+    principalId: typeof principalId === 'string' ? principalId : undefined,
+    context: readLambdaContext(context),
+  };
 }
 
-function extractV1Auth(event: APIGatewayV1EventType): Auth | undefined {
-  const { requestContext } = event;
-  /* v8 ignore next -- @preserve - Guard is for TS. API Gateway V1 always provides requestContext.identity */
-  if (requestContext.identity) {
-    const { identity } = requestContext;
-    if (identity.apiKey) {
-      return { apiKey: identity.apiKey, apiKeyId: identity.apiKeyId ?? undefined };
-    }
-    if (identity.cognitoAuthenticationType === 'authenticated' && identity.cognitoIdentityId) {
-      return {
-        iam: {
-          cognitoIdentityId: identity.cognitoIdentityId,
-          cognitoIdentityPoolId: identity.cognitoIdentityPoolId,
-          accountId: identity.accountId,
-          caller: identity.caller,
-          sourceIp: identity.sourceIp,
-          userArn: identity.userArn,
-        },
-      };
-    }
+// HTTP API adds claims and scopes as null, and never passes the authorizer's principalId
+function readHttpLambdaAuth(authorizer: Record<string, unknown>): LambdaAuth {
+  const { claims, scopes, ...context } = authorizer;
+  return { type: 'lambda', principalId: undefined, context: readLambdaContext(context) };
+}
+
+function readV1Authorizer(event: APIGatewayV1EventType): APIGatewayAuthorizer | undefined {
+  const { identity } = event.requestContext;
+  const authorizer: unknown = event.requestContext.authorizer;
+  const isHttpApi = isHttpApiEvent(event);
+
+  if (isObject(authorizer)) {
+    const claims = readClaims(authorizer.claims);
+    if (claims && isHttpApi) return { type: 'jwt', claims, scopes: readScopes(authorizer.scopes) };
+    if (claims) return { type: 'cognito', claims };
+    return isHttpApi ? readHttpLambdaAuth(authorizer) : readRestLambdaAuth(authorizer);
   }
 
-  if (requestContext.authorizer) {
-    const { authorizer } = requestContext;
-
-    if (isCognitoAuthorizer(authorizer)) {
-      return { claims: authorizer.claims };
-    }
-
-    if (isLambdaAuthorizer(authorizer)) {
-      const { principalId, integrationLatency, ...context } = authorizer;
-      return {
-        principalId,
-        context,
-      };
-    }
-
-    return { context: authorizer };
-  }
-
-  return undefined;
+  const iam = readV1Iam(identity);
+  return iam && { type: 'iam', iam };
 }
 
-export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayProxyResult> = {
+function extractV1Auth(event: APIGatewayV1EventType): APIGatewayAuth {
+  const { identity } = event.requestContext;
+  return withExtras(readV1Authorizer(event), { apiKey: readApiKey(identity), clientCert: readClientCert(identity) });
+}
+
+export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayProxyResult, APIGatewayAuth> = {
   canHandleEvent(event: unknown): event is APIGatewayV1EventType {
     if (!isObject(event)) return false;
     if (typeof event.path !== 'string') return false; // Guard against VPCLatticeV1, APIGatewayV2
@@ -95,7 +88,7 @@ export const apiGatewayV1Adapter: HTTPAdapter<APIGatewayV1EventType, APIGatewayP
     return true;
   },
 
-  normalize(event: APIGatewayV1EventType): NormalizedHTTPEvent {
+  normalize(event: APIGatewayV1EventType): NormalizedHTTPEvent<APIGatewayAuth> {
     // API Gateway V1 sends both the single-value and multi-value forms; read both so a repeated
     // query param or header is not lost when the flat map keeps only the last value.
     const headers = buildValueMaps({

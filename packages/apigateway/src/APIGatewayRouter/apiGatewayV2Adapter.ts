@@ -1,7 +1,4 @@
 import type {
-  APIGatewayEventRequestContextIAMAuthorizer,
-  APIGatewayEventRequestContextJWTAuthorizer,
-  APIGatewayEventRequestContextLambdaAuthorizer,
   APIGatewayProxyEventV2,
   APIGatewayProxyEventV2WithIAMAuthorizer,
   APIGatewayProxyEventV2WithJWTAuthorizer,
@@ -11,12 +8,22 @@ import type {
 
 import { isObject } from '@lambda-event-router/base';
 import {
-  type Auth,
   buildValueMaps,
   type FinalizedHTTPResponse,
   type HTTPAdapter,
   type NormalizedHTTPEvent,
 } from '@lambda-event-router/http';
+
+import {
+  type APIGatewayAuth,
+  type APIGatewayAuthorizer,
+  readClaims,
+  readClientCert,
+  readLambdaContext,
+  readScopes,
+  readV2Iam,
+  withExtras,
+} from './auth.js';
 
 export type APIGatewayV2EventType =
   | APIGatewayProxyEventV2
@@ -24,41 +31,34 @@ export type APIGatewayV2EventType =
   | APIGatewayProxyEventV2WithIAMAuthorizer
   | APIGatewayProxyEventV2WithLambdaAuthorizer<unknown>;
 
-type V2AuthorizerContext =
-  | APIGatewayEventRequestContextJWTAuthorizer
-  | APIGatewayEventRequestContextIAMAuthorizer
-  | APIGatewayEventRequestContextLambdaAuthorizer<unknown>;
+function readV2Authorizer(authorizer: unknown): APIGatewayAuthorizer | undefined {
+  if (!isObject(authorizer)) return undefined;
 
-function isJWTAuthorizer(authorizer: V2AuthorizerContext): authorizer is APIGatewayEventRequestContextJWTAuthorizer {
-  return 'jwt' in authorizer;
-}
-
-function isIAMAuthorizer(authorizer: V2AuthorizerContext): authorizer is APIGatewayEventRequestContextIAMAuthorizer {
-  return 'iam' in authorizer;
-}
-
-function extractV2Auth(event: APIGatewayV2EventType): Auth | undefined {
-  const { requestContext } = event;
-
-  if ('authentication' in requestContext && requestContext.authentication) {
-    return { clientCert: { ...requestContext.authentication.clientCert } };
+  if (isObject(authorizer.jwt)) {
+    const claims = readClaims(authorizer.jwt.claims) ?? {};
+    return { type: 'jwt', claims, scopes: readScopes(authorizer.jwt.scopes) };
   }
 
-  if ('authorizer' in requestContext && requestContext.authorizer) {
-    const { authorizer } = requestContext;
+  const iam = readV2Iam(authorizer.iam);
+  if (iam) return { type: 'iam', iam };
 
-    if (isJWTAuthorizer(authorizer)) {
-      return { claims: authorizer.jwt.claims, scopes: authorizer.jwt.scopes };
-    }
-    if (isIAMAuthorizer(authorizer)) {
-      return { iam: authorizer.iam };
-    }
-    return { context: { ...authorizer } };
+  // A Lambda authorizer that returns no context arrives as lambda: null
+  if (Object.hasOwn(authorizer, 'lambda')) {
+    const context = isObject(authorizer.lambda) ? readLambdaContext(authorizer.lambda) : {};
+    return { type: 'lambda', principalId: undefined, context };
   }
+
   return undefined;
 }
 
-export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayProxyResultV2> = {
+function extractV2Auth(event: APIGatewayV2EventType): APIGatewayAuth {
+  const { requestContext } = event;
+  const authorizer = 'authorizer' in requestContext ? requestContext.authorizer : undefined;
+  const authentication = 'authentication' in requestContext ? requestContext.authentication : undefined;
+  return withExtras(readV2Authorizer(authorizer), { clientCert: readClientCert(authentication) });
+}
+
+export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayProxyResultV2, APIGatewayAuth> = {
   canHandleEvent(event: unknown): event is APIGatewayV2EventType {
     if (!isObject(event)) return false;
     if (typeof event.rawPath !== 'string') return false;
@@ -70,7 +70,7 @@ export const apiGatewayV2Adapter: HTTPAdapter<APIGatewayV2EventType, APIGatewayP
     return true;
   },
 
-  normalize(event: APIGatewayV2EventType): NormalizedHTTPEvent {
+  normalize(event: APIGatewayV2EventType): NormalizedHTTPEvent<APIGatewayAuth> {
     // API Gateway V2 sends no multi-value form: it comma-joins repeated headers and query params
     // into one string before invoking the lambda. The multi-value map therefore holds that single
     // joined string; it is not split back apart, since a value may legitimately contain a comma.

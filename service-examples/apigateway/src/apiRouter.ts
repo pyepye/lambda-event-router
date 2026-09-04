@@ -21,6 +21,7 @@ import { reconcileStock } from './handlers/reconcileStock.js';
 import { redirectRetiredSku } from './handlers/redirectRetiredSku.js';
 import { uploadOrderManifest } from './handlers/uploadOrderManifest.js';
 import { logRequest } from './middleware/logRequest.js';
+import { staffAuth, stockAdjustmentAuth } from './utils/auth.js';
 import { ALLOWED_ORIGIN_SUFFIX, CHANNEL_HEADER, STAFF_ID_HEADER, STAFF_ROLE_HEADER } from './utils/constants.js';
 import { NewOrderSchema, OrderAmendmentSchema, OrderSchema, StockAdjustmentSchema } from './utils/schemas.js';
 
@@ -47,6 +48,7 @@ apiRouter
   .get({ filters: { path: '/orders/pending' }, handler: listPendingOrders })
   .post({
     filters: { path: '/orders' },
+    auth: staffAuth,
     bodySchema: NewOrderSchema,
     responseSchema: OrderSchema,
     handler: createOrder,
@@ -62,7 +64,12 @@ apiRouter
   .route(getStockAudit)
   .head({ filters: { path: '/inventory/:sku' }, handler: headStockRecord })
   .options({ filters: { path: '/inventory/:sku' }, handler: describeStockOptions })
-  .put({ filters: { path: '/inventory/:sku' }, bodySchema: StockAdjustmentSchema, handler: adjustStock })
+  .put({
+    filters: { path: '/inventory/:sku' },
+    auth: stockAdjustmentAuth,
+    bodySchema: StockAdjustmentSchema,
+    handler: adjustStock,
+  })
   .route(reconcileStock)
   .delete({ filters: { path: '/inventory/:sku' }, handler: discardStockRecord })
   .route(redirectRetiredSku);
