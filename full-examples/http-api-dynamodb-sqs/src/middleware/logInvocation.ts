@@ -1,10 +1,15 @@
-import type { HTTPMiddleware } from '@lambda-event-router/apigateway';
+import type { HTTPMiddleware, LambdaAuthorizerMiddleware } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 import type { DynamoDBMiddleware } from '@lambda-event-router/dynamodb';
 import type { SQSMiddleware } from '@lambda-event-router/sqs';
 
 export const logApiInvocation: HTTPMiddleware = async (request, next) => {
   logger.info({ message: 'Handling API request', method: request.method, path: request.rawPath });
+  return next(request);
+};
+
+export const logAuthorizerInvocation: LambdaAuthorizerMiddleware = async (request, next) => {
+  logger.info({ message: 'Handling authorizer request', type: request.type });
   return next(request);
 };
 

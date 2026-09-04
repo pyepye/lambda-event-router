@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 
 import { CfnOutput, custom_resources, Duration, RemovalPolicy, Stack, type StackProps } from 'aws-cdk-lib';
 import { HttpApi, HttpMethod } from 'aws-cdk-lib/aws-apigatewayv2';
+import { HttpLambdaAuthorizer, HttpLambdaResponseType } from 'aws-cdk-lib/aws-apigatewayv2-authorizers';
 import { HttpLambdaIntegration } from 'aws-cdk-lib/aws-apigatewayv2-integrations';
 import { AttributeType, BillingMode, StreamViewType, Table } from 'aws-cdk-lib/aws-dynamodb';
 import { PolicyDocument, PolicyStatement, Role, ServicePrincipal } from 'aws-cdk-lib/aws-iam';
@@ -186,10 +187,16 @@ export class AppStack extends Stack {
     const httpApi = new HttpApi(this, 'HttpApi');
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
+    // The authorizer runs on apiFn too, where the LambdaRouter sends its events to the authorizer router
+    const customerAuthorizer = new HttpLambdaAuthorizer('CustomerAuthorizer', apiFn, {
+      responseTypes: [HttpLambdaResponseType.SIMPLE],
+    });
+
     httpApi.addRoutes({
       path: '/orders',
       methods: [HttpMethod.POST],
       integration: apiIntegration,
+      authorizer: customerAuthorizer,
     });
 
     httpApi.addRoutes({

@@ -167,7 +167,7 @@ export const fullExamples: ExampleEntry[] = [
     name: 'HTTP API, DynamoDB and SQS',
     icons: ['api-gateway', 'dynamodb', 'sqs'],
     summary: 'An order fan-out chain across five handlers on two Lambdas',
-    routers: ['APIGatewayRouter', 'DynamoDBRouter', 'SQSRouter'],
+    routers: ['APIGatewayRouter', 'LambdaAuthorizerRouter', 'DynamoDBRouter', 'SQSRouter'],
     path: 'full-examples/http-api-dynamodb-sqs',
   },
   {

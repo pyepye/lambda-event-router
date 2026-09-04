@@ -5,6 +5,7 @@ A deployable CDK app that chains the API Gateway, DynamoDB and SQS routers throu
 ```
 Client
 └── API Gateway (HTTP API)
+    ├── apiFn / authoriseCustomer (authorizerRouter, before POST /orders)
     └── apiFn / createOrder (apiRouter, POST /orders)
         └── DynamoDB PutItem on ORDER#<orderId>
             └── workerFn / orderProcessor (dynamoDBRouter, INSERT on ORDER#*)
@@ -21,8 +22,8 @@ Client
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-There are 6 routes on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where
-one `LambdaRouter` combines all three routers. Each function receives only its own events, so the
+There are 7 routes on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where
+one `LambdaRouter` combines all four routers. Each function receives only its own events, so the
 right router picks them up.
 
 Each router has a small middleware from `src/middleware/logInvocation.ts`. It logs one line before
@@ -43,7 +44,7 @@ CloudFormation work is done by the CDK bootstrap roles, so the policy only allow
 roles. The rest covers reading the table, sending to the queue and reading the logs.
 Actions are locked down, resources are not.
 
-The API routes have no authoriser, so the `curl` calls below need no AWS credentials.
+The `curl` calls below need no AWS credentials. See [Auth](#auth) for the token `POST /orders` takes.
 
 Note: the policy assumes the default bootstrap qualifier `hnb659fds`. Change the role and parameter
 ARNs if your account uses a custom one.
@@ -60,6 +61,17 @@ pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs run deploy
 
 CDK outputs include `ApiUrl`, `TableName`, `QueueUrl` and `DlqUrl`.
 
+## Auth
+
+`POST /orders` sits behind a Lambda authorizer, and `GET /orders/:id` has none. The authorizer runs on
+`apiFn`, where `authorizerRouter` answers it. It accepts the token `demo-token` in the `authorization`
+header and passes on `{ customerId: 'cust-demo' }` as its context.
+
+`createOrder` uses the `customerAuth` preset from `src/utils/auth.ts`. It checks the context against a
+schema, so the handler reads `request.auth.context.customerId` as a string.
+
+**The fixed token is only there so `curl` works. A real authorizer verifies a token nobody can guess.**
+
 ## Playing around
 
 Set `API` to the `ApiUrl` output from the deploy.
@@ -68,7 +80,7 @@ Set `API` to the `ApiUrl` output from the deploy.
 export API=<ApiUrl>
 
 # 1. Place an order for 2 of widget-a and 1 of widget-b
-curl -X POST -H 'content-type: application/json' \
+curl -X POST -H 'content-type: application/json' -H 'authorization: demo-token' \
   -d '{"items":[{"sku":"widget-a","qty":2},{"sku":"widget-b","qty":1}]}' \
   "$API/orders"
 
@@ -76,13 +88,18 @@ curl -X POST -H 'content-type: application/json' \
 curl "$API/orders/<orderId>"
 
 # 3. Take widget-c from 6 to 4, which is below its threshold of 5
-curl -X POST -H 'content-type: application/json' \
+curl -X POST -H 'content-type: application/json' -H 'authorization: demo-token' \
   -d '{"items":[{"sku":"widget-c","qty":2}]}' \
   "$API/orders"
 
 # 4. Ask for more widget-c than there is
-curl -X POST -H 'content-type: application/json' \
+curl -X POST -H 'content-type: application/json' -H 'authorization: demo-token' \
   -d '{"items":[{"sku":"widget-c","qty":10}]}' \
+  "$API/orders"
+
+# 5. Place an order with the wrong token. API Gateway answers 403 and the order is not placed
+curl -X POST -H 'content-type: application/json' -H 'authorization: wrong-token' \
+  -d '{"items":[{"sku":"widget-a","qty":1}]}' \
   "$API/orders"
 ```
 
@@ -97,7 +114,8 @@ Save the worker logs to a file:
 aws logs tail /aws/lambda/http-api-dynamodb-sqs-worker --since 10m --format short > worker.log
 ```
 
-The API function logs to its own group, `/aws/lambda/http-api-dynamodb-sqs-api`.
+The API function logs to its own group, `/aws/lambda/http-api-dynamodb-sqs-api`. For step 1 it logs
+`Handling authorizer request` from the authorizer, then `Order created` with `customerId` set to `cust-demo`.
 
 Widen the window with `--since`, which takes a single unit such as `30m`, `2h` or `1d`. Add
 `--follow` to keep writing to the file while you send more requests. Both functions log in JSON, so
