@@ -340,6 +340,18 @@ suite('Response', () => {
       expect(result.isBase64Encoded).toBe(true);
     });
 
+    test('keeps a content type set with different letter case on a JSON body', () => {
+      const result = response.create(Response.Ok({ ok: true }, { 'Content-Type': 'application/problem+json' }));
+
+      expect(result.headers).toEqual({ 'Content-Type': 'application/problem+json' });
+    });
+
+    test('keeps a content type set with different letter case on a byte body', () => {
+      const result = response.create(Response.Ok(Buffer.from([0x25]), { 'CONTENT-TYPE': 'application/pdf' }));
+
+      expect(result.headers).toEqual({ 'CONTENT-TYPE': 'application/pdf' });
+    });
+
     test('falls back to String() for a body with circular references', () => {
       const circular: Record<string, unknown> = {};
       circular.self = circular;

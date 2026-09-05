@@ -99,11 +99,15 @@ export class Response {
     return undefined;
   }
 
+  private static hasContentType(headers: ApiResponse['headers']): boolean {
+    return headers !== undefined && Object.keys(headers).some((name) => name.toLowerCase() === 'content-type');
+  }
+
   private static buildHTTPResponse(response: unknown): HTTPResponse {
     if (Response.isHTTPResponse(response)) {
       const contentType = Response.defaultContentType(response.body);
-      if (contentType) {
-        // Create a new object and headers spread last so response.headers override
+      if (contentType && !Response.hasContentType(response.headers)) {
+        // Create a new object so the caller's headers are not mutated
         return { ...response, headers: { 'content-type': contentType, ...response.headers } };
       }
       return response;
