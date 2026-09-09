@@ -10,6 +10,7 @@ import type {
   HTTPAdapter,
   NormalizedHTTPEvent,
   PathParams,
+  ResponseBody,
 } from './types.js';
 
 type TeamAuth = { type: 'team'; team: string };
@@ -218,8 +219,8 @@ suite('auth presets', () => {
       middleware: [
         async (
           req: RouterRequest,
-          next: (req: RouterRequest) => Promise<HandlerResponse>,
-        ): Promise<HandlerResponse> => {
+          next: (req: RouterRequest) => Promise<HandlerResponse<ResponseBody>>,
+        ): Promise<HandlerResponse<ResponseBody>> => {
           seen.push(req.auth);
           return next(req);
         },

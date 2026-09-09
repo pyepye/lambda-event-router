@@ -13,8 +13,13 @@ import type {
   HTTPFilterInput,
   HttpMethod,
   NoBodyMethod,
+  OneKind,
   PathParams,
-  RouteDefinition,
+  ResponseBody,
+  ResponseKind,
+  ResponseTypeOption,
+  RouteConfig,
+  RouteKind,
   ValidPath,
 } from './types.js';
 
@@ -28,11 +33,12 @@ export interface InternalRoute<TAuth = unknown> {
   segmentKinds: SegmentKind[]; // one per segment, walked left to right to rank specificity
   registrationIndex: number; // position the route was registered in, which ranking does not disturb
   custom?: (input: HTTPFilterInput<unknown, TAuth>) => boolean | Promise<boolean>;
-  handler: ApiHandler<unknown, unknown, TAuth, unknown, unknown>;
+  handler: (request: ApiRequest<unknown, unknown, TAuth, unknown>) => Promise<HandlerResponse<ResponseBody>>;
   middleware: Middleware<
     ApiRequest<Record<string, string>, Record<string, string | undefined>, TAuth>,
-    HandlerResponse
+    HandlerResponse<ResponseBody>
   >[];
+  responseType?: ResponseTypeOption;
   querySchema?: StandardSchemaV1;
   bodySchema?: StandardSchemaV1;
   responseSchema?: StandardSchemaV1;
@@ -46,64 +52,124 @@ interface PathRouterFilters<TPathString extends string, TAuth> {
 
 // Base config shared by all route types. The filters see the auth the adapter produced, and the
 // handler sees what the auth preset hands on
-interface BaseRouteConfig<TPathString extends string, TQuery, TRawAuth, TRouteAuth, TResponse> {
+interface BaseRouteConfig<
+  TPathString extends string,
+  TQuery,
+  TRawAuth,
+  TRouteAuth,
+  TResponse,
+  TKind extends ResponseKind,
+  TContentType extends string,
+> {
   filters: PathRouterFilters<TPathString, TRawAuth>;
   auth?: AuthPreset<TRawAuth, TRouteAuth>;
+  responseType?: ResponseTypeOption<TKind, TContentType>;
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }
 
 // Config for HTTP methods that read a request body only with a bodySchema (GET, HEAD, DELETE, OPTIONS)
-interface NoBodyRouteConfig<TPathString extends string, TPath, TQuery, TRawAuth, TRouteAuth, TResponse, TBody>
-  extends BaseRouteConfig<TPathString, TQuery, TRawAuth, TRouteAuth, TResponse> {
-  handler: ApiHandler<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>>, HandlerResponse<TResponse>>[];
+interface NoBodyRouteConfig<
+  TPathString extends string,
+  TPath,
+  TQuery,
+  TRawAuth,
+  TRouteAuth,
+  TResponse,
+  TBody,
+  TKind extends ResponseKind,
+  TContentType extends string,
+> extends BaseRouteConfig<TPathString, TQuery, TRawAuth, TRouteAuth, TResponse, TKind, TContentType> {
+  handler: ApiHandler<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>, NoInfer<TResponse>>;
+  middleware?: Middleware<
+    ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>>,
+    HandlerResponse<NoInfer<TResponse>>
+  >[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
 // Config for HTTP methods that support a request body (POST, PUT, PATCH)
-interface BodyRouteConfig<TPathString extends string, TPath, TQuery, TRawAuth, TRouteAuth, TBody, TResponse>
-  extends BaseRouteConfig<TPathString, TQuery, TRawAuth, TRouteAuth, TResponse> {
-  handler: ApiHandler<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>, TResponse>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>>, HandlerResponse<TResponse>>[];
+interface BodyRouteConfig<
+  TPathString extends string,
+  TPath,
+  TQuery,
+  TRawAuth,
+  TRouteAuth,
+  TBody,
+  TResponse,
+  TKind extends ResponseKind,
+  TContentType extends string,
+> extends BaseRouteConfig<TPathString, TQuery, TRawAuth, TRouteAuth, TResponse, TKind, TContentType> {
+  handler: ApiHandler<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>, NoInfer<TResponse>>;
+  middleware?: Middleware<
+    ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, NoInfer<TBody>>,
+    HandlerResponse<NoInfer<TResponse>>
+  >[];
   bodySchema?: StandardSchemaV1<unknown, TBody>;
 }
 
-// Method signature for route (takes full RouteDefinition with method)
-export type RouteMethodFn<TReturn = PathRouter, TAuth = unknown, TDefaultAuth extends TAuth = TAuth> = <
+// Method signature for route (takes a full RouteConfig with method)
+export type RouteMethodFn<
+  TReturn = PathRouter,
+  TAuth = unknown,
+  TDefaultAuth extends TAuth = TAuth,
+  TDefaultKind extends ResponseKind = 'json',
+  TErrors = unknown,
+> = <
   TPathString extends string,
   TMethod extends AnyHttpMethod,
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
   TBody = DefaultBody<TMethod>,
-  TResponse = unknown,
+  TKind extends RouteKind<TErrors> = TDefaultKind & RouteKind<TErrors>,
+  TContentType extends string = string,
+  TResponse extends ResponseBody<TKind> = ResponseBody<TKind>,
   TRouteAuth extends TAuth = TDefaultAuth,
 >(
-  route: RouteDefinition<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TAuth>,
+  route: RouteConfig<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TAuth, TKind, TContentType> &
+    OneKind<NoInfer<TKind>>,
 ) => TReturn;
 
 // Method signature for routes with body support
-export type BodyRouteMethodFn<TReturn = PathRouter, TAuth = unknown, TDefaultAuth extends TAuth = TAuth> = <
+export type BodyRouteMethodFn<
+  TReturn = PathRouter,
+  TAuth = unknown,
+  TDefaultAuth extends TAuth = TAuth,
+  TDefaultKind extends ResponseKind = 'json',
+  TErrors = unknown,
+> = <
   TPathString extends string,
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
   TBody = unknown,
-  TResponse = unknown,
+  TKind extends RouteKind<TErrors> = TDefaultKind & RouteKind<TErrors>,
+  TContentType extends string = string,
+  TResponse extends ResponseBody<TKind> = ResponseBody<TKind>,
   TRouteAuth extends TAuth = TDefaultAuth,
 >(
-  config: BodyRouteConfig<TPathString, TPath, TQuery, TAuth, TRouteAuth, TBody, TResponse>,
+  config: BodyRouteConfig<TPathString, TPath, TQuery, TAuth, TRouteAuth, TBody, TResponse, TKind, TContentType> &
+    OneKind<NoInfer<TKind>>,
 ) => TReturn;
 
 // Method signature for routes without body support
-export type NoBodyRouteMethodFn<TReturn = PathRouter, TAuth = unknown, TDefaultAuth extends TAuth = TAuth> = <
+export type NoBodyRouteMethodFn<
+  TReturn = PathRouter,
+  TAuth = unknown,
+  TDefaultAuth extends TAuth = TAuth,
+  TDefaultKind extends ResponseKind = 'json',
+  TErrors = unknown,
+> = <
   TPathString extends string,
   TPath = PathParams<TPathString>,
   TQuery = Record<string, string | undefined>,
-  TResponse = unknown,
+  TKind extends RouteKind<TErrors> = TDefaultKind & RouteKind<TErrors>,
+  TContentType extends string = string,
+  TResponse extends ResponseBody<TKind> = ResponseBody<TKind>,
   TBody = undefined,
   TRouteAuth extends TAuth = TDefaultAuth,
 >(
-  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TAuth, TRouteAuth, TResponse, TBody>,
+  config: NoBodyRouteConfig<TPathString, TPath, TQuery, TAuth, TRouteAuth, TResponse, TBody, TKind, TContentType> &
+    OneKind<NoInfer<TKind>>,
 ) => TReturn;
 
 interface RouteMatch<TAuth> {
@@ -164,28 +230,32 @@ function compareRouteSpecificity<TAuth>(a: InternalRoute<TAuth>, b: InternalRout
   return 0;
 }
 
-export class PathRouter<TAuth = unknown, TDefaultAuth extends TAuth = TAuth> {
+export class PathRouter<
+  TAuth = unknown,
+  TDefaultAuth extends TAuth = TAuth,
+  TDefaultKind extends ResponseKind = 'json',
+  TErrors = unknown,
+> {
   private routes: InternalRoute<TAuth>[] = [];
   private routesSorted = false;
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
-  route: RouteMethodFn<this, TAuth, TDefaultAuth> = (definition) => {
+  route: RouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (definition) => {
     const method = definition.filters.method.toUpperCase() as HttpMethod;
     // @ts-expect-error - Generic handler types narrow TPath beyond addRoute's default Record<string, string>
     return this.addRoute(method, definition);
   };
 
-  get: NoBodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createNoBodyRoute('GET');
-  head: NoBodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createNoBodyRoute('HEAD');
-  delete: NoBodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createNoBodyRoute('DELETE');
-  options: NoBodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> =
-    this.createNoBodyRoute('OPTIONS');
+  get: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createNoBodyRoute('GET');
+  head: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createNoBodyRoute('HEAD');
+  delete: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createNoBodyRoute('DELETE');
+  options: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createNoBodyRoute('OPTIONS');
 
-  post: BodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createBodyRoute('POST');
-  put: BodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createBodyRoute('PUT');
-  patch: BodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> = this.createBodyRoute('PATCH');
+  post: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createBodyRoute('POST');
+  put: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createBodyRoute('PUT');
+  patch: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = this.createBodyRoute('PATCH');
 
-  private createBodyRoute(method: BodyMethod): BodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> {
+  private createBodyRoute(method: BodyMethod): BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> {
     // @ts-expect-error - Generic handler types narrow TPath beyond addRoute's default Record<string, string>
     // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn return type
     return (config): this => this.addRoute(method, config);
@@ -193,7 +263,7 @@ export class PathRouter<TAuth = unknown, TDefaultAuth extends TAuth = TAuth> {
 
   private createNoBodyRoute(
     method: NoBodyMethod,
-  ): NoBodyRouteMethodFn<PathRouter<TAuth, TDefaultAuth>, TAuth, TDefaultAuth> {
+  ): NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> {
     // @ts-expect-error - Generic handler types narrow TPath beyond addRoute's default Record<string, string>
     // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn return type
     return (config): this => this.addRoute(method, config);
@@ -204,11 +274,9 @@ export class PathRouter<TAuth = unknown, TDefaultAuth extends TAuth = TAuth> {
     config: {
       filters: PathRouterFilters<TPathString, TAuth>;
       auth?: AuthPreset<TAuth, TAuth>;
-      handler: ApiHandler<Record<string, string>, Record<string, string | undefined>, TAuth>;
-      middleware?: Middleware<
-        ApiRequest<Record<string, string>, Record<string, string | undefined>, TAuth>,
-        HandlerResponse
-      >[];
+      responseType?: ResponseTypeOption;
+      handler: ApiHandler<Record<string, string>, Record<string, string | undefined>, TAuth, unknown, ResponseBody>;
+      middleware?: InternalRoute<TAuth>['middleware'];
       querySchema?: StandardSchemaV1;
       bodySchema?: StandardSchemaV1;
       responseSchema?: StandardSchemaV1;
@@ -227,8 +295,9 @@ export class PathRouter<TAuth = unknown, TDefaultAuth extends TAuth = TAuth> {
       pathParamNames,
       segmentKinds,
       custom,
-      handler: config.handler as ApiHandler<unknown, unknown, TAuth, unknown, unknown>,
+      handler: config.handler as InternalRoute<TAuth>['handler'],
       middleware: config.middleware ?? [],
+      responseType: config.responseType,
       querySchema: config.querySchema,
       bodySchema: config.bodySchema,
       responseSchema: config.responseSchema,

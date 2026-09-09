@@ -1,11 +1,21 @@
-import { type HandlerResponse, NoContent, Ok, Response } from '@lambda-event-router/http';
+import {
+  type ErrorInput,
+  type HandlerResponse,
+  HTTPException,
+  Html,
+  NoContent,
+  Ok,
+  Response,
+  type ResponseBody,
+} from '@lambda-event-router/http';
 import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { APIGatewayRouter, createAPIGatewayRouter, defineRoute } from './APIGatewayRouter.js';
 import type { APIGatewayAuth } from './auth.js';
 import type { ApiRequest } from './types.js';
 
-type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
+type RouterResponse = HandlerResponse<ResponseBody>; // THis sees the responses of every route, any kind
+type HTTPNext = (request: ApiRequest) => Promise<RouterResponse>;
 type NoBodyRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, APIGatewayAuth, undefined>;
 type NoBodyNext = (request: NoBodyRequest) => Promise<HandlerResponse>;
 
@@ -180,7 +190,7 @@ suite('APIGatewayRouter', () => {
     test('preserves all schemas and handler in the definition', () => {
       const querySchema = createMockSchema();
       const bodySchema = createMockSchema();
-      const responseSchema = createMockSchema();
+      const responseSchema = createMockSchema<{ itemId: string }>();
       const handler = vi.fn();
 
       const definition = defineRoute({
@@ -259,7 +269,7 @@ suite('APIGatewayRouter', () => {
       );
     });
 
-    test('catches a generic Error and returns 500 with the error message', async ({ apiGatewayV2HandlerEvent }) => {
+    test('hides the message of an unhandled error', async ({ apiGatewayV2HandlerEvent }) => {
       router.get({
         filters: {
           path: '/',
@@ -275,7 +285,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'something broke' }),
+          body: JSON.stringify({ error: 'Internal server error' }),
         }),
       );
     });
@@ -367,7 +377,7 @@ suite('APIGatewayRouter', () => {
     test('executes middleware before the route handler', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middleware(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+      async function middleware(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
         callOrder.push('mw-pre');
         const response = await next(request);
         callOrder.push('mw-post');
@@ -392,8 +402,9 @@ suite('APIGatewayRouter', () => {
     });
 
     test('allows middleware to modify the response', async ({ apiGatewayV2HandlerEvent }) => {
-      async function addCorsHeaders(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+      async function addCorsHeaders(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
         const handlerResponse = await next(request);
+        if (handlerResponse instanceof HTTPException) return handlerResponse;
         const response = Response.isHTTPResponse(handlerResponse) ? handlerResponse : Ok(handlerResponse);
         return {
           ...response,
@@ -418,7 +429,7 @@ suite('APIGatewayRouter', () => {
     test('allows middleware to short-circuit with an early response', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function authMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<HandlerResponse> {
+      async function authMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<RouterResponse> {
         return { statusCode: 401, body: null };
       }
 
@@ -435,12 +446,12 @@ suite('APIGatewayRouter', () => {
     test('executes multiple router-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middlewareOne(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+      async function middlewareOne(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
         callOrder.push('mw1');
         return next(request);
       }
 
-      async function middlewareTwo(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+      async function middlewareTwo(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
         callOrder.push('mw2');
         return next(request);
       }
@@ -575,8 +586,8 @@ suite('APIGatewayRouter', () => {
         request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
         next: (
           request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
-        ) => Promise<HandlerResponse<unknown>>,
-      ): Promise<HandlerResponse<unknown>> {
+        ) => Promise<HandlerResponse>,
+      ): Promise<HandlerResponse> {
         callOrder.push('route-mw');
         return next(request);
       }
@@ -605,7 +616,7 @@ suite('APIGatewayRouter', () => {
     test('executes router middleware before route middleware', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routerMiddleware(request: ApiRequest, next: HTTPNext): Promise<HandlerResponse> {
+      async function routerMiddleware(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
         callOrder.push('router-mw');
         return next(request);
       }
@@ -641,7 +652,7 @@ suite('APIGatewayRouter', () => {
         );
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function blockingMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<HandlerResponse> {
+      async function blockingMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<RouterResponse> {
         return { statusCode: 403, body: null };
       }
 
@@ -770,5 +781,36 @@ suite('APIGatewayRouter.canHandleEvent', () => {
     const claimed = await createAPIGatewayRouter().canHandleEvent(event);
 
     expect(claimed).toBe(isOwnEvent);
+  });
+  suite('response types', () => {
+    const errors = {
+      html: ({ statusCode, statusText }: ErrorInput): Html => Html(`<h1>${statusCode} ${statusText}</h1>`),
+    };
+
+    test('sends Html and error pages from an HTML router', async ({ apiGatewayV2HandlerEvent }) => {
+      const htmlRouter = new APIGatewayRouter({ responseType: 'html', errors });
+      htmlRouter.get({ filters: { path: '/orders' }, handler: async () => Html('<p>Orders</p>') });
+
+      const page = apiGatewayV2HandlerEvent({ event: { rawPath: '/orders' } });
+      const missing = apiGatewayV2HandlerEvent({ event: { rawPath: '/missing' } });
+      const pageResult = await htmlRouter.handleEvent(page.event, page.context);
+      const missingResult = await htmlRouter.handleEvent(missing.event, missing.context);
+
+      expect(pageResult).toEqual(
+        expect.objectContaining({
+          statusCode: 200,
+          body: '<p>Orders</p>',
+          headers: { 'content-type': 'text/html; charset=utf-8' },
+        }),
+      );
+      expect(missingResult).toEqual(expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1>' }));
+    });
+
+    test('rejects an HTML router with no errors.html', () => {
+      // @ts-expect-error - an HTML router needs errors.html
+      expect(() => new APIGatewayRouter({ responseType: 'html' })).toThrow(
+        'Response type configuration error: an HTML router needs errors.html',
+      );
+    });
   });
 });

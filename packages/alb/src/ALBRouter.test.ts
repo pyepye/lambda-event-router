@@ -1,4 +1,4 @@
-import { NoContent, Ok } from '@lambda-event-router/http';
+import { type ErrorInput, Html, NoContent, Ok } from '@lambda-event-router/http';
 import { allEventBuilders, createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { ALBRouter, createALBRouter, defineRoute } from './ALBRouter.js';
@@ -42,7 +42,11 @@ suite('ALBRouter', () => {
 
     test('base64 encodes a handler that answers with bytes', async ({ albHandlerEvent }) => {
       const label = Buffer.from([0x89, 0x50, 0x4e, 0x47]);
-      router.get({ filters: { path: '/labels/1' }, handler: async () => Ok(label, { 'content-type': 'image/png' }) });
+      router.get({
+        filters: { path: '/labels/1' },
+        responseType: 'binary',
+        handler: async () => Ok(label, { 'content-type': 'image/png' }),
+      });
 
       const { event, context } = albHandlerEvent({ event: { path: '/labels/1', httpMethod: 'GET' } });
       const result = await router.handleEvent(event, context);
@@ -165,7 +169,7 @@ suite('ALBRouter', () => {
       );
     });
 
-    test('catches a generic Error and returns 500 with the error message', async ({ albHandlerEvent }) => {
+    test('hides the message of an unhandled error', async ({ albHandlerEvent }) => {
       router.get({
         filters: {
           path: '/',
@@ -181,7 +185,7 @@ suite('ALBRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'something broke' }),
+          body: JSON.stringify({ error: 'Internal server error' }),
         }),
       );
     });
@@ -341,5 +345,31 @@ suite('ALBRouter.canHandleEvent', () => {
     const claimed = await createALBRouter().canHandleEvent(event);
 
     expect(claimed).toBe(isOwnEvent);
+  });
+  suite('response types', () => {
+    const errors = {
+      html: ({ statusCode, statusText }: ErrorInput): Html => Html(`<h1>${statusCode} ${statusText}</h1>`),
+    };
+
+    test('sends Html and error pages from an HTML router', async ({ albHandlerEvent }) => {
+      const htmlRouter = new ALBRouter({ responseType: 'html', errors });
+      htmlRouter.get({ filters: { path: '/orders' }, handler: async () => Html('<p>Orders</p>') });
+
+      const page = albHandlerEvent({ event: { path: '/orders', httpMethod: 'GET' } });
+      const missing = albHandlerEvent({ event: { path: '/missing', httpMethod: 'GET' } });
+      const pageResult = await htmlRouter.handleEvent(page.event, page.context);
+      const missingResult = await htmlRouter.handleEvent(missing.event, missing.context);
+
+      expect(pageResult).toEqual(expect.objectContaining({ statusCode: 200, body: '<p>Orders</p>' }));
+      expect(pageResult.headers).toEqual({ 'content-type': 'text/html; charset=utf-8' });
+      expect(missingResult).toEqual(expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1>' }));
+    });
+
+    test('rejects an HTML router with no errors.html', () => {
+      // @ts-expect-error - an HTML router needs errors.html
+      expect(() => new ALBRouter({ responseType: 'html' })).toThrow(
+        'Response type configuration error: an HTML router needs errors.html',
+      );
+    });
   });
 });

@@ -1,63 +1,110 @@
+import { logger } from '@lambda-event-router/base';
+
 import { HTTP_STATUS_CODES } from './constants.js';
-import type { ApiResponse, FinalizedHTTPResponse, HTTPResponse } from './types.js';
+import { HTTPException } from './HTTPException.js';
+import { isJsonContentType, JSON_RESPONSE_TYPE, type ResolvedResponseType } from './responseType.js';
+import type { ApiResponse, BodyForHeaders, Bytes, ErrorContext, FinalizedHTTPResponse, HTTPResponse } from './types.js';
+
+const BYTES_CONTENT_TYPE = 'application/octet-stream';
+
+function isBytes(value: unknown): value is Bytes {
+  return value instanceof Uint8Array || value instanceof ArrayBuffer;
+}
+
+function toBuffer(value: Bytes): Buffer {
+  return value instanceof ArrayBuffer ? Buffer.from(new Uint8Array(value)) : Buffer.from(value);
+}
+
+function contentTypeHeader(headers: ApiResponse['headers']): string | undefined {
+  if (headers === undefined) return undefined;
+  const name = Object.keys(headers).find((key) => key.toLowerCase() === 'content-type');
+  return name === undefined ? undefined : headers[name];
+}
+
+// A body that JSON cannot carry is a handler fault, so it answers 500
+export function bodyToJson(body: unknown): string {
+  const bodyType = typeof body;
+  let json: string | undefined;
+  try {
+    json = JSON.stringify(body);
+  } catch (error) {
+    logger.error('Response body cannot be sent as JSON', { bodyType, error });
+    throw Response.InternalServerError();
+  }
+
+  // JSON.stringify gives no text for a function or a symbol, and writes NaN and Infinity as null
+  const isNonFiniteNumber = typeof body === 'number' && !Number.isFinite(body);
+  if (json === undefined || isNonFiniteNumber) {
+    logger.error('Response body cannot be sent as JSON', { bodyType });
+    throw Response.InternalServerError();
+  }
+  return json;
+}
+
+// A content-type header set on the response picks the encoding. Without one, the route's kind does
+function encodeBody(
+  body: unknown,
+  contentType: string,
+  hasHeader: boolean,
+  responseType: ResolvedResponseType,
+): string {
+  if (isJsonContentType(contentType)) return bodyToJson(body);
+  if (typeof body === 'string') return body;
+  if (hasHeader || responseType.kind === 'json') return bodyToJson(body);
+
+  logger.error('Response body is not a string', { responseType: responseType.kind, bodyType: typeof body });
+  throw Response.InternalServerError();
+}
 
 export class Response {
   // Static factory methods for creating raw response objects (body not yet stringified)
-  static BadRequest(): HTTPResponse<{ error: string }>;
-  static BadRequest<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static BadRequest<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.BAD_REQUEST, body: body ?? { error: 'Bad request' }, headers };
+  static BadRequest(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.BAD_REQUEST, message, context, headers);
   }
 
-  static Unauthorised(): HTTPResponse<{ error: string }>;
-  static Unauthorised<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static Unauthorised<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.UNAUTHORIZED, body: body ?? { error: 'Unauthorised' }, headers };
+  static Unauthorised(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.UNAUTHORIZED, message, context, headers);
   }
 
-  static Forbidden(): HTTPResponse<{ error: string }>;
-  static Forbidden<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static Forbidden<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.FORBIDDEN, body: body ?? { error: 'Forbidden' }, headers };
+  static Forbidden(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.FORBIDDEN, message, context, headers);
   }
 
-  static NotFound(): HTTPResponse<{ error: string }>;
-  static NotFound<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static NotFound<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.NOT_FOUND, body: body ?? { error: 'Not found' }, headers };
+  static NotFound(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.NOT_FOUND, message, context, headers);
   }
 
-  static Conflict(): HTTPResponse<{ error: string }>;
-  static Conflict<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static Conflict<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return { statusCode: HTTP_STATUS_CODES.CONFLICT, body: body ?? { error: 'Conflict' }, headers };
+  static Conflict(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.CONFLICT, message, context, headers);
   }
 
-  static UnprocessableContent(): HTTPResponse<{ error: string }>;
-  static UnprocessableContent<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static UnprocessableContent<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return {
-      statusCode: HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY,
-      body: body ?? { error: 'Unprocessable content' },
-      headers,
-    };
+  static UnprocessableContent(
+    message?: string,
+    context?: ErrorContext,
+    headers?: ApiResponse['headers'],
+  ): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY, message, context, headers);
   }
 
-  static InternalServerError(): HTTPResponse<{ error: string }>;
-  static InternalServerError<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T>;
-  static InternalServerError<T>(body?: T, headers?: ApiResponse['headers']): HTTPResponse<T | { error: string }> {
-    return {
-      statusCode: HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR,
-      body: body ?? { error: 'Internal server error' },
-      headers,
-    };
+  static InternalServerError(
+    message?: string,
+    context?: ErrorContext,
+    headers?: ApiResponse['headers'],
+  ): HTTPException {
+    return new HTTPException(HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR, message, context, headers);
   }
 
-  static Ok<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T> {
+  static Ok<T extends BodyForHeaders<THeaders>, const THeaders extends Record<string, string> = Record<string, string>>(
+    body: T,
+    headers?: THeaders,
+  ): HTTPResponse<T> {
     return { statusCode: HTTP_STATUS_CODES.OK, body, headers };
   }
 
-  static Created<T>(body: T, headers?: ApiResponse['headers']): HTTPResponse<T> {
+  static Created<
+    T extends BodyForHeaders<THeaders>,
+    const THeaders extends Record<string, string> = Record<string, string>,
+  >(body: T, headers?: THeaders): HTTPResponse<T> {
     return { statusCode: HTTP_STATUS_CODES.CREATED, body, headers };
   }
 
@@ -77,68 +124,10 @@ export class Response {
     return Response.httpRedirect(HTTP_STATUS_CODES.PERMANENT_REDIRECT, location);
   }
 
-  private static isPlainObject(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && value.constructor === Object;
-  }
-
-  private static isJsonBody(value: unknown): boolean {
-    return Response.isPlainObject(value) || Array.isArray(value);
-  }
-
-  private static isBytes(value: unknown): value is Uint8Array | ArrayBuffer {
-    return value instanceof Uint8Array || value instanceof ArrayBuffer;
-  }
-
-  private static toBuffer(value: Uint8Array | ArrayBuffer): Buffer {
-    return value instanceof ArrayBuffer ? Buffer.from(new Uint8Array(value)) : Buffer.from(value);
-  }
-
-  private static defaultContentType(body: unknown): string | undefined {
-    if (Response.isJsonBody(body)) return 'application/json';
-    if (Response.isBytes(body)) return 'application/octet-stream';
-    return undefined;
-  }
-
-  private static hasContentType(headers: ApiResponse['headers']): boolean {
-    return headers !== undefined && Object.keys(headers).some((name) => name.toLowerCase() === 'content-type');
-  }
-
-  private static buildHTTPResponse(response: unknown): HTTPResponse {
-    if (Response.isHTTPResponse(response)) {
-      const contentType = Response.defaultContentType(response.body);
-      if (contentType && !Response.hasContentType(response.headers)) {
-        // Create a new object so the caller's headers are not mutated
-        return { ...response, headers: { 'content-type': contentType, ...response.headers } };
-      }
-      return response;
-    }
-
-    // Only an empty plain object returns a 204. An empty array is valid JSON body so is a 200
-    const isEmptyObject = Response.isPlainObject(response) && Object.keys(response).length === 0;
-    if (response == null || response === '' || response === true || isEmptyObject) {
-      return Response.NoContent();
-    }
-
-    const contentType = Response.defaultContentType(response);
-    return Response.Ok(response, contentType ? { 'content-type': contentType } : undefined);
-  }
-
-  private static bodyToString(body: unknown): string {
-    // Invalid/empty values
-    if (body === null || body === undefined || typeof body === 'function' || Number.isNaN(body)) {
-      return '';
-    }
-    // Primitives
-    if (typeof body === 'string') return body;
-    if (typeof body === 'number' || typeof body === 'boolean') {
-      return String(body);
-    }
-    // Objects/arrays
-    try {
-      return JSON.stringify(body);
-    } catch {
-      return String(body);
-    }
+  private static toHTTPResponse(response: unknown): HTTPResponse {
+    if (Response.isHTTPResponse(response)) return response;
+    if (response == null) return Response.NoContent();
+    return { statusCode: HTTP_STATUS_CODES.OK, body: response };
   }
 
   static isHTTPResponse(value: unknown): value is HTTPResponse {
@@ -153,46 +142,26 @@ export class Response {
   }
 
   // Instance methods for building finalized responses (body stringified)
-  create(response: unknown): FinalizedHTTPResponse {
-    const validResponse = Response.buildHTTPResponse(response);
-    const { statusCode, body, headers } = validResponse;
-
-    // Bytes travel as base64 and every service decodes them from the same flag.
-    if (Response.isBytes(body)) {
-      return { statusCode, body: Response.toBuffer(body).toString('base64'), headers, isBase64Encoded: true };
+  create(response: unknown, responseType: ResolvedResponseType = JSON_RESPONSE_TYPE): FinalizedHTTPResponse {
+    const { statusCode, body, headers } = Response.toHTTPResponse(response);
+    if (body == null) {
+      return { statusCode, body: '', headers, isBase64Encoded: false };
     }
 
-    return { statusCode, body: Response.bodyToString(body), headers, isBase64Encoded: false };
-  }
+    const headerContentType = contentTypeHeader(headers);
+    const routeContentType =
+      isBytes(body) && responseType.kind !== 'binary' ? BYTES_CONTENT_TYPE : responseType.contentType;
+    const contentType = headerContentType ?? routeContentType;
+    // Create a new object so the caller's headers are not mutated
+    const finalHeaders = headerContentType === undefined ? { 'content-type': contentType, ...headers } : headers;
 
-  unauthorised(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.Unauthorised(body));
-  }
+    // Bytes travel as base64 and every service decodes them from the same flag
+    if (isBytes(body)) {
+      return { statusCode, body: toBuffer(body).toString('base64'), headers: finalHeaders, isBase64Encoded: true };
+    }
 
-  forbidden(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.Forbidden(body));
-  }
-
-  notFound(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.NotFound(body));
-  }
-
-  badRequest(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.BadRequest(body));
-  }
-
-  unprocessableContent(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.UnprocessableContent(body));
-  }
-
-  internalServerError(message?: string): FinalizedHTTPResponse {
-    const body = message ? { error: message } : undefined;
-    return this.create(Response.InternalServerError(body));
+    const encoded = encodeBody(body, contentType, headerContentType !== undefined, responseType);
+    return { statusCode, body: encoded, headers: finalHeaders, isBase64Encoded: false };
   }
 }
 

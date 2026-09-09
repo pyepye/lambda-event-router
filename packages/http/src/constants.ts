@@ -73,3 +73,94 @@ export enum HTTP_STATUS_CODES {
   NOT_EXTENDED = 510,
   NETWORK_AUTHENTICATION_REQUIRED = 511,
 }
+
+// The reason phrases MDN lists, which are the RFC 9110 ones where RFC 9110 defines the code. MDN does not list
+// 509, which is not a standard code, so it takes the name of its enum member
+const STATUS_NAMES: Record<HTTP_STATUS_CODES, string> = {
+  [HTTP_STATUS_CODES.CONTINUE]: 'Continue',
+  [HTTP_STATUS_CODES.SWITCHING_PROTOCOLS]: 'Switching Protocols',
+  [HTTP_STATUS_CODES.PROCESSING]: 'Processing',
+  [HTTP_STATUS_CODES.EARLY_HINTS]: 'Early Hints',
+  [HTTP_STATUS_CODES.OK]: 'OK',
+  [HTTP_STATUS_CODES.CREATED]: 'Created',
+  [HTTP_STATUS_CODES.ACCEPTED]: 'Accepted',
+  [HTTP_STATUS_CODES.NON_AUTHORITATIVE_INFORMATION]: 'Non-Authoritative Information',
+  [HTTP_STATUS_CODES.NO_CONTENT]: 'No Content',
+  [HTTP_STATUS_CODES.RESET_CONTENT]: 'Reset Content',
+  [HTTP_STATUS_CODES.PARTIAL_CONTENT]: 'Partial Content',
+  [HTTP_STATUS_CODES.MULTI_STATUS]: 'Multi-Status',
+  [HTTP_STATUS_CODES.ALREADY_REPORTED]: 'Already Reported',
+  [HTTP_STATUS_CODES.IM_USED]: 'IM Used',
+  [HTTP_STATUS_CODES.MULTIPLE_CHOICES]: 'Multiple Choices',
+  [HTTP_STATUS_CODES.MOVED_PERMANENTLY]: 'Moved Permanently',
+  [HTTP_STATUS_CODES.FOUND]: 'Found',
+  [HTTP_STATUS_CODES.SEE_OTHER]: 'See Other',
+  [HTTP_STATUS_CODES.NOT_MODIFIED]: 'Not Modified',
+  [HTTP_STATUS_CODES.USE_PROXY]: 'Use Proxy',
+  [HTTP_STATUS_CODES.TEMPORARY_REDIRECT]: 'Temporary Redirect',
+  [HTTP_STATUS_CODES.PERMANENT_REDIRECT]: 'Permanent Redirect',
+  [HTTP_STATUS_CODES.BAD_REQUEST]: 'Bad Request',
+  [HTTP_STATUS_CODES.UNAUTHORIZED]: 'Unauthorized',
+  [HTTP_STATUS_CODES.PAYMENT_REQUIRED]: 'Payment Required',
+  [HTTP_STATUS_CODES.FORBIDDEN]: 'Forbidden',
+  [HTTP_STATUS_CODES.NOT_FOUND]: 'Not Found',
+  [HTTP_STATUS_CODES.METHOD_NOT_ALLOWED]: 'Method Not Allowed',
+  [HTTP_STATUS_CODES.NOT_ACCEPTABLE]: 'Not Acceptable',
+  [HTTP_STATUS_CODES.PROXY_AUTHENTICATION_REQUIRED]: 'Proxy Authentication Required',
+  [HTTP_STATUS_CODES.REQUEST_TIMEOUT]: 'Request Timeout',
+  [HTTP_STATUS_CODES.CONFLICT]: 'Conflict',
+  [HTTP_STATUS_CODES.GONE]: 'Gone',
+  [HTTP_STATUS_CODES.LENGTH_REQUIRED]: 'Length Required',
+  [HTTP_STATUS_CODES.PRECONDITION_FAILED]: 'Precondition Failed',
+  [HTTP_STATUS_CODES.PAYLOAD_TOO_LARGE]: 'Content Too Large',
+  [HTTP_STATUS_CODES.URI_TOO_LONG]: 'URI Too Long',
+  [HTTP_STATUS_CODES.UNSUPPORTED_MEDIA_TYPE]: 'Unsupported Media Type',
+  [HTTP_STATUS_CODES.RANGE_NOT_SATISFIABLE]: 'Range Not Satisfiable',
+  [HTTP_STATUS_CODES.EXPECTATION_FAILED]: 'Expectation Failed',
+  [HTTP_STATUS_CODES.IM_A_TEAPOT]: "I'm a teapot",
+  [HTTP_STATUS_CODES.MISDIRECTED_REQUEST]: 'Misdirected Request',
+  [HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY]: 'Unprocessable Content',
+  [HTTP_STATUS_CODES.LOCKED]: 'Locked',
+  [HTTP_STATUS_CODES.FAILED_DEPENDENCY]: 'Failed Dependency',
+  [HTTP_STATUS_CODES.TOO_EARLY]: 'Too Early',
+  [HTTP_STATUS_CODES.UPGRADE_REQUIRED]: 'Upgrade Required',
+  [HTTP_STATUS_CODES.PRECONDITION_REQUIRED]: 'Precondition Required',
+  [HTTP_STATUS_CODES.TOO_MANY_REQUESTS]: 'Too Many Requests',
+  [HTTP_STATUS_CODES.REQUEST_HEADER_FIELDS_TOO_LARGE]: 'Request Header Fields Too Large',
+  [HTTP_STATUS_CODES.UNAVAILABLE_FOR_LEGAL_REASONS]: 'Unavailable For Legal Reasons',
+  [HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR]: 'Internal Server Error',
+  [HTTP_STATUS_CODES.NOT_IMPLEMENTED]: 'Not Implemented',
+  [HTTP_STATUS_CODES.BAD_GATEWAY]: 'Bad Gateway',
+  [HTTP_STATUS_CODES.SERVICE_UNAVAILABLE]: 'Service Unavailable',
+  [HTTP_STATUS_CODES.GATEWAY_TIMEOUT]: 'Gateway Timeout',
+  [HTTP_STATUS_CODES.HTTP_VERSION_NOT_SUPPORTED]: 'HTTP Version Not Supported',
+  [HTTP_STATUS_CODES.VARIANT_ALSO_NEGOTIATES]: 'Variant Also Negotiates',
+  [HTTP_STATUS_CODES.INSUFFICIENT_STORAGE]: 'Insufficient Storage',
+  [HTTP_STATUS_CODES.LOOP_DETECTED]: 'Loop Detected',
+  [HTTP_STATUS_CODES.BANDWIDTH_LIMIT_EXCEEDED]: 'Bandwidth Limit Exceeded',
+  [HTTP_STATUS_CODES.NOT_EXTENDED]: 'Not Extended',
+  [HTTP_STATUS_CODES.NETWORK_AUTHENTICATION_REQUIRED]: 'Network Authentication Required',
+};
+
+function isKnownStatusCode(statusCode: number): statusCode is HTTP_STATUS_CODES {
+  return Object.hasOwn(STATUS_NAMES, statusCode);
+}
+
+export function statusName(statusCode: number): string {
+  if (!isKnownStatusCode(statusCode)) return 'Error';
+  return STATUS_NAMES[statusCode];
+}
+
+const DEFAULT_ERROR_MESSAGES: Partial<Record<number, string>> = {
+  [HTTP_STATUS_CODES.BAD_REQUEST]: 'Bad request',
+  [HTTP_STATUS_CODES.UNAUTHORIZED]: 'Unauthorised',
+  [HTTP_STATUS_CODES.FORBIDDEN]: 'Forbidden',
+  [HTTP_STATUS_CODES.NOT_FOUND]: 'Not found',
+  [HTTP_STATUS_CODES.CONFLICT]: 'Conflict',
+  [HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY]: 'Unprocessable content',
+  [HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR]: 'Internal server error',
+};
+
+export function defaultErrorMessage(statusCode: number): string {
+  return DEFAULT_ERROR_MESSAGES[statusCode] ?? statusName(statusCode);
+}

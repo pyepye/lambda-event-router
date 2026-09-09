@@ -1,11 +1,13 @@
 import type {
   AnyHttpMethod,
+  AnyResponseKind,
   ApiHandler as HTTPApiHandler,
   ApiRequest as HTTPApiRequest,
   HTTPFilterInput as HTTPFilterInputBase,
   HTTPFilters as HTTPFiltersBase,
   HTTPMiddleware as HTTPMiddlewareBase,
   RouteDefinition as HTTPRouteDefinition,
+  JsonBody,
   PathParams,
 } from '@lambda-event-router/http';
 
@@ -25,7 +27,7 @@ export type ApiHandler<
   TQuery = Record<string, string | undefined>,
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
-  TResponse = unknown,
+  TResponse = JsonBody,
 > = HTTPApiHandler<TPath, TQuery, TAuth, TBody, TResponse>;
 
 export type HTTPMiddleware<
@@ -33,7 +35,7 @@ export type HTTPMiddleware<
   TQuery = Record<string, string | undefined>,
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
-  TResponse = unknown,
+  TResponse = AnyResponseKind,
 > = HTTPMiddlewareBase<TPath, TQuery, TAuth, TBody, TResponse>;
 
 export type HTTPFilterInput<TEvent = unknown, TAuth = DefaultAuth> = HTTPFilterInputBase<TEvent, TAuth>;
@@ -50,6 +52,6 @@ export type RouteDefinition<
   TQuery = Record<string, string | undefined>,
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
-  TResponse = unknown,
+  TResponse = JsonBody,
   TMethod extends AnyHttpMethod = AnyHttpMethod,
 > = HTTPRouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod, DefaultAuth>;

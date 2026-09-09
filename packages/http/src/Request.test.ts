@@ -3,9 +3,9 @@ import type { MockInstance } from 'vitest';
 import * as base from '@lambda-event-router/base';
 import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
+import { HTTPException } from './HTTPException.js';
 import type { InternalRoute } from './PathRouter.js';
 import { Request } from './Request.js';
-import { Response } from './Response.js';
 import type { NormalizedHTTPEvent } from './types.js';
 
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
@@ -232,9 +232,8 @@ suite('Request', () => {
         await request.validateQuery();
         expect.unreachable('should have thrown');
       } catch (thrown) {
-        expect(Response.isHTTPResponse(thrown)).toBe(true);
-        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
-        expect(thrown.statusCode).toBe(400);
+        expect(thrown).toBeInstanceOf(HTTPException);
+        expect(thrown).toMatchObject({ statusCode: 400, context: [{ message: 'invalid query' }] });
       }
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ bad: 'param' }, querySchema);
     });
@@ -270,9 +269,8 @@ suite('Request', () => {
         await request.validateBody();
         expect.unreachable('should have thrown');
       } catch (thrown) {
-        expect(Response.isHTTPResponse(thrown)).toBe(true);
-        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
-        expect(thrown.statusCode).toBe(422);
+        expect(thrown).toBeInstanceOf(HTTPException);
+        expect(thrown).toMatchObject({ statusCode: 422, context: [{ message: 'invalid body' }] });
       }
       expect(validateSchemaResultSpy).toHaveBeenCalledWith({ invalid: true }, bodySchema);
     });
@@ -287,9 +285,8 @@ suite('Request', () => {
         await request.validateBody();
         expect.unreachable('should have thrown');
       } catch (thrown) {
-        expect(Response.isHTTPResponse(thrown)).toBe(true);
-        // @ts-expect-error - thrown is unknown but we verified it's an HTTPResponse above
-        expect(thrown.statusCode).toBe(422);
+        expect(thrown).toBeInstanceOf(HTTPException);
+        expect(thrown).toMatchObject({ statusCode: 422, context: [{ message: 'expected object, received string' }] });
       }
       expect(bodySchema['~standard'].validate).toHaveBeenCalled();
     });

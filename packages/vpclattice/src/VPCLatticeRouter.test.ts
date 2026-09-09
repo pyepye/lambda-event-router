@@ -1,4 +1,4 @@
-import { NoContent, Ok } from '@lambda-event-router/http';
+import { type ErrorInput, Html, NoContent, Ok } from '@lambda-event-router/http';
 import { allEventBuilders, createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 
 import { createVPCLatticeRouter, defineRoute, VPCLatticeRouter } from './VPCLatticeRouter.js';
@@ -145,7 +145,7 @@ suite('VPCLatticeRouter', () => {
       );
     });
 
-    test('catches a generic Error and returns 500 with the error message', async ({ vpcLatticeV2HandlerEvent }) => {
+    test('hides the message of an unhandled error', async ({ vpcLatticeV2HandlerEvent }) => {
       router.get({
         filters: {
           path: '/',
@@ -161,7 +161,7 @@ suite('VPCLatticeRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'something broke' }),
+          body: JSON.stringify({ error: 'Internal server error' }),
         }),
       );
     });
@@ -323,5 +323,31 @@ suite('VPCLatticeRouter.canHandleEvent', () => {
     const claimed = await createVPCLatticeRouter().canHandleEvent(event);
 
     expect(claimed).toBe(isOwnEvent);
+  });
+  suite('response types', () => {
+    const errors = {
+      html: ({ statusCode, statusText }: ErrorInput): Html => Html(`<h1>${statusCode} ${statusText}</h1>`),
+    };
+
+    test('sends Html and error pages from an HTML router', async ({ vpcLatticeV2HandlerEvent }) => {
+      const htmlRouter = new VPCLatticeRouter({ responseType: 'html', errors });
+      htmlRouter.get({ filters: { path: '/orders' }, handler: async () => Html('<p>Orders</p>') });
+
+      const page = vpcLatticeV2HandlerEvent({ event: { path: '/orders' } });
+      const missing = vpcLatticeV2HandlerEvent({ event: { path: '/missing' } });
+      const pageResult = await htmlRouter.handleEvent(page.event, page.context);
+      const missingResult = await htmlRouter.handleEvent(missing.event, missing.context);
+
+      expect(pageResult).toEqual(expect.objectContaining({ statusCode: 200, body: '<p>Orders</p>' }));
+      expect(pageResult.headers).toEqual({ 'content-type': 'text/html; charset=utf-8' });
+      expect(missingResult).toEqual(expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1>' }));
+    });
+
+    test('rejects an HTML router with no errors.html', () => {
+      // @ts-expect-error - an HTML router needs errors.html
+      expect(() => new VPCLatticeRouter({ responseType: 'html' })).toThrow(
+        'Response type configuration error: an HTML router needs errors.html',
+      );
+    });
   });
 });

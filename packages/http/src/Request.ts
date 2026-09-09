@@ -92,7 +92,7 @@ export class Request<TAuth = unknown> {
   async validateQuery(): Promise<Record<string, string | undefined>> {
     const result = await validateSchemaResult(this.queryParams, this.route.querySchema);
     if (!result.success) {
-      throw Response.BadRequest(result.issues);
+      throw Response.BadRequest(undefined, result.issues);
     }
     return result.data;
   }
@@ -102,7 +102,7 @@ export class Request<TAuth = unknown> {
 
     const result = await validateSchemaResult(this.body, this.route.bodySchema);
     if (!result.success) {
-      throw Response.UnprocessableContent(result.issues);
+      throw Response.UnprocessableContent(undefined, result.issues);
     }
     return result.data;
   }

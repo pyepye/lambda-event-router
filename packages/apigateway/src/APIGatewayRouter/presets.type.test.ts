@@ -16,11 +16,11 @@ function handlesOrg(
   request: ApiRequest<Record<string, string>, Query, AuthOf<typeof orgAuth>>,
 ): Promise<HandlerResponse> {
   expectTypeOf(request.auth.context).toEqualTypeOf<SeatsContext>();
-  return Promise.resolve(request.auth.context.seats);
+  return Promise.resolve({ seats: request.auth.context.seats });
 }
 
 function handlesIam(request: ApiRequest<Record<string, string>, Query, IamAuth>): Promise<HandlerResponse> {
-  return Promise.resolve(request.auth.iam.accountId);
+  return Promise.resolve({ accountId: request.auth.iam.accountId });
 }
 
 function handlesAnyAuth(
@@ -82,7 +82,7 @@ suite('API Gateway auth preset types', () => {
   test('defineRoute takes a preset and types the inferred handler', () => {
     defineRoute({ filters: { method: 'GET', path: '/orders' }, auth: orgAuth }).handle(async ({ auth }) => {
       expectTypeOf(auth.context.seats).toEqualTypeOf<number>();
-      return auth.context.orgId;
+      return { orgId: auth.context.orgId };
     });
   });
 
@@ -91,7 +91,7 @@ suite('API Gateway auth preset types', () => {
       .defineRoute({ filters: { method: 'GET', path: '/orders' } })
       .handle(async ({ auth }) => {
         expectTypeOf(auth.context.seats).toEqualTypeOf<number>();
-        return auth.context.orgId;
+        return { orgId: auth.context.orgId };
       });
   });
 
