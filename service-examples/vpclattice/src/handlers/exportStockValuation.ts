@@ -4,9 +4,10 @@ import { defineRoute } from '@lambda-event-router/vpclattice';
 import { STOCK } from '../utils/inventory.js';
 
 // The dot in the path is a literal, so this route takes /reports/valuation.csv and nothing else.
-// Returning a plain string leaves the router with no JSON content type to set.
+// A text route sends the string as it is, with the content type it names.
 export const exportStockValuation = defineRoute({
   filters: { method: 'GET', path: '/reports/valuation.csv' },
+  responseType: { type: 'text', contentType: 'text/csv' },
 }).handle(async () => {
   const rows = Object.values(STOCK).map((item) => `${item.sku},${item.depot},${item.quantity}`);
 

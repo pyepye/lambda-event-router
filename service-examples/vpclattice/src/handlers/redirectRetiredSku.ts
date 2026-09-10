@@ -21,5 +21,5 @@ export const redirectRetiredSku = defineRoute({
     return TemporaryRedirect('/reports/valuation');
   }
 
-  throw NotFound({ error: `SKU ${sku} has not been retired` });
+  throw NotFound(`SKU ${sku} has not been retired`);
 });

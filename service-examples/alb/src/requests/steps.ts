@@ -269,11 +269,10 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'export the returns',
       request: { method: 'GET', path: '/reports/returns.csv' },
-      expected: { status: 200, bodyIncludes: 'returnId,carrier,units\nret-8801,dpd,3' },
-      expectedInProcess: {
+      expected: {
         status: 200,
         bodyIncludes: 'returnId,carrier,units\nret-8801,dpd,3',
-        headers: { 'content-type': null },
+        headers: { 'content-type': 'text/csv' },
       },
     },
     {
@@ -285,7 +284,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
       name: 'export the return labels',
       request: { method: 'GET', path: '/reports/labels' },
       expected: { status: 502 },
-      expectedInProcess: { status: 200, bodyIncludes: 'ret-8801,dpd,GB-LEEDS-01' },
+      expectedInProcess: { status: 200, bodyIncludes: '{"returnId":"ret-8801","carrier":"dpd","depot":"GB-LEEDS-01"' },
     },
     {
       name: 'refund a return',
@@ -295,7 +294,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
         headers: JSON_HEADERS,
         body: JSON.stringify({ returnId: 'ret-8801', amount: 42.5 }),
       },
-      expected: { status: 500, bodyIncludes: 'Refunds are unavailable for ret-8801' },
+      expected: { status: 500, bodyIncludes: 'Internal server error', bodyExcludes: 'Refunds are unavailable' },
     },
     {
       name: 'refund a return with a body the schema rejects',
@@ -334,23 +333,22 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'count the open returns',
       request: { method: 'GET', path: '/reports/returns/count' },
-      expected: { status: 200, bodyIs: '1' },
-      expectedInProcess: { status: 200, bodyIs: '1', headers: { 'content-type': null } },
+      expected: { status: 200, bodyIs: '{"open":1}', headers: { 'content-type': 'application/json' } },
     },
     {
       name: 'summarise the return queue',
       request: { method: 'GET', path: '/reports/returns/queue' },
-      expected: { status: 200, bodyIncludes: '"queued":-3' },
+      expected: { status: 500, bodyIncludes: 'Internal server error' },
     },
     {
       name: 'check a return is waiting for pickup',
       request: { method: 'GET', path: '/returns/ret-8801/pickup' },
-      expected: { status: 204, bodyIs: '' },
+      expected: { status: 200, bodyIs: '{"returnId":"ret-8801","awaitingPickup":true}' },
     },
     {
       name: 'check a settled return is waiting for pickup',
       request: { method: 'GET', path: '/returns/ret-8802/pickup' },
-      expected: { status: 200, bodyIs: 'false' },
+      expected: { status: 200, bodyIs: '{"returnId":"ret-8802","awaitingPickup":false}' },
     },
     {
       name: 'release a return hold',

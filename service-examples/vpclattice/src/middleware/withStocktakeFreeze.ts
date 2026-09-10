@@ -13,7 +13,7 @@ export const withStocktakeFreeze: HTTPMiddleware<
 > = async (request, next) => {
   if (request.headers[STOCKTAKE_HEADER] === STOCKTAKE_FROZEN) {
     logger.info({ message: 'Stock replacement frozen for the stocktake', sku: request.path.sku });
-    return Conflict({ error: `SKU ${request.path.sku} is being counted` });
+    return Conflict(`SKU ${request.path.sku} is being counted`);
   }
 
   return next(request);

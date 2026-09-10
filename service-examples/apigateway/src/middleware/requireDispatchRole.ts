@@ -7,8 +7,8 @@ import { DISPATCH_ROLE, STAFF_ROLE_HEADER } from '../utils/constants.js';
 export const requireDispatchRole: HTTPMiddleware = async (request, next) => {
   const role = request.headers[STAFF_ROLE_HEADER];
 
-  if (!role) throw Unauthorised({ error: `${STAFF_ROLE_HEADER} is required` });
-  if (role !== DISPATCH_ROLE) throw Forbidden({ error: `${role} cannot book a consignment` });
+  if (!role) throw Unauthorised(`${STAFF_ROLE_HEADER} is required`);
+  if (role !== DISPATCH_ROLE) throw Forbidden(`${role} cannot book a consignment`);
 
   return next(request);
 };

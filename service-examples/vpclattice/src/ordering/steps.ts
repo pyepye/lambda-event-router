@@ -197,7 +197,11 @@ export function buildSteps(version: PayloadVersion): Step[] {
     {
       name: 'export the stock valuation',
       request: { method: 'GET', path: '/reports/valuation.csv' },
-      expected: { status: 200, bodyIncludes: 'sku,depot,quantity\nbrk-9,leeds,120' },
+      expected: {
+        status: 200,
+        bodyIncludes: 'sku,depot,quantity\nbrk-9,leeds,120',
+        headers: { 'content-type': 'text/csv' },
+      },
     },
     {
       name: 'read a path where the dot is not a dot',
@@ -212,7 +216,7 @@ export function buildSteps(version: PayloadVersion): Step[] {
         headers: JSON_HEADERS,
         body: JSON.stringify({ sku: 'brk-9', quantity: 200 }),
       },
-      expected: { status: 500, bodyIncludes: 'Supplier ordering is unavailable for brk-9' },
+      expected: { status: 500, bodyIncludes: 'Internal server error' },
     },
     {
       name: 'raise a reorder with a body the schema rejects',

@@ -10,7 +10,7 @@ export const uploadOrderManifest = defineRoute({
   bodySchema: BinaryBody,
 }).handle(async (request) => {
   const order = ORDERS[request.path.orderId];
-  if (!order) throw NotFound({ error: `Order ${request.path.orderId} does not exist` });
+  if (!order) throw NotFound(`Order ${request.path.orderId} does not exist`);
 
   const manifest = request.body.toString('utf-8');
   const lines = manifest.split('\n').filter((line) => line.length > 0);

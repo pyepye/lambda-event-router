@@ -4,8 +4,8 @@ import { logger } from '@lambda-event-router/base';
 import { RETURNS, WRITE_OFFS } from '../utils/returns.js';
 import { ReturnQueueSchema } from '../utils/schemas.js';
 
-// The count is negative and the route's own responseSchema rejects a negative one. The handler
-// builds the response itself, and the router validates only a bare value, so this one answers 200.
+// The count is negative and the route's own responseSchema rejects a negative one. The router checks
+// a body returned through Ok() too, so this one answers 500.
 export const summariseReturnQueue = defineRoute({
   filters: { method: 'GET', path: '/reports/returns/queue' },
   responseSchema: ReturnQueueSchema,

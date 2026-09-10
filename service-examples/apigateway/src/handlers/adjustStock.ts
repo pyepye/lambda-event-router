@@ -15,7 +15,7 @@ export async function adjustStock(
   >,
 ): Promise<ApiResponse<{ sku: string; quantity: number }>> {
   const record = STOCK[request.path.sku];
-  if (!record) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!record) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({
     message: 'Stock adjusted',

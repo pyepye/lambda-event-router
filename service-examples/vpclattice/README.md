@@ -28,7 +28,7 @@ both listeners reach the same routes
 ├── GET     /stock/:sku/movements/:movementId getStockMovement     two path params
 ├── GET     /suppliers/:supplierId/skus       listSupplierSkus     needs a caller identity
 ├── GET     /reports/valuation                valueStockHolding    responseSchema the handler fails
-├── GET     /reports/valuation.csv            exportStockValuation a literal dot, a string body
+├── GET     /reports/valuation.csv            exportStockValuation a literal dot, a text route
 └── POST    /reorders                         raiseReorder         throws
 ```
 
@@ -70,12 +70,12 @@ supports and every failure path it has.
 | Request context | `getStockItem` reads `serviceArn` off the request context, which only a 2.0 payload carries |
 | WARN records | `requireCallerPrincipal` warns before it refuses an unsigned caller |
 | Binary body | `replaceStockItem` takes a count sheet as bytes, typed by a `bodySchema` of `BinaryBody` |
-| String response | `exportStockValuation` returns CSV, so the router sets no JSON content type |
+| Text response | `exportStockValuation` is a text route, so the router sends the CSV as it is with `text/csv` |
 | Escaped path literal | `/reports/valuation.csv` matches itself, and `/reports/valuationXcsv` answers 404 |
 | No route matched | An unrouted path, a preflight for an unrouted path, and a near miss on an escaped dot |
 | Schema failures | One query and three bodies |
 | Thrown responses | 401, 404, 409, 307 and 308, from handlers and from two middlewares |
-| Handler failure | `raiseReorder` throws an error, which the router answers 500 |
+| Handler failure | `raiseReorder` throws an error, which the router answers 500 without its message |
 
 The service auth type is `AWS_IAM` and its auth policy allows any caller. Lattice names a signed
 caller and says nothing about an unsigned one, so the supplier read is sent both ways.
@@ -203,8 +203,8 @@ The rest of the log is one line per handler:
   after the router middleware.
 - `Stock replacement frozen for the stocktake` is the first one answering on its own. It returns a
   409 rather than calling `next`, so neither the second middleware nor the handler runs.
-- `Stock valuation exported` is the CSV route. The router sends the string back with no JSON
-  content type, because only an object or an array gets one.
+- `Stock valuation exported` is the text route. The router sends the string back as it is, with the
+  `text/csv` content type the route names.
 - `Stock adjusted on the warehouse floor` is the custom filter winning. `Stock adjusted` is the
   same method and path without the `x-channel` header.
 - `Stock movement read` proves both path params reach the handler.
@@ -225,7 +225,7 @@ already run:
 
 - `Handler response failed its responseSchema` carries the issues the valuation schema raised.
 - `Unhandled error processing HTTP request` carries `Supplier ordering is unavailable for brk-9`.
-  That is the error `raiseReorder` threw, and the router put its message in the 500 body.
+  That is the error `raiseReorder` threw. The router logs its message and leaves it out of the 500 body.
 
 The ordering log holds one line, `Inventory calls finished`, with `requests` 64 and `failures` 0.
 The per-step results come back in the invoke response, which is what the trigger prints.

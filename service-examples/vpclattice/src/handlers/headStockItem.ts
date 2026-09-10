@@ -8,7 +8,7 @@ import { STOCK, type StockItem } from '../utils/inventory.js';
 // the headers, so a HEAD answers 200 with nothing in it.
 export async function headStockItem(request: ApiRequest<{ sku: string }>): Promise<ApiResponse<StockItem>> {
   const item = STOCK[request.path.sku];
-  if (!item) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!item) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({ message: 'Stock item checked', sku: item.sku });
 

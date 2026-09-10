@@ -11,7 +11,7 @@ export const getStockRecord = defineRoute({
   filters: { method: 'GET', path: '/inventory/:sku' },
 }).handle(async (request) => {
   const record = STOCK[request.path.sku];
-  if (!record) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!record) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({
     message: 'Stock record read',

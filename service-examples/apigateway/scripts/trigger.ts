@@ -344,7 +344,7 @@ await call(
   'HTTP 1.0 book a consignment as a dispatcher',
   `${httpUrl}/dispatch`,
   { method: 'POST', headers: { ...jsonHeaders, [STAFF_ROLE_HEADER]: DISPATCH_ROLE }, body: booking },
-  { status: 500, bodyIncludes: 'rejected the booking' },
+  { status: 500, bodyIncludes: 'Internal server error' },
 );
 
 await call(

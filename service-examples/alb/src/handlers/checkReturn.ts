@@ -8,7 +8,7 @@ import { RETURNS, type ReturnRecord } from '../utils/returns.js';
 // the headers, so a HEAD answers 200 with nothing in it.
 export async function checkReturn(request: ApiRequest<{ returnId: string }>): Promise<ApiResponse<ReturnRecord>> {
   const record = RETURNS[request.path.returnId];
-  if (!record) throw NotFound({ error: `Return ${request.path.returnId} does not exist` });
+  if (!record) throw NotFound(`Return ${request.path.returnId} does not exist`);
 
   logger.info({ message: 'Return checked', returnId: record.returnId });
 

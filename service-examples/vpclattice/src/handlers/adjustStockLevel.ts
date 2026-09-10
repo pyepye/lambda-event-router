@@ -8,7 +8,7 @@ export async function adjustStockLevel(
   request: ApiRequest<{ sku: string }, Record<string, string | undefined>, VPCLatticeAuth, TStockAdjustment>,
 ): Promise<ApiResponse<{ sku: string; quantity: number }>> {
   const item = STOCK[request.path.sku];
-  if (!item) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!item) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({ message: 'Stock adjusted', sku: item.sku, delta: request.body.delta });
 

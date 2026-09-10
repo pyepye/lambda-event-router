@@ -12,7 +12,7 @@ export const getStockItem = defineRoute({
   querySchema: StockQuerySchema,
 }).handle(async (request) => {
   const item = STOCK[request.path.sku];
-  if (!item) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!item) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   const event = request.event as VPCLatticeEvent;
   const depots = request.multiValueQuery.depot ?? [];

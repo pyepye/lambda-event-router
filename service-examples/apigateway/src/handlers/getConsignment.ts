@@ -10,7 +10,7 @@ export const getConsignment = defineRoute({
   filters: { method: 'GET', path: '/dispatch/:consignmentId' },
 }).handle(async (request) => {
   const consignment = CONSIGNMENTS[request.path.consignmentId];
-  if (!consignment) throw NotFound({ error: `Consignment ${request.path.consignmentId} does not exist` });
+  if (!consignment) throw NotFound(`Consignment ${request.path.consignmentId} does not exist`);
 
   logger.info({
     message: 'Consignment read',

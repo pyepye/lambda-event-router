@@ -11,7 +11,7 @@ export const requireCallerPrincipal: HTTPMiddleware<
 > = async (request, next) => {
   if (!request.auth?.principalId) {
     logger.warn({ message: 'Supplier read refused, no caller principal', supplierId: request.path.supplierId });
-    throw Unauthorised({ error: 'The caller has no principal' });
+    throw Unauthorised('The caller has no principal');
   }
 
   logger.info({

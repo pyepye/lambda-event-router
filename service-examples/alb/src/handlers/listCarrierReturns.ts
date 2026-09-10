@@ -10,7 +10,7 @@ export const listCarrierReturns = defineRoute({
   middleware: [requireDeskRole],
 }).handle(async (request) => {
   const returnIds = CARRIER_RETURNS[request.path.carrierId];
-  if (!returnIds) throw NotFound({ error: `Carrier ${request.path.carrierId} is not known` });
+  if (!returnIds) throw NotFound(`Carrier ${request.path.carrierId} is not known`);
 
   logger.info({ message: 'Carrier returns listed', carrierId: request.path.carrierId, count: returnIds.length });
 

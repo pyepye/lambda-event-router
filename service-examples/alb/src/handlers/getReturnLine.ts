@@ -10,7 +10,7 @@ export const getReturnLine = defineRoute({
 }).handle(async (request) => {
   const line = RETURN_LINES[request.path.lineId];
   if (!line || line.returnId !== request.path.returnId) {
-    throw NotFound({ error: `Line ${request.path.lineId} does not exist on ${request.path.returnId}` });
+    throw NotFound(`Line ${request.path.lineId} does not exist on ${request.path.returnId}`);
   }
 
   logger.info({ message: 'Return line read', returnId: request.path.returnId, lineId: line.lineId });

@@ -25,14 +25,14 @@ both listeners reach the same routes
 ├── DELETE  /returns/:returnId               withdrawReturn
 ├── GET     /returns/merged/:returnId        redirectMergedReturn 307 and 308
 ├── GET     /returns/:returnId/lines/:lineId getReturnLine        two path params
-├── GET     /returns/:returnId/label         getReturnLabel       a PNG response
-├── GET     /returns/:returnId/pickup        checkReturnPickup    a bare boolean
-├── DELETE  /returns/:returnId/hold          releaseReturnHold    a bare empty object
+├── GET     /returns/:returnId/label         getReturnLabel       a binary route
+├── GET     /returns/:returnId/pickup        checkReturnPickup    a boolean in an object
+├── DELETE  /returns/:returnId/hold          releaseReturnHold    NoContent
 ├── GET     /carriers/:carrierId/returns     listCarrierReturns   needs the desk role
 ├── GET     /reports/returns                 summariseReturns     responseSchema the handler fails
-├── GET     /reports/returns/queue           summariseReturnQueue responseSchema the router skips
-├── GET     /reports/returns/count           countOpenReturns     a bare number
-├── GET     /reports/returns.csv             exportReturnsCsv     a literal dot, a string body
+├── GET     /reports/returns/queue           summariseReturnQueue responseSchema that Ok fails
+├── GET     /reports/returns/count           countOpenReturns     a count in an object
+├── GET     /reports/returns.csv             exportReturnsCsv     a literal dot, a text route
 ├── GET     /reports/labels                  exportReturnLabels   a response ALB rejects
 └── POST    /refunds                         refundReturn         throws
 ```
@@ -59,8 +59,8 @@ supports and every failure path it has.
 | Convenience methods | `get`, `post`, `put`, `patch`, `delete`, `head` and `options`, one route each |
 | `querySchema` | `getReturn` coerces `page` to a number |
 | `bodySchema` | `createReturn`, `amendReturn`, `amendReturnAtDesk` and `refundReturn`, and `replaceReturnNote` takes `BinaryBody` |
-| `responseSchema` | `listOpenReturns` passes its own schema, `summariseReturns` fails its own, and `summariseReturnQueue` builds its own response so the router never runs the schema |
-| Bare return values | An array, an object, a number, `false`, `true` and `{}`, and the router picks the status for each |
+| `responseSchema` | `listOpenReturns` passes its own schema, and `summariseReturns` and `summariseReturnQueue` fail theirs, one with a bare value and one through `Ok()` |
+| Bare return values | An array and objects, which the router answers 200 with a JSON content type |
 | Router middleware | `logRequest` runs once per matched request |
 | Route middleware | `withReturnContext` logs, `requireDeskRole` throws, `withDeskClosure` answers without calling `next` |
 | CORS | An origin function, credentials, exposed headers, an automatic preflight, and a registered `options()` route that wins |
@@ -74,16 +74,16 @@ supports and every failure path it has.
 | Binary request body | `replaceReturnNote` gunzips a note ALB base64 encoded, which only works on bytes that arrived whole |
 | `BinaryBody` refusal | A note sent as `text/plain` reads as a string, so the route answers 422 |
 | Body that is not JSON | A JSON content type whose body will not parse reaches the schema as a string |
-| Binary response body | `getReturnLabel` returns a PNG, and the router base64 encodes it and sets `isBase64Encoded` |
-| String response | `exportReturnsCsv` returns CSV, so the router sets no JSON content type |
+| Binary response body | `getReturnLabel` is a binary route, so the router base64 encodes the PNG and sets `isBase64Encoded` |
+| Text response | `exportReturnsCsv` is a text route, so the router sends the CSV as it is with `text/csv` |
 | Escaped path literal | `/reports/returns.csv` matches itself, and `/reports/returnsXcsv` answers 404 |
 | Trailing slash | `/returns/open/` reaches the route registered as `/returns/open` |
 | WARN records | `requireDeskRole` warns before it refuses a caller, once per reason |
 | No route matched | An unrouted path, a HEAD of it, a preflight for it, and a near miss on an escaped dot |
 | Schema failures | One query and five bodies |
 | Thrown responses | 401, 403, 404, 409, 307 and 308, from handlers and from two middlewares |
-| Handler failure | `refundReturn` throws an error, which the router answers 500 |
-| Oversized response | `exportReturnLabels` returns 1.1 MB, which is over the 1 MB ALB accepts |
+| Handler failure | `refundReturn` throws an error, which the router answers 500 without its message |
+| Oversized response | `exportReturnLabels` returns 1.2 MB of JSON, which is over the 1 MB ALB accepts |
 
 ALB puts no caller identity on the event, so `auth` is undefined. A route that needs a role reads one
 from a header instead.
@@ -209,17 +209,18 @@ The rest of the log is one line per handler:
   router middleware.
 - `Return note refused, the desk is closed` is the first one answering on its own. It returns a 409
   rather than calling `next`, so neither the second middleware nor the handler runs.
-- `Return label read` is the PNG route. The router base64 encodes the buffer and sets
+- `Return label read` is the binary route. The router base64 encodes the buffer and sets
   `isBase64Encoded`, and the trigger compares the bytes that came off the wire with the ones the
   handler holds.
-- `Open returns counted` is the bare number route. The router sends `1` back as the body.
-- `Return pickup checked` appears twice per listener. A return holding units answers 204, because a
-  bare `true` is no content to the router. A settled one answers 200 with the body `false`.
-- `Return hold released` returns an empty object, which the router answers 204.
-- `Return queue summarised` carries the same kind of negative count as the summary route. It answers
-  200, because a handler that builds its own response skips the `responseSchema`.
-- `Returns exported` is the CSV route. The router sends the string back with no JSON content type,
-  because only an object or an array gets one.
+- `Open returns counted` is the count route. The router sends `{"open":1}` back as the body.
+- `Return pickup checked` appears twice per listener. Both answer 200, with `awaitingPickup` set to
+  `true` for a return holding units and `false` for a settled one.
+- `Return hold released` returns `NoContent()`, which the router answers 204.
+- `Return queue summarised` carries the same kind of negative count as the summary route, and is
+  followed by the same error. The router checks a body returned through `Ok()` against the
+  `responseSchema` too.
+- `Returns exported` is the text route. The router sends the string back as it is, with the
+  `text/csv` content type the route names.
 - `Return amended at the desk` is the custom filter winning. `Return amended` is the same method and
   path without the `x-channel` header.
 - `Return line read` proves both path params reach the handler. It returns the line on its own, so
@@ -233,19 +234,20 @@ The rest of the log is one line per handler:
   absolute URL.
 - `Returns summarised` is followed by an error. The count the handler returned is negative and its
   own `responseSchema` requires a number that is not.
-- `Return labels exported` carries `bytes` as 1170000. The worker returns that response and the load
+- `Return labels exported` carries `bytes` as 1245001. The worker returns that response and the load
   balancer refuses it. The trigger sees a 502 the log has no record of.
 
 Four requests per listener match a route, log the router middleware and then log nothing else. Each
 throws its response before the handler reaches its own log line. They are a return that does not
 exist, a return that already exists, a return that still holds units, and a return with no label.
 
-The run has four `ERROR` records, two per listener. Both are the router reporting a handler it had
+The run has six `ERROR` records, three per listener. Each is the router reporting a handler it had
 already run:
 
-- `Handler response failed its responseSchema` carries the issues the summary schema raised.
+- `Handler response failed its responseSchema` appears twice, with the issues the summary and the
+  queue schemas raised.
 - `Unhandled error processing HTTP request` carries `Refunds are unavailable for ret-8801`. That is
-  the error `refundReturn` threw, and the router put its message in the 500 body.
+  the error `refundReturn` threw. The router logs its message and leaves it out of the 500 body.
 
 ## Listeners and routes
 

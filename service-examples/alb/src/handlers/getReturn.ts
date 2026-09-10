@@ -14,7 +14,7 @@ export const getReturn = defineRoute({
   querySchema: ReturnQuerySchema,
 }).handle(async (request) => {
   const record = RETURNS[request.path.returnId];
-  if (!record) throw NotFound({ error: `Return ${request.path.returnId} does not exist` });
+  if (!record) throw NotFound(`Return ${request.path.returnId} does not exist`);
 
   const carriers = request.multiValueQuery.carrier ?? [];
   const { targetGroupArn } = (request.event as ALBEvent).requestContext.elb;

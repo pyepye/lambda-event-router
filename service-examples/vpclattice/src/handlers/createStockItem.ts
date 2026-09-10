@@ -14,7 +14,7 @@ export async function createStockItem(
   request: ApiRequest<Record<string, string>, Record<string, string | undefined>, VPCLatticeAuth, TNewStockItem>,
 ): Promise<ApiResponse<StockItem>> {
   const { sku, description, quantity } = request.body;
-  if (STOCK[sku]) throw Conflict({ error: `SKU ${sku} is already stocked` });
+  if (STOCK[sku]) throw Conflict(`SKU ${sku} is already stocked`);
 
   logger.info({ message: 'Stock item created', sku, quantity });
 

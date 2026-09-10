@@ -16,7 +16,7 @@ export const adjustStockOnFloor = defineRoute({
   bodySchema: StockAdjustmentSchema,
 }).handle(async (request) => {
   const item = STOCK[request.path.sku];
-  if (!item) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!item) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({
     message: 'Stock adjusted on the warehouse floor',

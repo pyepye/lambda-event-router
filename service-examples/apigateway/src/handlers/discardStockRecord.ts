@@ -7,10 +7,10 @@ import { STOCK } from '../utils/warehouse.js';
 // answers 409.
 export async function discardStockRecord(request: ApiRequest<{ sku: string }>): Promise<ApiResponse<undefined>> {
   const record = STOCK[request.path.sku];
-  if (!record) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!record) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   if (record.quantity > 0) {
-    throw Conflict({ error: `SKU ${record.sku} still holds ${record.quantity} units` });
+    throw Conflict(`SKU ${record.sku} still holds ${record.quantity} units`);
   }
 
   logger.info({ message: 'Stock record discarded', sku: record.sku });

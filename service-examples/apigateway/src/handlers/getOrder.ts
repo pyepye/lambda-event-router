@@ -15,7 +15,7 @@ export const getOrder = defineRoute({
   middleware: [withOrderContext],
 }).handle(async (request) => {
   const order = ORDERS[request.path.orderId];
-  if (!order) throw NotFound({ error: `Order ${request.path.orderId} does not exist` });
+  if (!order) throw NotFound(`Order ${request.path.orderId} does not exist`);
 
   logger.info({
     message: 'Order read',

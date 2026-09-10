@@ -88,7 +88,7 @@ failure path each router has. They also cover all three payload formats API Gate
 | No route matched | An unrouted path, an unrouted authorizer method, an unrouted WebSocket route key |
 | Schema failures | A query, three bodies and a WebSocket frame |
 | Thrown responses | 401, 403, 404, 409, 307 and 308, from handlers and from a middleware |
-| Handler failure | `bookConsignment` throws an error, which the router answers 500 |
+| Handler failure | `bookConsignment` throws an error, which the router answers 500 without its message |
 
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. Everything
 the routers answer with is asserted by the trigger.
@@ -179,7 +179,7 @@ Two `ERROR` records are the router reporting a handler that had already run:
 - `Handler response failed its responseSchema` follows `Carrier quote fetched`. The handler returned
   a price of -1 and its own schema requires a positive one.
 - `Unhandled error processing HTTP request` carries `Carrier palletline rejected the booking`. That
-  is the error the handler threw, and the router put its message in the 500 body.
+  is the error the handler threw. The router logs its message and leaves it out of the 500 body.
 
 Seven requests reach the worker with no `Handling API request` line:
 

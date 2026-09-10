@@ -9,10 +9,10 @@ export const getOrderLine = defineRoute({
 }).handle(async (request) => {
   const { orderId, lineId } = request.path;
 
-  if (!ORDERS[orderId]) throw NotFound({ error: `Order ${orderId} does not exist` });
+  if (!ORDERS[orderId]) throw NotFound(`Order ${orderId} does not exist`);
 
   const line = ORDER_LINES[lineId];
-  if (!line) throw NotFound({ error: `Line ${lineId} is not on order ${orderId}` });
+  if (!line) throw NotFound(`Line ${lineId} is not on order ${orderId}`);
 
   logger.info({ message: 'Order line read', orderId, lineId });
 

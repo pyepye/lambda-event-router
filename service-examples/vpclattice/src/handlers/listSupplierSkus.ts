@@ -11,7 +11,7 @@ export const listSupplierSkus = defineRoute({
   middleware: [requireCallerPrincipal],
 }).handle(async (request) => {
   const skus = SUPPLIER_SKUS[request.path.supplierId];
-  if (!skus) throw NotFound({ error: `Supplier ${request.path.supplierId} is not known` });
+  if (!skus) throw NotFound(`Supplier ${request.path.supplierId} is not known`);
 
   logger.info({ message: 'Supplier SKUs listed', supplierId: request.path.supplierId, count: skus.length });
 

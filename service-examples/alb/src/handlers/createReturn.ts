@@ -8,7 +8,7 @@ export async function createReturn(
   request: ApiRequest<Record<string, string>, Record<string, string | undefined>, undefined, TNewReturn>,
 ): Promise<ApiResponse<ReturnRecord>> {
   const { returnId, orderId, units } = request.body;
-  if (RETURNS[returnId]) throw Conflict({ error: `Return ${returnId} already exists` });
+  if (RETURNS[returnId]) throw Conflict(`Return ${returnId} already exists`);
 
   logger.info({ message: 'Return created', returnId, units });
 

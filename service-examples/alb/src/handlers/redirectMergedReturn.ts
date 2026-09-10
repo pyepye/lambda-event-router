@@ -21,5 +21,5 @@ export const redirectMergedReturn = defineRoute({
     return TemporaryRedirect('/returns/open');
   }
 
-  throw NotFound({ error: `Return ${returnId} has not been merged` });
+  throw NotFound(`Return ${returnId} has not been merged`);
 });

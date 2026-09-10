@@ -7,10 +7,10 @@ import { STOCK } from '../utils/inventory.js';
 // answers 409.
 export async function discardStockItem(request: ApiRequest<{ sku: string }>): Promise<ApiResponse<undefined>> {
   const item = STOCK[request.path.sku];
-  if (!item) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!item) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   if (item.quantity > 0) {
-    throw Conflict({ error: `SKU ${item.sku} still holds ${item.quantity} units` });
+    throw Conflict(`SKU ${item.sku} still holds ${item.quantity} units`);
   }
 
   logger.info({ message: 'Stock item discarded', sku: item.sku });

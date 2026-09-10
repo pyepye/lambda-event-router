@@ -16,7 +16,7 @@ export const amendReturnAtDesk = defineRoute({
   bodySchema: ReturnAmendmentSchema,
 }).handle(async (request) => {
   const record = RETURNS[request.path.returnId];
-  if (!record) throw NotFound({ error: `Return ${request.path.returnId} does not exist` });
+  if (!record) throw NotFound(`Return ${request.path.returnId} does not exist`);
 
   logger.info({
     message: 'Return amended at the desk',

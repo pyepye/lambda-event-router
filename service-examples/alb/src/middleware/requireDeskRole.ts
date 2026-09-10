@@ -16,12 +16,12 @@ export const requireDeskRole: HTTPMiddleware<
 
   if (role === undefined) {
     logger.warn({ message: 'Carrier read refused, no desk role', carrierId: request.path.carrierId });
-    throw Unauthorised({ error: 'The caller has no desk role' });
+    throw Unauthorised('The caller has no desk role');
   }
 
   if (role !== RETURNS_DESK_ROLE) {
     logger.warn({ message: 'Carrier read refused, wrong desk role', carrierId: request.path.carrierId, role });
-    throw Forbidden({ error: 'The caller is not on the returns desk' });
+    throw Forbidden('The caller is not on the returns desk');
   }
 
   logger.info({ message: 'Carrier read authorised', carrierId: request.path.carrierId });

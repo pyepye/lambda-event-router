@@ -9,7 +9,7 @@ export async function headStockRecord(
   request: ApiRequest<{ sku: string }>,
 ): Promise<ApiResponse<StockRecord | { error: string }>> {
   const record = STOCK[request.path.sku];
-  if (!record) throw NotFound({ error: `SKU ${request.path.sku} is not stocked` });
+  if (!record) throw NotFound(`SKU ${request.path.sku} is not stocked`);
 
   logger.info({ message: 'Stock record checked', sku: record.sku });
 

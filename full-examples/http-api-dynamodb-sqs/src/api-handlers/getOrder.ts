@@ -13,7 +13,7 @@ export const getOrder = defineRoute({
   const { id } = request.path;
 
   const order = await findOrder(id);
-  if (!order) throw NotFound({ error: `Order ${id} not found` });
+  if (!order) throw NotFound(`Order ${id} not found`);
 
   return order;
 });

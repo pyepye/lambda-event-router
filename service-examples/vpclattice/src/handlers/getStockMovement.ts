@@ -9,7 +9,7 @@ export const getStockMovement = defineRoute({
 }).handle(async (request) => {
   const movement = MOVEMENTS[request.path.movementId];
   if (!movement || movement.sku !== request.path.sku) {
-    throw NotFound({ error: `Movement ${request.path.movementId} does not exist for ${request.path.sku}` });
+    throw NotFound(`Movement ${request.path.movementId} does not exist for ${request.path.sku}`);
   }
 
   logger.info({ message: 'Stock movement read', sku: request.path.sku, movementId: movement.movementId });
