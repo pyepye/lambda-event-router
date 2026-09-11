@@ -3,9 +3,11 @@ import type {
   CorsConfig,
   DefineRouteFn,
   ErrorFunctions,
+  HTTPRouterOptions,
+  HtmlRouterErrors,
   ResponseBody,
+  ResponseKind,
   ResponseTypeOption,
-  RouteKind,
 } from '@lambda-event-router/http';
 import { createDefineRoute, HTTPRouter } from '@lambda-event-router/http';
 
@@ -18,7 +20,7 @@ type RawAuth = VPCLatticeAuth;
 
 export interface VPCLatticeRouterOptions<
   TDefaultAuth extends RawAuth = RawAuth,
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 > {
@@ -37,11 +39,15 @@ export interface VPCLatticeRouterOptions<
 
 export class VPCLatticeRouter<
   TDefaultAuth extends RawAuth = RawAuth,
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 > extends HTTPRouter<VPCLatticeEvent, VPCLatticeResult, RawAuth, TDefaultAuth, TDefaultKind, TErrors, TContentType> {
-  constructor(options?: VPCLatticeRouterOptions<TDefaultAuth, TDefaultKind, TErrors, TContentType>) {
+  constructor(
+    options?: VPCLatticeRouterOptions<TDefaultAuth, TDefaultKind, TErrors, TContentType> &
+      HtmlRouterErrors<NoInfer<TDefaultKind>>,
+  ) {
+    // The options already passed HtmlRouterErrors, which TypeScript cannot resolve here for a generic kind
     super({
       adapter: vpcLatticeAdapter,
       auth: options?.auth,
@@ -49,17 +55,27 @@ export class VPCLatticeRouter<
       errors: options?.errors,
       middleware: options?.middleware,
       cors: options?.cors,
-    });
+    } as HTTPRouterOptions<
+      VPCLatticeEvent,
+      VPCLatticeResult,
+      RawAuth,
+      TDefaultAuth,
+      TDefaultKind,
+      TErrors,
+      TContentType
+    > &
+      HtmlRouterErrors<TDefaultKind>);
   }
 }
 
 export function createVPCLatticeRouter<
   TDefaultAuth extends RawAuth = RawAuth,
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 >(
-  options?: VPCLatticeRouterOptions<TDefaultAuth, TDefaultKind, TErrors, TContentType>,
+  options?: VPCLatticeRouterOptions<TDefaultAuth, TDefaultKind, TErrors, TContentType> &
+    HtmlRouterErrors<NoInfer<TDefaultKind>>,
 ): VPCLatticeRouter<TDefaultAuth, TDefaultKind, TErrors, TContentType> {
   return new VPCLatticeRouter(options);
 }

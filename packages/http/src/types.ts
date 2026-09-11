@@ -158,10 +158,16 @@ export interface ErrorInput {
 type ErrorFunction<TBody> = (error: ErrorInput) => TBody | Promise<TBody>;
 
 export interface ErrorFunctions {
-  json?: ErrorFunction<JsonBody>;
+  json?: ErrorFunction<ErrorContext>;
   html?: ErrorFunction<Html>;
   text?: ErrorFunction<string>;
 }
+
+// Checked on the router options rather than as a constraint on the kind, so an inline errors.html keeps its
+// parameter types
+export type HtmlRouterErrors<TKind extends ResponseKind> = [TKind] extends ['html']
+  ? { errors: { html: ErrorFunction<Html> } }
+  : unknown;
 
 // An HTML route needs errors.html, because no default error page could match a site
 export type RouteKind<TErrors> = TErrors extends { html: ErrorFunction<Html> }

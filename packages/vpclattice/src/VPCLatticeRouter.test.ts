@@ -343,6 +343,24 @@ suite('VPCLatticeRouter.canHandleEvent', () => {
       expect(missingResult).toEqual(expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1>' }));
     });
 
+    test('accepts an inline errors.html whose parameters are inferred', () => {
+      expect(
+        () =>
+          new VPCLatticeRouter({
+            responseType: 'html',
+            // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+            errors: { html: ({ statusCode }) => Html(`<h1>${statusCode}</h1>`) },
+          }),
+      ).not.toThrow();
+      expect(() =>
+        createVPCLatticeRouter({
+          responseType: 'html',
+          // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+          errors: { html: ({ statusCode }) => Html(`<h1>${statusCode}</h1>`) },
+        }),
+      ).not.toThrow();
+    });
+
     test('rejects an HTML router with no errors.html', () => {
       // @ts-expect-error - an HTML router needs errors.html
       expect(() => new VPCLatticeRouter({ responseType: 'html' })).toThrow(

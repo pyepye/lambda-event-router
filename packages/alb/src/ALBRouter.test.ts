@@ -351,6 +351,24 @@ suite('ALBRouter.canHandleEvent', () => {
       html: ({ statusCode, statusText }: ErrorInput): Html => Html(`<h1>${statusCode} ${statusText}</h1>`),
     };
 
+    test('accepts an inline errors.html whose parameters are inferred', () => {
+      expect(
+        () =>
+          new ALBRouter({
+            responseType: 'html',
+            // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+            errors: { html: ({ statusCode }) => Html(`<h1>${statusCode}</h1>`) },
+          }),
+      ).not.toThrow();
+      expect(() =>
+        createALBRouter({
+          responseType: 'html',
+          // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+          errors: { html: ({ statusCode }) => Html(`<h1>${statusCode}</h1>`) },
+        }),
+      ).not.toThrow();
+    });
+
     test('sends Html and error pages from an HTML router', async ({ albHandlerEvent }) => {
       const htmlRouter = new ALBRouter({ responseType: 'html', errors });
       htmlRouter.get({ filters: { path: '/orders' }, handler: async () => Html('<p>Orders</p>') });

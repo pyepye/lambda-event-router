@@ -631,6 +631,15 @@ suite('response content-type headers', () => {
 });
 
 suite('router errors', () => {
+  test('accepts an inline errors.html whose parameters are inferred', () => {
+    new HTTPRouter({
+      adapter: teamAdapter,
+      responseType: 'html',
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      errors: { html: ({ statusCode, statusText }) => Html(`<h1>${statusCode} ${statusText}</h1>`) },
+    });
+  });
+
   test('rejects an HTML router with no errors.html', () => {
     // @ts-expect-error - no default error page could match a site, so an HTML router needs errors.html
     expect(() => new HTTPRouter({ adapter: teamAdapter, responseType: 'html' })).toThrow();
@@ -659,6 +668,13 @@ suite('router errors', () => {
   test('rejects an errors.html that returns a plain string', () => {
     // @ts-expect-error - errors.html must return Html
     new HTTPRouter({ adapter: teamAdapter, errors: { html: () => '<p>Error</p>' } });
+  });
+
+  test('accepts an errors.json whose body has a statusCode field', () => {
+    new HTTPRouter({
+      adapter: teamAdapter,
+      errors: { json: ({ statusCode, message }: ErrorInput) => ({ statusCode, error: message }) },
+    });
   });
 
   test('rejects an errors.html that returns a full ApiResponse', () => {

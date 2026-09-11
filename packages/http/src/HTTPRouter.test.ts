@@ -873,6 +873,22 @@ suite('HTTPRouter', () => {
       expect(response.body).toBe('<h1>500 Internal Server Error</h1><p>Internal server error</p>');
     });
 
+    test('sends a statusCode field from errors.json as part of the body', async () => {
+      const statusRouter = new HTTPRouter({
+        adapter: mockAdapter,
+        errors: { json: ({ statusCode, message }: ErrorInput) => ({ statusCode, error: message }) },
+      });
+
+      const result = await statusRouter.handleEvent(createMockEvent({ path: '/missing' }), createMockContext());
+
+      expect(result).toEqual({
+        statusCode: 404,
+        body: JSON.stringify({ statusCode: 404, error: 'Not found' }),
+        headers: { 'content-type': 'application/json' },
+        isBase64Encoded: false,
+      });
+    });
+
     test('calls errors.json for every error when it is set', async () => {
       const json = vi.fn(({ statusCode, statusText }: ErrorInput) => ({ status: statusCode, title: statusText }));
       const jsonRouter = new HTTPRouter({ adapter: mockAdapter, errors: { json } });

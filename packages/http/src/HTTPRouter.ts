@@ -35,6 +35,7 @@ import type {
   HandlerResponse,
   HTTPAdapter,
   HTTPFilterInput,
+  HtmlRouterErrors,
   HttpMethod,
   NormalizedHTTPEvent,
   OneKind,
@@ -43,7 +44,6 @@ import type {
   ResponseKind,
   ResponseTypeOption,
   RouteDefinition,
-  RouteKind,
   ValidPath,
 } from './types.js';
 
@@ -210,7 +210,7 @@ export function createDefineRoute<TRawAuth, TDefaultAuth extends TRawAuth = TRaw
 
 export const defineRoute: DefineRouteFn<unknown> = createDefineRoute<unknown>();
 
-interface HTTPRouterOptions<
+export interface HTTPRouterOptions<
   TEvent,
   TResult,
   TAuth,
@@ -232,7 +232,7 @@ export class HTTPRouter<
   TResult,
   TAuth = unknown,
   TDefaultAuth extends TAuth = TAuth,
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 > implements EventTypeRouter<TEvent, TResult>
@@ -251,7 +251,8 @@ export class HTTPRouter<
   constructor(
     options:
       | HTTPAdapter<TEvent, TResult, TAuth>
-      | HTTPRouterOptions<TEvent, TResult, TAuth, TDefaultAuth, TDefaultKind, TErrors, TContentType>,
+      | (HTTPRouterOptions<TEvent, TResult, TAuth, TDefaultAuth, TDefaultKind, TErrors, TContentType> &
+          HtmlRouterErrors<NoInfer<TDefaultKind>>),
   ) {
     if ('canHandleEvent' in options) {
       this.adapter = options;

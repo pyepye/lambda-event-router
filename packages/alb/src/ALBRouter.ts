@@ -4,9 +4,11 @@ import type {
   CorsConfig,
   DefineRouteFn,
   ErrorFunctions,
+  HTTPRouterOptions,
+  HtmlRouterErrors,
   ResponseBody,
+  ResponseKind,
   ResponseTypeOption,
-  RouteKind,
 } from '@lambda-event-router/http';
 import { createDefineRoute, HTTPRouter } from '@lambda-event-router/http';
 
@@ -14,7 +16,7 @@ import { albAdapter } from './albAdapter.js';
 import type { HTTPMiddleware } from './types.js';
 
 export interface ALBRouterOptions<
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 > {
@@ -31,26 +33,32 @@ export interface ALBRouterOptions<
 }
 
 export class ALBRouter<
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
 > extends HTTPRouter<ALBEvent, ALBResult, undefined, undefined, TDefaultKind, TErrors, TContentType> {
-  constructor(options?: ALBRouterOptions<TDefaultKind, TErrors, TContentType>) {
+  constructor(
+    options?: ALBRouterOptions<TDefaultKind, TErrors, TContentType> & HtmlRouterErrors<NoInfer<TDefaultKind>>,
+  ) {
+    // The options already passed HtmlRouterErrors, which TypeScript cannot resolve here for a generic kind
     super({
       adapter: albAdapter,
       responseType: options?.responseType,
       errors: options?.errors,
       middleware: options?.middleware,
       cors: options?.cors,
-    });
+    } as HTTPRouterOptions<ALBEvent, ALBResult, undefined, undefined, TDefaultKind, TErrors, TContentType> &
+      HtmlRouterErrors<TDefaultKind>);
   }
 }
 
 export function createALBRouter<
-  TDefaultKind extends RouteKind<TErrors> = 'json',
+  TDefaultKind extends ResponseKind = 'json',
   TErrors extends ErrorFunctions = Record<never, never>,
   TContentType extends string = string,
->(options?: ALBRouterOptions<TDefaultKind, TErrors, TContentType>): ALBRouter<TDefaultKind, TErrors, TContentType> {
+>(
+  options?: ALBRouterOptions<TDefaultKind, TErrors, TContentType> & HtmlRouterErrors<NoInfer<TDefaultKind>>,
+): ALBRouter<TDefaultKind, TErrors, TContentType> {
   return new ALBRouter(options);
 }
 
