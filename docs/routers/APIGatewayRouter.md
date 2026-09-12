@@ -619,8 +619,6 @@ if (order.status === 'SHIPPED') throw Conflict('Shipped orders cannot be cancell
 error with its own message, so a `new Error('connect ETIMEDOUT 10.0.1.5:8000')` ends up in your logs
 and never on the wire.
 
-See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with the other HTTP routers.
-
 ### Error responses
 
 The router builds every error response the same way, whether a handler threw a helper or the router hit

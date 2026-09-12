@@ -153,10 +153,10 @@ import { Conflict, NotFound } from '@lambda-event-router/apigateway'
 export async function cancelOrderHandler({ path }: ApiRequest<{ orderId: string }>): Promise<OrderCancelled> {
   const order = await orders.get(path.orderId)
   if (!order) {
-    throw NotFound({ error: `Order ${path.orderId} not found` })
+    throw NotFound(`Order ${path.orderId} not found`)
   }
   if (order.status === 'SHIPPED') {
-    throw Conflict({ error: 'Shipped orders cannot be cancelled' })
+    throw Conflict('Shipped orders cannot be cancelled')
   }
 
   await orders.update(order.orderId, { status: 'CANCELLED' })
@@ -172,9 +172,8 @@ end the request without each function in between passing a failure back up.
 
 The authorizer routers work the same way with `Allow` and `Deny`.
 
-**Anything else thrown from an HTTP handler becomes a 500 with the error message as the response
-body.** Keep internal detail out of the messages your handlers can throw, because an error naming a
-connection string or an internal hostname puts it on the wire.
+**Anything else thrown from an HTTP handler becomes a 500 with `Internal server error` as the message.**
+The router logs the real error, so its message never reaches the caller.
 
 ```ts
 // A plain Error is not a response, so the router logs it and answers with a 500
@@ -184,12 +183,12 @@ export async function getOrderHandler({ path }: ApiRequest<{ orderId: string }>)
   return { orderId: order.orderId, status: order.status } // Does not get reached
 }
 
-// The caller gets { "statusCode": 500, "body": { "error": "connect ETIMEDOUT 10.0.1.5:8000" }}
+// The caller gets 500 {"error":"Internal server error"}
 ```
 
 ### HTTP responses
 
-A bare value becomes a 200 and the body is serialised for you, so these three are the same response:
+A bare value becomes a 200 with a JSON body, so these three are the same response:
 
 ```ts
 import { Ok } from '@lambda-event-router/apigateway'
@@ -199,17 +198,13 @@ return Ok({ orderId: order.orderId })
 return { statusCode: 200, body: { orderId: order.orderId } }
 ```
 
-For any other code, use a helper or set it yourself, so `Created(order)` and
-`{ statusCode: 201, body: order }` both give a 201. `Ok`, `Created`, `NoContent`, `NotFound`,
-`BadRequest`, `Conflict` and the rest are all exported from the router's package.
+`undefined` or `null` becomes a 204, and a string on a JSON route fails the compile. Set `responseType`
+on a route to answer with HTML, plain text or bytes instead.
 
-Empty returns become a 204 rather than a 200 with nothing in it.
-
-| You return | You get |
-| --- | --- |
-| An object or an array | 200, with a JSON content type |
-| A string, a number or another primitive | 200 |
-| `undefined`, `null`, `''`, `true` or `{}` | 204 |
+For any other status, use a helper such as `Created(order)` or `NotFound('Order not found')`. Each HTTP
+router page covers the response types, the helpers and the error responses:
+[API Gateway](/routers/APIGatewayRouter#responses), [ALB](/routers/ALBRouter#responses) and
+[VPC Lattice](/routers/VPCLatticeRouter#responses).
 
 ## Schema validation
 

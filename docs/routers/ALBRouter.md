@@ -627,8 +627,6 @@ and never on the wire.
 A 502 reaching the client is the load balancer rather than anything on this page. An ALB answers 502 of its
 own accord when a Lambda returns a shape it cannot read, or when the function errors outside the router.
 
-See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with the other HTTP routers.
-
 ### Error responses
 
 The router builds every error response the same way, whether a handler threw a helper or the router hit
