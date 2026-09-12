@@ -25,19 +25,25 @@ import { createVPCLatticeRouter } from '@lambda-event-router/vpclattice'
 import { withRequestLog } from './middleware/withRequestLog'
 
 const latticeRouter = createVPCLatticeRouter({
+  responseType: 'json',  // Optional
+  errors: {  // Optional
+    json: ({ statusCode, message }) => ({ status: statusCode, message }),
+  },
   middleware: [withRequestLog],  // Optional
   cors: { origin: 'https://app.example.com' },  // Optional
 })
 ```
 
-Both options can be left out. `createVPCLatticeRouter()` on its own gives you a router that takes both payload
-versions, answers 404 for anything you have not registered and sends no CORS headers.
+Every option can be left out. `createVPCLatticeRouter()` on its own gives you a router that answers
+JSON, answers 404 for anything you have not registered and sends no CORS headers.
 
 ### Options
 
 | Option | Type | Required | Default | Description |
 | --- | --- | --- | --- | --- |
 | `auth` | `AuthPreset` | No | | The preset every route uses unless it names its own. See [auth presets](#auth-presets) |
+| `responseType` | `ResponseTypeOption` | No | `'json'` | What every route answers with unless it names its own. See [response types](#response-types) |
+| `errors` | `ErrorFunctions` | No | | Builds the body of every error response, one function per kind. Required when the router serves HTML. See [error responses](#error-responses) |
 | `middleware` | `HTTPMiddleware[]` | No | `[]` | Runs for every request this router handles, before any route middleware. See [Middleware](#middleware) |
 | `cors` | `CorsConfig` | No | | Answers preflight and adds CORS headers to every response. See [CORS](#cors) |
 
@@ -51,14 +57,16 @@ latticeRouter.route({
   },
   querySchema: CreateOrderQuerySchema,  // Optional
   bodySchema: NewOrderSchema,  // Optional
-  responseSchema: OrderSchema,  // Optional
   middleware: [withOrgContext],  // Optional
+  responseType: 'json',  // Optional
+  responseSchema: OrderSchema,  // Optional
   handler: createOrder,
 })
 ```
 
 `filters` and `handler` are the only required keys, and inside `filters` both `method` and `path` are
-required.
+required. A `responseType` on the route overrides the router's, so one router can mix
+[response types](#response-types).
 
 `route()` returns the router, so you can chain registrations.
 
@@ -79,10 +87,11 @@ Two routes of the same shape differing only in a param name, such as `GET /order
 second never runs. Giving one of them a `custom` ranks it first, because a `custom` can only reject a
 request and never accept an extra one. See [match order](/docs/routing#match-order).
 
-**When nothing matches, the router answers 404 with `{"error":"Not found"}` and runs no middleware.** A path
-you have registered under another method counts as no match rather than a 405, so `DELETE /orders/1` against
-a `GET /orders/:orderId` route answers 404. See [nothing matched](/docs/routing#nothing-matched) for what the
-other routers do instead.
+**When nothing matches, the router answers 404 and runs no middleware.** A JSON router sends
+`{"error":"Not found"}`, and any other router sends its own [error response](#error-responses). A
+path you have registered under another method counts as no match rather than a 405, so `DELETE /orders/1`
+against a `GET /orders/:orderId` route answers 404. See [nothing
+matched](/docs/routing#nothing-matched) for what the other routers do instead.
 
 The listener rules on the Lattice service decide what reaches your Lambda target at all, so a 404 from here
 means the request got through those and then matched no route you registered.
@@ -146,6 +155,7 @@ latticeRouter.route({
       return headers['x-service-version'] === '2'
     },
   },
+  bodySchema: NewOrderSchema,
   handler: createOrder,
 })
 ```
@@ -217,7 +227,7 @@ export async function getOrder(
 ): Promise<ApiResponse<Order>> {
   const order = await orders.get(request.path.orderId)
   if (!order) {
-    throw NotFound({ error: `Order ${request.path.orderId} not found` })
+    throw NotFound(`Order ${request.path.orderId} not found`)
   }
 
   return Ok(order)
@@ -293,8 +303,10 @@ than in the handler. It still happens only once.
 The handler can return the body on its own or a full `{ statusCode, body, headers }`, which is `ApiResponse`.
 See [Responses](#responses) for what the router does with each.
 
-`HandlerResponse<T>` is the union of the two, `ApiResponse<T> | T`, so annotate with that if you want
-to return a bare value from a typed handler.
+`HandlerResponse<T>` is `ApiResponse<T> | T | HTTPException`, where `T` is the body the route's
+[response type](#response-types) takes. You can return the body on its own, a full
+`{ statusCode, body, headers }` or an error helper. It defaults to a JSON body. See
+[Responses](#responses) for what the router does with each.
 
 ### Inferred handlers
 
@@ -406,26 +418,32 @@ latticeRouter.route({
 
 | Key | Validates | A failure answers |
 | --- | --- | --- |
-| `querySchema` | The query string params | 400, with the validation issues as the body |
-| `bodySchema` | The parsed request body | 422, with the validation issues as the body |
-| `responseSchema` | The value the handler returns, unless it returns an explicit HTTP response | 500 |
+| `querySchema` | The query string params | 400, with the validation issues as the context |
+| `bodySchema` | The parsed request body | 422, with the validation issues as the context |
+| `responseSchema` | The body of every 2xx response the handler returns | 500 |
 
 Any [Standard Schema](https://standardschema.dev) library works. Validation runs after a route has matched, so
 a request failing its schema gets an error response rather than falling through to the next route, and no
 middleware runs. The query is checked first, so a request with a bad query and a bad body gets the 400.
 
-Both failures put the issues array straight in the body, so the caller sees the schema library's own messages
-and paths.
+Both failures put the issues array in the [error response](#error-responses) as its context, so on a
+JSON route the caller sees the schema library's own messages and paths.
 
 ```json
-[{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }]
+{ "error": "Unprocessable content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
 ```
 
 The handler receives the schema output. A `querySchema` of `z.object({ page: z.coerce.number().default(1) })`
 hands `query.page` the number `2` for `?page=2` and `1` when the param is absent, and unknown keys are
-stripped. A value the handler returns that fails its `responseSchema` answers 500; an explicit HTTP response
-is sent unchanged, without that check. [Schema validation](/docs/routing#schema-validation) describes the
-same behaviour on the record routers.
+stripped.
+
+`responseSchema` checks every 2xx the handler returns, so `Ok(order)`,
+`{ statusCode: 200, body: order }` and a bare `order` are all checked, and the caller gets the schema
+output. A 204 is checked too, so `NoContent()` on a route whose schema needs a body answers 500. An
+error or a redirect is sent without the check.
+
+Its output has to match the route's kind, so a JSON route's `responseSchema` outputs a JSON body and an
+HTML route's outputs `Html`.
 
 ### Binary bodies
 
@@ -449,8 +467,9 @@ Leave the `bodySchema` off and `body` is `unknown`, which the compiler makes you
 
 ## Responses
 
-Return a value and the router works out the status code, serialises the body and sets a JSON content type
-where one applies.
+Return a value and the router works out the status code, encodes the body and sets its content type.
+What you can return depends on the route's [response type](#response-types), which is JSON unless you
+say otherwise.
 
 ```ts
 return { orderId: order.orderId }             // 200, with a JSON content type
@@ -458,63 +477,215 @@ return Ok({ orderId: order.orderId })         // The same 200
 return { statusCode: 200, body: order }       // Also the same 200
 ```
 
+On a JSON route:
+
 | You return | You get |
 | --- | --- |
-| An object | 200, with a JSON content type |
-| An array | 200, with a JSON content type |
-| A string, a number or `false` | 200 |
-| A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | 200, base64 encoded with an `application/octet-stream` content type |
-| `undefined`, `null`, `''`, `true` or `{}` | 204 |
+| An object or an array, `{}` included | 200, with a JSON content type |
+| `undefined` or `null` | 204 |
+| A string, a number or a boolean | A compile error. At runtime it is JSON-encoded, so `'ok'` goes out as `"ok"` |
+| A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | A compile error, since bytes need a [binary route](#response-types) |
+| A value JSON cannot carry, such as a function or an object that refers to itself | 500, and the router logs it |
+
+A `Map` or a `Set` does not compile either, because `JSON.stringify` would send it as `{}`.
+
+### Response types
+
+A route answers in one of four kinds. Set `responseType` on the router for its default and on a route
+to override it, so one router can serve both pages and a JSON API.
+
+```ts
+import { createVPCLatticeRouter, Html } from '@lambda-event-router/vpclattice'
+
+const latticeRouter = createVPCLatticeRouter({
+  responseType: 'html',
+  errors: { html: ({ statusCode, statusText }) => Html(`<h1>${statusCode} ${statusText}</h1>`) },
+})
+
+latticeRouter
+  .get({
+    filters: { path: '/orders/:orderId' },
+    handler: async ({ path }) => Html(nunjucks.render('order.njk', await orders.get(path.orderId))),
+  })
+  .get({
+    filters: { path: '/api/orders/:orderId' },
+    responseType: 'json',
+    handler: async ({ path }) => orders.get(path.orderId),
+  })
+  .get({
+    filters: { path: '/health' },
+    responseType: 'text',
+    handler: async () => 'ok',
+  })
+```
+
+| Kind | The handler returns | Sent as | Default content type |
+| --- | --- | --- | --- |
+| `json` | An object, an array, `null` or `undefined` | JSON | `application/json` |
+| `html` | `Html(...)` | The string as it is | `text/html; charset=utf-8` |
+| `text` | A string | The string as it is | `text/plain; charset=utf-8` |
+| `binary` | A `Buffer`, a `Uint8Array` or an `ArrayBuffer` | Base64, with `isBase64Encoded` set | `application/octet-stream` |
+
+The compiler checks the handler against its kind, so a plain string on an HTML route or an object on a
+text route fails the build. `Html()` is the only way to make an HTML body, which means a string never
+reaches a page unless you wrap it. It takes a promise too, and then gives you a `Promise<Html>`.
+
+**An HTML route needs `errors.html` on its router,** because no default error page could match your
+site. Leave it out and the route fails the compile, and the router throws when you register it. See
+[error responses](#error-responses) for writing one.
+
+When the content type differs from the kind's default, pass `{ type, contentType }` instead. A `json`
+kind takes only a JSON content type, such as `application/problem+json`, and the other kinds take
+anything else.
+
+```ts
+latticeRouter.get({
+  filters: { path: '/reports/orders.csv' },
+  responseType: { type: 'text', contentType: 'text/csv' },
+  handler: async () => orders.csv(),
+})
+```
+
+An empty string on a text route is a 200 with an empty body, and `undefined` or `null` is a 204 on
+every kind.
+
+A `content-type` header on a single response sets the content type for that response alone, so a JSON
+route can answer `Ok(problem, { 'content-type': 'application/problem+json' })`. Through `Ok()` and
+`Created()` the compiler checks the header against the body: a JSON content type takes a JSON body, and
+any other takes a string or bytes. The body still has to suit the route's kind, so a CSV string needs a
+text route.
 
 ### Response helpers
 
-Anything other than a 200 or a 204 goes through a helper, or you set the status code yourself. Every helper
-takes the response body rather than a message, and the ones with a default body can be called with no
-arguments.
+Anything other than a 200 or a 204 goes through a helper, or you set the status code yourself. The
+success helpers take the body. The error helpers take a message and a context, both optional, and the
+router turns them into an [error response](#error-responses).
 
-| Helper | Status | Default body |
+| Helper | Status | With no arguments |
 | --- | --- | --- |
-| `Ok(body, headers?)` | 200 | Body is required |
-| `Created(body, headers?)` | 201 | Body is required |
+| `Ok(body, headers?)` | 200 | The body is required |
+| `Created(body, headers?)` | 201 | The body is required |
 | `NoContent()` | 204 | Empty |
 | `TemporaryRedirect(location)` | 307 | Empty, with a `Location` header |
 | `PermanentRedirect(location)` | 308 | Empty, with a `Location` header |
-| `BadRequest(body?, headers?)` | 400 | `{ error: 'Bad request' }` |
-| `Unauthorised(body?, headers?)` | 401 | `{ error: 'Unauthorised' }` |
-| `Forbidden(body?, headers?)` | 403 | `{ error: 'Forbidden' }` |
-| `NotFound(body?, headers?)` | 404 | `{ error: 'Not found' }` |
-| `Conflict(body?, headers?)` | 409 | `{ error: 'Conflict' }` |
-| `UnprocessableContent(body?, headers?)` | 422 | `{ error: 'Unprocessable content' }` |
-| `InternalServerError(body?, headers?)` | 500 | `{ error: 'Internal server error' }` |
+| `BadRequest(message?, context?, headers?)` | 400 | The message `Bad request` |
+| `Unauthorised(message?, context?, headers?)` | 401 | The message `Unauthorised` |
+| `Forbidden(message?, context?, headers?)` | 403 | The message `Forbidden` |
+| `NotFound(message?, context?, headers?)` | 404 | The message `Not found` |
+| `Conflict(message?, context?, headers?)` | 409 | The message `Conflict` |
+| `UnprocessableContent(message?, context?, headers?)` | 422 | The message `Unprocessable content` |
+| `InternalServerError(message?, context?, headers?)` | 500 | The message `Internal server error` |
 
-For a code with no helper, hand back an `ApiResponse` yourself. `HTTP_STATUS_CODES` is exported if you would
-rather not write the number.
+On a JSON route the message goes out as `error`, and the context, when there is one, as `context`.
 
 ```ts
-import { HTTP_STATUS_CODES } from '@lambda-event-router/vpclattice'
+throw NotFound(`Order ${path.orderId} not found`)
+// 404 {"error":"Order ord-1 not found"}
 
-return { statusCode: HTTP_STATUS_CODES.SERVICE_UNAVAILABLE, body: { error: 'Down for maintenance' } }
+throw Conflict('Shipped orders cannot be cancelled', { orderId: path.orderId, status: order.status })
+// 409 {"error":"Shipped orders cannot be cancelled","context":{"orderId":"ord-1","status":"SHIPPED"}}
+```
+
+The context can be any JSON value, and the compiler rejects one JSON cannot carry, such as a `Map`.
+
+For an error status with no helper, throw an `HTTPException` with the status first. It takes only a 4xx
+or 5xx, so any other status fails the compile. For any other status, return an `ApiResponse` yourself.
+`HTTP_STATUS_CODES` is exported if you would rather not write the number.
+
+```ts
+import { HTTP_STATUS_CODES, HTTPException } from '@lambda-event-router/vpclattice'
+
+throw new HTTPException(HTTP_STATUS_CODES.SERVICE_UNAVAILABLE, 'Down for maintenance', undefined, {
+  'retry-after': '3600',
+})
+
+return { statusCode: HTTP_STATUS_CODES.ACCEPTED, body: { jobId } }
 ```
 
 ### Throwing
 
-Throwing a helper works the same as returning it, and it carries the same weight from any depth, so a function
-three calls below your handler can end the request without every function in between passing a failure back
-up.
+Throwing a helper works the same as returning it, and it carries the same weight from any depth, so a
+function three calls below your handler can end the request without every function in between passing a
+failure back up.
 
 ```ts
 import { Conflict, NotFound } from '@lambda-event-router/vpclattice'
 
 const order = await orders.get(path.orderId)
-if (!order) throw NotFound({ error: `Order ${path.orderId} not found` })
-if (order.status === 'SHIPPED') throw Conflict({ error: 'Shipped orders cannot be cancelled' })
+if (!order) throw NotFound(`Order ${path.orderId} not found`)
+if (order.status === 'SHIPPED') throw Conflict('Shipped orders cannot be cancelled')
 ```
 
-**Anything else thrown becomes a 500 with the error message as the body,** so keep internal detail out of the
-errors your handlers can throw. A `new Error('connect ETIMEDOUT 10.0.1.5:8000')` puts that address on the
-wire. The router logs it before answering.
+**Anything else thrown becomes a 500 with `Internal server error` as the message.** The router logs the
+error with its own message, so a `new Error('connect ETIMEDOUT 10.0.1.5:8000')` ends up in your logs
+and never on the wire.
 
 See [HTTP responses](/docs/handlers#http-responses) for the shapes shared with the other HTTP routers.
+
+### Error responses
+
+The router builds every error response the same way, whether a handler threw a helper or the router hit
+the error itself.
+
+| Error | Status | `message` | `context` |
+| --- | --- | --- | --- |
+| No route matched | 404 | `Not found` | None |
+| Auth missing | 401 | `Unauthorised` | None |
+| Auth invalid | 403 | `Forbidden` | None |
+| Auth preset error | 500 | `Internal server error` | None |
+| Query fails `querySchema` | 400 | `Bad request` | The schema issues |
+| Body fails `bodySchema` | 422 | `Unprocessable content` | The schema issues |
+| Response fails `responseSchema` | 500 | `Internal server error` | None |
+| Anything else thrown | 500 | `Internal server error` | None |
+| An error helper or `HTTPException` | Its status | Yours, or the helper's default | Yours |
+
+With no error function of your own, a JSON route sends the message as `error` and adds the context as
+`context` when there is one. A text route sends the message on its own.
+
+```json
+{ "error": "Unprocessable content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
+```
+
+To send your own shape, set `errors` on the router with a function per kind. `json` and `text` are
+optional, and `html` is required on a router with any HTML route.
+
+```ts
+import { createVPCLatticeRouter, Html } from '@lambda-event-router/vpclattice'
+
+const latticeRouter = createVPCLatticeRouter({
+  responseType: 'html',
+  errors: {
+    html: ({ statusCode, statusText }) => Html(`<h1>${statusCode} ${statusText}</h1>`),
+    json: ({ statusCode, message, context }) => ({ statusCode, error: message, details: context }),
+  },
+})
+```
+
+The `html` function above returns only an `<h1>` heading. To send a full HTML page, use a template engine
+such as Nunjucks.
+
+Each function gets the same input and returns only the body. The status comes from the error, and the
+headers from the `HTTPException` or helper that raised it.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `statusCode` | `ErrorStatusCode` | The status, from 400 to 599 |
+| `statusText` | `string` | The name of the status, such as `Not Found` |
+| `message` | `string` | The message the error was given, or its default |
+| `context` | `ErrorContext \| undefined` | The context the error was given, or the schema issues for a 400 or 422 |
+
+The router calls the function for the route's kind, and the router's kind for a 404 that matched no
+route. A binary route never sends bytes as an error, so it uses the router's kind, and a binary router
+uses JSON.
+
+An error response takes its kind's default content type rather than the route's, so a `text/csv`
+route's 404 is `text/plain`. Set a `content-type` in the exception's headers to change it.
+
+**If an error function throws, the router logs it and answers a 500 it builds itself.** A JSON route
+gets `{"error":"Internal server error"}`, and every other kind gets the plain text
+`Internal server error`.
+
+CORS headers and the `HEAD` rule apply to every error response.
 
 ## Auth
 
@@ -739,13 +910,16 @@ latticeRouter.put({
 })
 ```
 
-A middleware can also short-circuit by returning a response instead of calling `next`, so an auth check or a
-maintenance window can answer without the handler running. A check like the one above rejects any caller
-Lattice could not name, on either payload version, so it belongs on the routes that need an identity rather
-than on the router.
+A middleware can also short-circuit by returning or throwing an error helper instead of calling `next`,
+so an auth check or a maintenance window can answer without the handler running.
 
 The bare alias is the right one for router middleware, which runs for every route and so cannot know any one
 route's shape.
+
+**The bare alias cannot answer with a body of its own,** since it runs on routes of every
+[response type](#response-types). It can return what `next()` gives it or an error helper, and nothing
+else compiles. A middleware that reads or builds a body names it as the fifth parameter, so
+`HTTPMiddleware<..., JsonBody>` fits only JSON routes and never a router.
 
 **On a route, the bare alias pins the route's types and the handler quietly loses them.** `HTTPMiddleware` with
 no parameters defaults `path` to `Record<string, string>`, `query` to the raw query and `body` to `unknown`,
@@ -790,6 +964,16 @@ All exported from `@lambda-event-router/vpclattice`.
 | `ApiHandler<TPath, TQuery, TAuth, TBody, TResponse>` | The handler signature |
 | `RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod>` | A full route passed to `route()` |
 | `PathParams<TPathString>` | The params a pattern names, so `PathParams<'/orders/:orderId'>` is `{ orderId: string }` |
+| `JsonBody` | What a JSON route returns: an object, an array, `null` or `undefined` |
+| `Html` | An HTML body, which only `Html()` makes |
+| `Bytes` | `Uint8Array \| ArrayBuffer`, which a binary route returns along with a `Buffer` |
+| `ResponseKind` | `'json' \| 'html' \| 'text' \| 'binary'` |
+| `ResponseTypeOption` | The `responseType` option, a kind or `{ type, contentType }` |
+| `ResponseBody<TKind>` | The body a kind returns. With no argument, the body of any kind |
+| `ErrorFunctions` | The `errors` option |
+| `ErrorInput` | What an error function gets, `{ statusCode, statusText, message, context }` |
+| `ErrorContext` | Any JSON value, which an error helper takes as its context |
+| `ErrorStatusCode` | A 4xx or 5xx status, which `HTTPException` takes |
 | `VPCLatticeAuth` | `request.auth`, which is `VPCLatticeIamAuth` or `undefined` |
 | `CorsConfig` | The `cors` option |
 | `CorsOriginFunction` | A dynamic `origin`, `(origin, path) => string \| undefined` |
@@ -809,7 +993,7 @@ from here rather than naming that package. The route definition and request type
 
 The `VPCLatticeRouter` class, the `createVPCLatticeRouter` and `defineRoute` functions and the [auth
 presets](#auth-presets) come from the same place, along with the `Response` class, the response helpers,
-`HTTP_STATUS_CODES`, `BinaryBody` and the three adapters.
+`Html`, `HTTPException`, `HTTP_STATUS_CODES`, `BinaryBody` and the three adapters.
 
 `HTTPRouter` is exported too, for [pinning a router to one payload version](#event-versions).
 `NormalizedHTTPEvent`, `FinalizedHTTPResponse` and `HTTPAdapter` go with it for writing an adapter of
@@ -827,7 +1011,7 @@ Eight parameters cover every type above, and they do not all appear in the same 
 | `TAuth` | `request.auth` | `VPCLatticeAuth` |
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
-| `TResponse` | What the handler returns | `unknown` |
+| `TResponse` | What the handler returns | `JsonBody` |
 | `TEvent` | `request.event` | `unknown` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
@@ -914,7 +1098,7 @@ export async function getOrder(request: ApiRequest<OrderPath>): Promise<ApiRespo
 
   const order = await orders.get(orgId, orderId)
   if (!order) {
-    throw NotFound({ error: \`Order \${orderId} not found\` })
+    throw NotFound(\`Order \${orderId} not found\`)
   }
 
   return Ok(order)
