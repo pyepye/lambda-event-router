@@ -33,7 +33,7 @@ export type ApiHandler<
 
 export type HTTPMiddleware<
   TPath = Record<string, string>,
-  TQuery = Record<string, string | undefined>,
+  TQuery = Record<string, unknown>,
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
   TResponse = AnyResponseKind,

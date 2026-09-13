@@ -738,6 +738,29 @@ suite('middleware response types', () => {
     });
   });
 
+  test('accepts middleware with no response type on a route with a querySchema', () => {
+    const router = new HTTPRouter({ adapter: teamAdapter, errors });
+    const querySchema = createMockSchema<{ limit: number }>();
+
+    router.get({
+      filters: { path: '/orders' },
+      querySchema,
+      middleware: [withApiKey, withTrace],
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async ({ query }) => ({ limit: query.limit }),
+    });
+  });
+
+  test('types the query values of middleware with no response type as unknown', () => {
+    // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters, which is what this test asserts
+    const readsQuery: HTTPMiddleware = async (request, next) => {
+      expectTypeOf(request.query).toEqualTypeOf<Record<string, unknown>>();
+      return next(request);
+    };
+
+    expect(readsQuery).toBeTypeOf('function');
+  });
+
   test('rejects middleware with no response type that answers with its own body', () => {
     // @ts-expect-error - the middleware does not know the route's kind, so it cannot build a body for it
     const sendsText: HTTPMiddleware = async () => 'Down for maintenance';

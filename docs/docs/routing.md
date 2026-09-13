@@ -307,8 +307,8 @@ apart by their schemas alone.
 | Router | A failing schema |
 | --- | --- |
 | Record based | Throws, and the record counts as a failure |
-| HTTP `querySchema` | 400, with the validation issues in the body |
-| HTTP `bodySchema` | 422, with the validation issues in the body |
+| HTTP `querySchema` | 400, with the validation issues as the error's `context` |
+| HTTP `bodySchema` | 422, with the validation issues as the error's `context` |
 | HTTP `responseSchema` | 500, with the issues logged rather than returned |
 
 Your handler is given the validated output rather than what arrived, so a `z.coerce.boolean()` reaches

@@ -919,13 +919,14 @@ route's shape.
 else compiles. A middleware that reads or builds a body names it as the fifth parameter, so
 `HTTPMiddleware<..., JsonBody>` fits only JSON routes and never a router.
 
-**On a route, the bare alias pins the route's types and the handler quietly loses them.** `HTTPMiddleware` with
-no parameters defaults `path` to `Record<string, string>`, `query` to the raw query and `body` to `unknown`,
-and attaching it overrides whatever the path pattern and the schemas would have given the handler. A route with
-`path: '/orgs/:orgId/orders'` and a `bodySchema` still compiles with a bare alias attached, and its handler
-gets neither `path.orgId` nor the schema's body.
+A route keeps its own types with the bare alias attached. The handler still gets `path.orgId` from the
+path pattern and the body from the `bodySchema`.
 
-Spell the parameters out to match the route, in the order [`TPath`, `TQuery`, `TAuth`, `TBody`](#generic-parameters).
+The bare alias types each query value as `unknown`, since a route's `querySchema` can turn a value into
+a number or a boolean before the middleware runs.
+
+To read typed values inside the middleware, such as the schema's body, name the parameters in the order
+[`TPath`, `TQuery`, `TAuth`, `TBody`](#generic-parameters).
 
 ```ts
 export const withOrgContext: HTTPMiddleware<
@@ -939,13 +940,6 @@ export const withOrgContext: HTTPMiddleware<
   return next(request)
 }
 ```
-
-Every parameter you leave off falls back to the alias default, so a middleware for the route above has to name
-both path params or the handler loses the one it skipped.
-
-Two cases fail the compile rather than going quiet. A `querySchema` on a route with a bare alias attached stops
-assigning, and the four methods with no body reject the bare alias outright because they type `body` as
-`undefined`.
 
 Neither level runs when nothing matched or when a schema failed. See [middleware](/docs/middleware) for the
 execution order and the three levels it attaches at.
@@ -1005,11 +999,11 @@ Eight parameters cover every type above, and they do not all appear in the same 
 | --- | --- | --- |
 | `TPathString` | The path pattern itself, which `PathParams` reads | `string` |
 | `TPath` | `request.path` | `PathParams<TPathString>` on `RouteDefinition`, `Record<string, string>` elsewhere |
-| `TQuery` | `request.query` | `Record<string, string \| undefined>` |
+| `TQuery` | `request.query` | `Record<string, unknown>` on `HTTPMiddleware`, `Record<string, string \| undefined>` elsewhere |
 | `TAuth` | `request.auth` | `VPCLatticeAuth` |
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
-| `TResponse` | What the handler returns | `JsonBody` |
+| `TResponse` | What the handler returns | Any kind on `HTTPMiddleware`, `JsonBody` elsewhere |
 | `TEvent` | `request.event` | `unknown` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth

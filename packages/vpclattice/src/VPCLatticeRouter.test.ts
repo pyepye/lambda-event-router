@@ -1,6 +1,7 @@
 import { type ErrorInput, Html, NoContent, Ok } from '@lambda-event-router/http';
 import { allEventBuilders, createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
 
+import type { HTTPMiddleware } from './types.js';
 import { createVPCLatticeRouter, defineRoute, VPCLatticeRouter } from './VPCLatticeRouter.js';
 
 suite('VPCLatticeRouter', () => {
@@ -229,6 +230,28 @@ suite('VPCLatticeRouter', () => {
 
       expect(result).toEqual(expect.objectContaining({ statusCode: 200 }));
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { page: '2', limit: '10' } }));
+    });
+
+    test('gives a bare HTTPMiddleware the output of the querySchema', async ({ vpcLatticeV2HandlerEvent }) => {
+      let receivedQuery: unknown;
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const readsQuery: HTTPMiddleware = async (request, next) => {
+        receivedQuery = request.query;
+        return next(request);
+      };
+      router.get({
+        filters: { path: '/items' },
+        querySchema: createMockSchema({ value: { limit: 10 } }),
+        middleware: [readsQuery],
+        handler: async () => NoContent(),
+      });
+
+      const { event, context } = vpcLatticeV2HandlerEvent({
+        event: { path: '/items', queryStringParameters: { limit: ['10'] } },
+      });
+      await router.handleEvent(event, context);
+
+      expect(receivedQuery).toEqual({ limit: 10 });
     });
 
     test('passes parsed body to the handler', async ({ vpcLatticeV2HandlerEvent }) => {

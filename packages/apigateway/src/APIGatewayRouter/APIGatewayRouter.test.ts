@@ -1,23 +1,17 @@
 import {
   type ErrorInput,
-  type HandlerResponse,
+  Forbidden,
   HTTPException,
   Html,
   NoContent,
   Ok,
   Response,
-  type ResponseBody,
+  Unauthorised,
 } from '@lambda-event-router/http';
 import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
 import { APIGatewayRouter, createAPIGatewayRouter, defineRoute } from './APIGatewayRouter.js';
-import type { APIGatewayAuth } from './auth.js';
-import type { ApiRequest } from './types.js';
-
-type RouterResponse = HandlerResponse<ResponseBody>; // THis sees the responses of every route, any kind
-type HTTPNext = (request: ApiRequest) => Promise<RouterResponse>;
-type NoBodyRequest = ApiRequest<Record<string, string>, Record<string, string | undefined>, APIGatewayAuth, undefined>;
-type NoBodyNext = (request: NoBodyRequest) => Promise<HandlerResponse>;
+import type { HTTPMiddleware } from './types.js';
 
 suite('APIGatewayRouter', () => {
   let router: APIGatewayRouter;
@@ -355,6 +349,28 @@ suite('APIGatewayRouter', () => {
       expect(handler).toHaveBeenCalledWith(expect.objectContaining({ query: { page: '2', limit: '10' } }));
     });
 
+    test('gives a bare HTTPMiddleware the output of the querySchema', async ({ apiGatewayV2HandlerEvent }) => {
+      let receivedQuery: unknown;
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const readsQuery: HTTPMiddleware = async (request, next) => {
+        receivedQuery = request.query;
+        return next(request);
+      };
+      router.get({
+        filters: { path: '/items' },
+        querySchema: createMockSchema({ value: { limit: 10 } }),
+        middleware: [readsQuery],
+        handler: async () => NoContent(),
+      });
+
+      const { event, context } = apiGatewayV2HandlerEvent({
+        event: { rawPath: '/items', queryStringParameters: { limit: '10' } },
+      });
+      await router.handleEvent(event, context);
+
+      expect(receivedQuery).toEqual({ limit: 10 });
+    });
+
     test('passes parsed body to the handler', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({ id: 'new-1' }));
       router.post({ filters: { path: '/items' }, handler });
@@ -377,12 +393,13 @@ suite('APIGatewayRouter', () => {
     test('executes middleware before the route handler', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middleware(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw-pre');
         const response = await next(request);
         callOrder.push('mw-post');
         return response;
-      }
+      };
 
       const router = createAPIGatewayRouter({ middleware: [middleware] });
       router.get({
@@ -402,7 +419,8 @@ suite('APIGatewayRouter', () => {
     });
 
     test('allows middleware to modify the response', async ({ apiGatewayV2HandlerEvent }) => {
-      async function addCorsHeaders(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const addCorsHeaders: HTTPMiddleware = async (request, next) => {
         const handlerResponse = await next(request);
         if (handlerResponse instanceof HTTPException) return handlerResponse;
         const response = Response.isHTTPResponse(handlerResponse) ? handlerResponse : Ok(handlerResponse);
@@ -410,7 +428,7 @@ suite('APIGatewayRouter', () => {
           ...response,
           headers: { ...response.headers, 'Access-Control-Allow-Origin': '*' },
         };
-      }
+      };
 
       const router = createAPIGatewayRouter({ middleware: [addCorsHeaders] });
       router.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'hello' }) });
@@ -429,9 +447,9 @@ suite('APIGatewayRouter', () => {
     test('allows middleware to short-circuit with an early response', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function authMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<RouterResponse> {
-        return { statusCode: 401, body: null };
-      }
+      const authMiddleware: HTTPMiddleware = async () => {
+        return Unauthorised();
+      };
 
       const router = createAPIGatewayRouter({ middleware: [authMiddleware] });
       router.get({ filters: { path: '/' }, handler });
@@ -446,15 +464,17 @@ suite('APIGatewayRouter', () => {
     test('executes multiple router-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function middlewareOne(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middlewareOne: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw1');
         return next(request);
-      }
+      };
 
-      async function middlewareTwo(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middlewareTwo: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw2');
         return next(request);
-      }
+      };
 
       const router = createAPIGatewayRouter({ middleware: [middlewareOne, middlewareTwo] });
       router.get({
@@ -478,10 +498,11 @@ suite('APIGatewayRouter', () => {
     test('executes route-level middleware for a specific route', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw');
         return next(request);
-      }
+      };
 
       router.get({
         filters: {
@@ -503,9 +524,9 @@ suite('APIGatewayRouter', () => {
     test('allows route-level middleware to short-circuit by not calling next', async ({ apiGatewayV2HandlerEvent }) => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function blockingRouteMiddleware(_request: NoBodyRequest, _next: NoBodyNext): Promise<HandlerResponse> {
-        return { statusCode: 403, body: null };
-      }
+      const blockingRouteMiddleware: HTTPMiddleware = async () => {
+        return Forbidden();
+      };
 
       router.get({
         filters: {
@@ -525,15 +546,17 @@ suite('APIGatewayRouter', () => {
     test('executes multiple route-level middleware in order', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddlewareOne(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddlewareOne: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw1');
         return next(request);
-      }
+      };
 
-      async function routeMiddlewareTwo(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddlewareTwo: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw2');
         return next(request);
-      }
+      };
 
       router.get({
         filters: {
@@ -553,11 +576,7 @@ suite('APIGatewayRouter', () => {
     });
 
     test('does not apply route middleware to other routes', async ({ apiGatewayV2HandlerEvent }) => {
-      const routeMiddleware = vi
-        .fn()
-        .mockImplementation(
-          async (request: NoBodyRequest, next: (request: NoBodyRequest) => Promise<HandlerResponse>) => next(request),
-        );
+      const routeMiddleware = vi.fn();
 
       router.get({
         filters: {
@@ -582,15 +601,11 @@ suite('APIGatewayRouter', () => {
     test('supports middleware on defineRoute builder pattern', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routeMiddleware(
-        request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
-        next: (
-          request: ApiRequest<Record<string, never>, Record<string, string | undefined>, APIGatewayAuth, unknown>,
-        ) => Promise<HandlerResponse>,
-      ): Promise<HandlerResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw');
         return next(request);
-      }
+      };
 
       const route = defineRoute({
         filters: {
@@ -616,15 +631,17 @@ suite('APIGatewayRouter', () => {
     test('executes router middleware before route middleware', async ({ apiGatewayV2HandlerEvent }) => {
       const callOrder: string[] = [];
 
-      async function routerMiddleware(request: ApiRequest, next: HTTPNext): Promise<RouterResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routerMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('router-mw');
         return next(request);
-      }
+      };
 
-      async function routeMiddleware(request: NoBodyRequest, next: NoBodyNext): Promise<HandlerResponse> {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw');
         return next(request);
-      }
+      };
 
       const router = createAPIGatewayRouter({ middleware: [routerMiddleware] });
       router.get({
@@ -645,16 +662,12 @@ suite('APIGatewayRouter', () => {
     });
 
     test('router middleware can short-circuit before route middleware runs', async ({ apiGatewayV2HandlerEvent }) => {
-      const routeMiddleware = vi
-        .fn()
-        .mockImplementation(async (request: ApiRequest, next: (request: ApiRequest) => Promise<HandlerResponse>) =>
-          next(request),
-        );
+      const routeMiddleware = vi.fn();
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      async function blockingMiddleware(_request: ApiRequest, _next: HTTPNext): Promise<RouterResponse> {
-        return { statusCode: 403, body: null };
-      }
+      const blockingMiddleware: HTTPMiddleware = async () => {
+        return Forbidden();
+      };
 
       const router = createAPIGatewayRouter({ middleware: [blockingMiddleware] });
       router.get({ filters: { path: '/' }, middleware: [routeMiddleware], handler });

@@ -72,6 +72,21 @@ const createItemRoute = defineRoute({
 
 #### Responses
 
+A route answers with JSON unless you set its `responseType` to `html`, `text` or `binary`. An HTML route
+returns `Html(...)` and needs `errors.html` on its router.
+
+```ts
+import { defineRoute } from '@lambda-event-router/http'
+
+const healthRoute = defineRoute({
+  filters: {
+    method: 'GET',
+    path: '/health',
+  },
+  responseType: 'text',
+}).handle(async () => 'ok')
+```
+
 ```ts
 import { BadRequest, NotFound, Unauthorised, Forbidden, InternalServerError } from '@lambda-event-router/http'
 

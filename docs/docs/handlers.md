@@ -180,7 +180,7 @@ The router logs the real error, so its message never reaches the caller.
 export async function getOrderHandler({ path }: ApiRequest<{ orderId: string }>) {
   const order = await orders.get(path.orderId) // Throws Error('connect ETIMEDOUT 10.0.1.5:8000')
 
-  return { orderId: order.orderId, status: order.status } // Does not get reached
+  return { orderId: order?.orderId, status: order?.status } // Does not get reached
 }
 
 // The caller gets 500 {"error":"Internal server error"}

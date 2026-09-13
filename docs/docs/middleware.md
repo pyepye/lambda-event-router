@@ -165,7 +165,7 @@ import { apiKeys } from '../services/apiKeys.js'
 export const withApiKey: HTTPMiddleware = async (request, next) => {
   const key = request.headers['x-api-key']
   if (!key || !(await apiKeys.isValid(key))) {
-    return Unauthorised({ error: 'Provide a valid x-api-key header' })
+    return Unauthorised('Provide a valid x-api-key header')
   }
 
   return next(request)
@@ -212,7 +212,7 @@ export const skipMuted: SNSMiddleware = async (request, next) => {
 // The router still owes the caller a response, so return one
 export const withMaintenanceWindow: HTTPMiddleware = async (request, next) => {
   if (await maintenance.isActive()) {
-    return { statusCode: 503, body: { error: 'Orders are read only until 06:00 UTC' } }
+    return new HTTPException(HTTP_STATUS_CODES.SERVICE_UNAVAILABLE, 'Orders are read only until 06:00 UTC')
   }
 
   return next(request)
@@ -221,9 +221,9 @@ export const withMaintenanceWindow: HTTPMiddleware = async (request, next) => {
 
 :::
 
-There is no helper for a 503, so that one sets the status code by hand. An HTTP middleware can also
-throw a response helper rather than returning it, which is the readable option once the check sits a
-few calls below the middleware itself. See [handlers](/docs/handlers#throwing).
+There is no helper for a 503, so that one returns an `HTTPException` with the status. An HTTP
+middleware can also throw a response helper rather than returning it, which is the readable option once
+the check sits a few calls below the middleware itself. See [handlers](/docs/handlers#throwing).
 
 ## Failing and recovering
 
@@ -372,7 +372,7 @@ import { apiKeys } from '../services/apiKeys.js'
 export const withApiKey: HTTPMiddleware = async (request, next) => {
   const key = request.headers['x-api-key']
   if (!key || !(await apiKeys.isValid(key))) {
-    return Unauthorised({ error: 'Provide a valid x-api-key header' })
+    return Unauthorised('Provide a valid x-api-key header')
   }
 
   return next(request)

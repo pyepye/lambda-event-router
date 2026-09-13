@@ -265,7 +265,7 @@ type AnyKindMiddleware<TRequest> = <TResponse>(
 // Middleware that reads or builds a body names the response type, which ties it to routes of that kind
 export type HTTPMiddleware<
   TPath = Record<string, string>,
-  TQuery = Record<string, string | undefined>,
+  TQuery = Record<string, unknown>,
   TAuth = unknown,
   TBody = unknown,
   TResponse = AnyResponseKind,

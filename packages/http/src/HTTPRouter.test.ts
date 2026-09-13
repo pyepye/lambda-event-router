@@ -1,6 +1,5 @@
 import type { MockInstance } from 'vitest';
 
-import type { Middleware } from '@lambda-event-router/base';
 import * as base from '@lambda-event-router/base';
 import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
 
@@ -8,22 +7,19 @@ import { BinaryBody } from './binaryBody.js';
 import { HTTPException } from './HTTPException.js';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { Html } from './html.js';
-import { Conflict, Created, Forbidden, NoContent, NotFound, Ok, TemporaryRedirect } from './Response.js';
+import { Conflict, Created, Forbidden, NoContent, NotFound, Ok, TemporaryRedirect, Unauthorised } from './Response.js';
 import type {
   ApiRequest,
   ErrorInput,
   FinalizedHTTPResponse,
   HandlerResponse,
   HTTPAdapter,
+  HTTPMiddleware,
   NormalizedHTTPEvent,
-  ResponseBody,
 } from './types.js';
 
 const validateSchemaResultSpy: MockInstance = vi.spyOn(base, 'validateSchemaResult');
 const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
-type HTTPNext = (request: ApiRequest) => Promise<HandlerResponse>;
-type RouterMiddleware = Middleware<ApiRequest, HandlerResponse<ResponseBody>>; // Sees the responses of every route
-type RouterNext = (request: ApiRequest) => Promise<HandlerResponse<ResponseBody>>;
 
 interface MockEvent {
   method: string;
@@ -122,8 +118,13 @@ suite('HTTPRouter', () => {
     });
 
     test('applies router-level middleware from options', async () => {
-      const middlewareSpy = vi.fn<RouterMiddleware>((request, next) => next(request));
-      const optionsRouter = new HTTPRouter({ adapter: mockAdapter, middleware: [middlewareSpy] });
+      const middlewareSpy = vi.fn();
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middleware: HTTPMiddleware = async (request, next) => {
+        middlewareSpy();
+        return next(request);
+      };
+      const optionsRouter = new HTTPRouter({ adapter: mockAdapter, middleware: [middleware] });
       optionsRouter.get({ filters: { path: '/' }, handler: async () => Ok({ message: 'with middleware' }) });
 
       const event = createMockEvent();
@@ -438,10 +439,15 @@ suite('HTTPRouter', () => {
     });
 
     test('executes route-level middleware before calling the handler', async () => {
-      const middlewareSpy = vi.fn<Middleware<ApiRequest, HandlerResponse>>((request, next) => next(request));
+      const middlewareSpy = vi.fn();
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middleware: HTTPMiddleware = async (request, next) => {
+        middlewareSpy();
+        return next(request);
+      };
       const route = defineRoute({
         filters: { method: 'GET', path: '/items' },
-        middleware: [middlewareSpy],
+        middleware: [middleware],
       }).handle(async () => Ok(null));
       router.route(route);
 
@@ -1275,7 +1281,7 @@ suite('HTTPRouter', () => {
 
     test('sends a helper returned from middleware', async () => {
       const handler = vi.fn();
-      const closed: Middleware<ApiRequest, HandlerResponse> = async () => Conflict('The desk is closed');
+      const closed: HTTPMiddleware = async () => Conflict('The desk is closed');
       router.get({ filters: { path: '/' }, handler, middleware: [closed] });
 
       const result = await router.handleEvent(createMockEvent(), createMockContext());
@@ -1425,7 +1431,8 @@ suite('HTTPRouter', () => {
 
     test('a body assigned by middleware reaches the handler', async () => {
       let receivedBody: unknown;
-      const replaceBody: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const replaceBody: HTTPMiddleware = async (request, next) => {
         request.body = { replaced: true };
         return next(request);
       };
@@ -1448,7 +1455,8 @@ suite('HTTPRouter', () => {
 
     test('a request spread by middleware carries the parsed body', async () => {
       let receivedBody: unknown;
-      const spreadRequest: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) =>
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const spreadRequest: HTTPMiddleware = async (request, next) =>
         next({ ...request, headers: { ...request.headers, 'x-added': 'yes' } });
       router.post({
         filters: { path: '/items' },
@@ -1737,7 +1745,8 @@ suite('HTTPRouter', () => {
     test('executes middleware before the route handler', async () => {
       const callOrder: string[] = [];
 
-      const middleware: RouterMiddleware = async (request: ApiRequest, next: RouterNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw-pre');
         const result = await next(request);
         callOrder.push('mw-post');
@@ -1763,8 +1772,8 @@ suite('HTTPRouter', () => {
     test('allows middleware to short-circuit with an early response', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const authMiddleware: RouterMiddleware = async () => {
-        return { statusCode: 401, body: null };
+      const authMiddleware: HTTPMiddleware = async () => {
+        return Unauthorised();
       };
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [authMiddleware] });
@@ -1781,12 +1790,14 @@ suite('HTTPRouter', () => {
     test('executes multiple router-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const middlewareOne: RouterMiddleware = async (request: ApiRequest, next: RouterNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middlewareOne: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw1');
         return next(request);
       };
 
-      const middlewareTwo: RouterMiddleware = async (request: ApiRequest, next: RouterNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middlewareTwo: HTTPMiddleware = async (request, next) => {
         callOrder.push('mw2');
         return next(request);
       };
@@ -1827,8 +1838,8 @@ suite('HTTPRouter', () => {
     test('allows route-level middleware to short-circuit by not calling next', async () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const blockingRouteMiddleware: Middleware<ApiRequest, HandlerResponse> = async () => {
-        return { statusCode: 403, body: null };
+      const blockingRouteMiddleware: HTTPMiddleware = async () => {
+        return Forbidden();
       };
 
       const route = defineRoute({
@@ -1848,18 +1859,14 @@ suite('HTTPRouter', () => {
     test('executes multiple route-level middleware in order', async () => {
       const callOrder: string[] = [];
 
-      const routeMiddlewareOne: Middleware<ApiRequest, HandlerResponse> = async (
-        request: ApiRequest,
-        next: HTTPNext,
-      ) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddlewareOne: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw1');
         return next(request);
       };
 
-      const routeMiddlewareTwo: Middleware<ApiRequest, HandlerResponse> = async (
-        request: ApiRequest,
-        next: HTTPNext,
-      ) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddlewareTwo: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw2');
         return next(request);
       };
@@ -1885,12 +1892,14 @@ suite('HTTPRouter', () => {
     test('executes router middleware before route middleware', async () => {
       const callOrder: string[] = [];
 
-      const routerMiddleware: RouterMiddleware = async (request: ApiRequest, next: RouterNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routerMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('router-mw');
         return next(request);
       };
 
-      const routeMiddleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const routeMiddleware: HTTPMiddleware = async (request, next) => {
         callOrder.push('route-mw');
         return next(request);
       };
@@ -1916,8 +1925,8 @@ suite('HTTPRouter', () => {
       const routeMiddleware = vi.fn();
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
-      const blockingMiddleware: RouterMiddleware = async () => {
-        return { statusCode: 403, body: null };
+      const blockingMiddleware: HTTPMiddleware = async () => {
+        return Forbidden();
       };
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [blockingMiddleware] });
@@ -2272,7 +2281,8 @@ suite('HTTPRouter', () => {
 
     test('runs route middleware for a registered OPTIONS route', async () => {
       const order: string[] = [];
-      const middleware: Middleware<ApiRequest, HandlerResponse> = async (request: ApiRequest, next: HTTPNext) => {
+      // biome-ignore lint/nursery/useExplicitType: HTTPMiddleware types the parameters
+      const middleware: HTTPMiddleware = async (request, next) => {
         order.push('middleware');
         return next(request);
       };
