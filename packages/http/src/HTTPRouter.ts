@@ -461,7 +461,7 @@ export class HTTPRouter<
     const failure = { preset: preset.name, reason: result.reason, message: result.message, issues: result.issues };
     if (result.reason === 'missing') {
       logger.warn('Request auth does not match the auth preset', failure);
-      throw Response.Unauthorised();
+      throw Response.Unauthorized();
     }
     if (result.reason === 'invalid') {
       logger.warn('Request auth does not match the auth preset', failure);

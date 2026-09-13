@@ -264,7 +264,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'summarise the returns',
       request: { method: 'GET', path: '/reports/returns' },
-      expected: { status: 500, bodyIncludes: 'Internal server error' },
+      expected: { status: 500, bodyIncludes: 'Internal Server Error' },
     },
     {
       name: 'export the returns',
@@ -278,7 +278,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'read a path where the dot is not a dot',
       request: { method: 'GET', path: '/reports/returnsXcsv' },
-      expected: { status: 404, bodyIncludes: 'Not found' },
+      expected: { status: 404, bodyIncludes: 'Not Found' },
     },
     {
       name: 'export the return labels',
@@ -294,7 +294,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
         headers: JSON_HEADERS,
         body: JSON.stringify({ returnId: 'ret-8801', amount: 42.5 }),
       },
-      expected: { status: 500, bodyIncludes: 'Internal server error', bodyExcludes: 'Refunds are unavailable' },
+      expected: { status: 500, bodyIncludes: 'Internal Server Error', bodyExcludes: 'Refunds are unavailable' },
     },
     {
       name: 'refund a return with a body the schema rejects',
@@ -309,7 +309,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'read a path with no route',
       request: { method: 'GET', path: '/nowhere' },
-      expected: { status: 404, bodyIncludes: 'Not found' },
+      expected: { status: 404, bodyIncludes: 'Not Found' },
     },
     {
       name: 'check a path with no route',
@@ -338,7 +338,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
     {
       name: 'summarise the return queue',
       request: { method: 'GET', path: '/reports/returns/queue' },
-      expected: { status: 500, bodyIncludes: 'Internal server error' },
+      expected: { status: 500, bodyIncludes: 'Internal Server Error' },
     },
     {
       name: 'check a return is waiting for pickup',

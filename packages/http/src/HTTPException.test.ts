@@ -6,7 +6,7 @@ import {
   Forbidden,
   InternalServerError,
   NotFound,
-  Unauthorised,
+  Unauthorized,
   UnprocessableContent,
 } from './Response.js';
 
@@ -32,7 +32,7 @@ suite('HTTPException', () => {
   });
 
   test.each([
-    { statusCode: 404, message: 'Not found' },
+    { statusCode: 404, message: 'Not Found' },
     { statusCode: 429, message: 'Too Many Requests' },
   ] as const)('uses the default message for $statusCode when it is given none', ({ statusCode, message }) => {
     expect(new HTTPException(statusCode, undefined, { orderId: 'ord-1' }).message).toBe(message);
@@ -53,7 +53,7 @@ suite('HTTPException', () => {
 
   test.each([
     { name: 'BadRequest', helper: BadRequest, statusCode: 400 },
-    { name: 'Unauthorised', helper: Unauthorised, statusCode: 401 },
+    { name: 'Unauthorized', helper: Unauthorized, statusCode: 401 },
     { name: 'Forbidden', helper: Forbidden, statusCode: 403 },
     { name: 'NotFound', helper: NotFound, statusCode: 404 },
     { name: 'Conflict', helper: Conflict, statusCode: 409 },

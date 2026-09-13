@@ -172,7 +172,7 @@ end the request without each function in between passing a failure back up.
 
 The authorizer routers work the same way with `Allow` and `Deny`.
 
-**Anything else thrown from an HTTP handler becomes a 500 with `Internal server error` as the message.**
+**Anything else thrown from an HTTP handler becomes a 500 with `Internal Server Error` as the message.**
 The router logs the real error, so its message never reaches the caller.
 
 ```ts
@@ -183,7 +183,7 @@ export async function getOrderHandler({ path }: ApiRequest<{ orderId: string }>)
   return { orderId: order?.orderId, status: order?.status } // Does not get reached
 }
 
-// The caller gets 500 {"error":"Internal server error"}
+// The caller gets 500 {"error":"Internal Server Error"}
 ```
 
 ### HTTP responses

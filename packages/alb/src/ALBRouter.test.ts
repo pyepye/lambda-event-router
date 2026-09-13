@@ -165,7 +165,7 @@ suite('ALBRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
     });
@@ -186,7 +186,7 @@ suite('ALBRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -207,7 +207,7 @@ suite('ALBRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -325,7 +325,7 @@ suite('ALBRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
       expect(handler).not.toHaveBeenCalled();

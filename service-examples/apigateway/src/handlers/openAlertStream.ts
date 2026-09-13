@@ -3,7 +3,7 @@ import {
   type WebSocketConnectResponse,
   WebSocketForbidden,
   WebSocketOk,
-  WebSocketUnauthorised,
+  WebSocketUnauthorized,
 } from '@lambda-event-router/apigateway';
 import { logger } from '@lambda-event-router/base';
 
@@ -19,7 +19,7 @@ export async function openAlertStream({
 
   if (!token) {
     logger.info({ message: 'Alert stream refused, no token', connectionId });
-    return WebSocketUnauthorised();
+    return WebSocketUnauthorized();
   }
 
   if (token === RETIRED_SERVICE_TOKEN) {

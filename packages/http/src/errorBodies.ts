@@ -1,4 +1,4 @@
-import { defaultErrorMessage, HTTP_STATUS_CODES } from './constants.js';
+import { HTTP_STATUS_CODES, statusName } from './constants.js';
 import type { HTTPException } from './HTTPException.js';
 import { DEFAULT_CONTENT_TYPES } from './responseType.js';
 import type { FinalizedHTTPResponse, JsonBody, ResponseKind } from './types.js';
@@ -15,7 +15,7 @@ export function defaultTextErrorBody({ message }: HTTPException): string {
 // The last resort when the error response itself cannot be built, so it depends on nothing a user supplies
 export function fallbackServerError(kind: ResponseKind): FinalizedHTTPResponse {
   const statusCode = HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR;
-  const message = defaultErrorMessage(statusCode);
+  const message = statusName(statusCode);
   if (kind === 'json') {
     return {
       statusCode,

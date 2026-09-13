@@ -204,7 +204,7 @@ export class WebSocketRouter implements EventTypeRouter<WebSocketEvent, WebSocke
       if (isWebSocketResponse(error)) {
         if (isHTTPShapedResponse(error)) {
           logger.warn(
-            'An HTTP response was thrown from a WebSocket handler. Its body and headers are dropped, since a WebSocket answer is a status code alone. Use the WebSocket helpers, for example WebSocketUnauthorised()',
+            'An HTTP response was thrown from a WebSocket handler. Its body and headers are dropped, since a WebSocket answer is a status code alone. Use the WebSocket helpers, for example WebSocketUnauthorized()',
             { statusCode: error.statusCode },
           );
         }

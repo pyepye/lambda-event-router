@@ -158,14 +158,14 @@ endpoint, or a fallback that only makes sense for one message type.
 
 ```ts
 import type { HTTPMiddleware } from '@lambda-event-router/apigateway'
-import { Unauthorised } from '@lambda-event-router/apigateway'
+import { Unauthorized } from '@lambda-event-router/apigateway'
 
 import { apiKeys } from '../services/apiKeys.js'
 
 export const withApiKey: HTTPMiddleware = async (request, next) => {
   const key = request.headers['x-api-key']
   if (!key || !(await apiKeys.isValid(key))) {
-    return Unauthorised('Provide a valid x-api-key header')
+    return Unauthorized('Provide a valid x-api-key header')
   }
 
   return next(request)
@@ -364,7 +364,7 @@ export const withRequestLog: HTTPMiddleware = async (request, next) => {
   {
     path: 'middleware/withApiKey.ts',
     code: `import type { HTTPMiddleware } from '@lambda-event-router/apigateway'
-import { Unauthorised } from '@lambda-event-router/apigateway'
+import { Unauthorized } from '@lambda-event-router/apigateway'
 
 import { apiKeys } from '../services/apiKeys.js'
 
@@ -372,7 +372,7 @@ import { apiKeys } from '../services/apiKeys.js'
 export const withApiKey: HTTPMiddleware = async (request, next) => {
   const key = request.headers['x-api-key']
   if (!key || !(await apiKeys.isValid(key))) {
-    return Unauthorised('Provide a valid x-api-key header')
+    return Unauthorized('Provide a valid x-api-key header')
   }
 
   return next(request)

@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { Unauthorised } from '@lambda-event-router/http';
+import { Unauthorized } from '@lambda-event-router/http';
 import { allEventBuilders, createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
 
 import { WebSocketForbidden } from './response.js';
@@ -350,7 +350,7 @@ suite('WebSocketRouter', () => {
       const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
       router.message({
         handler: async () => {
-          throw Unauthorised();
+          throw Unauthorized();
         },
       });
 
@@ -359,7 +359,7 @@ suite('WebSocketRouter', () => {
 
       expect(result).toEqual({ statusCode: 401 });
       expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0]?.[0]).toContain('WebSocketUnauthorised');
+      expect(warnSpy.mock.calls[0]?.[0]).toContain('WebSocketUnauthorized');
       warnSpy.mockRestore();
     });
 

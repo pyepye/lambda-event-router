@@ -1,4 +1,4 @@
-import { Forbidden, type HTTPMiddleware, Unauthorised } from '@lambda-event-router/alb';
+import { Forbidden, type HTTPMiddleware, Unauthorized } from '@lambda-event-router/alb';
 import { logger } from '@lambda-event-router/base';
 
 import { DESK_ROLE_HEADER, RETURNS_DESK_ROLE } from '../utils/constants.js';
@@ -11,7 +11,7 @@ export const requireDeskRole: HTTPMiddleware<{ carrierId: string }> = async (req
 
   if (role === undefined) {
     logger.warn({ message: 'Carrier read refused, no desk role', carrierId: request.path.carrierId });
-    throw Unauthorised('The caller has no desk role');
+    throw Unauthorized('The caller has no desk role');
   }
 
   if (role !== RETURNS_DESK_ROLE) {

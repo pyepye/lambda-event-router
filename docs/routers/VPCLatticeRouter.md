@@ -88,7 +88,7 @@ second never runs. Giving one of them a `custom` ranks it first, because a `cust
 request and never accept an extra one. See [match order](/docs/routing#match-order).
 
 **When nothing matches, the router answers 404 and runs no middleware.** A JSON router sends
-`{"error":"Not found"}`, and any other router sends its own [error response](#error-responses). A
+`{"error":"Not Found"}`, and any other router sends its own [error response](#error-responses). A
 path you have registered under another method counts as no match rather than a 405, so `DELETE /orders/1`
 against a `GET /orders/:orderId` route answers 404. See [nothing
 matched](/docs/routing#nothing-matched) for what the other routers do instead.
@@ -430,7 +430,7 @@ Both failures put the issues array in the [error response](#error-responses) as 
 JSON route the caller sees the schema library's own messages and paths.
 
 ```json
-{ "error": "Unprocessable content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
+{ "error": "Unprocessable Content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
 ```
 
 The handler receives the schema output. A `querySchema` of `z.object({ page: z.coerce.number().default(1) })`
@@ -568,13 +568,13 @@ router turns them into an [error response](#error-responses).
 | `NoContent()` | 204 | Empty |
 | `TemporaryRedirect(location)` | 307 | Empty, with a `Location` header |
 | `PermanentRedirect(location)` | 308 | Empty, with a `Location` header |
-| `BadRequest(message?, context?, headers?)` | 400 | The message `Bad request` |
-| `Unauthorised(message?, context?, headers?)` | 401 | The message `Unauthorised` |
+| `BadRequest(message?, context?, headers?)` | 400 | The message `Bad Request` |
+| `Unauthorized(message?, context?, headers?)` | 401 | The message `Unauthorized` |
 | `Forbidden(message?, context?, headers?)` | 403 | The message `Forbidden` |
-| `NotFound(message?, context?, headers?)` | 404 | The message `Not found` |
+| `NotFound(message?, context?, headers?)` | 404 | The message `Not Found` |
 | `Conflict(message?, context?, headers?)` | 409 | The message `Conflict` |
-| `UnprocessableContent(message?, context?, headers?)` | 422 | The message `Unprocessable content` |
-| `InternalServerError(message?, context?, headers?)` | 500 | The message `Internal server error` |
+| `UnprocessableContent(message?, context?, headers?)` | 422 | The message `Unprocessable Content` |
+| `InternalServerError(message?, context?, headers?)` | 500 | The message `Internal Server Error` |
 
 On a JSON route the message goes out as `error`, and the context, when there is one, as `context`.
 
@@ -616,7 +616,7 @@ if (!order) throw NotFound(`Order ${path.orderId} not found`)
 if (order.status === 'SHIPPED') throw Conflict('Shipped orders cannot be cancelled')
 ```
 
-**Anything else thrown becomes a 500 with `Internal server error` as the message.** The router logs the
+**Anything else thrown becomes a 500 with `Internal Server Error` as the message.** The router logs the
 error with its own message, so a `new Error('connect ETIMEDOUT 10.0.1.5:8000')` ends up in your logs
 and never on the wire.
 
@@ -627,21 +627,21 @@ the error itself.
 
 | Error | Status | `message` | `context` |
 | --- | --- | --- | --- |
-| No route matched | 404 | `Not found` | None |
-| Auth missing | 401 | `Unauthorised` | None |
+| No route matched | 404 | `Not Found` | None |
+| Auth missing | 401 | `Unauthorized` | None |
 | Auth invalid | 403 | `Forbidden` | None |
-| Auth preset error | 500 | `Internal server error` | None |
-| Query fails `querySchema` | 400 | `Bad request` | The schema issues |
-| Body fails `bodySchema` | 422 | `Unprocessable content` | The schema issues |
-| Response fails `responseSchema` | 500 | `Internal server error` | None |
-| Anything else thrown | 500 | `Internal server error` | None |
+| Auth preset error | 500 | `Internal Server Error` | None |
+| Query fails `querySchema` | 400 | `Bad Request` | The schema issues |
+| Body fails `bodySchema` | 422 | `Unprocessable Content` | The schema issues |
+| Response fails `responseSchema` | 500 | `Internal Server Error` | None |
+| Anything else thrown | 500 | `Internal Server Error` | None |
 | An error helper or `HTTPException` | Its status | Yours, or the helper's default | Yours |
 
 With no error function of your own, a JSON route sends the message as `error` and adds the context as
 `context` when there is one. A text route sends the message on its own.
 
 ```json
-{ "error": "Unprocessable content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
+{ "error": "Unprocessable Content", "context": [{ "code": "invalid_type", "path": ["quantity"], "message": "Invalid input: expected number, received string" }] }
 ```
 
 To send your own shape, set `errors` on the router with a function per kind. `json` and `text` are
@@ -680,8 +680,8 @@ An error response takes its kind's default content type rather than the route's,
 route's 404 is `text/plain`. Set a `content-type` in the exception's headers to change it.
 
 **If an error function throws, the router logs it and answers a 500 it builds itself.** A JSON route
-gets `{"error":"Internal server error"}`, and every other kind gets the plain text
-`Internal server error`.
+gets `{"error":"Internal Server Error"}`, and every other kind gets the plain text
+`Internal Server Error`.
 
 CORS headers and the `HEAD` rule apply to every error response.
 
@@ -882,13 +882,13 @@ Router and route middleware are both typed `HTTPMiddleware`, and the chain runs 
 
 ```ts
 import { logger } from '@lambda-event-router/base'
-import { Unauthorised } from '@lambda-event-router/vpclattice'
+import { Unauthorized } from '@lambda-event-router/vpclattice'
 import type { HTTPMiddleware } from '@lambda-event-router/vpclattice'
 
 export const withPrincipal: HTTPMiddleware = async (request, next) => {
   if (!request.auth?.principalId) {
     logger.warn(`Rejected a ${request.method} with no caller principal`)
-    throw Unauthorised()
+    throw Unauthorized()
   }
 
   logger.appendKeys({ principalId: request.auth.principalId })

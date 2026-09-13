@@ -22,6 +22,6 @@ export function WebSocketForbidden(): WebSocketResult {
   return { statusCode: 403 };
 }
 
-export function WebSocketUnauthorised(): WebSocketResult {
+export function WebSocketUnauthorized(): WebSocketResult {
   return { statusCode: 401 };
 }

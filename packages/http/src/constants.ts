@@ -42,14 +42,14 @@ export enum HTTP_STATUS_CODES {
   GONE = 410,
   LENGTH_REQUIRED = 411,
   PRECONDITION_FAILED = 412,
-  PAYLOAD_TOO_LARGE = 413,
+  CONTENT_TOO_LARGE = 413,
   URI_TOO_LONG = 414,
   UNSUPPORTED_MEDIA_TYPE = 415,
   RANGE_NOT_SATISFIABLE = 416,
   EXPECTATION_FAILED = 417,
   IM_A_TEAPOT = 418,
   MISDIRECTED_REQUEST = 421,
-  UNPROCESSABLE_ENTITY = 422,
+  UNPROCESSABLE_CONTENT = 422,
   LOCKED = 423,
   FAILED_DEPENDENCY = 424,
   TOO_EARLY = 425,
@@ -112,14 +112,14 @@ const STATUS_NAMES: Record<HTTP_STATUS_CODES, string> = {
   [HTTP_STATUS_CODES.GONE]: 'Gone',
   [HTTP_STATUS_CODES.LENGTH_REQUIRED]: 'Length Required',
   [HTTP_STATUS_CODES.PRECONDITION_FAILED]: 'Precondition Failed',
-  [HTTP_STATUS_CODES.PAYLOAD_TOO_LARGE]: 'Content Too Large',
+  [HTTP_STATUS_CODES.CONTENT_TOO_LARGE]: 'Content Too Large',
   [HTTP_STATUS_CODES.URI_TOO_LONG]: 'URI Too Long',
   [HTTP_STATUS_CODES.UNSUPPORTED_MEDIA_TYPE]: 'Unsupported Media Type',
   [HTTP_STATUS_CODES.RANGE_NOT_SATISFIABLE]: 'Range Not Satisfiable',
   [HTTP_STATUS_CODES.EXPECTATION_FAILED]: 'Expectation Failed',
   [HTTP_STATUS_CODES.IM_A_TEAPOT]: "I'm a teapot",
   [HTTP_STATUS_CODES.MISDIRECTED_REQUEST]: 'Misdirected Request',
-  [HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY]: 'Unprocessable Content',
+  [HTTP_STATUS_CODES.UNPROCESSABLE_CONTENT]: 'Unprocessable Content',
   [HTTP_STATUS_CODES.LOCKED]: 'Locked',
   [HTTP_STATUS_CODES.FAILED_DEPENDENCY]: 'Failed Dependency',
   [HTTP_STATUS_CODES.TOO_EARLY]: 'Too Early',
@@ -149,18 +149,4 @@ function isKnownStatusCode(statusCode: number): statusCode is HTTP_STATUS_CODES 
 export function statusName(statusCode: number): string {
   if (!isKnownStatusCode(statusCode)) return 'Error';
   return STATUS_NAMES[statusCode];
-}
-
-const DEFAULT_ERROR_MESSAGES: Partial<Record<number, string>> = {
-  [HTTP_STATUS_CODES.BAD_REQUEST]: 'Bad request',
-  [HTTP_STATUS_CODES.UNAUTHORIZED]: 'Unauthorised',
-  [HTTP_STATUS_CODES.FORBIDDEN]: 'Forbidden',
-  [HTTP_STATUS_CODES.NOT_FOUND]: 'Not found',
-  [HTTP_STATUS_CODES.CONFLICT]: 'Conflict',
-  [HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY]: 'Unprocessable content',
-  [HTTP_STATUS_CODES.INTERNAL_SERVER_ERROR]: 'Internal server error',
-};
-
-export function defaultErrorMessage(statusCode: number): string {
-  return DEFAULT_ERROR_MESSAGES[statusCode] ?? statusName(statusCode);
 }

@@ -15,7 +15,7 @@ import {
   PermanentRedirect,
   Response,
   TemporaryRedirect,
-  Unauthorised,
+  Unauthorized,
   UnprocessableContent,
 } from './Response.js';
 
@@ -563,7 +563,7 @@ suite('Response', () => {
       { name: 'TemporaryRedirect', fn: TemporaryRedirect },
       { name: 'PermanentRedirect', fn: PermanentRedirect },
       { name: 'BadRequest', fn: BadRequest },
-      { name: 'Unauthorised', fn: Unauthorised },
+      { name: 'Unauthorized', fn: Unauthorized },
       { name: 'Forbidden', fn: Forbidden },
       { name: 'NotFound', fn: NotFound },
       { name: 'Conflict', fn: Conflict },

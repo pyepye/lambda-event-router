@@ -23,7 +23,7 @@ export {
   PermanentRedirect,
   Response,
   TemporaryRedirect,
-  Unauthorised,
+  Unauthorized,
   UnprocessableContent,
 } from './Response.js';
 export type {

@@ -104,7 +104,7 @@ suite('auth presets', () => {
     const result = await router.handleEvent(request(undefined), context);
 
     expect(result.statusCode).toBe(401);
-    expect(result.body).toBe(JSON.stringify({ error: 'Unauthorised' }));
+    expect(result.body).toBe(JSON.stringify({ error: 'Unauthorized' }));
     expect(warnSpy).toHaveBeenCalledWith(
       'Request auth does not match the auth preset',
       expect.objectContaining({ preset: 'teamOnly', reason: 'missing' }),

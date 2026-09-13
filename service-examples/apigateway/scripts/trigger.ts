@@ -335,7 +335,7 @@ await call(
   'HTTP 1.0 quote a carrier rate the response schema rejects',
   `${httpUrl}/dispatch/quote`,
   {},
-  { status: 500, bodyIncludes: 'Internal server error' },
+  { status: 500, bodyIncludes: 'Internal Server Error' },
 );
 
 const booking = JSON.stringify({ consignmentId: 'con-5502', carrier: 'palletline', weightKg: 18 });
@@ -344,7 +344,7 @@ await call(
   'HTTP 1.0 book a consignment as a dispatcher',
   `${httpUrl}/dispatch`,
   { method: 'POST', headers: { ...jsonHeaders, [STAFF_ROLE_HEADER]: DISPATCH_ROLE }, body: booking },
-  { status: 500, bodyIncludes: 'Internal server error' },
+  { status: 500, bodyIncludes: 'Internal Server Error' },
 );
 
 await call(
@@ -511,7 +511,7 @@ await call(
   'HTTP 2.0 request a path no route matches',
   `${httpUrl}/nowhere`,
   { headers: { origin: ALLOWED_ORIGIN } },
-  { status: 404, bodyIs: '{"error":"Not found"}', headers: { 'access-control-allow-origin': ALLOWED_ORIGIN } },
+  { status: 404, bodyIs: '{"error":"Not Found"}', headers: { 'access-control-allow-origin': ALLOWED_ORIGIN } },
 );
 
 // =============================================================================

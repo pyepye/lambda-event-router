@@ -4,7 +4,7 @@ export {
   isWebSocketResponse,
   WebSocketForbidden,
   WebSocketOk,
-  WebSocketUnauthorised,
+  WebSocketUnauthorized,
 } from './response.js';
 export type {
   WebSocketBaseRequest,

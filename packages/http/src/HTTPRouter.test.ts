@@ -7,7 +7,7 @@ import { BinaryBody } from './binaryBody.js';
 import { HTTPException } from './HTTPException.js';
 import { defineRoute, HTTPRouter } from './HTTPRouter.js';
 import { Html } from './html.js';
-import { Conflict, Created, Forbidden, NoContent, NotFound, Ok, TemporaryRedirect, Unauthorised } from './Response.js';
+import { Conflict, Created, Forbidden, NoContent, NotFound, Ok, TemporaryRedirect, Unauthorized } from './Response.js';
 import type {
   ApiRequest,
   ErrorInput,
@@ -319,7 +319,7 @@ suite('HTTPRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
     });
@@ -350,7 +350,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(createMockEvent(), createMockContext());
 
       expect(result).toEqual(
-        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }),
+        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) }),
       );
       expect(errorSpy).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
       errorSpy.mockRestore();
@@ -371,7 +371,7 @@ suite('HTTPRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -593,7 +593,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: JSON.stringify({ error: 'Internal server error' }),
+        body: JSON.stringify({ error: 'Internal Server Error' }),
         headers: { 'content-type': 'application/json' },
         isBase64Encoded: false,
       });
@@ -608,7 +608,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(createMockEvent(), createMockContext());
 
       expect(result).toEqual(
-        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }),
+        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) }),
       );
       expect(errorSpy).toHaveBeenCalledOnce();
     });
@@ -622,7 +622,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: JSON.stringify({ error: 'Internal server error' }),
+        body: JSON.stringify({ error: 'Internal Server Error' }),
         headers: { 'content-type': 'application/json' },
         isBase64Encoded: false,
       });
@@ -834,7 +834,7 @@ suite('HTTPRouter', () => {
       const result = await htmlRouter.handleEvent(createMockEvent({ path: '/missing' }), createMockContext());
 
       expect(result).toEqual(
-        expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1><p>Not found</p>' }),
+        expect.objectContaining({ statusCode: 404, body: '<h1>404 Not Found</h1><p>Not Found</p>' }),
       );
     });
 
@@ -876,7 +876,7 @@ suite('HTTPRouter', () => {
 
       expect(query.body).toMatch('<h1>400 Bad Request</h1>');
       expect(body.body).toMatch('<h1>422 Unprocessable Content</h1>');
-      expect(response.body).toBe('<h1>500 Internal Server Error</h1><p>Internal server error</p>');
+      expect(response.body).toBe('<h1>500 Internal Server Error</h1><p>Internal Server Error</p>');
     });
 
     test('sends a statusCode field from errors.json as part of the body', async () => {
@@ -889,7 +889,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 404,
-        body: JSON.stringify({ statusCode: 404, error: 'Not found' }),
+        body: JSON.stringify({ statusCode: 404, error: 'Not Found' }),
         headers: { 'content-type': 'application/json' },
         isBase64Encoded: false,
       });
@@ -970,7 +970,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
           headers: { 'content-type': 'application/json' },
         }),
       );
@@ -997,7 +997,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual(
         expect.objectContaining({
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
           headers: { 'content-type': 'application/json' },
         }),
       );
@@ -1031,7 +1031,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: 'Internal server error',
+        body: 'Internal Server Error',
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         isBase64Encoded: false,
       });
@@ -1053,7 +1053,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: JSON.stringify({ error: 'Internal server error' }),
+        body: JSON.stringify({ error: 'Internal Server Error' }),
         headers: { 'content-type': 'application/json' },
         isBase64Encoded: false,
       });
@@ -1076,7 +1076,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: 'Internal server error',
+        body: 'Internal Server Error',
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         isBase64Encoded: false,
       });
@@ -1103,7 +1103,7 @@ suite('HTTPRouter', () => {
 
       expect(result).toEqual({
         statusCode: 500,
-        body: 'Internal server error',
+        body: 'Internal Server Error',
         headers: { 'content-type': 'text/plain; charset=utf-8' },
         isBase64Encoded: false,
       });
@@ -1119,7 +1119,7 @@ suite('HTTPRouter', () => {
 
       const result = await brokenRouter.handleEvent(createMockEvent({ path: '/missing' }), createMockContext());
 
-      expect(result).toEqual(expect.objectContaining({ statusCode: 500, body: 'Internal server error' }));
+      expect(result).toEqual(expect.objectContaining({ statusCode: 500, body: 'Internal Server Error' }));
       expect(errorSpy).toHaveBeenCalledWith('Response body is not a string', {
         responseType: 'html',
         bodyType: 'object',
@@ -1134,7 +1134,7 @@ suite('HTTPRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: '<h1>500 Internal Server Error</h1><p>Internal server error</p>',
+          body: '<h1>500 Internal Server Error</h1><p>Internal Server Error</p>',
         }),
       );
       expect(errorSpy).toHaveBeenCalledWith('Response body is not a string', {
@@ -1215,13 +1215,13 @@ suite('HTTPRouter', () => {
         name: 'a 400 for the query',
         schemas: { querySchema: createMockSchema({ issues }) },
         statusCode: 400,
-        error: 'Bad request',
+        error: 'Bad Request',
       },
       {
         name: 'a 422 for the body',
         schemas: { bodySchema: createMockSchema({ issues }) },
         statusCode: 422,
-        error: 'Unprocessable content',
+        error: 'Unprocessable Content',
       },
     ])('passes the schema issues as the context for $name', async ({ schemas, statusCode, error }) => {
       router.post({ filters: { path: '/' }, handler: vi.fn(), ...schemas });
@@ -1499,7 +1499,7 @@ suite('HTTPRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -1553,7 +1553,7 @@ suite('HTTPRouter', () => {
       const result = await router.handleEvent(createMockEvent({ path: '/orders' }), createMockContext());
 
       expect(result).toEqual(
-        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal server error' }) }),
+        expect.objectContaining({ statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) }),
       );
       expect(errorSpy).toHaveBeenCalledWith('Handler response failed its responseSchema', {
         issues: [{ message: 'missing orderId' }],
@@ -1669,7 +1669,7 @@ suite('HTTPRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
       expect(handler).not.toHaveBeenCalled();
@@ -1773,7 +1773,7 @@ suite('HTTPRouter', () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
       const authMiddleware: HTTPMiddleware = async () => {
-        return Unauthorised();
+        return Unauthorized();
       };
 
       const router = new HTTPRouter({ adapter: mockAdapter, middleware: [authMiddleware] });

@@ -88,12 +88,12 @@ const healthRoute = defineRoute({
 ```
 
 ```ts
-import { BadRequest, NotFound, Unauthorised, Forbidden, InternalServerError } from '@lambda-event-router/http'
+import { BadRequest, NotFound, Unauthorized, Forbidden, InternalServerError } from '@lambda-event-router/http'
 
 // Throw error responses
 throw BadRequest('Invalid input')
 throw NotFound('Item not found')
-throw Unauthorised()
+throw Unauthorized()
 ```
 
 ## Examples

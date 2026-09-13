@@ -62,7 +62,7 @@ export class Response {
     return new HTTPException(HTTP_STATUS_CODES.BAD_REQUEST, message, context, headers);
   }
 
-  static Unauthorised(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
+  static Unauthorized(message?: string, context?: ErrorContext, headers?: ApiResponse['headers']): HTTPException {
     return new HTTPException(HTTP_STATUS_CODES.UNAUTHORIZED, message, context, headers);
   }
 
@@ -83,7 +83,7 @@ export class Response {
     context?: ErrorContext,
     headers?: ApiResponse['headers'],
   ): HTTPException {
-    return new HTTPException(HTTP_STATUS_CODES.UNPROCESSABLE_ENTITY, message, context, headers);
+    return new HTTPException(HTTP_STATUS_CODES.UNPROCESSABLE_CONTENT, message, context, headers);
   }
 
   static InternalServerError(
@@ -172,7 +172,7 @@ export const NoContent: typeof Response.NoContent = Response.NoContent;
 export const TemporaryRedirect: typeof Response.TemporaryRedirect = Response.TemporaryRedirect;
 export const PermanentRedirect: typeof Response.PermanentRedirect = Response.PermanentRedirect;
 export const BadRequest: typeof Response.BadRequest = Response.BadRequest;
-export const Unauthorised: typeof Response.Unauthorised = Response.Unauthorised;
+export const Unauthorized: typeof Response.Unauthorized = Response.Unauthorized;
 export const Forbidden: typeof Response.Forbidden = Response.Forbidden;
 export const NotFound: typeof Response.NotFound = Response.NotFound;
 export const Conflict: typeof Response.Conflict = Response.Conflict;

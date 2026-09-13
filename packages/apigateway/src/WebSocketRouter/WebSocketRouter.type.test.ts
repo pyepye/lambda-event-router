@@ -1,4 +1,4 @@
-import { Unauthorised } from '@lambda-event-router/http';
+import { Unauthorized } from '@lambda-event-router/http';
 
 import type {
   WebSocketConnectRequest,
@@ -69,7 +69,7 @@ suite('WebSocketRouter filter types', () => {
 
     test('a connect handler cannot return an HTTP helper, whose body has nowhere to go', () => {
       // @ts-expect-error - an HTTP response carries a body and headers a WebSocket result drops
-      const response: WebSocketConnectResponse = Unauthorised();
+      const response: WebSocketConnectResponse = Unauthorized();
 
       expect(response).toHaveProperty('statusCode', 401);
     });

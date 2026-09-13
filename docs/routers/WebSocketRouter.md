@@ -250,14 +250,14 @@ and hands your handler a typed `body` and `queryStringParameters`, so `token` be
 `body` matches `SendMessageSchema` without you declaring either.
 
 ```ts
-import { defineWebSocketRoute, WebSocketOk, WebSocketUnauthorised } from '@lambda-event-router/apigateway'
+import { defineWebSocketRoute, WebSocketOk, WebSocketUnauthorized } from '@lambda-event-router/apigateway'
 import { logger } from '@lambda-event-router/base'
 
 export const connectRoute = defineWebSocketRoute({
   filters: { eventType: 'CONNECT' },
 }).handle(async ({ connectionId, queryStringParameters }) => {
   const token = queryStringParameters?.token
-  if (!token) return WebSocketUnauthorised()
+  if (!token) return WebSocketUnauthorized()
 
   await connections.add(connectionId, token)
   logger.info(`Connection ${connectionId} opened`)
@@ -388,7 +388,7 @@ Three helpers cover the status codes a connect handler needs, and none of them t
 | Helper | Status |
 | --- | --- |
 | `WebSocketOk()` | 200 |
-| `WebSocketUnauthorised()` | 401 |
+| `WebSocketUnauthorized()` | 401 |
 | `WebSocketForbidden()` | 403 |
 
 For any other code, hand back the object yourself.
@@ -418,7 +418,7 @@ if (!user) throw WebSocketForbidden()
 **Anything else thrown fails the invocation.** The router rethrows it untouched, so Lambda records the
 error and API Gateway refuses the handshake on a `$connect`.
 
-**Reach for the `WebSocket` prefixed helpers, not the HTTP ones.** This package exports `Unauthorised`,
+**Reach for the `WebSocket` prefixed helpers, not the HTTP ones.** This package exports `Unauthorized`,
 `Forbidden` and the rest for [`APIGatewayRouter`](/routers/APIGatewayRouter), so autocomplete offers you
 both families.
 
@@ -618,7 +618,7 @@ import type {
   WebSocketDisconnectRequest,
   WebSocketMessageRequest,
 } from '@lambda-event-router/apigateway'
-import { postToConnection, WebSocketOk, WebSocketUnauthorised } from '@lambda-event-router/apigateway'
+import { postToConnection, WebSocketOk, WebSocketUnauthorized } from '@lambda-event-router/apigateway'
 import { logger } from '@lambda-event-router/base'
 
 import { connections } from '../connections.js'
@@ -629,7 +629,7 @@ export async function onConnect(request: WebSocketConnectRequest): Promise<WebSo
 
   const token = queryStringParameters?.token
   if (!token) {
-    return WebSocketUnauthorised()
+    return WebSocketUnauthorized()
   }
 
   await connections.add(connectionId, token)

@@ -1,4 +1,4 @@
-import { isWebSocketResponse, WebSocketForbidden, WebSocketOk, WebSocketUnauthorised } from './response.js';
+import { isWebSocketResponse, WebSocketForbidden, WebSocketOk, WebSocketUnauthorized } from './response.js';
 
 suite('webSocketResponse', () => {
   suite('isWebSocketResponse', () => {
@@ -31,7 +31,7 @@ suite('webSocketResponse', () => {
     expect(WebSocketForbidden()).toEqual({ statusCode: 403 });
   });
 
-  test('WebSocketUnauthorised returns { statusCode: 401 }', () => {
-    expect(WebSocketUnauthorised()).toEqual({ statusCode: 401 });
+  test('WebSocketUnauthorized returns { statusCode: 401 }', () => {
+    expect(WebSocketUnauthorized()).toEqual({ statusCode: 401 });
   });
 });

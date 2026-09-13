@@ -36,7 +36,7 @@ export {
   PermanentRedirect,
   Response,
   TemporaryRedirect,
-  Unauthorised,
+  Unauthorized,
   UnprocessableContent,
 } from '@lambda-event-router/http';
 

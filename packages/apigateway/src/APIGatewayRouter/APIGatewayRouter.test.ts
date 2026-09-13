@@ -6,7 +6,7 @@ import {
   NoContent,
   Ok,
   Response,
-  Unauthorised,
+  Unauthorized,
 } from '@lambda-event-router/http';
 import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
 
@@ -237,7 +237,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
     });
@@ -248,7 +248,7 @@ suite('APIGatewayRouter', () => {
           path: '/',
         },
         handler: async () => {
-          throw Response.Unauthorised();
+          throw Response.Unauthorized();
         },
       });
 
@@ -258,7 +258,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 401,
-          body: JSON.stringify({ error: 'Unauthorised' }),
+          body: JSON.stringify({ error: 'Unauthorized' }),
         }),
       );
     });
@@ -279,7 +279,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -300,7 +300,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -448,7 +448,7 @@ suite('APIGatewayRouter', () => {
       const handler = vi.fn().mockResolvedValue(Ok({}));
 
       const authMiddleware: HTTPMiddleware = async () => {
-        return Unauthorised();
+        return Unauthorized();
       };
 
       const router = createAPIGatewayRouter({ middleware: [authMiddleware] });
@@ -747,7 +747,7 @@ suite('APIGatewayRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
       expect(handler).not.toHaveBeenCalled();

@@ -1,4 +1,4 @@
-import { defaultErrorMessage } from './constants.js';
+import { statusName } from './constants.js';
 import type { ApiResponse, ErrorContext, ErrorStatusCode } from './types.js';
 
 const LOWEST_ERROR_STATUS = 400;
@@ -18,7 +18,7 @@ export class HTTPException extends Error {
     if (!isErrorStatusCode(statusCode)) {
       throw new RangeError(`An HTTPException needs a 4xx or 5xx status code, not ${statusCode}`);
     }
-    super(message ?? defaultErrorMessage(statusCode));
+    super(message ?? statusName(statusCode));
     this.name = 'HTTPException';
     this.statusCode = statusCode;
     this.context = context;

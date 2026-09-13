@@ -6,18 +6,18 @@ import {
   Forbidden,
   InternalServerError,
   NotFound,
-  Unauthorised,
+  Unauthorized,
   UnprocessableContent,
 } from './Response.js';
 
 const defaultErrors: { name: string; helper: (message?: string) => HTTPException; defaultError: string }[] = [
-  { name: 'BadRequest', helper: BadRequest, defaultError: 'Bad request' },
-  { name: 'Unauthorised', helper: Unauthorised, defaultError: 'Unauthorised' },
+  { name: 'BadRequest', helper: BadRequest, defaultError: 'Bad Request' },
+  { name: 'Unauthorized', helper: Unauthorized, defaultError: 'Unauthorized' },
   { name: 'Forbidden', helper: Forbidden, defaultError: 'Forbidden' },
-  { name: 'NotFound', helper: NotFound, defaultError: 'Not found' },
+  { name: 'NotFound', helper: NotFound, defaultError: 'Not Found' },
   { name: 'Conflict', helper: Conflict, defaultError: 'Conflict' },
-  { name: 'UnprocessableContent', helper: UnprocessableContent, defaultError: 'Unprocessable content' },
-  { name: 'InternalServerError', helper: InternalServerError, defaultError: 'Internal server error' },
+  { name: 'UnprocessableContent', helper: UnprocessableContent, defaultError: 'Unprocessable Content' },
+  { name: 'InternalServerError', helper: InternalServerError, defaultError: 'Internal Server Error' },
 ];
 
 suite('defaultJsonErrorBody', () => {
@@ -43,7 +43,7 @@ suite('defaultJsonErrorBody', () => {
   });
 
   test('sends a null context', () => {
-    expect(defaultJsonErrorBody(NotFound(undefined, null))).toEqual({ error: 'Not found', context: null });
+    expect(defaultJsonErrorBody(NotFound(undefined, null))).toEqual({ error: 'Not Found', context: null });
   });
 });
 
@@ -65,7 +65,7 @@ suite('fallbackServerError', () => {
   test('is a JSON 500 with the default error body for a JSON route', () => {
     expect(fallbackServerError('json')).toEqual({
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal server error' }),
+      body: JSON.stringify({ error: 'Internal Server Error' }),
       headers: { 'content-type': 'application/json' },
       isBase64Encoded: false,
     });
@@ -78,7 +78,7 @@ suite('fallbackServerError', () => {
   ] as const)('is a plain-text 500 with the default message for a %s route', (kind) => {
     expect(fallbackServerError(kind)).toEqual({
       statusCode: 500,
-      body: 'Internal server error',
+      body: 'Internal Server Error',
       headers: { 'content-type': 'text/plain; charset=utf-8' },
       isBase64Encoded: false,
     });

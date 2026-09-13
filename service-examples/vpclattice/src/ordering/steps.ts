@@ -192,7 +192,7 @@ export function buildSteps(version: PayloadVersion): Step[] {
     {
       name: 'value the stock holding',
       request: { method: 'GET', path: '/reports/valuation' },
-      expected: { status: 500, bodyIncludes: 'Internal server error' },
+      expected: { status: 500, bodyIncludes: 'Internal Server Error' },
     },
     {
       name: 'export the stock valuation',
@@ -216,7 +216,7 @@ export function buildSteps(version: PayloadVersion): Step[] {
         headers: JSON_HEADERS,
         body: JSON.stringify({ sku: 'brk-9', quantity: 200 }),
       },
-      expected: { status: 500, bodyIncludes: 'Internal server error' },
+      expected: { status: 500, bodyIncludes: 'Internal Server Error' },
     },
     {
       name: 'raise a reorder with a body the schema rejects',
@@ -231,7 +231,7 @@ export function buildSteps(version: PayloadVersion): Step[] {
     {
       name: 'read a path with no route',
       request: { method: 'GET', path: '/nowhere' },
-      expected: { status: 404, bodyIncludes: 'Not found' },
+      expected: { status: 404, bodyIncludes: 'Not Found' },
     },
     {
       name: 'read from an allowed origin',

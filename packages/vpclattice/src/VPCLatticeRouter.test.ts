@@ -141,7 +141,7 @@ suite('VPCLatticeRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
     });
@@ -162,7 +162,7 @@ suite('VPCLatticeRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -183,7 +183,7 @@ suite('VPCLatticeRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 500,
-          body: JSON.stringify({ error: 'Internal server error' }),
+          body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
     });
@@ -305,7 +305,7 @@ suite('VPCLatticeRouter', () => {
       expect(result).toEqual(
         expect.objectContaining({
           statusCode: 404,
-          body: JSON.stringify({ error: 'Not found' }),
+          body: JSON.stringify({ error: 'Not Found' }),
         }),
       );
       expect(handler).not.toHaveBeenCalled();
