@@ -49,6 +49,15 @@ export const STOCK: Record<string, StockRecord> = {
   'clp-3': { sku: 'clp-3', description: 'Cable clip, 8mm', quantity: 0 },
 };
 
+// A one pixel PNG stands in for the packing slip a picker would print. It holds bytes utf-8 cannot
+// carry, so a response that reached the caller intact proves the bytes were never read as text.
+export const PACKING_SLIP_PNG: Record<string, Buffer> = {
+  'ord-1042': Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+};
+
 export function pendingOrders(): WarehouseOrder[] {
   return Object.values(ORDERS).filter((order) => order.status === 'pending');
 }

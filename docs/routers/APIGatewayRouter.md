@@ -548,6 +548,11 @@ apiRouter.get({
 An empty string on a text route is a 200 with an empty body, and `undefined` or `null` is a 204 on
 every kind.
 
+**A REST API sends a binary response as bytes only when the first type in the request's `Accept` header
+is in its `binaryMediaTypes`.** Otherwise the caller gets the base64 text, whatever the response's
+`Content-Type`. Setting `binaryMediaTypes` to `['*/*']` sends the bytes for every request. An HTTP API
+sends the bytes for every request with no setting.
+
 A `content-type` header on a single response sets the content type for that response alone, so a JSON
 route can answer `Ok(problem, { 'content-type': 'application/problem+json' })`. Through `Ok()` and
 `Created()` the compiler checks the header against the body: a JSON content type takes a JSON body, and

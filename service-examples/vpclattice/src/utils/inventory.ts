@@ -32,3 +32,12 @@ export const SUCCESSOR_SKUS: Record<string, string> = {
 };
 
 export const SKUS_UNDER_REVIEW = ['clp-1'];
+
+// A one pixel PNG stands in for the shelf label a depot would print. It holds bytes utf-8 cannot
+// carry, so a response that reached the caller intact proves the bytes were never read as text.
+export const SHELF_LABEL_PNG: Record<string, Buffer> = {
+  'brk-9': Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAAAAAA6fptVAAAACklEQVR4nGNgAAAAAgABSK+kcQAAAABJRU5ErkJggg==',
+    'base64',
+  ),
+};

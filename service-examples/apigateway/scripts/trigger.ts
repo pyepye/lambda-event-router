@@ -22,6 +22,7 @@ import {
   STAFF_TOKEN,
   WAREHOUSE_FLOOR_CHANNEL,
 } from '../src/utils/constants.js';
+import { PACKING_SLIP_PNG } from '../src/utils/warehouse.js';
 
 const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? process.env.CDK_DEFAULT_REGION;
 if (!region) throw new Error('Set AWS_REGION to the region the stack is deployed in.');
@@ -98,12 +99,14 @@ interface Expected {
   status: number;
   bodyIncludes?: string;
   bodyIs?: string;
+  bodyBase64?: string;
   headers?: Record<string, string | null>;
 }
 
 interface Received {
   status: number;
   body: string;
+  bytes?: Buffer;
   headers: Record<string, string | undefined>;
 }
 
@@ -114,6 +117,9 @@ function assertResponse(step: string, received: Received, expected: Expected): v
   if (status !== expected.status) problems.push(`status ${status} (${body.slice(0, 120)})`);
   if (expected.bodyIncludes && !body.includes(expected.bodyIncludes)) problems.push(`body ${body.slice(0, 200)}`);
   if (expected.bodyIs !== undefined && body !== expected.bodyIs) problems.push(`body ${JSON.stringify(body)}`);
+  if (expected.bodyBase64 !== undefined && received.bytes?.toString('base64') !== expected.bodyBase64) {
+    problems.push(`bytes ${received.bytes?.toString('base64').slice(0, 80)}`);
+  }
 
   for (const [name, value] of Object.entries(expected.headers ?? {})) {
     const actual = received.headers[name];
@@ -126,10 +132,10 @@ function assertResponse(step: string, received: Received, expected: Expected): v
 
 async function call(step: string, url: string, init: RequestInit, expected: Expected): Promise<void> {
   const response = await fetch(url, { redirect: 'manual', ...init });
-  const body = await response.text();
+  const bytes = Buffer.from(await response.arrayBuffer());
   const headers = Object.fromEntries(response.headers.entries());
 
-  assertResponse(step, { status: response.status, body, headers }, expected);
+  assertResponse(step, { status: response.status, body: bytes.toString('utf8'), bytes, headers }, expected);
 }
 
 // `fetch` folds repeated header names into one comma-joined value. A header the API has to see
@@ -225,6 +231,24 @@ await call(
   `${restUrl}/orders/ord-1042/manifest`,
   { method: 'PUT', headers: { 'content-type': 'application/octet-stream' }, body: manifest },
   { status: 200, bodyIncludes: '"lines":3' },
+);
+
+const packingSlip = PACKING_SLIP_PNG['ord-1042']?.toString('base64');
+if (!packingSlip) throw new Error('ord-1042 has no packing slip.');
+
+await call(
+  'REST read a packing slip as a PNG',
+  `${restUrl}/orders/ord-1042/slip`,
+  { headers: { accept: 'image/png' } },
+  { status: 200, bodyBase64: packingSlip, headers: { 'content-type': 'image/png' } },
+);
+
+// A REST API sends the bytes only when the first type in the request's Accept header is a binary media type
+await call(
+  'REST read a packing slip without asking for a PNG',
+  `${restUrl}/orders/ord-1042/slip`,
+  {},
+  { status: 200, bodyIs: packingSlip, headers: { 'content-type': 'image/png' } },
 );
 
 await call(
@@ -375,6 +399,20 @@ await call(
 // =============================================================================
 // HTTP API: payload format 2.0
 // =============================================================================
+
+await call(
+  'HTTP 2.0 read a packing slip',
+  `${httpUrl}/orders/ord-1042/slip`,
+  {},
+  { status: 200, bodyBase64: packingSlip, headers: { 'content-type': 'image/png' } },
+);
+
+await call(
+  'HTTP 2.0 read a packing slip for an order with none',
+  `${httpUrl}/orders/ord-1043/slip`,
+  {},
+  { status: 404, bodyIs: '{"error":"Order ord-1043 has no packing slip"}' },
+);
 
 await callRaw(
   'HTTP 2.0 read a stock record',

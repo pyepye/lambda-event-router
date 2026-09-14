@@ -20,6 +20,7 @@ orders (REST API, payload format 1.0)
 ├── PATCH   /orders/:orderId               amendOrder
 ├── GET     /orders/:orderId/lines/:lineId getOrderLine
 ├── PUT     /orders/:orderId/manifest      uploadOrderManifest   base64 encoded body
+├── GET     /orders/:orderId/slip          getPackingSlip        binary response
 ├── DELETE  /orders/:orderId               no authorizer route matches
 └── GET     /warehouse/stock               getStockLevel         API key
 
@@ -77,6 +78,7 @@ failure path each router has. They also cover all three payload formats API Gate
 | Auth from an API key | `getStockLevel` reads `auth.apiKey.id` |
 | Auth from IAM | `getStockAudit` reads `auth.iam` off a SigV4 signed request, behind `iamAuth()` |
 | Base64 encoded body | `uploadOrderManifest` takes a manifest as bytes, typed by a `bodySchema` of `BinaryBody` |
+| Binary response | `getPackingSlip` returns a PNG. The REST API sends it as bytes when the first `Accept` type is one of its binary media types, and the HTTP API always does |
 | `type` filter | `token()` and `request()` split the authorizer's two event types |
 | `method` filter on an authorizer route | PUT and PATCH are routed separately from the read route |
 | `custom` filter on an authorizer route | The read route covers GET and HEAD in one filter |
@@ -206,6 +208,7 @@ The rest of the log is one line per handler:
   one of the API's binary media types, so the router hands the manifest over as a `Buffer`. The
   manifest is three lines of text, so a body the router had not decoded would count as one. `bytes`
   is the length of the manifest the caller sent.
+- `Packing slip read` carries `bytes` as 67, the size of the PNG.
 - `Stock levels read` carries the API key's id. The key value is a credential, so the handler logs
   only whether it is there.
 - `Consignment read` carries `depots` and `depotHeaders` both as `['leeds', 'hull']`. Payload format

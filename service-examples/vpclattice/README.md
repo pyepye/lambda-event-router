@@ -26,6 +26,7 @@ both listeners reach the same routes
 ├── DELETE  /stock/:sku                       discardStockItem
 ├── GET     /stock/retired/:sku               redirectRetiredSku   307 and 308
 ├── GET     /stock/:sku/movements/:movementId getStockMovement     two path params
+├── GET     /stock/:sku/label                 getShelfLabel        a binary route
 ├── GET     /suppliers/:supplierId/skus       listSupplierSkus     needs a caller identity
 ├── GET     /reports/valuation                valueStockHolding    responseSchema the handler fails
 ├── GET     /reports/valuation.csv            exportStockValuation a literal dot, a text route
@@ -71,6 +72,7 @@ supports and every failure path it has.
 | WARN records | `requireCallerPrincipal` warns before it refuses an unsigned caller |
 | Binary body | `replaceStockItem` takes a count sheet as bytes, typed by a `bodySchema` of `BinaryBody` |
 | Text response | `exportStockValuation` is a text route, so the router sends the CSV as it is with `text/csv` |
+| Binary response body | `getShelfLabel` is a binary route, so the router base64 encodes the PNG and sets `isBase64Encoded` |
 | Escaped path literal | `/reports/valuation.csv` matches itself, and `/reports/valuationXcsv` answers 404 |
 | No route matched | An unrouted path, a preflight for an unrouted path, and a near miss on an escaped dot |
 | Schema failures | One query and three bodies |
@@ -166,7 +168,7 @@ Note: the log groups are `/aws/lambda/<stackName>-inventory` and `/aws/lambda/<s
 so the names change if you deploy with a different `stackName`.
 
 `Handling inventory request` is the router middleware, and there is one for every request that
-reached a route. A full run has 48, half on each listener. Its `payloadVersion` field says which
+reached a route. A full run has 52, half on each listener. Its `payloadVersion` field says which
 adapter normalised the event.
 
 Eight requests per listener reach the worker with no `Handling inventory request` line:
@@ -205,6 +207,9 @@ The rest of the log is one line per handler:
   409 rather than calling `next`, so neither the second middleware nor the handler runs.
 - `Stock valuation exported` is the text route. The router sends the string back as it is, with the
   `text/csv` content type the route names.
+- `Shelf label read` is the binary route. The router base64 encodes the buffer and sets
+  `isBase64Encoded`, and the ordering function compares the bytes that came off the wire with the ones
+  the handler holds.
 - `Stock adjusted on the warehouse floor` is the custom filter winning. `Stock adjusted` is the
   same method and path without the `x-channel` header.
 - `Stock movement read` proves both path params reach the handler.
@@ -227,7 +232,7 @@ already run:
 - `Unhandled error processing HTTP request` carries `Supplier ordering is unavailable for brk-9`.
   That is the error `raiseReorder` threw. The router logs its message and leaves it out of the 500 body.
 
-The ordering log holds one line, `Inventory calls finished`, with `requests` 64 and `failures` 0.
+The ordering log holds one line, `Inventory calls finished`, with `requests` 68 and `failures` 0.
 The per-step results come back in the invoke response, which is what the trigger prints.
 
 ## Services and routes

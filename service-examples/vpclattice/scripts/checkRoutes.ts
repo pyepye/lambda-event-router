@@ -100,6 +100,9 @@ function problemsWith(result: VPCLatticeResult, expected: Expected): string[] {
   if (result.statusCode !== expected.status) problems.push(`status ${result.statusCode} (${body.slice(0, 120)})`);
   if (expected.bodyIncludes && !body.includes(expected.bodyIncludes)) problems.push(`body ${body.slice(0, 200)}`);
   if (expected.bodyIs !== undefined && body !== expected.bodyIs) problems.push(`body ${JSON.stringify(body)}`);
+  if (expected.bodyBase64 !== undefined && (body !== expected.bodyBase64 || !result.isBase64Encoded)) {
+    problems.push(`body ${body.slice(0, 60)} with isBase64Encoded ${String(result.isBase64Encoded)}`);
+  }
 
   for (const [name, value] of Object.entries(expected.headers ?? {})) {
     const actual = headers[name];

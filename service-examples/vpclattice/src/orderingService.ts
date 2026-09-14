@@ -21,6 +21,9 @@ function problemsWith(received: RequestResult, expected: Expected): string[] {
   if (status !== expected.status) problems.push(`status ${status} (${body.slice(0, 120)})`);
   if (expected.bodyIncludes && !body.includes(expected.bodyIncludes)) problems.push(`body ${body.slice(0, 200)}`);
   if (expected.bodyIs !== undefined && body !== expected.bodyIs) problems.push(`body ${JSON.stringify(body)}`);
+  if (expected.bodyBase64 !== undefined && received.bytes.toString('base64') !== expected.bodyBase64) {
+    problems.push(`body holds ${received.bytes.length} bytes that are not the ones expected`);
+  }
 
   for (const [name, value] of Object.entries(expected.headers ?? {})) {
     const actual = received.headers[name];

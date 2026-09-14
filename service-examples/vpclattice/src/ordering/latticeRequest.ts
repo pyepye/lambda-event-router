@@ -39,6 +39,7 @@ export interface RequestInput {
 export interface RequestResult {
   status: number;
   body: string;
+  bytes: Buffer;
   headers: Record<string, string | undefined>;
 }
 
@@ -121,9 +122,11 @@ export async function latticeRequest(input: RequestInput): Promise<RequestResult
           const received = Object.entries(response.headers).map(
             ([name, value]) => [name, Array.isArray(value) ? value.join(', ') : value] as const,
           );
+          const bytes = Buffer.concat(chunks);
           resolve({
             status: response.statusCode ?? 0,
-            body: Buffer.concat(chunks).toString(),
+            body: bytes.toString(),
+            bytes,
             headers: Object.fromEntries(received),
           });
         });

@@ -7,6 +7,7 @@ import {
   STOCKTAKE_HEADER,
   WAREHOUSE_FLOOR_CHANNEL,
 } from '../utils/constants.js';
+import { SHELF_LABEL_PNG } from '../utils/inventory.js';
 import type { RequestInput } from './latticeRequest.js';
 
 export type PayloadVersion = '1.0' | '2.0';
@@ -15,6 +16,9 @@ export interface Expected {
   status: number;
   bodyIncludes?: string;
   bodyIs?: string;
+  // Bytes the response carries. The caller compares what came off the wire, and the in-process run
+  // compares the base64 the router handed the adapter.
+  bodyBase64?: string;
   headers?: Record<string, string | null>;
 }
 
@@ -206,7 +210,21 @@ export function buildSteps(version: PayloadVersion): Step[] {
     {
       name: 'read a path where the dot is not a dot',
       request: { method: 'GET', path: '/reports/valuationXcsv' },
-      expected: { status: 404, bodyIncludes: 'Not found' },
+      expected: { status: 404, bodyIncludes: 'Not Found' },
+    },
+    {
+      name: 'download a shelf label',
+      request: { method: 'GET', path: '/stock/brk-9/label' },
+      expected: {
+        status: 200,
+        bodyBase64: SHELF_LABEL_PNG['brk-9']?.toString('base64'),
+        headers: { 'content-type': 'image/png' },
+      },
+    },
+    {
+      name: 'download a label for a SKU that has none',
+      request: { method: 'GET', path: '/stock/clp-3/label' },
+      expected: { status: 404, bodyIs: '{"error":"SKU clp-3 has no shelf label"}' },
     },
     {
       name: 'raise a reorder',

@@ -88,8 +88,9 @@ export class AppStack extends Stack {
     const restApi = new RestApi(this, 'OrdersApi', {
       restApiName: `${this.stackName}-orders`,
       cloudWatchRole: false,
-      // A request whose content type is listed here arrives base64 encoded.
-      binaryMediaTypes: ['application/octet-stream'],
+      // A request whose content type is listed here arrives base64 encoded. A binary response reaches the
+      // caller as bytes only when the first type in the request's Accept header is listed.
+      binaryMediaTypes: ['application/octet-stream', 'image/png'],
     });
     const restIntegration = new LambdaIntegration(workerFn);
 
@@ -117,6 +118,7 @@ export class AppStack extends Stack {
     order.addMethod('DELETE', restIntegration, { authorizer: warehouseRequestAuthorizer });
     order.addResource('lines').addResource('{lineId}').addMethod('GET', restIntegration);
     order.addResource('manifest').addMethod('PUT', restIntegration);
+    order.addResource('slip').addMethod('GET', restIntegration);
 
     restApi.root
       .addResource('warehouse')

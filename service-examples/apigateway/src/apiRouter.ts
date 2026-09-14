@@ -11,6 +11,7 @@ import { getConsignment } from './handlers/getConsignment.js';
 import { getConsignmentLabel } from './handlers/getConsignmentLabel.js';
 import { getOrder } from './handlers/getOrder.js';
 import { getOrderLine } from './handlers/getOrderLine.js';
+import { getPackingSlip } from './handlers/getPackingSlip.js';
 import { getStockAudit } from './handlers/getStockAudit.js';
 import { getStockLevel } from './handlers/getStockLevel.js';
 import { getStockRecord } from './handlers/getStockRecord.js';
@@ -55,6 +56,7 @@ apiRouter
   })
   .route(getOrderLine)
   .route(uploadOrderManifest)
+  .route(getPackingSlip)
   .route(getStockLevel)
   .route(getConsignment)
   .route(getConsignmentLabel)

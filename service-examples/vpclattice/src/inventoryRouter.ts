@@ -6,6 +6,7 @@ import { createStockItem } from './handlers/createStockItem.js';
 import { describeStockItem } from './handlers/describeStockItem.js';
 import { discardStockItem } from './handlers/discardStockItem.js';
 import { exportStockValuation } from './handlers/exportStockValuation.js';
+import { getShelfLabel } from './handlers/getShelfLabel.js';
 import { getStockItem } from './handlers/getStockItem.js';
 import { getStockMovement } from './handlers/getStockMovement.js';
 import { headStockItem } from './handlers/headStockItem.js';
@@ -57,4 +58,5 @@ inventoryRouter
   .route(listSupplierSkus)
   .route(valueStockHolding)
   .route(exportStockValuation)
+  .route(getShelfLabel)
   .route(raiseReorder);
