@@ -1,3 +1,4 @@
+import { getLogger } from '@lambda-event-router/base';
 import {
   type ErrorInput,
   Forbidden,
@@ -8,7 +9,13 @@ import {
   Response,
   Unauthorized,
 } from '@lambda-event-router/http';
-import { allEventBuilders, createApiGatewayV2Event, createMockSchema, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createApiGatewayV2Event,
+  createMockSchema,
+  silenceLog,
+  test,
+} from '@lambda-event-router/testing';
 
 import { APIGatewayRouter, createAPIGatewayRouter, defineRoute } from './APIGatewayRouter.js';
 import type { HTTPMiddleware } from './types.js';
@@ -264,12 +271,14 @@ suite('APIGatewayRouter', () => {
     });
 
     test('hides the message of an unhandled error', async ({ apiGatewayV2HandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
+      const error = new Error('something broke');
       router.get({
         filters: {
           path: '/',
         },
         handler: async () => {
-          throw new Error('something broke');
+          throw error;
         },
       });
 
@@ -282,9 +291,11 @@ suite('APIGatewayRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ apiGatewayV2HandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
       router.get({
         filters: {
           path: '/',
@@ -303,6 +314,7 @@ suite('APIGatewayRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error: 'string error' });
     });
 
     test('validates the request before calling handler and returns 422 for body schema failure', async ({

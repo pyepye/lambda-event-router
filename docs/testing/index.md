@@ -125,6 +125,41 @@ test('rejects an invalid body', async ({ sqsHandlerEvent }) => {
 
 The return type is exported as `MockSchema` if you need to name it.
 
+## Silencing logs
+
+`silenceLog` stops one log method from printing and hands you a spy on it. Use it when a test expects a
+log, so the test checks the log and the output stays clean.
+
+```ts
+import { getLogger, logger } from '@lambda-event-router/base'
+import { createSQSRouter } from '@lambda-event-router/sqs'
+import { silenceLog, test } from '@lambda-event-router/testing'
+import { expect } from 'vitest'
+
+test('logs an order it cannot process', async ({ sqsHandlerEvent }) => {
+  const errorLog = silenceLog(getLogger(), 'error')
+
+  const sqsRouter = createSQSRouter()
+  sqsRouter.route({
+    filters: {},
+    handler: async () => {
+      logger.error('Order could not be processed', { orderId: '123' })
+    },
+  })
+
+  const { event, context } = sqsHandlerEvent()
+  await sqsRouter.handleEvent(event, context)
+
+  expect(errorLog).toHaveBeenCalledWith('Order could not be processed', { orderId: '123' })
+})
+```
+
+The log method goes back to normal when the test finishes, so you don't restore it yourself. The level is
+one of `trace`, `debug`, `info`, `warn`, `error` or `critical`.
+
+Pass `getLogger()` rather than `logger`. Every `logger` call goes to the logger `getLogger()` returns, so
+that is the one to spy on. This also covers a logger you set with `setLogger`.
+
 ## Event types
 
 Most builders return a type from `@types/aws-lambda`. The services below use their own type instead,

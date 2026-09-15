@@ -39,5 +39,5 @@ test('processes an order message', async ({ sqsRecord, sqsHandlerEvent }) => {
 
 ## Documentation
 
-- [Testing](https://pyepye.github.io/lambda-event-router/testing/) covers the fixtures, builders, mock context, mock schemas and where to import
-  each event type from.
+- [Testing](https://pyepye.github.io/lambda-event-router/testing/) covers the fixtures, builders, mock context, mock schemas, silencing logs
+  and where to import each event type from.

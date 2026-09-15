@@ -286,6 +286,8 @@ export type {
 export { createSecretsManagerHandlerEvent, createSecretsManagerRotationEvent } from './secretsManager.js';
 export type { CreateSESHandlerEventOptions, SESHandlerEvent, SESRecordOverrides } from './ses.js';
 export { createSESEvent, createSESHandlerEvent, createSESRecord } from './ses.js';
+export type { LogLevel } from './silenceLog.js';
+export { silenceLog } from './silenceLog.js';
 export type { CreateSNSHandlerEventOptions, SNSHandlerEvent, SNSRecordOverrides } from './sns.js';
 export { createSNSEvent, createSNSHandlerEvent, createSNSRecord } from './sns.js';
 export type { CreateSQSHandlerEventOptions, SQSHandlerEvent, SQSRecordOverrides } from './sqs.js';

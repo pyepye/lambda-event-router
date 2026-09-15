@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
-import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import { createMockContext, createMockSchema, silenceLog } from '@lambda-event-router/testing';
 
 import { BinaryBody } from './binaryBody.js';
 import { HTTPException } from './HTTPException.js';
@@ -217,10 +217,12 @@ suite('HTTPRouter', () => {
     });
 
     test('a HEAD request whose handler throws has no body', async () => {
+      const errorLog = silenceLog(base.getLogger(), 'error');
+      const error = new Error('boom');
       router.head({
         filters: { path: '/items' },
         handler: async () => {
-          throw new Error('boom');
+          throw error;
         },
       });
 
@@ -228,6 +230,7 @@ suite('HTTPRouter', () => {
 
       expect(result.statusCode).toBe(500);
       expect(result.body).toBe('');
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
     });
 
     test('options() registers an OPTIONS route', async () => {
@@ -368,6 +371,7 @@ suite('HTTPRouter', () => {
     });
 
     test('catches a non-Error throw and returns 500 with default message', async () => {
+      const errorLog = silenceLog(base.getLogger(), 'error');
       router.get({
         filters: { path: '/' },
         handler: async () => {
@@ -385,6 +389,7 @@ suite('HTTPRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error: 'string error' });
     });
 
     test('passes extracted path params to the handler', async () => {
@@ -2344,11 +2349,13 @@ suite('HTTPRouter', () => {
     });
 
     test('adds CORS headers to error responses from thrown errors', async () => {
+      const errorLog = silenceLog(base.getLogger(), 'error');
+      const error = new Error('something broke');
       const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
       router.get({
         filters: { path: '/items' },
         handler: async () => {
-          throw new Error('something broke');
+          throw error;
         },
       });
 
@@ -2358,6 +2365,7 @@ suite('HTTPRouter', () => {
 
       expect(result.statusCode).toBe(500);
       expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
     });
 
     test('adds CORS headers to thrown HTTPResponse errors', async () => {
@@ -2444,6 +2452,7 @@ suite('HTTPRouter', () => {
     });
 
     test('adds CORS headers to non-Error throw response', async () => {
+      const errorLog = silenceLog(base.getLogger(), 'error');
       const router = new HTTPRouter({ adapter: mockAdapter, cors: { origin: '*' } });
       router.get({
         filters: { path: '/items' },
@@ -2458,6 +2467,7 @@ suite('HTTPRouter', () => {
 
       expect(result.statusCode).toBe(500);
       expect(result.headers?.['Access-Control-Allow-Origin']).toBe('*');
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error: 'string error' });
     });
 
     test('adds CORS headers when no origin header with wildcard config', async () => {

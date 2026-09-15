@@ -2,7 +2,13 @@ import type { MockInstance } from 'vitest';
 
 import * as base from '@lambda-event-router/base';
 import { Unauthorized } from '@lambda-event-router/http';
-import { allEventBuilders, createMockSchema, createWebSocketEvent, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createMockSchema,
+  createWebSocketEvent,
+  silenceLog,
+  test,
+} from '@lambda-event-router/testing';
 
 import { WebSocketForbidden } from './response.js';
 import type { WebSocketConnectResponse, WebSocketFilterInput, WebSocketRequest } from './types.js';
@@ -347,7 +353,7 @@ suite('WebSocketRouter', () => {
     });
 
     test('catches a thrown HTTP helper, keeps its status code and warns', async ({ webSocketHandlerEvent }) => {
-      const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
+      const warnLog = silenceLog(base.getLogger(), 'warn');
       router.message({
         handler: async () => {
           throw Unauthorized();
@@ -358,9 +364,8 @@ suite('WebSocketRouter', () => {
       const result = await router.handleEvent(event, context);
 
       expect(result).toEqual({ statusCode: 401 });
-      expect(warnSpy).toHaveBeenCalledOnce();
-      expect(warnSpy.mock.calls[0]?.[0]).toContain('WebSocketUnauthorized');
-      warnSpy.mockRestore();
+      expect(warnLog).toHaveBeenCalledOnce();
+      expect(warnLog.mock.calls[0]?.[0]).toContain('WebSocketUnauthorized');
     });
 
     test('re-throws errors without statusCode', async ({ webSocketHandlerEvent }) => {
@@ -823,17 +828,20 @@ suite('WebSocketRouter', () => {
     });
 
     test('returns { statusCode: 200 } for unexpected response shape', () => {
+      const warnLog = silenceLog(base.getLogger(), 'warn');
+
       // @ts-expect-error - testing private method
       expect(router.buildResult('unexpected')).toEqual({ statusCode: 200 });
+      expect(warnLog).toHaveBeenCalledOnce();
     });
 
     test('warns when an unexpected response shape defaults to { statusCode: 200 }', () => {
-      const warnSpy: MockInstance = vi.spyOn(base.getLogger(), 'warn');
+      const warnLog = silenceLog(base.getLogger(), 'warn');
 
       // @ts-expect-error - testing private method
       router.buildResult('unexpected');
 
-      expect(warnSpy).toHaveBeenCalledOnce();
+      expect(warnLog).toHaveBeenCalledOnce();
     });
   });
 

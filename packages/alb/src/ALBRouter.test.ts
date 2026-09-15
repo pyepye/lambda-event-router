@@ -1,5 +1,6 @@
+import { getLogger } from '@lambda-event-router/base';
 import { type ErrorInput, Html, NoContent, Ok } from '@lambda-event-router/http';
-import { allEventBuilders, createALBEvent, createMockSchema, test } from '@lambda-event-router/testing';
+import { allEventBuilders, createALBEvent, createMockSchema, silenceLog, test } from '@lambda-event-router/testing';
 
 import { ALBRouter, createALBRouter, defineRoute } from './ALBRouter.js';
 import type { HTTPMiddleware } from './types.js';
@@ -171,12 +172,14 @@ suite('ALBRouter', () => {
     });
 
     test('hides the message of an unhandled error', async ({ albHandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
+      const error = new Error('something broke');
       router.get({
         filters: {
           path: '/',
         },
         handler: async () => {
-          throw new Error('something broke');
+          throw error;
         },
       });
 
@@ -189,9 +192,11 @@ suite('ALBRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ albHandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
       router.get({
         filters: {
           path: '/',
@@ -210,6 +215,7 @@ suite('ALBRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error: 'string error' });
     });
 
     test('validates the request before calling handler and returns 422 for body schema failure', async ({

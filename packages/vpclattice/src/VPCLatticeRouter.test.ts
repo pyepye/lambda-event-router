@@ -1,5 +1,12 @@
+import { getLogger } from '@lambda-event-router/base';
 import { type ErrorInput, Html, NoContent, Ok } from '@lambda-event-router/http';
-import { allEventBuilders, createMockSchema, createVPCLatticeV2Event, test } from '@lambda-event-router/testing';
+import {
+  allEventBuilders,
+  createMockSchema,
+  createVPCLatticeV2Event,
+  silenceLog,
+  test,
+} from '@lambda-event-router/testing';
 
 import type { HTTPMiddleware } from './types.js';
 import { createVPCLatticeRouter, defineRoute, VPCLatticeRouter } from './VPCLatticeRouter.js';
@@ -147,12 +154,14 @@ suite('VPCLatticeRouter', () => {
     });
 
     test('hides the message of an unhandled error', async ({ vpcLatticeV2HandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
+      const error = new Error('something broke');
       router.get({
         filters: {
           path: '/',
         },
         handler: async () => {
-          throw new Error('something broke');
+          throw error;
         },
       });
 
@@ -165,9 +174,11 @@ suite('VPCLatticeRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error });
     });
 
     test('catches a non-Error throw and returns 500 with default message', async ({ vpcLatticeV2HandlerEvent }) => {
+      const errorLog = silenceLog(getLogger(), 'error');
       router.get({
         filters: {
           path: '/',
@@ -186,6 +197,7 @@ suite('VPCLatticeRouter', () => {
           body: JSON.stringify({ error: 'Internal Server Error' }),
         }),
       );
+      expect(errorLog).toHaveBeenCalledWith('Unhandled error processing HTTP request', { error: 'string error' });
     });
 
     test('validates the request before calling handler and returns 422 for body schema failure', async ({
