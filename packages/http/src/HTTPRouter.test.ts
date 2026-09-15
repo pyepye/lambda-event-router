@@ -309,6 +309,17 @@ suite('HTTPRouter', () => {
       );
     });
 
+    test('hands the handler the event it received', async () => {
+      const handler = vi.fn().mockResolvedValue(Ok({}));
+      router.get({ filters: { path: '/' }, handler });
+
+      const event = createMockEvent();
+      const context = { functionName: 'test' } as Parameters<typeof router.handleEvent>[1];
+      await router.handleEvent(event, context);
+
+      expect(handler.mock.calls[0]?.[0].event).toBe(event);
+    });
+
     test('returns 404 when no route matches', async () => {
       router.get({ filters: { path: '/items' }, handler: async () => Ok({}) });
 

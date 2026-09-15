@@ -249,7 +249,7 @@ export async function getOrder(
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `VPCLatticeAuth` | `principalId` and `iam`, on either payload version. See [Auth](#auth) |
-| `event` | `TEvent` | The untouched event, typed `VPCLatticeEvent` |
+| `event` | `VPCLatticeEvent` | The untouched event from AWS, for `requestContext` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
 `Context` comes from `aws-lambda`, not from this package. `VPCLatticeEvent` types `event` and is exported
@@ -843,12 +843,8 @@ Where the two differ is in what the event itself carries, which is why `request.
 `VPCLatticeEvent`, a union of both. Narrow it before reading anything version specific.
 
 ```ts
-import { isObject } from '@lambda-event-router/base'
-
 // requestContext is only on a 2.0 payload
-const serviceArn = isObject(request.event) && 'requestContext' in request.event
-  ? request.event.requestContext.serviceArn
-  : undefined
+const serviceArn = 'requestContext' in request.event ? request.event.requestContext.serviceArn : undefined
 ```
 
 A 1.0 payload has no `requestContext`, but it still names the service. The `x-amzn-lattice-target` header holds
@@ -979,8 +975,8 @@ All exported from `@lambda-event-router/vpclattice`.
 | `VPCLatticeResult` | What the router hands back to Lambda |
 
 `HandlerResponse`, `HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from
-`@lambda-event-router/http`, with `TAuth` defaulting to `VPCLatticeAuth` here, so import them
-from here rather than naming that package. The route definition and request types carry no `VPCLattice` prefix because
+`@lambda-event-router/http`. Here `TAuth` defaults to `VPCLatticeAuth` and `TEvent` to `VPCLatticeEvent`, so
+import them from here rather than naming that package. The route definition and request types carry no `VPCLattice` prefix because
 `APIGatewayRouter` and `ALBRouter` use the same ones.
 
 The `VPCLatticeRouter` class, the `createVPCLatticeRouter` and `defineRoute` functions and the [auth
@@ -1004,11 +1000,11 @@ Eight parameters cover every type above, and they do not all appear in the same 
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | Any kind on `HTTPMiddleware`, `JsonBody` elsewhere |
-| `TEvent` | `request.event` | `unknown` |
+| `TEvent` | `request.event` | `VPCLatticeEvent` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
-is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
-`TPath` from it. It takes `TMethod` last.
+is `TEvent`. The other two take `TResponse` fifth and `TEvent` sixth. `RouteDefinition` puts `TPathString`
+first and derives `TPath` from it. It takes `TMethod` then `TEvent` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types the
 path and leaves the query, auth and body loose.

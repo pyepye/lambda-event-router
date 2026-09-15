@@ -11,16 +11,18 @@ import type {
   PathParams,
 } from '@lambda-event-router/http';
 
+import type { APIGatewayEvent } from './apiGatewayAdapter.js';
 import type { APIGatewayAuth } from './auth.js';
 
 type DefaultAuth = APIGatewayAuth;
+type DefaultEvent = APIGatewayEvent;
 
 export type ApiRequest<
   TPath = Record<string, string>,
   TQuery = Record<string, string | undefined>,
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
-  TEvent = unknown,
+  TEvent = DefaultEvent,
 > = HTTPApiRequest<TPath, TQuery, TAuth, TBody, TEvent>;
 
 export type ApiHandler<
@@ -29,7 +31,8 @@ export type ApiHandler<
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
   TResponse = JsonBody,
-> = HTTPApiHandler<TPath, TQuery, TAuth, TBody, TResponse>;
+  TEvent = DefaultEvent,
+> = HTTPApiHandler<TPath, TQuery, TAuth, TBody, TResponse, TEvent>;
 
 export type HTTPMiddleware<
   TPath = Record<string, string>,
@@ -37,15 +40,17 @@ export type HTTPMiddleware<
   TAuth extends DefaultAuth = DefaultAuth,
   TBody = unknown,
   TResponse = AnyResponseKind,
-> = HTTPMiddlewareBase<TPath, TQuery, TAuth, TBody, TResponse>;
+  TEvent = DefaultEvent,
+> = HTTPMiddlewareBase<TPath, TQuery, TAuth, TBody, TResponse, TEvent>;
 
-export type HTTPFilterInput<TEvent = unknown, TAuth = DefaultAuth> = HTTPFilterInputBase<TEvent, TAuth>;
+export type HTTPFilterInput<TEvent = DefaultEvent, TAuth = DefaultAuth> = HTTPFilterInputBase<TEvent, TAuth>;
 
 export type HTTPFilters<
   TPathString extends string = string,
   TMethod extends AnyHttpMethod = AnyHttpMethod,
   TAuth = DefaultAuth,
-> = HTTPFiltersBase<TPathString, TMethod, TAuth>;
+  TEvent = DefaultEvent,
+> = HTTPFiltersBase<TPathString, TMethod, TAuth, TEvent>;
 
 export type RouteDefinition<
   TPathString extends string = string,
@@ -55,4 +60,17 @@ export type RouteDefinition<
   TBody = unknown,
   TResponse = JsonBody,
   TMethod extends AnyHttpMethod = AnyHttpMethod,
-> = HTTPRouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod, DefaultAuth>;
+  TEvent = DefaultEvent,
+> = HTTPRouteDefinition<
+  TPathString,
+  TPath,
+  TQuery,
+  TAuth,
+  TBody,
+  TResponse,
+  TMethod,
+  DefaultAuth,
+  'json',
+  string,
+  TEvent
+>;

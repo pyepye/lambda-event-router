@@ -79,4 +79,8 @@ export function createAPIGatewayRouter<
   return new APIGatewayRouter(options);
 }
 
-export const defineRoute: DefineRouteFn<RawAuth> = createDefineRoute<RawAuth>();
+export const defineRoute: DefineRouteFn<RawAuth, RawAuth, 'json', APIGatewayEvent> = createDefineRoute<
+  RawAuth,
+  RawAuth,
+  APIGatewayEvent
+>();

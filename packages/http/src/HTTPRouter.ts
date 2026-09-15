@@ -63,6 +63,7 @@ interface RouteInput<
   TRouteAuth,
   TKind extends ResponseKind,
   TContentType extends string,
+  TEvent,
   TPath = PathParams<TPathString>,
   TQuery = TQuerySchema extends StandardSchemaV1
     ? StandardSchemaV1.InferOutput<TQuerySchema>
@@ -73,11 +74,11 @@ interface RouteInput<
   filters: {
     method: TMethod;
     path: ValidPath<TPathString>;
-    custom?: (input: HTTPFilterInput<unknown, TRawAuth>) => boolean | Promise<boolean>;
+    custom?: (input: HTTPFilterInput<TEvent, TRawAuth>) => boolean | Promise<boolean>;
   };
   auth?: AuthPreset<TRawAuth, TRouteAuth>;
   responseType?: ResponseTypeOption<TKind, TContentType>;
-  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, TBody>, HandlerResponse<TResponse>>[];
+  middleware?: Middleware<ApiRequest<TPath, TQuery, NoInfer<TRouteAuth>, TBody, TEvent>, HandlerResponse<TResponse>>[];
   querySchema?: TQuerySchema;
   bodySchema?: TBodySchema;
   responseSchema?: TResponseSchema;
@@ -95,16 +96,30 @@ interface RouteBuilder<
   TRawAuth,
   TKind extends ResponseKind,
   TContentType extends string,
+  TEvent,
 > {
   handle(
-    handler: ApiHandler<TPath, TQuery, TAuth, TBody, TResponse>,
-  ): RouteDefinition<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod, TRawAuth, TKind, TContentType>;
+    handler: ApiHandler<TPath, TQuery, TAuth, TBody, TResponse, TEvent>,
+  ): RouteDefinition<
+    TPathString,
+    TPath,
+    TQuery,
+    TAuth,
+    TBody,
+    TResponse,
+    TMethod,
+    TRawAuth,
+    TKind,
+    TContentType,
+    TEvent
+  >;
 }
 
 export type DefineRouteFn<
   TRawAuth,
   TDefaultAuth extends TRawAuth = TRawAuth,
   TDefaultKind extends ResponseKind = 'json',
+  TEvent = unknown,
 > = <
   TPathString extends string,
   TMethod extends AnyHttpMethod,
@@ -130,14 +145,27 @@ export type DefineRouteFn<
     TRawAuth,
     TRouteAuth,
     TKind,
-    TContentType
+    TContentType,
+    TEvent
   > &
     OneKind<NoInfer<TKind>>,
-) => RouteBuilder<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TRawAuth, TKind, TContentType>;
+) => RouteBuilder<
+  TPathString,
+  TPath,
+  TQuery,
+  TRouteAuth,
+  TBody,
+  TResponse,
+  TMethod,
+  TRawAuth,
+  TKind,
+  TContentType,
+  TEvent
+>;
 
-function defineRouteWithDefault<TRawAuth, TDefaultAuth extends TRawAuth, TDefaultKind extends ResponseKind>(
+function defineRouteWithDefault<TRawAuth, TDefaultAuth extends TRawAuth, TDefaultKind extends ResponseKind, TEvent>(
   defaultResponseType: ResponseTypeOption,
-): DefineRouteFn<TRawAuth, TDefaultAuth, TDefaultKind> {
+): DefineRouteFn<TRawAuth, TDefaultAuth, TDefaultKind, TEvent> {
   return function defineRouteWithAuth<
     TPathString extends string,
     TMethod extends AnyHttpMethod,
@@ -163,10 +191,23 @@ function defineRouteWithDefault<TRawAuth, TDefaultAuth extends TRawAuth, TDefaul
       TRawAuth,
       TRouteAuth,
       TKind,
-      TContentType
+      TContentType,
+      TEvent
     > &
       OneKind<NoInfer<TKind>>,
-  ): RouteBuilder<TPathString, TPath, TQuery, TRouteAuth, TBody, TResponse, TMethod, TRawAuth, TKind, TContentType> {
+  ): RouteBuilder<
+    TPathString,
+    TPath,
+    TQuery,
+    TRouteAuth,
+    TBody,
+    TResponse,
+    TMethod,
+    TRawAuth,
+    TKind,
+    TContentType,
+    TEvent
+  > {
     return {
       // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
       handle(
@@ -181,7 +222,8 @@ function defineRouteWithDefault<TRawAuth, TDefaultAuth extends TRawAuth, TDefaul
         TMethod,
         TRawAuth,
         TKind,
-        TContentType
+        TContentType,
+        TEvent
       > {
         // The route keeps the kind its handler was typed for, whatever the default of the router it joins
         return { ...config, responseType: config.responseType ?? defaultResponseType, handler } as RouteDefinition<
@@ -194,18 +236,20 @@ function defineRouteWithDefault<TRawAuth, TDefaultAuth extends TRawAuth, TDefaul
           TMethod,
           TRawAuth,
           TKind,
-          TContentType
+          TContentType,
+          TEvent
         >;
       },
     };
   };
 }
 
-export function createDefineRoute<TRawAuth, TDefaultAuth extends TRawAuth = TRawAuth>(): DefineRouteFn<
+export function createDefineRoute<
   TRawAuth,
-  TDefaultAuth
-> {
-  return defineRouteWithDefault<TRawAuth, TDefaultAuth, 'json'>('json');
+  TDefaultAuth extends TRawAuth = TRawAuth,
+  TEvent = unknown,
+>(): DefineRouteFn<TRawAuth, TDefaultAuth, 'json', TEvent> {
+  return defineRouteWithDefault<TRawAuth, TDefaultAuth, 'json', TEvent>('json');
 }
 
 export const defineRoute: DefineRouteFn<unknown> = createDefineRoute<unknown>();
@@ -223,7 +267,7 @@ export interface HTTPRouterOptions<
   auth?: AuthPreset<TAuth, TDefaultAuth>;
   responseType?: ResponseTypeOption<TDefaultKind, TContentType>;
   errors?: TErrors & ErrorFunctions;
-  middleware?: Middleware<RouterRequest<TAuth>, HandlerResponse<ResponseBody>>[];
+  middleware?: Middleware<RouterRequest<TAuth, TEvent>, HandlerResponse<ResponseBody>>[];
   cors?: CorsConfig;
 }
 
@@ -237,16 +281,16 @@ export class HTTPRouter<
   TContentType extends string = string,
 > implements EventTypeRouter<TEvent, TResult>
 {
-  private router = new PathRouter<TAuth, TDefaultAuth, TDefaultKind, TErrors>();
+  private router = new PathRouter<TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent>();
   private defaultAuth: AuthPreset<TAuth, TDefaultAuth> | undefined;
   private response = new Response();
-  private middleware: Middleware<RouterRequest<TAuth>, HandlerResponse<ResponseBody>>[];
+  private middleware: Middleware<RouterRequest<TAuth, TEvent>, HandlerResponse<ResponseBody>>[];
   private adapter: HTTPAdapter<TEvent, TResult, TAuth>;
   private corsConfig: CorsConfig | undefined;
   private defaultResponseType: ResolvedResponseType = JSON_RESPONSE_TYPE;
   private errors: ErrorFunctions = {};
 
-  defineRoute: DefineRouteFn<TAuth, TDefaultAuth, TDefaultKind>;
+  defineRoute: DefineRouteFn<TAuth, TDefaultAuth, TDefaultKind, TEvent>;
 
   constructor(
     options:
@@ -257,7 +301,7 @@ export class HTTPRouter<
     if ('canHandleEvent' in options) {
       this.adapter = options;
       this.middleware = [];
-      this.defineRoute = defineRouteWithDefault<TAuth, TDefaultAuth, TDefaultKind>('json');
+      this.defineRoute = defineRouteWithDefault<TAuth, TDefaultAuth, TDefaultKind, TEvent>('json');
       return;
     }
 
@@ -273,7 +317,9 @@ export class HTTPRouter<
     if (this.defaultResponseType.kind === 'html' && !this.errors.html) {
       throw new Error('Response type configuration error: an HTML router needs errors.html');
     }
-    this.defineRoute = defineRouteWithDefault<TAuth, TDefaultAuth, TDefaultKind>(options.responseType ?? 'json');
+    this.defineRoute = defineRouteWithDefault<TAuth, TDefaultAuth, TDefaultKind, TEvent>(
+      options.responseType ?? 'json',
+    );
   }
 
   private checkRouteResponseType(responseType: ResponseTypeOption | undefined): void {
@@ -285,56 +331,56 @@ export class HTTPRouter<
   }
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from RouteMethodFn<this>
-  route: RouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (definition) => {
+  route: RouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (definition) => {
     this.checkRouteResponseType(definition.responseType);
     this.router.route(definition);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  get: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  get: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.get(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  post: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  post: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.post(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  put: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  put: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.put(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from BodyRouteMethodFn<this>
-  patch: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  patch: BodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.patch(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  delete: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  delete: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.delete(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  head: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  head: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.head(config);
     return this;
   };
 
   // biome-ignore lint/nursery/useExplicitType: parameter type is inferred from NoBodyRouteMethodFn<this>
-  options: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors> = (config) => {
+  options: NoBodyRouteMethodFn<this, TAuth, TDefaultAuth, TDefaultKind, TErrors, TEvent> = (config) => {
     this.checkRouteResponseType(config.responseType);
     this.router.options(config);
     return this;

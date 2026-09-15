@@ -62,4 +62,8 @@ export function createALBRouter<
   return new ALBRouter(options);
 }
 
-export const defineRoute: DefineRouteFn<undefined> = createDefineRoute<undefined>();
+export const defineRoute: DefineRouteFn<undefined, undefined, 'json', ALBEvent> = createDefineRoute<
+  undefined,
+  undefined,
+  ALBEvent
+>();

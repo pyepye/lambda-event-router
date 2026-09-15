@@ -9,9 +9,15 @@ import type { ApiRequest, BodyMethod, HttpMethod, NormalizedHTTPEvent } from './
 
 const BODY_METHODS: ReadonlySet<HttpMethod> = new Set<BodyMethod>(['POST', 'PUT', 'PATCH']);
 
-export type RouterRequest<TAuth> = ApiRequest<Record<string, string>, Record<string, string | undefined>, TAuth>;
+export type RouterRequest<TAuth, TEvent = unknown> = ApiRequest<
+  Record<string, string>,
+  Record<string, string | undefined>,
+  TAuth,
+  unknown,
+  TEvent
+>;
 
-export class Request<TAuth = unknown> {
+export class Request<TAuth = unknown, TEvent = unknown> {
   readonly headers: Record<string, string | undefined>;
   readonly multiValueHeaders: Record<string, string[] | undefined>;
   readonly method: string;
@@ -22,7 +28,7 @@ export class Request<TAuth = unknown> {
 
   constructor(
     readonly normalizedEvent: NormalizedHTTPEvent<TAuth>,
-    readonly rawEvent: unknown,
+    readonly rawEvent: TEvent,
     readonly context: Context,
     readonly route: InternalRoute<TAuth>,
     readonly pathParams: Record<string, string>,
@@ -59,7 +65,7 @@ export class Request<TAuth = unknown> {
   }
 
   // Parses the body on first read, so a handler that never reads it skips the parse
-  private withLazyBody(apiRequest: RouterRequest<TAuth>): RouterRequest<TAuth> {
+  private withLazyBody(apiRequest: RouterRequest<TAuth, TEvent>): RouterRequest<TAuth, TEvent> {
     Object.defineProperty(apiRequest, 'body', {
       enumerable: true,
       configurable: true,
@@ -107,8 +113,8 @@ export class Request<TAuth = unknown> {
     return result.data;
   }
 
-  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): RouterRequest<TAuth> {
-    const apiRequest: RouterRequest<TAuth> = {
+  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): RouterRequest<TAuth, TEvent> {
+    const apiRequest: RouterRequest<TAuth, TEvent> = {
       method: this.method,
       path: this.pathParams,
       rawPath: this.path,

@@ -248,7 +248,7 @@ export async function getOrder(
 | `headers` | `Record<string, string \| undefined>` | Request headers. Read them lower cased. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `APIGatewayAuth` | Whatever authorised the request. See [Auth](#auth) |
-| `event` | `TEvent` | The untouched event from AWS, for `requestContext`, `stageVariables` and anything else you need |
+| `event` | `APIGatewayEvent` | The untouched event from AWS, for `requestContext`, `stageVariables` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
 `Context` comes from `aws-lambda`, not from this package. `APIGatewayEvent` types `event` and is exported
@@ -957,10 +957,8 @@ Where the two differ is in what the event itself carries, which is why `request.
 `APIGatewayEvent`, a union of both. Narrow it before reading anything payload specific.
 
 ```ts
-import { isObject } from '@lambda-event-router/base'
-
 // rawPath is only on a 2.0 payload
-const payloadVersion = isObject(request.event) && 'rawPath' in request.event ? '2.0' : '1.0'
+const payloadVersion = 'rawPath' in request.event ? '2.0' : '1.0'
 ```
 
 To take one payload and reject the rest, hand that payload's adapter to `HTTPRouter`. Both are exported
@@ -1088,8 +1086,8 @@ All exported from `@lambda-event-router/apigateway`.
 | `APIGatewayResult` | What the router hands back to Lambda |
 | `APIGatewayV1EventType`, `APIGatewayV2EventType` | One payload version each |
 
-`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`, with `TAuth`
-defaulting to `APIGatewayAuth` here, so import them from here rather than naming that package. The route definition
+`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`. Here `TAuth`
+defaults to `APIGatewayAuth` and `TEvent` to `APIGatewayEvent`, so import them from here rather than naming that package. The route definition
 and request types carry no `APIGateway` prefix because `ALBRouter` and `VPCLatticeRouter` use the same
 ones.
 
@@ -1114,11 +1112,11 @@ Eight parameters cover every type above, and they do not all appear in the same 
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | Any kind on `HTTPMiddleware`, `JsonBody` elsewhere |
-| `TEvent` | `request.event` | `unknown` |
+| `TEvent` | `request.event` | `APIGatewayEvent` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
-is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
-`TPath` from it. It takes `TMethod` last.
+is `TEvent`. The other two take `TResponse` fifth and `TEvent` sixth. `RouteDefinition` puts `TPathString`
+first and derives `TPath` from it. It takes `TMethod` then `TEvent` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types
 the path and leaves the query, auth and body loose.

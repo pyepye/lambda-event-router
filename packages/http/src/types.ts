@@ -245,10 +245,11 @@ export interface HTTPFilters<
   TPathString extends string = string,
   TMethod extends AnyHttpMethod = AnyHttpMethod,
   TAuth = unknown,
+  TEvent = unknown,
 > {
   method: TMethod;
   path: ValidPath<TPathString>;
-  custom?: (input: HTTPFilterInput<unknown, TAuth>) => boolean | Promise<boolean>;
+  custom?: (input: HTTPFilterInput<TEvent, TAuth>) => boolean | Promise<boolean>;
 }
 
 declare const anyResponseKind: unique symbol;
@@ -269,9 +270,10 @@ export type HTTPMiddleware<
   TAuth = unknown,
   TBody = unknown,
   TResponse = AnyResponseKind,
+  TEvent = unknown,
 > = [TResponse] extends [AnyResponseKind]
-  ? AnyKindMiddleware<ApiRequest<TPath, TQuery, TAuth, TBody>>
-  : Middleware<ApiRequest<TPath, TQuery, TAuth, TBody>, HandlerResponse<TResponse>>;
+  ? AnyKindMiddleware<ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>>
+  : Middleware<ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>, HandlerResponse<TResponse>>;
 
 // A handler with no return statement returns Promise<void>, which is allowed only where the response can be undefined
 type NoReturn<TResponse> = undefined extends TResponse ? Promise<void> : never;
@@ -282,7 +284,10 @@ export type ApiHandler<
   TAuth = unknown,
   TBody = unknown,
   TResponse = JsonBody,
-> = (request: ApiRequest<TPath, TQuery, TAuth, TBody>) => Promise<HandlerResponse<TResponse>> | NoReturn<TResponse>;
+  TEvent = unknown,
+> = (
+  request: ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>,
+) => Promise<HandlerResponse<TResponse>> | NoReturn<TResponse>;
 
 // A route passed straight to route() with no responseType takes the router's kind
 export interface RouteConfig<
@@ -296,12 +301,13 @@ export interface RouteConfig<
   TRawAuth = TAuth,
   TKind extends ResponseKind = 'json',
   TContentType extends string = string,
+  TEvent = unknown,
 > {
-  filters: HTTPFilters<TPathString, TMethod, TRawAuth>;
+  filters: HTTPFilters<TPathString, TMethod, TRawAuth, TEvent>;
   auth?: AuthPreset<TRawAuth, TAuth>;
   responseType?: ResponseTypeOption<TKind, TContentType>;
-  handler: ApiHandler<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, NoInfer<TResponse>>;
-  middleware?: HTTPMiddleware<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, NoInfer<TResponse>>[];
+  handler: ApiHandler<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, NoInfer<TResponse>, TEvent>;
+  middleware?: HTTPMiddleware<TPath, TQuery, NoInfer<TAuth>, NoInfer<TBody>, NoInfer<TResponse>, TEvent>[];
   querySchema?: StandardSchemaV1<unknown, TQuery>;
   bodySchema?: StandardSchemaV1<unknown, TBody>;
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
@@ -319,6 +325,19 @@ export interface RouteDefinition<
   TRawAuth = TAuth,
   TKind extends ResponseKind = 'json',
   TContentType extends string = string,
-> extends RouteConfig<TPathString, TPath, TQuery, TAuth, TBody, TResponse, TMethod, TRawAuth, TKind, TContentType> {
+  TEvent = unknown,
+> extends RouteConfig<
+    TPathString,
+    TPath,
+    TQuery,
+    TAuth,
+    TBody,
+    TResponse,
+    TMethod,
+    TRawAuth,
+    TKind,
+    TContentType,
+    TEvent
+  > {
   responseType: ResponseTypeOption<TKind, TContentType>;
 }

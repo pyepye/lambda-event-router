@@ -95,6 +95,17 @@ suite('HTTP generic order', () => {
     expectTypeOf<ApiRequest<{ id: string }>['auth']>().toEqualTypeOf<unknown>();
   });
 
+  test('ApiHandler and HTTPMiddleware take the event after the response type', () => {
+    type OrderEvent = { orderId: string };
+
+    expectTypeOf<
+      Parameters<ApiHandler<{ id: string }, Query, ItemAuth, Item, JsonBody, OrderEvent>>[0]
+    >().toEqualTypeOf<ApiRequest<{ id: string }, Query, ItemAuth, Item, OrderEvent>>();
+    expectTypeOf<
+      Parameters<HTTPMiddleware<{ id: string }, Query, ItemAuth, Item, JsonBody, OrderEvent>>[0]
+    >().toEqualTypeOf<ApiRequest<{ id: string }, Query, ItemAuth, Item, OrderEvent>>();
+  });
+
   test('ApiHandler and HTTPMiddleware take auth after query', () => {
     expectTypeOf<Parameters<ApiHandler<{ id: string }, Query, ItemAuth, Item>>[0]>().toEqualTypeOf<
       ApiRequest<{ id: string }, Query, ItemAuth, Item>
@@ -163,6 +174,183 @@ suite('auth type', () => {
     );
 
     router.route(itemsRoute);
+  });
+});
+
+interface ShipmentEvent {
+  shipmentId: string;
+}
+
+interface ReturnEvent {
+  returnId: string;
+}
+
+type ShipmentRequest = ApiRequest<
+  Record<string, string>,
+  Record<string, string | undefined>,
+  undefined,
+  undefined,
+  ShipmentEvent
+>;
+
+const shipmentAdapter: HTTPAdapter<ShipmentEvent, unknown, undefined> = {
+  canHandleEvent: (event: unknown): event is ShipmentEvent => event !== undefined,
+  normalize: (): NormalizedHTTPEvent<undefined> => ({
+    method: 'GET',
+    path: '/shipments',
+    headers: {},
+    multiValueHeaders: {},
+    query: {},
+    multiValueQuery: {},
+    body: undefined,
+    isBase64Encoded: false,
+    auth: undefined,
+  }),
+  buildResult: (): unknown => undefined,
+};
+
+function handlesShipment(_request: ShipmentRequest): Promise<HandlerResponse> {
+  return Promise.resolve(NoContent());
+}
+
+function handlesReturn(
+  _request: ApiRequest<Record<string, string>, Record<string, string | undefined>, undefined, undefined, ReturnEvent>,
+): Promise<HandlerResponse> {
+  return Promise.resolve(NoContent());
+}
+
+function handlesAnyEvent(
+  _request: ApiRequest<Record<string, string>, Record<string, string | undefined>, undefined, undefined>,
+): Promise<HandlerResponse> {
+  return Promise.resolve(NoContent());
+}
+
+suite('event type', () => {
+  test('ApiRequest defaults the event to unknown, which each router package narrows', () => {
+    expectTypeOf<ApiRequest['event']>().toEqualTypeOf<unknown>();
+  });
+
+  test('a router hands its adapter event type to an inline handler', () => {
+    const router = new HTTPRouter(shipmentAdapter);
+
+    router.get({
+      filters: { path: '/shipments' },
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async (request) => {
+        expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+      },
+    });
+    router.post({
+      filters: { path: '/shipments' },
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async (request) => {
+        expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+      },
+    });
+    router.route({
+      filters: { method: 'PUT', path: '/shipments' },
+      // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+      handler: async (request) => {
+        expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+      },
+    });
+  });
+
+  test('a router hands its adapter event type to the custom filter', () => {
+    const router = new HTTPRouter(shipmentAdapter);
+
+    router.get({
+      filters: {
+        path: '/shipments',
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        custom: (input) => {
+          expectTypeOf(input.event).toEqualTypeOf<ShipmentEvent>();
+          return true;
+        },
+      },
+      handler: handlesShipment,
+    });
+    router.route({
+      filters: {
+        method: 'GET',
+        path: '/shipments',
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        custom: (input) => {
+          expectTypeOf(input.event).toEqualTypeOf<ShipmentEvent>();
+          return true;
+        },
+      },
+      handler: handlesShipment,
+    });
+  });
+
+  test('a router hands its adapter event type to route and router middleware', () => {
+    const router = new HTTPRouter({
+      adapter: shipmentAdapter,
+      middleware: [
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        async (request, next) => {
+          expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+          return next(request);
+        },
+      ],
+    });
+
+    router.get({
+      filters: { path: '/shipments' },
+      middleware: [
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        async (request, next) => {
+          expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+          return next(request);
+        },
+      ],
+      handler: handlesShipment,
+    });
+  });
+
+  test('the router defineRoute hands its adapter event type to the handler', () => {
+    const router = new HTTPRouter(shipmentAdapter);
+
+    router.defineRoute({ filters: { method: 'GET', path: '/shipments' } }).handle(async (request) => {
+      expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+    });
+  });
+
+  test('createDefineRoute types the event for the routes it defines', () => {
+    createDefineRoute<undefined, undefined, ShipmentEvent>()({ filters: { method: 'GET', path: '/shipments' } }).handle(
+      async (request) => {
+        expectTypeOf(request.event).toEqualTypeOf<ShipmentEvent>();
+      },
+    );
+  });
+
+  test('the defineRoute with no router types the event as unknown', () => {
+    defineRoute({ filters: { method: 'GET', path: '/shipments' } }).handle(async (request) => {
+      expectTypeOf(request.event).toEqualTypeOf<unknown>();
+    });
+  });
+
+  test('a router accepts a handler and a route that expect any event', () => {
+    const router = new HTTPRouter(shipmentAdapter);
+    const anyEventRoute = createDefineRoute<undefined>()({ filters: { method: 'GET', path: '/shipments' } }).handle(
+      handlesAnyEvent,
+    );
+
+    router.get({ filters: { path: '/shipments' }, handler: handlesAnyEvent });
+    router.route(anyEventRoute);
+  });
+
+  test('a router rejects a handler and a route that expect another event', () => {
+    const router = new HTTPRouter(shipmentAdapter);
+    const returnRoute = createDefineRoute<undefined, undefined, ReturnEvent>()({
+      filters: { method: 'GET', path: '/returns' },
+    }).handle(handlesReturn);
+
+    // @ts-expect-error - the router hands the handler a ShipmentEvent
+    router.get({ filters: { path: '/returns' }, handler: handlesReturn });
+    // @ts-expect-error - the route expects a ReturnEvent
+    router.route(returnRoute);
   });
 });
 

@@ -249,7 +249,7 @@ export async function getOrder(
 | `headers` | `Record<string, string \| undefined>` | Request headers, lower cased by the router. Where a name repeats, this is the last value |
 | `multiValueHeaders` | `Record<string, string[] \| undefined>` | Every value for each header, lower cased key |
 | `auth` | `undefined` | ALB names no caller. See [Auth](#auth) |
-| `event` | `TEvent` | The untouched `ALBEvent`, for `requestContext` and anything else you need |
+| `event` | `ALBEvent` | The untouched event from AWS, for `requestContext` and anything else you need |
 | `context` | `Context` | The Lambda context |
 
 `ALBEvent` and `Context` both come from `aws-lambda` rather than from this package, so import them from
@@ -889,8 +889,8 @@ All exported from `@lambda-event-router/alb`.
 `ALBEvent` and `ALBResult` are not re-exported, so `request.event` is typed by `aws-lambda` and you import
 those two from there.
 
-`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`, with `TAuth`
-defaulting to `undefined` here, so import them from here rather than naming that package. The route definition
+`HTTPFilters`, `HTTPFilterInput` and `HTTPMiddleware` come from `@lambda-event-router/http`. Here `TAuth`
+defaults to `undefined` and `TEvent` to `ALBEvent`, so import them from here rather than naming that package. The route definition
 and request types carry no `ALB` prefix because `APIGatewayRouter` and `VPCLatticeRouter` use the same
 ones.
 
@@ -915,11 +915,11 @@ Eight parameters cover every type above, and they do not all appear in the same 
 | `TBody` | `request.body` | `unknown`. On a route without a `bodySchema`, `TMethod` picks `unknown` or `undefined` |
 | `TMethod` | The `method` filter on `RouteDefinition` | `AnyHttpMethod` |
 | `TResponse` | What the handler returns | Any kind on `HTTPMiddleware`, `JsonBody` elsewhere |
-| `TEvent` | `request.event` | `unknown` |
+| `TEvent` | `request.event` | `ALBEvent` |
 
 `ApiRequest`, `ApiHandler` and `HTTPMiddleware` all start `TPath, TQuery, TAuth, TBody`. `ApiRequest`'s fifth
-is `TEvent` while the other two take `TResponse`. `RouteDefinition` puts `TPathString` first and derives
-`TPath` from it. It takes `TMethod` last.
+is `TEvent`. The other two take `TResponse` fifth and `TEvent` sixth. `RouteDefinition` puts `TPathString`
+first and derives `TPath` from it. It takes `TMethod` then `TEvent` last.
 
 Pass only the ones you need up to the last one you care about, so `ApiRequest<{ orderId: string }>` types the
 path and leaves the query, auth and body loose.
