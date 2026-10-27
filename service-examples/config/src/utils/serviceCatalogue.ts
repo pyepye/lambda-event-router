@@ -1,4 +1,4 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 
 // Stands in for a service catalogue API. Both calls are async, as a real lookup would be.
 const decommissioned = new Set(['legacy-invoice-export']);

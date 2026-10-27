@@ -1,5 +1,5 @@
 import { ListDiscoveredResourcesCommand } from '@aws-sdk/client-config-service';
-import { defineConfigScheduledRoute } from '@lambda-event-router/config';
+import { defineConfigScheduledRoute } from '@latcher/config';
 
 import { ACCOUNT_ID, configRuleName, configServiceClient } from '../environment.js';
 import { withAccountContext } from '../middleware/withAccountContext.js';

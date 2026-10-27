@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { type HTTPMiddleware, Unauthorized } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { type HTTPMiddleware, Unauthorized } from '@latcher/vpclattice';
 
 // Route middleware on GET /suppliers/:supplierId/skus. An unsigned caller arrives with no
 // identity, so the same request answers 200 signed and 401 unsigned on either listener.

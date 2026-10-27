@@ -1,42 +1,42 @@
-# @lambda-event-router/mq
+# @latcher/mq
 
-Routes each Amazon MQ message to a handler, for ActiveMQ and RabbitMQ brokers. The router decodes the body, so your handler sees one message and never the batch.
+Routes each Amazon MQ message to a handler, for ActiveMQ and RabbitMQ brokers. The matcher decodes the body, so your handler sees one message and never the batch.
 
 **Supported AWS Services:** `Amazon MQ`
 
-**Available Routers:** `ActiveMQRouter` | `RabbitMQRouter`
+**Available Matchers:** `ActiveMQMatcher` | `RabbitMQMatcher`
 
-**Docs:** [ActiveMQRouter](https://pyepye.github.io/lambda-event-router/routers/ActiveMQRouter) | [RabbitMQRouter](https://pyepye.github.io/lambda-event-router/routers/RabbitMQRouter)
+**Docs:** [ActiveMQMatcher](https://pyepye.github.io/latcher/matchers/ActiveMQMatcher) | [RabbitMQMatcher](https://pyepye.github.io/latcher/matchers/RabbitMQMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/mq
+npm install @latcher/base @latcher/mq
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { activeMQRouter } from './activemq'
-import { rabbitMQRouter } from './rabbitmq'
+import { Latcher } from '@latcher/base'
+import { activeMQMatcher } from './activemq'
+import { rabbitMQMatcher } from './rabbitmq'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [activeMQRouter, rabbitMQRouter],
+const latcher = new Latcher({
+  matchers: [activeMQMatcher, rabbitMQMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // activemq.ts
-import { createActiveMQRouter, defineActiveMQRoute } from '@lambda-event-router/mq'
+import { createActiveMQMatcher, defineActiveMQRoute } from '@latcher/mq'
 import { z } from 'zod'
 
-export const activeMQRouter = createActiveMQRouter()
+export const activeMQMatcher = createActiveMQMatcher()
 
 const processOrder = defineActiveMQRoute({
   filters: {
@@ -49,15 +49,15 @@ const processOrder = defineActiveMQRoute({
   console.log(`Processing order ${body.orderId} from ${destination}`)
 })
 
-activeMQRouter.route(processOrder)
+activeMQMatcher.route(processOrder)
 ```
 
 ```ts
 // rabbitmq.ts
-import { createRabbitMQRouter, defineRabbitMQRoute } from '@lambda-event-router/mq'
+import { createRabbitMQMatcher, defineRabbitMQRoute } from '@latcher/mq'
 import { z } from 'zod'
 
-export const rabbitMQRouter = createRabbitMQRouter()
+export const rabbitMQMatcher = createRabbitMQMatcher()
 
 const processOrder = defineRabbitMQRoute({
   filters: {
@@ -71,19 +71,19 @@ const processOrder = defineRabbitMQRoute({
   console.log(`Processing order ${body.orderId} on ${virtualHost}`)
 })
 
-rabbitMQRouter.route(processOrder)
+rabbitMQMatcher.route(processOrder)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ActiveMQRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/ActiveMQMatcher#annotated-handlers).
 
 ## Documentation
 
-- [ActiveMQRouter](https://pyepye.github.io/lambda-event-router/routers/ActiveMQRouter) covers every filter, message types, schema validation
+- [ActiveMQMatcher](https://pyepye.github.io/latcher/matchers/ActiveMQMatcher) covers every filter, message types, schema validation
   and failures and retries.
-- [RabbitMQRouter](https://pyepye.github.io/lambda-event-router/routers/RabbitMQRouter) covers every filter, schema validation and failures
+- [RabbitMQMatcher](https://pyepye.github.io/latcher/matchers/RabbitMQMatcher) covers every filter, schema validation and failures
   and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

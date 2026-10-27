@@ -7,7 +7,7 @@ next: false
 
 # About
 
-Lambda Event Router is built by [Matt Pye](https://github.com/pyepye).
+Latcher is built by [Matt Pye](https://github.com/pyepye).
 
 ## Why I built it
 
@@ -24,4 +24,4 @@ Gateway well and left every other event source to me. So I built this one.
 
 ## Source
 
-The source lives on GitHub at [pyepye/lambda-event-router](https://github.com/pyepye/lambda-event-router).
+The source lives on GitHub at [pyepye/latcher](https://github.com/pyepye/latcher).

@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/sns';
+import { defineRoute } from '@latcher/sns';
 
 import { ORDERS_TOPIC_ARN } from '../config.js';
 import { PaymentSchema } from '../utils/schemas.js';

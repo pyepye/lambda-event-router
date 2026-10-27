@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { StepFunctionsTaskTokenMiddleware } from '@lambda-event-router/stepfunctions';
+import { logger } from '@latcher/base';
+import type { StepFunctionsTaskTokenMiddleware } from '@latcher/stepfunctions';
 
 import type { TFraudReview } from '../utils/schemas.js';
 

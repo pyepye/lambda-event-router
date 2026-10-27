@@ -2,7 +2,7 @@ import type { Context, KinesisStreamRecord } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export interface KinesisFilterInput {
   data: unknown;
@@ -39,7 +39,7 @@ export interface KinesisRouteDefinition<TData = unknown> {
   handler: (request: KinesisRequest<TData>) => Promise<void>;
 }
 
-export interface KinesisRouterOptions {
+export interface KinesisMatcherOptions {
   batchItemFailures?: boolean;
   middleware?: KinesisMiddleware[];
 }

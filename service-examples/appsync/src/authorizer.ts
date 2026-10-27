@@ -1,11 +1,12 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { authorizerRouter } from './authorizerRouter.js';
-import { eventsAuthorizerRouter } from './eventsAuthorizerRouter.js';
+import { Latcher } from '@latcher/base';
 
-// One function authorises both APIs. The two routers take different event shapes, so `LambdaRouter`
+import { authorizerMatcher } from './authorizerMatcher.js';
+import { eventsAuthorizerMatcher } from './eventsAuthorizerMatcher.js';
+
+// One function authorises both APIs. The two matchers take different event shapes, so `Latcher`
 // picks between them without a filter.
-const lambdaRouter = new LambdaRouter({ routers: [authorizerRouter, eventsAuthorizerRouter] });
+const latcher = new Latcher({ matchers: [authorizerMatcher, eventsAuthorizerMatcher] });
 
-export const handler: Handler = lambdaRouter.handler();
+export const handler: Handler = latcher.handler();

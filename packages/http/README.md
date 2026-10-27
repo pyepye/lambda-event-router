@@ -1,25 +1,25 @@
-# @lambda-event-router/http
+# @latcher/http
 
-Abstract HTTP handler shared by API Gateway, ALB, and VPC Lattice routers. Provides route definitions, request/response types, and response helpers.
+Abstract HTTP handler shared by API Gateway, ALB, and VPC Lattice matchers. Provides route definitions, request/response types, and response helpers.
 
-This package is typically not installed directly. Instead, use one of the HTTP service packages: `@lambda-event-router/apigateway`, `@lambda-event-router/alb`, or `@lambda-event-router/vpclattice`.
+This package is typically not installed directly. Instead, use one of the HTTP service packages: `@latcher/apigateway`, `@latcher/alb`, or `@latcher/vpclattice`.
 
 **Supported AWS Services:** `Amazon API Gateway` | `Application Load Balancer` | `Amazon VPC Lattice`
 
-**Available Routers:** None (shared HTTP utilities)
+**Available Matchers:** None (shared HTTP utilities)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/http
+npm install @latcher/base @latcher/http
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself.
+`@latcher/base` is a peer dependency, so install it yourself.
 
 ## Quick Start
 
 ```ts
-import { defineRoute } from '@lambda-event-router/http'
+import { defineRoute } from '@latcher/http'
 import { z } from 'zod'
 
 // An inferred handler takes its types from the route
@@ -39,7 +39,7 @@ const getItemRoute = defineRoute({
 #### Inferred handlers
 
 ```ts
-import { defineRoute } from '@lambda-event-router/http'
+import { defineRoute } from '@latcher/http'
 import { z } from 'zod'
 
 const QuerySchema = z.object({
@@ -73,10 +73,10 @@ const createItemRoute = defineRoute({
 #### Responses
 
 A route answers with JSON unless you set its `responseType` to `html`, `text` or `binary`. An HTML route
-returns `Html(...)` and needs `errors.html` on its router.
+returns `Html(...)` and needs `errors.html` on its matcher.
 
 ```ts
-import { defineRoute } from '@lambda-event-router/http'
+import { defineRoute } from '@latcher/http'
 
 const healthRoute = defineRoute({
   filters: {
@@ -88,7 +88,7 @@ const healthRoute = defineRoute({
 ```
 
 ```ts
-import { BadRequest, NotFound, Unauthorized, Forbidden, InternalServerError } from '@lambda-event-router/http'
+import { BadRequest, NotFound, Unauthorized, Forbidden, InternalServerError } from '@latcher/http'
 
 // Throw error responses
 throw BadRequest('Invalid input')
@@ -98,4 +98,4 @@ throw Unauthorized()
 
 ## Examples
 
-See the `@lambda-event-router/apigateway`, `@lambda-event-router/alb`, or `@lambda-event-router/vpclattice` packages for complete working examples.
+See the `@latcher/apigateway`, `@latcher/alb`, or `@latcher/vpclattice` packages for complete working examples.

@@ -1,4 +1,4 @@
-import { defineActiveMQRoute } from '@lambda-event-router/mq';
+import { defineActiveMQRoute } from '@latcher/mq';
 
 import { ORDER_QUEUES } from '../utils/brokers.js';
 import { OrderSchema } from '../utils/schemas.js';

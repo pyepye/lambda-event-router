@@ -1,5 +1,5 @@
-import { defineRoute, NotFound, PermanentRedirect, TemporaryRedirect } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound, PermanentRedirect, TemporaryRedirect } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { MERGED_RETURNS, RETURNS_UNDER_REVIEW } from '../utils/returns.js';
 

@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { CodePipelineMiddleware } from '@lambda-event-router/codepipeline';
+import { logger } from '@latcher/base';
+import type { CodePipelineMiddleware } from '@latcher/codepipeline';
 
-// Router middleware: runs once per job, before any route middleware, for every function.
+// Matcher middleware: runs once per job, before any route middleware, for every function.
 export const logJob: CodePipelineMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling CodePipeline job',

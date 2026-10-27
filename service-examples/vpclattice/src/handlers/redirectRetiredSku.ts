@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, NotFound, PermanentRedirect, TemporaryRedirect } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute, NotFound, PermanentRedirect, TemporaryRedirect } from '@latcher/vpclattice';
 
 import { SKUS_UNDER_REVIEW, SUCCESSOR_SKUS } from '../utils/inventory.js';
 

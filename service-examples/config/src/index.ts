@@ -1,10 +1,11 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { configRouter } from './configRouter.js';
-import { configScheduledRouter } from './configScheduledRouter.js';
+import { Latcher } from '@latcher/base';
 
-// Both routers take Config rule events. The invokingEvent's messageType decides which one claims it.
-const lambdaRouter = new LambdaRouter({ routers: [configRouter, configScheduledRouter] });
+import { configMatcher } from './configMatcher.js';
+import { configScheduledMatcher } from './configScheduledMatcher.js';
 
-export const handler: Handler = lambdaRouter.handler();
+// Both matchers take Config rule events. The invokingEvent's messageType decides which one claims it.
+const latcher = new Latcher({ matchers: [configMatcher, configScheduledMatcher] });
+
+export const handler: Handler = latcher.handler();

@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { SHIPMENT_DELAYED, SHIPMENT_DISPATCHED, SHIPPING_SOURCE } from '../config.js';
 import { ShipmentSchema } from '../utils/schemas.js';

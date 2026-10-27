@@ -1,0 +1,178 @@
+import type { Context } from 'aws-lambda';
+
+import type { EventTypeMatcher } from '@latcher/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  safeJsonParse,
+  validateSchema,
+} from '@latcher/base';
+
+import type {
+  ActiveMQBytesMessageRouteDefinition,
+  ActiveMQDecodedMessage,
+  ActiveMQEvent,
+  ActiveMQFilterInput,
+  ActiveMQInternalRoute,
+  ActiveMQMatcherOptions,
+  ActiveMQMessage,
+  ActiveMQMessageType,
+  ActiveMQMiddleware,
+  ActiveMQRequest,
+  ActiveMQRouteBuilder,
+  ActiveMQRouteDefinition,
+  ActiveMQRouteInput,
+  ActiveMQTextMessageRouteDefinition,
+} from './types.js';
+
+export function defineActiveMQRoute<
+  TBody = unknown,
+  const TMessageType extends ActiveMQMessageType | undefined = undefined,
+>(config: ActiveMQRouteInput<TBody, TMessageType>): ActiveMQRouteBuilder<TBody, TMessageType> {
+  return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
+    handle(handler): ActiveMQRouteDefinition<TBody, TMessageType> {
+      return {
+        filters: config.filters,
+        bodySchema: config.bodySchema,
+        middleware: config.middleware,
+        handler,
+      };
+    },
+  };
+}
+
+export class ActiveMQMatcher implements EventTypeMatcher<ActiveMQEvent, undefined> {
+  private routes: ActiveMQInternalRoute[] = [];
+  private routesOrdered = false;
+  private middleware: ActiveMQMiddleware[];
+
+  constructor(options?: ActiveMQMatcherOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
+
+  canHandleEvent(event: unknown): event is ActiveMQEvent {
+    if (!isObject(event)) return false;
+    return event.eventSource === 'aws:mq' && Array.isArray(event.messages);
+  }
+
+  route<TBody = unknown, TMessageType extends ActiveMQMessageType | undefined = undefined>(
+    definition: ActiveMQRouteDefinition<TBody, TMessageType>,
+  ): this {
+    this.routes.push(definition as ActiveMQInternalRoute);
+    this.routesOrdered = false;
+    return this;
+  }
+
+  textMessage<TBody>(definition: ActiveMQTextMessageRouteDefinition<TBody>): this {
+    this.routes.push({
+      ...definition,
+      filters: { ...definition.filters, messageType: 'jms/text-message' },
+    } as ActiveMQInternalRoute);
+    this.routesOrdered = false;
+    return this;
+  }
+
+  bytesMessage(definition: ActiveMQBytesMessageRouteDefinition): this {
+    this.routes.push({
+      ...definition,
+      filters: { ...definition.filters, messageType: 'jms/bytes-message' },
+    } as ActiveMQInternalRoute);
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: ActiveMQEvent, context: Context): Promise<undefined> {
+    for (const message of event.messages) {
+      const destination = message.destination.physicalName;
+
+      // Decode text and leave a bytes-message alone, as it's an unknown binary buffer we can't guess at
+      // decoding. Amazon MQ omits `properties` when the message carries none, so fill it in here and a
+      // filter can read it without a guard.
+      const isBytesMessage = message.messageType === 'jms/bytes-message';
+      const decodedData = isBytesMessage ? message.data : Buffer.from(message.data, 'base64').toString('utf-8');
+      const decodedMessage: ActiveMQDecodedMessage = {
+        ...message,
+        data: decodedData,
+        properties: message.properties ?? {},
+      };
+
+      const route = await this.matchRoute(event, decodedMessage, message);
+      if (!route) {
+        throw new Error(`No route matched for message ${message.messageID} from ${event.eventSourceArn}`);
+      }
+
+      const base = { message: decodedMessage, destination, record: message, context };
+      let request: ActiveMQRequest;
+      if (isBytesMessage) {
+        request = { ...base, body: Buffer.from(message.data, 'base64'), messageType: 'jms/bytes-message' };
+      } else {
+        const body = await validateSchema(
+          safeJsonParse(decodedData),
+          route.bodySchema,
+          `Body validation failed for message ${message.messageID}`,
+        );
+        request = { ...base, body, messageType: 'jms/text-message' };
+      }
+
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      await handleEventWithMiddleware(allMiddleware, request, route.handler);
+    }
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(
+    event: ActiveMQEvent,
+    message: ActiveMQDecodedMessage,
+    record: ActiveMQMessage,
+  ): Promise<ActiveMQInternalRoute | undefined> {
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.eventSourceArn !== undefined) {
+        const eventSourceArnMatch = filterStringMatcher(event.eventSourceArn, filters.eventSourceArn);
+        if (!eventSourceArnMatch) continue;
+      }
+
+      if (filters.messageType !== undefined) {
+        const messageTypes = Array.isArray(filters.messageType) ? filters.messageType : [filters.messageType];
+        if (!messageTypes.includes(message.messageType)) continue;
+      }
+
+      if (filters.destination !== undefined) {
+        // Is calling this destination and not physicalName correct?
+        const destinationMatch = filterStringMatcher(message.destination.physicalName, filters.destination);
+        if (!destinationMatch) continue;
+      }
+
+      if (filters.custom) {
+        const filterInput: ActiveMQFilterInput = {
+          messageType: message.messageType,
+          destination: message.destination.physicalName,
+          message,
+          record,
+        };
+        const match = await filters.custom(filterInput);
+        if (!match) continue;
+      }
+
+      return route;
+    }
+
+    return undefined;
+  }
+}
+
+export function createActiveMQMatcher(options?: ActiveMQMatcherOptions): ActiveMQMatcher {
+  return new ActiveMQMatcher(options);
+}

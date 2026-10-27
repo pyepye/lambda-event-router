@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { LexMiddleware } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import type { LexMiddleware } from '@latcher/lex';
 
-// Router middleware: runs once per turn, before any route middleware, for every matched route.
+// Matcher middleware: runs once per turn, before any route middleware, for every matched route.
 export const logTurn: LexMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling Lex turn',

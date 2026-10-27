@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Query on GET /returns/:returnId. `page` arrives as a string, so it is coerced; a value that will
-// not coerce fails the schema and the router answers 400.
+// not coerce fails the schema and the matcher answers 400.
 export const ReturnQuerySchema = z.object({
   expand: z.enum(['lines', 'refund']).optional(),
   carrier: z.string().optional(),
@@ -9,7 +9,7 @@ export const ReturnQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
 });
 
-// Body on POST /returns. A missing field fails the schema and the router answers 422.
+// Body on POST /returns. A missing field fails the schema and the matcher answers 422.
 export const NewReturnSchema = z.object({
   returnId: z.string().min(1),
   orderId: z.string().min(1),
@@ -40,7 +40,7 @@ export const ReturnsSummarySchema = z.object({
 });
 
 // Response on GET /reports/returns/queue. The handler returns a count this rejects, wrapped in a
-// response of its own, which is the shape the router leaves unvalidated.
+// response of its own, which is the shape the matcher leaves unvalidated.
 export const ReturnQueueSchema = z.object({
   currency: z.literal('GBP'),
   queued: z.number().nonnegative(),

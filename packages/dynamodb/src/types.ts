@@ -2,7 +2,7 @@ import type { Context, DynamoDBRecord, StreamRecord } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 // Derive event name type from aws-lambda (excludes undefined)
 export type DynamoDBEventName = NonNullable<DynamoDBRecord['eventName']>;
@@ -127,13 +127,13 @@ export interface DynamoDBRouteDefinition<
   handler: DynamoDBRecordHandler<TKeys, TNewItem, TOldItem>;
 }
 
-export interface DynamoDBRouterKeys {
+export interface DynamoDBMatcherKeys {
   partitionKey: string;
   sortKey?: string;
 }
 
-export interface DynamoDBRouterOptions {
+export interface DynamoDBMatcherOptions {
   batchItemFailures?: boolean;
   middleware?: DynamoDBMiddleware[];
-  keys?: DynamoDBRouterKeys;
+  keys?: DynamoDBMatcherKeys;
 }

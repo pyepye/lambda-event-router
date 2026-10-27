@@ -9,7 +9,7 @@ both are first-class.
 
 ## Requests
 
-Each router hands your handler one object, typed as `<Source>Request`, and it arrives ready to use:
+Each matcher hands your handler one object, typed as `<Source>Request`, and it arrives ready to use:
 
 - JSON bodies and messages are parsed
 - base64 payloads are decoded, and binary ones reach you as a `Buffer`
@@ -19,10 +19,10 @@ Each router hands your handler one object, typed as `<Source>Request`, and it ar
 - The raw `event` or `record` and the Lambda `context` are always there as a fallback
 
 An HTTP body reaches you as a `Buffer` when the request's `Content-Type` is not a text one, so an upload
-arrives as the bytes that were sent. See [binary bodies](/routers/ALBRouter#binary-bodies) for typing a
+arrives as the bytes that were sent. See [binary bodies](/matchers/ALBMatcher#binary-bodies) for typing a
 route that takes them.
 
-Record based routers call the handler once per record rather than once per batch, so a queue delivering
+Record based matchers call the handler once per record rather than once per batch, so a queue delivering
 ten messages runs your handler ten times and you write code for a single message.
 
 ::: code-group
@@ -68,19 +68,19 @@ async function onOrderModified({ keys, newImage, oldImage }: DynamoDBModifyReque
 
 :::
 
-Field names are per router, and each [router page](/packages) documents its own.
+Field names are per matcher, and each [matcher page](/packages) documents its own.
 
 ## Responses
 
 What you return is limited to what the event source can do with it, which is why this varies more
-between routers than anything else. There are four shapes.
+between matchers than anything else. There are four shapes.
 
-| Shape | Routers | What you write |
+| Shape | Matchers | What you write |
 | --- | --- | --- |
 | Nothing | Record based, so SQS, SNS, Kinesis and the rest | Do the work and return |
-| A body the router wraps | HTTP | Return a value, or a status code and body |
+| A body the matcher wraps | HTTP | Return a value, or a status code and body |
 | The event, changed | Cognito | Change the event and return it |
-| A result the router reports | CodePipeline, S3 Batch | Return the outcome, or nothing |
+| A result the matcher reports | CodePipeline, S3 Batch | Return the outcome, or nothing |
 
 ::: code-group
 
@@ -96,7 +96,7 @@ async function adjustStock({ body }: SQSRequest<StockChange>): Promise<SQSRespon
 ```
 
 ```ts [API Gateway]
-// Return a body and the router builds the response around it
+// Return a body and the matcher builds the response around it
 async function getCustomerOrders({
   path,
   query,
@@ -123,7 +123,7 @@ async function preSignUp({ event, userAttributes }: PreSignUpRequest): Promise<P
 ```
 
 ```ts [CodePipeline]
-// Return the outcome and the router calls PutJobSuccessResult for you
+// Return the outcome and the matcher calls PutJobSuccessResult for you
 async function runMigrations({
   userParameters,
   inputArtifacts,
@@ -140,15 +140,15 @@ async function runMigrations({
 ### Throwing
 
 Throwing from a handler fails the invocation, and what that costs depends on the source. Record based
-routers report the failing record so it can be retried, and CodePipeline calls `PutJobFailureResult`
-before rethrowing. Each router page covers its own behaviour and the options that change it.
+matchers report the failing record so it can be retried, and CodePipeline calls `PutJobFailureResult`
+before rethrowing. Each matcher page covers its own behaviour and the options that change it.
 
-The HTTP and authorizer routers go further and return a thrown response as the response, so
-`APIGatewayRouter`, `ALBRouter`, `VPCLatticeRouter`, `WebSocketRouter`, `LambdaAuthorizerRouter` and
-`AppSyncAuthorizerRouter`.
+The HTTP and authorizer matchers go further and return a thrown response as the response, so
+`APIGatewayMatcher`, `ALBMatcher`, `VPCLatticeMatcher`, `WebSocketMatcher`, `LambdaAuthorizerMatcher` and
+`AppSyncAuthorizerMatcher`.
 
 ```ts
-import { Conflict, NotFound } from '@lambda-event-router/apigateway'
+import { Conflict, NotFound } from '@latcher/apigateway'
 
 export async function cancelOrderHandler({ path }: ApiRequest<{ orderId: string }>): Promise<OrderCancelled> {
   const order = await orders.get(path.orderId)
@@ -170,13 +170,13 @@ export async function cancelOrderHandler({ path }: ApiRequest<{ orderId: string 
 A throw carries the same weight from any depth, so business logic several calls below the handler can
 end the request without each function in between passing a failure back up.
 
-The authorizer routers work the same way with `Allow` and `Deny`.
+The authorizer matchers work the same way with `Allow` and `Deny`.
 
 **Anything else thrown from an HTTP handler becomes a 500 with `Internal Server Error` as the message.**
-The router logs the real error, so its message never reaches the caller.
+The matcher logs the real error, so its message never reaches the caller.
 
 ```ts
-// A plain Error is not a response, so the router logs it and answers with a 500
+// A plain Error is not a response, so the matcher logs it and answers with a 500
 export async function getOrderHandler({ path }: ApiRequest<{ orderId: string }>) {
   const order = await orders.get(path.orderId) // Throws Error('connect ETIMEDOUT 10.0.1.5:8000')
 
@@ -191,7 +191,7 @@ export async function getOrderHandler({ path }: ApiRequest<{ orderId: string }>)
 A bare value becomes a 200 with a JSON body, so these three are the same response:
 
 ```ts
-import { Ok } from '@lambda-event-router/apigateway'
+import { Ok } from '@latcher/apigateway'
 
 return { orderId: order.orderId }
 return Ok({ orderId: order.orderId })
@@ -202,9 +202,9 @@ return { statusCode: 200, body: { orderId: order.orderId } }
 on a route to answer with HTML, plain text or bytes instead.
 
 For any other status, use a helper such as `Created(order)` or `NotFound('Order not found')`. Each HTTP
-router page covers the response types, the helpers and the error responses:
-[API Gateway](/routers/APIGatewayRouter#responses), [ALB](/routers/ALBRouter#responses) and
-[VPC Lattice](/routers/VPCLatticeRouter#responses).
+matcher page covers the response types, the helpers and the error responses:
+[API Gateway](/matchers/APIGatewayMatcher#responses), [ALB](/matchers/ALBMatcher#responses) and
+[VPC Lattice](/matchers/VPCLatticeMatcher#responses).
 
 ## Schema validation
 
@@ -219,7 +219,7 @@ const BlogEventSchema = z.object({
   draft: z.coerce.boolean().default(false),
 })
 
-kinesisRouter.route({
+kinesisMatcher.route({
   filters: { eventSourceArn: BLOG_STREAM_ARN },
   dataSchema: BlogEventSchema,
   handler: async ({ data }) => {
@@ -236,7 +236,7 @@ kinesisRouter.route({
 This section and the next process the same order queue, once each way, so you can compare them.
 
 `defineRoute` reads the schemas on the route and hands your handler a typed request, so you never need
-to know the shape of any router's request object. No types to declare and nothing to keep in sync as
+to know the shape of any matcher's request object. No types to declare and nothing to keep in sync as
 the schemas change.
 
 Open a file: [routes/processOrder.ts](#inferred-handlers:routes/processOrder.ts) |
@@ -245,15 +245,15 @@ Open a file: [routes/processOrder.ts](#inferred-handlers:routes/processOrder.ts)
 
 <script setup>
 const ENTRY_POINT = `import type { Handler } from 'aws-lambda'
-import { LambdaRouter } from '@lambda-event-router/base'
+import { Latcher } from '@latcher/base'
 
-import { sqsRouter } from './sqs.js'
+import { sqsMatcher } from './sqs.js'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter],
+const latcher = new Latcher({
+  matchers: [sqsMatcher],
 })
 
-export const handler: Handler = lambdaRouter.handler()`
+export const handler: Handler = latcher.handler()`
 
 // Identical in both examples
 const ORDER_SCHEMAS = `import { z } from 'zod'
@@ -279,8 +279,8 @@ const HANDLER_BODY = `  const total = body.items.reduce((sum, { price, quantity 
 const inferredFiles = [
   {
     path: 'routes/processOrder.ts',
-    code: `import { logger } from '@lambda-event-router/base'
-import { defineRoute } from '@lambda-event-router/sqs'
+    code: `import { logger } from '@latcher/base'
+import { defineRoute } from '@latcher/sqs'
 
 import { OrderAttributesSchema, OrderSchema } from '../schemas/order.js'
 import { notifications, orders } from '../services/orders.js'
@@ -299,14 +299,14 @@ ${HANDLER_BODY}
   { path: 'schemas/order.ts', code: ORDER_SCHEMAS },
   {
     path: 'sqs.ts',
-    code: `import { createSQSRouter } from '@lambda-event-router/sqs'
+    code: `import { createSQSMatcher } from '@latcher/sqs'
 
 import { processOrderRoute } from './routes/processOrder.js'
 
-export const sqsRouter = createSQSRouter()
+export const sqsMatcher = createSQSMatcher()
 
 // The route arrives complete, filters and schemas included
-sqsRouter.route(processOrderRoute)`,
+sqsMatcher.route(processOrderRoute)`,
   },
   { path: 'index.ts', code: ENTRY_POINT },
 ]
@@ -314,8 +314,8 @@ sqsRouter.route(processOrderRoute)`,
 const annotatedFiles = [
   {
     path: 'handlers/processOrder.ts',
-    code: `import { logger } from '@lambda-event-router/base'
-import type { SQSRequest, SQSResponse } from '@lambda-event-router/sqs'
+    code: `import { logger } from '@latcher/base'
+import type { SQSRequest, SQSResponse } from '@latcher/sqs'
 import type { z } from 'zod'
 
 import { OrderAttributesSchema, OrderSchema } from '../schemas/order.js'
@@ -333,17 +333,17 @@ ${HANDLER_BODY}
   { path: 'schemas/order.ts', code: ORDER_SCHEMAS },
   {
     path: 'sqs.ts',
-    code: `import { createSQSRouter } from '@lambda-event-router/sqs'
+    code: `import { createSQSMatcher } from '@latcher/sqs'
 
 import { processOrder } from './handlers/processOrder.js'
 import { OrderAttributesSchema, OrderSchema } from './schemas/order.js'
 
 const ORDER_QUEUE_ARN = 'arn:aws:sqs:eu-west-2:123456789012:orders'
 
-export const sqsRouter = createSQSRouter()
+export const sqsMatcher = createSQSMatcher()
 
 // Filters, schemas and handler are brought together here instead
-sqsRouter.route({
+sqsMatcher.route({
   filters: { eventSourceArn: ORDER_QUEUE_ARN },
   bodySchema: OrderSchema,
   messageAttributesSchema: OrderAttributesSchema,
@@ -360,7 +360,7 @@ This pays off in a Lambda taking several event sources. SQS, API Gateway and Dyn
 their handlers completely different objects, and inference gets all three typed without you looking
 any of them up.
 
-`defineRoute` is named `define<Router>Route` in packages holding more than one router, and
+`defineRoute` is named `define<Matcher>Route` in packages holding more than one matcher, and
 `defineEventRoute` in `base`.
 
 ## Annotated handlers
@@ -380,6 +380,6 @@ Same four files, same schemas, same handler body. Both differ in one thing only,
 Derive those types from the schema with `z.infer` rather than writing an interface that mirrors it, so
 the two cannot drift.
 
-Most routers take the payload first and its attributes second, the way
+Most matchers take the payload first and its attributes second, the way
 `SQSRequest<TBody, TMessageAttributes>` does, and later parameters have defaults so passing only the
-first leaves the rest alone. Each router page lists its own parameters in order.
+first leaves the rest alone. Each matcher page lists its own parameters in order.

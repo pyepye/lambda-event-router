@@ -1,12 +1,12 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/codepipeline';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/codepipeline';
 
 import { CANARY_STEP, FIRST_CANARY_TOKEN } from '../config.js';
 import { DEPLOYER_FUNCTION_NAME } from '../environment.js';
 import { CanaryParametersSchema } from '../utils/schemas.js';
 
 // The first invocation of the canary action. hasContinuationToken false keeps it off the re-invokes,
-// which awaitCanaryHealth takes instead. Its custom filter is async, which the router awaits.
+// which awaitCanaryHealth takes instead. Its custom filter is async, which the matcher awaits.
 // The token it returns is what CodePipeline sends back on the next invocation.
 export const startCanaryDeployment = defineRoute({
   filters: {

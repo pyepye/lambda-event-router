@@ -1,14 +1,15 @@
-export type { StepFunctionsRouterOptions } from './StepFunctionsRouter.js';
-export { createStepFunctionsRouter, defineRoute, StepFunctionsRouter } from './StepFunctionsRouter.js';
+export { createStepFunctionsMatcher, defineRoute, StepFunctionsMatcher } from './StepFunctionsMatcher.js';
+export type { StepFunctionsMatcherOptions } from './StepFunctionsMatcher.js';
 export type {
-  StepFunctionsFilterInput,
-  StepFunctionsFilters,
-  StepFunctionsHandler,
-  StepFunctionsMiddleware,
-  StepFunctionsRequest,
-  StepFunctionsRouteDefinition,
-  StepFunctionsTaskTokenHandler,
-  StepFunctionsTaskTokenMiddleware,
-  StepFunctionsTaskTokenRequest,
-  StepFunctionsTaskTokenRouteDefinition,
+    StepFunctionsFilterInput,
+    StepFunctionsFilters,
+    StepFunctionsHandler,
+    StepFunctionsMiddleware,
+    StepFunctionsRequest,
+    StepFunctionsRouteDefinition,
+    StepFunctionsTaskTokenHandler,
+    StepFunctionsTaskTokenMiddleware,
+    StepFunctionsTaskTokenRequest,
+    StepFunctionsTaskTokenRouteDefinition
 } from './types.js';
+

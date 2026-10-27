@@ -1,7 +1,7 @@
 # Service example: Kinesis
 
-A deployable CDK app that exercises the `KinesisRouter` end to end. It models an order and telemetry
-pipeline. One Lambda consumes two Kinesis data streams, and the router does the per-record dispatch.
+A deployable CDK app that exercises the `KinesisMatcher` end to end. It models an order and telemetry
+pipeline. One Lambda consumes two Kinesis data streams, and the matcher does the per-record dispatch.
 
 The routes are in `src/kinesis.ts`, and the handlers are in `src/handlers/`.
 
@@ -25,7 +25,7 @@ to SQS or SNS, and this example stays on one service.
 ## What it covers
 
 One `put:records` puts five groups of records on the two streams. Together they hit every filter the
-router has and every failure path.
+matcher has and every failure path.
 
 | Feature | Where |
 | --- | --- |
@@ -34,17 +34,17 @@ router has and every failure path.
 | `custom` filter | `flagHighValueOrder` reads the total before any schema runs |
 | Zod schemas | `dataSchema` on all four routes |
 | JSON numbers | `processOrder` gets `total` as a number, with nothing to coerce |
-| Router middleware | `logRecord` runs once per record, on both streams |
+| Matcher middleware | `logRecord` runs once per record, on both streams |
 | Route middleware | `withOrderContext` on `flagHighValueOrder`, typed to the route's data |
-| Lambda middleware | `logBatchResponse` logs what the router hands back to Lambda |
-| Batch item failures | `createKinesisRouter({ batchItemFailures: true })`, both streams report them |
-| A batch with no failures | Two readings that both work, so the router returns nothing to report |
+| Lambda middleware | `logBatchResponse` logs what the matcher hands back to Lambda |
+| Batch item failures | `createKinesisMatcher({ batchItemFailures: true })`, both streams report them |
+| A batch with no failures | Two readings that both work, so the matcher returns nothing to report |
 | No route matched | An order with a `web-checkout` partition key and a low total |
 | Handler failure | `quarantineDevice` throws, after its middleware has run |
 | Schema failures | An order with no total, and a reading that is not JSON |
 | Retries | Every failing record is delivered a second time, then discarded |
 
-Kinesis carries raw bytes. The router base64 decodes each record and then parses it as JSON, so a JSON
+Kinesis carries raw bytes. The matcher base64 decodes each record and then parses it as JSON, so a JSON
 number arrives as a number. A payload that is not JSON is not rejected at that point. It reaches the
 schema as a raw string.
 
@@ -54,7 +54,7 @@ type of `total` before it compares it.
 CDK injects both stream ARNs as env vars, and `src/config.ts` reads them. The `eventSourceArn` filters
 match against those values.
 
-Handlers do their work by logging. The router returns a batch response rather than anything a handler
+Handlers do their work by logging. The matcher returns a batch response rather than anything a handler
 produces, and `logBatchResponse` puts that in the log as well.
 
 ## Prerequisites
@@ -80,9 +80,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kinesis... install
-pnpm -F @lambda-event-router/service-example-kinesis... build
-pnpm -F @lambda-event-router/service-example-kinesis run deploy
+pnpm -F @latcher/service-example-kinesis... install
+pnpm -F @latcher/service-example-kinesis... build
+pnpm -F @latcher/service-example-kinesis run deploy
 ```
 
 CDK outputs include `OrdersStreamArn` and `TelemetryStreamArn`.
@@ -92,7 +92,7 @@ CDK outputs include `OrdersStreamArn` and `TelemetryStreamArn`.
 Pass the two stream ARNs from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kinesis run put:records \
+pnpm -F @latcher/service-example-kinesis run put:records \
   <OrdersStreamArn> <TelemetryStreamArn>
 ```
 
@@ -138,7 +138,7 @@ different `stackName`.
 One run produces 12 invocations across five batches. The batch with nothing wrong in it runs once.
 
 There are 9 `Handling Kinesis record` lines. A record that matches no route, or fails its schema, never
-gets one. The router matches and validates before it runs middleware.
+gets one. The matcher matches and validates before it runs middleware.
 
 Every failure logs the same line, `Error processing Kinesis record <eventID>`, and the detail sits under
 `error`. The eventID reads `shardId-000000000000:<sequenceNumber>`.
@@ -157,7 +157,7 @@ The first four orders share a shard, so they arrive in one batch in the order th
 Telemetry is a second stream, so its records are batches of their own. The first two both work:
 
 - `Device reading recorded` for `device-0117` and for `device-0204`.
-- `Batch response returned` with no `response` field. The router returns `undefined` when it has no
+- `Batch response returned` with no `response` field. The matcher returns `undefined` when it has no
   failure to report, and `JSON.stringify` drops the key. That batch runs once and is never retried.
 
 The quarantined device follows, on its own:
@@ -170,7 +170,7 @@ Two more batches follow, one per stream, each holding a schema failure:
 - `Order accepted for fulfilment` for `ord-5`, then an `error.message` of
   `Data validation failed for record <eventID>` for `ord-6`, which has no `total`.
 - `Device reading recorded` for `device-0117`, then the same `Data validation failed` message for the
-  reading that is not JSON. The router hands `ReadingSchema` a raw string.
+  reading that is not JSON. The matcher hands `ReadingSchema` a raw string.
 
 Both schema failures give the same `error.message`. `error.issues` is what names the field. `ord-6` reads
 `path: ["total"]`, and the reading that is not JSON reads an empty path, because the whole record failed
@@ -205,15 +205,15 @@ window.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kinesis diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-kinesis watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-kinesis synth  # render template
+pnpm -F @latcher/service-example-kinesis diff   # review pending changeset
+pnpm -F @latcher/service-example-kinesis watch  # hotswap deploys
+pnpm -F @latcher/service-example-kinesis synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kinesis destroy
+pnpm -F @latcher/service-example-kinesis destroy
 ```
 
 The stack owns both streams and its log group. `destroy` removes the streams, the worker, the event

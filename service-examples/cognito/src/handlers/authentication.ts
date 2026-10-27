@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/cognito';
 
 const WITHDRAWN_PROGRAMME = 'msc-withdrawn';
 

@@ -74,7 +74,7 @@ function alert(tenantId: string, alertId: string, message: string, severity: str
 }
 
 const priorityEntries: SendMessageBatchRequestEntry[] = [
-  // tenant-42 fails in the middle. The router marks the failing record and everything after it in
+  // tenant-42 fails in the middle. The matcher marks the failing record and everything after it in
   // the group, so a-3 never runs and retries alongside a-2.
   { Id: 'a-1', MessageGroupId: 'tenant-42', MessageBody: alert('tenant-42', 'a-1', 'CPU usage high', 'warning') },
   { Id: 'a-2', MessageGroupId: 'tenant-42', MessageBody: JSON.stringify({ tenantId: 'tenant-42' }) },

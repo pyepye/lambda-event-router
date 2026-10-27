@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-dynamodb",
+  "name": "@latcher/service-example-dynamodb",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/dynamodb": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/dynamodb": "workspace:*",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/util-dynamodb": "catalog:",
     "zod": "^4.3.5"

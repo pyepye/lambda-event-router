@@ -1,4 +1,4 @@
-import { defineRoute, NotFound } from '@lambda-event-router/apigateway';
+import { defineRoute, NotFound } from '@latcher/apigateway';
 
 import { findOrder } from '../utils/dynamodb.js';
 import { OrderSchema } from '../utils/schemas.js';

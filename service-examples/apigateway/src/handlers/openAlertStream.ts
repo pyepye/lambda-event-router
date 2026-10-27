@@ -1,11 +1,11 @@
 import {
-  type WebSocketConnectRequest,
-  type WebSocketConnectResponse,
-  WebSocketForbidden,
-  WebSocketOk,
-  WebSocketUnauthorized,
-} from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+    type WebSocketConnectRequest,
+    type WebSocketConnectResponse,
+    WebSocketForbidden,
+    WebSocketOk,
+    WebSocketUnauthorized,
+} from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { RETIRED_SERVICE_TOKEN } from '../utils/constants.js';
 

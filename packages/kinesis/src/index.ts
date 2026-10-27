@@ -1,10 +1,9 @@
-export { createKinesisRouter, defineRoute, KinesisRouter } from './KinesisRouter.js';
+export { createKinesisMatcher, defineRoute, KinesisMatcher } from './KinesisMatcher.js';
 export type {
-  KinesisFilterInput,
-  KinesisFilters,
-  KinesisMiddleware,
-  KinesisRequest,
-  KinesisResponse,
-  KinesisRouteDefinition,
-  KinesisRouterOptions,
+    KinesisFilterInput,
+    KinesisFilters, KinesisMatcherOptions, KinesisMiddleware,
+    KinesisRequest,
+    KinesisResponse,
+    KinesisRouteDefinition
 } from './types.js';
+

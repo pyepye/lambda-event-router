@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineActiveMQRoute } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import { defineActiveMQRoute } from '@latcher/mq';
 
 import { LEGACY_ORDER_BROKER_ARN } from '../config.js';
 import { ORDER_QUEUES } from '../utils/brokers.js';

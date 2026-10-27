@@ -1,10 +1,5 @@
-import {
-  Allow,
-  Deny,
-  type LambdaAuthorizerResult,
-  type LambdaAuthorizerTokenRequest,
-} from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { Allow, Deny, type LambdaAuthorizerResult, type LambdaAuthorizerTokenRequest } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { REVOKED_TOKEN, SIMPLE_MODE_TOKEN, STAFF_TOKEN } from '../utils/constants.js';
 
@@ -24,7 +19,7 @@ export async function authoriseStaffToken({
     throw Deny('anonymous', resourceArn);
   }
 
-  // A TOKEN authorizer has no simple response shape, so the router refuses a boolean and the
+  // A TOKEN authorizer has no simple response shape, so the matcher refuses a boolean and the
   // invocation fails.
   if (authorizationToken === SIMPLE_MODE_TOKEN) {
     return true;

@@ -1,5 +1,5 @@
-import { defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineWebSocketRoute, postToConnection } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 // The API's $default route collects any frame whose action it does not recognise.
 export const rejectUnknownAction = defineWebSocketRoute({

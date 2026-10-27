@@ -1,43 +1,43 @@
-# @lambda-event-router/appsync
+# @latcher/appsync
 
-Routes AppSync resolver calls to handlers by GraphQL type and field. The package also has routers for AppSync authorizers and the Events API.
+Routes AppSync resolver calls to handlers by GraphQL type and field. The package also has matchers for AppSync authorizers and the Events API.
 
 **Supported AWS Services:** `AWS AppSync`
 
-**Available Routers:** `AppSyncRouter` | `AppSyncAuthorizerRouter` | `AppSyncEventsRouter` | `AppSyncEventsAuthorizerRouter`
+**Available Matchers:** `AppSyncMatcher` | `AppSyncAuthorizerMatcher` | `AppSyncEventsMatcher` | `AppSyncEventsAuthorizerMatcher`
 
-**Docs:** [AppSyncRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncRouter) | [AppSyncAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncAuthorizerRouter) | [AppSyncEventsRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsRouter) | [AppSyncEventsAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsAuthorizerRouter)
+**Docs:** [AppSyncMatcher](https://pyepye.github.io/latcher/matchers/AppSyncMatcher) | [AppSyncAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/AppSyncAuthorizerMatcher) | [AppSyncEventsMatcher](https://pyepye.github.io/latcher/matchers/AppSyncEventsMatcher) | [AppSyncEventsAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/AppSyncEventsAuthorizerMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/appsync
+npm install @latcher/base @latcher/appsync
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { appSyncRouter } from './appsync'
-import { authorizerRouter } from './authorizer'
-import { eventsRouter } from './events'
-import { eventsAuthorizerRouter } from './eventsAuthorizer'
+import { Latcher } from '@latcher/base'
+import { appSyncMatcher } from './appsync'
+import { authorizerMatcher } from './authorizer'
+import { eventsMatcher } from './events'
+import { eventsAuthorizerMatcher } from './eventsAuthorizer'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [appSyncRouter, authorizerRouter, eventsRouter, eventsAuthorizerRouter],
+const latcher = new Latcher({
+  matchers: [appSyncMatcher, authorizerMatcher, eventsMatcher, eventsAuthorizerMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // appsync.ts
-import { createAppSyncRouter, defineRoute } from '@lambda-event-router/appsync'
+import { createAppSyncMatcher, defineRoute } from '@latcher/appsync'
 
-export const appSyncRouter = createAppSyncRouter()
+export const appSyncMatcher = createAppSyncMatcher()
 
 const getOrder = defineRoute({
   filters: {
@@ -49,19 +49,19 @@ const getOrder = defineRoute({
   return { id: args.id, status: 'SHIPPED' }
 })
 
-appSyncRouter.route(getOrder)
+appSyncMatcher.route(getOrder)
 ```
 
 ```ts
 // authorizer.ts
 import {
   Authorized,
-  createAppSyncAuthorizerRouter,
+  createAppSyncAuthorizerMatcher,
   defineAuthorizerRoute,
   Denied,
-} from '@lambda-event-router/appsync'
+} from '@latcher/appsync'
 
-export const authorizerRouter = createAppSyncAuthorizerRouter()
+export const authorizerMatcher = createAppSyncAuthorizerMatcher()
 
 const authoriseGetOrder = defineAuthorizerRoute({
   filters: {
@@ -73,14 +73,14 @@ const authoriseGetOrder = defineAuthorizerRoute({
   return authorizationToken === process.env.API_TOKEN ? Authorized() : Denied()
 })
 
-authorizerRouter.route(authoriseGetOrder)
+authorizerMatcher.route(authoriseGetOrder)
 ```
 
 ```ts
 // events.ts
-import { createAppSyncEventsRouter, defineEventsRoute } from '@lambda-event-router/appsync'
+import { createAppSyncEventsMatcher, defineEventsRoute } from '@latcher/appsync'
 
-export const eventsRouter = createAppSyncEventsRouter()
+export const eventsMatcher = createAppSyncEventsMatcher()
 
 const publishOrder = defineEventsRoute({
   filters: {
@@ -93,19 +93,19 @@ const publishOrder = defineEventsRoute({
   return { events }
 })
 
-eventsRouter.route(publishOrder)
+eventsMatcher.route(publishOrder)
 ```
 
 ```ts
 // eventsAuthorizer.ts
 import {
-  createAppSyncEventsAuthorizerRouter,
+  createAppSyncEventsAuthorizerMatcher,
   defineEventsAuthorizerRoute,
   EventsAuthorized,
   EventsDenied,
-} from '@lambda-event-router/appsync'
+} from '@latcher/appsync'
 
-export const eventsAuthorizerRouter = createAppSyncEventsAuthorizerRouter()
+export const eventsAuthorizerMatcher = createAppSyncEventsAuthorizerMatcher()
 
 const authoriseOrderPublish = defineEventsAuthorizerRoute({
   filters: {
@@ -118,23 +118,23 @@ const authoriseOrderPublish = defineEventsAuthorizerRoute({
   return authorizationToken === process.env.API_TOKEN ? EventsAuthorized() : EventsDenied()
 })
 
-eventsAuthorizerRouter.route(authoriseOrderPublish)
+eventsAuthorizerMatcher.route(authoriseOrderPublish)
 ```
 
 Each handler's types come from its route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/docs/handlers#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/docs/handlers#annotated-handlers).
 
 ## Documentation
 
-- [AppSyncRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncRouter) covers every filter, schema validation, nested field resolvers
+- [AppSyncMatcher](https://pyepye.github.io/latcher/matchers/AppSyncMatcher) covers every filter, schema validation, nested field resolvers
   and batched resolvers.
-- [AppSyncAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncAuthorizerRouter) covers every filter, responses
+- [AppSyncAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/AppSyncAuthorizerMatcher) covers every filter, responses
   and middleware.
-- [AppSyncEventsRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsRouter) covers every filter, responses
+- [AppSyncEventsMatcher](https://pyepye.github.io/latcher/matchers/AppSyncEventsMatcher) covers every filter, responses
   and middleware.
-- [AppSyncEventsAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/AppSyncEventsAuthorizerRouter) covers every filter, responses
+- [AppSyncEventsAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/AppSyncEventsAuthorizerMatcher) covers every filter, responses
   and middleware.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

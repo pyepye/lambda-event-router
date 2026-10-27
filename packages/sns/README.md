@@ -1,41 +1,41 @@
-# @lambda-event-router/sns
+# @latcher/sns
 
-Routes each SNS notification to a handler by topic, subject or message attribute. The router parses the message and converts its attributes before your handler runs.
+Routes each SNS notification to a handler by topic, subject or message attribute. The matcher parses the message and converts its attributes before your handler runs.
 
 **Supported AWS Services:** `Amazon SNS`
 
-**Available Routers:** `SNSRouter`
+**Available Matchers:** `SNSMatcher`
 
-**Docs:** [SNSRouter](https://pyepye.github.io/lambda-event-router/routers/SNSRouter)
+**Docs:** [SNSMatcher](https://pyepye.github.io/latcher/matchers/SNSMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/sns
+npm install @latcher/base @latcher/sns
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { snsRouter } from './sns'
+import { Latcher } from '@latcher/base'
+import { snsMatcher } from './sns'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [snsRouter],
+const latcher = new Latcher({
+  matchers: [snsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // sns.ts
-import { createSNSRouter, defineRoute } from '@lambda-event-router/sns'
+import { createSNSMatcher, defineRoute } from '@latcher/sns'
 import { z } from 'zod'
 
-export const snsRouter = createSNSRouter()
+export const snsMatcher = createSNSMatcher()
 
 const orderCreated = defineRoute({
   filters: {
@@ -48,17 +48,17 @@ const orderCreated = defineRoute({
   console.log(`Processing order ${body.orderId} for ${body.total}`)
 })
 
-snsRouter.route(orderCreated)
+snsMatcher.route(orderCreated)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SNSRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/SNSMatcher#annotated-handlers).
 
 ## Documentation
 
-- [SNSRouter](https://pyepye.github.io/lambda-event-router/routers/SNSRouter) covers every filter, message attribute types,
+- [SNSMatcher](https://pyepye.github.io/latcher/matchers/SNSMatcher) covers every filter, message attribute types,
   schema validation and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

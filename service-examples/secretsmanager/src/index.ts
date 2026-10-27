@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { secretsManagerRouter } from './secretsManager.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [secretsManagerRouter] });
+import { secretsManagerMatcher } from './secretsManager.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [secretsManagerMatcher] });
+
+export const handler: Handler = latcher.handler();

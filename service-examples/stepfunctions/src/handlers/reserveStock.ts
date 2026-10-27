@@ -1,5 +1,5 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/stepfunctions';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/stepfunctions';
 
 import { RESERVE_STOCK_TASK } from '../config.js';
 import { withOrderContext } from '../middleware/withOrderContext.js';

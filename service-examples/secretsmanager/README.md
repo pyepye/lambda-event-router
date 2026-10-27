@@ -1,8 +1,8 @@
 # Service example: Secrets Manager
 
-A deployable CDK app that exercises the `SecretsManagerRouter` end to end. It models credential
+A deployable CDK app that exercises the `SecretsManagerMatcher` end to end. It models credential
 rotation for an internal platform. One Lambda is the rotation function for five secrets, and the
-router dispatches each of the four rotation steps.
+matcher dispatches each of the four rotation steps.
 
 The routes are in `src/secretsManager.ts`, and the handlers are in `src/handlers/`.
 
@@ -36,7 +36,7 @@ retired/report-token
 ## What it covers
 
 One `rotate` starts a rotation on each of the five secrets. Between them they hit every filter the
-router has. They also cover both kinds of failure and the two routes that win on registration order.
+matcher has. They also cover both kinds of failure and the two routes that win on registration order.
 
 | Feature | Where |
 | --- | --- |
@@ -50,13 +50,13 @@ router has. They also cover both kinds of failure and the two routes that win on
 | No `step` filter | `holdPausedRotation` catches all four steps |
 | `custom` filter, async | `holdPausedRotation` reads the secret's tags before it matches |
 | `custom` filter, sync | `verifyPaymentsToken` checks a list held in code |
-| Router middleware | `logRotationStep` runs once per rotation event |
+| Matcher middleware | `logRotationStep` runs once per rotation event |
 | Route middleware | `withSecretContext` on the `createSecret` route |
 | Registration order | `holdPausedRotation` and `checkWebhookKey` each beat a later route that also matches |
 | No route matched | `retired/report-token` has a rotation schedule but no route |
 | Handler failure | `rejectIndexKey` throws after its middleware has run |
 
-The router takes no schemas, so there is no validation step and no validation failure to show.
+The matcher takes no schemas, so there is no validation step and no validation failure to show.
 
 CDK injects the payments secret ARN as an env var, and `src/config.ts` reads it. The exact string
 `secretId` filter matches against that value.
@@ -87,9 +87,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-secretsmanager... install
-pnpm -F @lambda-event-router/service-example-secretsmanager... build
-pnpm -F @lambda-event-router/service-example-secretsmanager run deploy
+pnpm -F @latcher/service-example-secretsmanager... install
+pnpm -F @latcher/service-example-secretsmanager... build
+pnpm -F @latcher/service-example-secretsmanager run deploy
 ```
 
 CDK outputs include `WorkerLogGroupName` and `PaymentsTokenArn`.
@@ -102,7 +102,7 @@ five lines sit in the log ahead of anything the trigger does.
 ## Rotate sample secrets
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-secretsmanager run rotate
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-secretsmanager run rotate
 ```
 
 The script takes no arguments. It holds the five secret names and the stack creates them with exactly
@@ -180,8 +180,8 @@ attempt. The rotation token changes on every invocation.
 
 `retired/report-token` matches nothing:
 
-- `No route matched for Secrets Manager rotation event` is the router refusing the event.
-- That event has no `Handling rotation step` line. The router picks a route before it runs middleware.
+- `No route matched for Secrets Manager rotation event` is the matcher refusing the event.
+- That event has no `Handling rotation step` line. The matcher picks a route before it runs middleware.
 - Only `createSecret` appears. Secrets Manager gets no further.
 
 `Pending token already created` is `createSecret` finding the version it wrote last time. It shows
@@ -210,25 +210,25 @@ All five secrets have a rotation schedule pointing at the worker. The interval i
 schedule fires during a test, and `rotateImmediatelyOnUpdate` is off so creating one runs no rotation.
 
 The rotation event carries `SecretId` as the secret ARN, never the name, and that ARN ends in a six
-character suffix Secrets Manager adds. The router takes the name back out of it and hands both to the
+character suffix Secrets Manager adds. The matcher takes the name back out of it and hands both to the
 filters, so `announceRotation` can be written against names and `verifyPaymentsToken` against the
 ARN.
 
-Every event also carries `RotationToken`, which `@types/aws-lambda` leaves out. The router reads it
+Every event also carries `RotationToken`, which `@types/aws-lambda` leaves out. The matcher reads it
 off the event and puts it on the request as `rotationToken`.
 
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-secretsmanager diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-secretsmanager watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-secretsmanager synth  # render template
+pnpm -F @latcher/service-example-secretsmanager diff   # review pending changeset
+pnpm -F @latcher/service-example-secretsmanager watch  # hotswap deploys
+pnpm -F @latcher/service-example-secretsmanager synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-secretsmanager run destroy
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-secretsmanager run destroy
 ```
 
 That destroys the stack and then force deletes the five secrets. Destroying takes the rotation

@@ -10,7 +10,7 @@ export async function countBreaches(secret: string): Promise<number> {
   const prefix = hash.slice(0, HASH_PREFIX_LENGTH);
   const suffix = hash.slice(HASH_PREFIX_LENGTH);
 
-  const response = await fetch(`${RANGE_URL}${prefix}`, { headers: { 'user-agent': 'lambda-event-router-example' } });
+  const response = await fetch(`${RANGE_URL}${prefix}`, { headers: { 'user-agent': 'latcher-example' } });
   if (!response.ok) throw new Error(`Pwned Passwords returned HTTP ${response.status}`);
 
   const body = await response.text();

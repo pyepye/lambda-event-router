@@ -1,6 +1,6 @@
-import { logger } from '@lambda-event-router/base';
-import type { ApiRequest, ApiResponse } from '@lambda-event-router/vpclattice';
-import { HTTP_STATUS_CODES } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import type { ApiRequest, ApiResponse } from '@latcher/vpclattice';
+import { HTTP_STATUS_CODES } from '@latcher/vpclattice';
 
 // A registered OPTIONS route wins over the automatic CORS preflight for this path. The CORS
 // headers are still added on top of whatever it returns.

@@ -1,5 +1,5 @@
-import { type ApiRequest, type ApiResponse, NotFound, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, NotFound, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { RETURNS } from '../utils/returns.js';
 import type { TReturnAmendment } from '../utils/schemas.js';

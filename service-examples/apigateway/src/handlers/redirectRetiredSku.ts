@@ -1,5 +1,5 @@
-import { defineRoute, PermanentRedirect } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, PermanentRedirect } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 // Retired SKU codes moved under /inventory, and the old path answers with a permanent redirect.
 export const redirectRetiredSku = defineRoute({

@@ -1,5 +1,5 @@
-import { defineRoute, NotFound } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { RETURN_LABEL_PNG } from '../utils/returns.js';
 

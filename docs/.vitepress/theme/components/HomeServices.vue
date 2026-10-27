@@ -12,10 +12,10 @@ const services: FilterPill[] = filterPills.filter(function isRealService(pill) {
     <div class="home-services-intro">
       <h2 class="home-services-title">Supported AWS services</h2>
       <p class="home-services-text">
-        There is a router for every AWS service that can trigger a Lambda directly. That is 33
-        routers across 26 packages.
+        There is a matcher for every AWS service that can trigger a Lambda directly. That is 33
+        matchers across 26 packages.
       </p>
-      <a class="home-services-link" :href="withBase('/packages')">See all packages and routers</a>
+      <a class="home-services-link" :href="withBase('/packages')">See all packages and matchers</a>
     </div>
 
     <ul class="home-services-grid">

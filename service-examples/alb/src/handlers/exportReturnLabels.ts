@@ -1,11 +1,11 @@
-import { defineRoute } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 const LABEL = { returnId: 'ret-8801', carrier: 'dpd', depot: 'GB-LEEDS-01', packaging: 'parcel' };
 const LABEL_COUNT = 15_000;
 
-// ALB caps a Lambda response at 1 MB and answers 502 when one is bigger. The router builds this
-// response happily, so the size is the one failure the load balancer owns rather than the router.
+// ALB caps a Lambda response at 1 MB and answers 502 when one is bigger. The matcher builds this
+// response happily, so the size is the one failure the load balancer owns rather than the matcher.
 export const exportReturnLabels = defineRoute({
   filters: { method: 'GET', path: '/reports/labels' },
 }).handle(async () => {

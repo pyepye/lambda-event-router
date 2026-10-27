@@ -1,6 +1,7 @@
-import { gzipSync } from 'node:zlib';
 import type { CloudWatchLogsDecodedData, CloudWatchLogsEvent, CloudWatchLogsLogEvent, Context } from 'aws-lambda';
-import { cloudwatchRouter } from '../src/cloudwatch.js';
+import { gzipSync } from 'node:zlib';
+
+import { cloudwatchMatcher } from '../src/cloudwatch.js';
 import {
   AUDIT_LOG_GROUP,
   AUDIT_TRAFFIC_FILTER,
@@ -131,7 +132,7 @@ async function runCapturingLogs(event: CloudWatchLogsEvent): Promise<{ logged: s
   Object.assign(console, { log: collect, debug: collect, warn: collect, error: collect });
 
   try {
-    await cloudwatchRouter.handleEvent(event, context);
+    await cloudwatchMatcher.handleEvent(event, context);
     return { logged: lines.join('\n') };
   } catch (thrown) {
     return { logged: lines.join('\n'), error: thrown };
@@ -173,9 +174,9 @@ for (const delivery of deliveries) {
 const sampleEvent = buildEvent(deliveries[0] as Delivery);
 
 const claims: [string, boolean][] = [
-  ['the router takes a CloudWatch Logs event', cloudwatchRouter.canHandleEvent(sampleEvent)],
-  ['the router turns an SQS event away', !cloudwatchRouter.canHandleEvent({ Records: [] })],
-  ['the router turns a plain object away', !cloudwatchRouter.canHandleEvent({ awslogs: { data: 123 } })],
+  ['the matcher takes a CloudWatch Logs event', cloudwatchMatcher.canHandleEvent(sampleEvent)],
+  ['the matcher turns an SQS event away', !cloudwatchMatcher.canHandleEvent({ Records: [] })],
+  ['the matcher turns a plain object away', !cloudwatchMatcher.canHandleEvent({ awslogs: { data: 123 } })],
 ];
 
 for (const [label, held] of claims) {

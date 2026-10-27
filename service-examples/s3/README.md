@@ -1,8 +1,8 @@
 # Service example: S3
 
-A deployable CDK app that exercises `S3Router` and `S3BatchRouter` end to end. It models a student
+A deployable CDK app that exercises `S3Matcher` and `S3BatchMatcher` end to end. It models a student
 document vault. One Lambda handles the notifications from two buckets and the tasks of an S3 Batch
-job, with a router registered for each.
+job, with a matcher registered for each.
 
 The routes are in `src/s3.ts`, and the handlers are in `src/handlers/`.
 
@@ -47,13 +47,13 @@ cannot feed back into the worker.
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The one
 exception is the batch route, which returns a result code to S3 for every task.
 
-`LambdaRouter` picks the router from the event shape, so a notification never reaches the batch
+`Latcher` picks the matcher from the event shape, so a notification never reaches the batch
 handler and a task never reaches a notification route.
 
 ## What it covers
 
 One `trigger` writes 22 notification events across the two buckets and then runs an eight task batch
-job. Together they hit every filter the router has, both kinds of notification failure and every
+job. Together they hit every filter the matcher has, both kinds of notification failure and every
 result the batch route can return.
 
 | Feature | Where |
@@ -66,28 +66,28 @@ result the batch route can return.
 | `eventName` filter, wildcard | `rejectOversizedUpload`, `logRemoval` and `expireRestoredCopy` |
 | `route()` and `defineRoute` | `quarantineExecutable`, the one form that names its own event name |
 | Convenience methods | Every other route, which set the event name for you |
-| Router middleware | `logRecord` runs once per record, on both buckets |
+| Matcher middleware | `logRecord` runs once per record, on both buckets |
 | Route middleware | `withDocumentContext` on `scanDocument` |
 | Batch middleware | `withBatchContext` on the batch route, which has its own request type |
-| Two routers, one Lambda | `S3Router` takes the notifications and `S3BatchRouter` takes the job's tasks |
+| Two matchers, one Lambda | `S3Matcher` takes the notifications and `S3BatchMatcher` takes the job's tasks |
 | ObjectCreated request | `objectSize` and `eTag`, which only the created routes receive |
 | ObjectRestore request | `restoreEventData`, which only `ObjectRestore:Completed` carries |
 | Filter order | An oversized PDF reaches `rejectOversizedUpload`, registered above `scanDocument` |
-| URL-decoded keys | `batch/enrolment 1003 final.json` is read back by the key the router decoded |
-| No route matched | `misc/notes.txt` matches nothing and the router throws |
+| URL-decoded keys | `batch/enrolment 1003 final.json` is read back by the key the matcher decoded |
+| No route matched | `misc/notes.txt` matches nothing and the matcher throws |
 | Handler failure | `notifyReviewer` throws after its middleware has run |
 | `Succeeded` | The four ready enrolments, and the locked one once its lock is released |
 | `TemporaryFailure` | A locked enrolment, which S3 Batch retries until the trigger releases the lock |
 | `PermanentFailure` returned | An enrolment that failed its checksum |
 | `PermanentFailure` thrown | `assertArchivable` throws for a withdrawn enrolment |
 | A batch task that throws | One manifest key has no object, so the handler's `GetObject` fails |
-| `treatMissingKeysAs` | Set on the batch route. The router answers every task, so S3 never applies it |
+| `treatMissingKeysAs` | Set on the batch route. The matcher answers every task, so S3 never applies it |
 | `s3:TestEvent` | `recordNotificationSetup` takes the ping, which has no `Records` and no route |
 
-The router has no schemas. Filters and the event shape are the whole of its matching.
+The matcher has no schemas. Filters and the event shape are the whole of its matching.
 
 S3 sends one record per Lambda invocation, and an S3 Batch job on schema 1.0 sends one task per
-invocation. The router loops over records and tasks, but in this example each loop runs once. Several
+invocation. The matcher loops over records and tasks, but in this example each loop runs once. Several
 records in one invocation is covered by the package's unit tests.
 
 Note: `s3:TestEvent` goes to SQS and SNS destinations. A Lambda destination is validated a different
@@ -127,9 +127,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-s3... install
-pnpm -F @lambda-event-router/service-example-s3... build
-pnpm -F @lambda-event-router/service-example-s3 run deploy
+pnpm -F @latcher/service-example-s3... install
+pnpm -F @latcher/service-example-s3... build
+pnpm -F @latcher/service-example-s3 run deploy
 ```
 
 CDK outputs include `UploadsBucketName`, `ReportsBucketName`, `BatchOpsBucketName`,
@@ -138,7 +138,7 @@ CDK outputs include `UploadsBucketName`, `ReportsBucketName`, `BatchOpsBucketNam
 ## Write sample objects
 
 ```bash
-pnpm -F @lambda-event-router/service-example-s3 run trigger
+pnpm -F @latcher/service-example-s3 run trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name if you deployed
@@ -188,7 +188,7 @@ Use `aws logs filter-log-events` instead when you want to count lines. It return
 `aws logs tail --format json` does not.
 
 `logRecord` writes one `Handling S3 record` line per record that matched a route. A record that
-matched nothing has no line, because router middleware runs after the match.
+matched nothing has no line, because matcher middleware runs after the match.
 
 Twenty records reach a handler and log once each:
 
@@ -214,7 +214,7 @@ Two records fail, and each one produces three `ERROR` records:
 
 - `Review service unavailable for reviews/case-4821.json` comes from the handler. That record has a
   `Handling S3 record` line, because the middleware ran before the handler threw.
-- `No route matched for record from bucket <uploads>, key misc/notes.txt` comes from the router. That
+- `No route matched for record from bucket <uploads>, key misc/notes.txt` comes from the matcher. That
   record has no `Handling S3 record` line.
 
 Note: an invocation whose handler threw still reports `success` in its `platform.report` line, with no
@@ -228,7 +228,7 @@ S3 Batch retries that task every six minutes until the trigger releases the lock
 release adds an attempt each time:
 
 - `Enrolment archived` five times. Four are the enrolments that were ready, and the fifth is the
-  locked one on its retry. One of the five keys holds a space, so the line proves the router decoded
+  locked one on its retry. One of the five keys holds a space, so the line proves the matcher decoded
   what S3 Batch sent.
 - The locked enrolment's first attempt, the corrupt one and the withdrawn one log the middleware line
   and nothing else. Their result codes go back to S3, not to the log.
@@ -254,7 +254,7 @@ the error code before the HTTP status.
   `PermanentFailure: Enrolment 2003 is withdrawn`.
 - The task that threw carries the whole Lambda error, `errorType` and stack trace included.
 - The spaced key comes back as `batch/enrolment+1003+final.json`. The report holds it encoded, and the
-  handler read the object by the key the router decoded.
+  handler read the object by the key the matcher decoded.
 
 Note: `TemporaryFailure` is not in the report, because that task ends up succeeding. What proves it is
 the locked enrolment appearing twice in the log, five to six minutes apart.
@@ -283,15 +283,15 @@ writes is 210 KB for that reason. Expiration has no such floor.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-s3 diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-s3 watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-s3 synth  # render template
+pnpm -F @latcher/service-example-s3 diff   # review pending changeset
+pnpm -F @latcher/service-example-s3 watch  # hotswap deploys
+pnpm -F @latcher/service-example-s3 synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-s3 destroy
+pnpm -F @latcher/service-example-s3 destroy
 ```
 
 The three buckets empty themselves first, and the worker's log group goes with the stack. CDK's own

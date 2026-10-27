@@ -1,41 +1,41 @@
-# @lambda-event-router/documentdb
+# @latcher/documentdb
 
 Routes each change in a DocumentDB change stream batch to a handler by operation type. Your handler gets validated plain objects, one change at a time and in order.
 
 **Supported AWS Services:** `Amazon DocumentDB`
 
-**Available Routers:** `DocumentDBRouter`
+**Available Matchers:** `DocumentDBMatcher`
 
-**Docs:** [DocumentDBRouter](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter)
+**Docs:** [DocumentDBMatcher](https://pyepye.github.io/latcher/matchers/DocumentDBMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/documentdb
+npm install @latcher/base @latcher/documentdb
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { documentDBRouter } from './documentdb'
+import { Latcher } from '@latcher/base'
+import { documentDBMatcher } from './documentdb'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [documentDBRouter],
+const latcher = new Latcher({
+  matchers: [documentDBMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // documentdb.ts
-import { createDocumentDBRouter, defineRoute } from '@lambda-event-router/documentdb'
+import { createDocumentDBMatcher, defineRoute } from '@latcher/documentdb'
 import { z } from 'zod'
 
-export const documentDBRouter = createDocumentDBRouter()
+export const documentDBMatcher = createDocumentDBMatcher()
 
 const OrderSchema = z.object({ status: z.string() })
 
@@ -54,16 +54,16 @@ const orderUpdated = defineRoute({
   console.log(`Order was ${fullDocumentBeforeChange.status}, now ${fullDocument.status}`)
 })
 
-documentDBRouter.route(orderUpdated)
+documentDBMatcher.route(orderUpdated)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/DocumentDBMatcher#annotated-handlers).
 
 ## Documentation
 
-- [DocumentDBRouter](https://pyepye.github.io/lambda-event-router/routers/DocumentDBRouter) covers every filter, convenience methods, schema validation, and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [DocumentDBMatcher](https://pyepye.github.io/latcher/matchers/DocumentDBMatcher) covers every filter, convenience methods, schema validation, and failures and retries.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

@@ -1,5 +1,5 @@
-import { defineRoute } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { CHANNEL_HEADER, WAREHOUSE_FLOOR_CHANNEL } from '../utils/constants.js';
 import { OrderAmendmentSchema } from '../utils/schemas.js';

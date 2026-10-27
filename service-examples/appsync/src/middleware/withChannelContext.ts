@@ -1,5 +1,5 @@
-import type { AppSyncEventsMiddleware } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncEventsMiddleware } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 // Route middleware for ticket activity: names the ticket the channel's last segment points at.
 export const withChannelContext: AppSyncEventsMiddleware = async (request, next) => {

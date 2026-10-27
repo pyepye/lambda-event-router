@@ -1,9 +1,9 @@
-import { defineRoute } from '@lambda-event-router/apigateway';
+import { defineRoute } from '@latcher/apigateway';
 
 import { requireDispatchRole } from '../middleware/requireDispatchRole.js';
 import { ConsignmentBookingSchema } from '../utils/schemas.js';
 
-// The carrier refuses every booking, so this route always throws. The router answers 500 and keeps
+// The carrier refuses every booking, so this route always throws. The matcher answers 500 and keeps
 // the error's message out of the body, because it can hold internal detail.
 export const bookConsignment = defineRoute({
   filters: { method: 'POST', path: '/dispatch' },

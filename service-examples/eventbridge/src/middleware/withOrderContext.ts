@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import type { EventBridgeMiddleware } from '@latcher/eventbridge';
 
 import type { TOrderPlaced } from '../utils/schemas.js';
 

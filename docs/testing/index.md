@@ -1,11 +1,11 @@
 # Testing
 
-`@lambda-event-router/testing` builds realistic AWS events for your tests, so you don't have to copy
+`@latcher/testing` builds realistic AWS events for your tests, so you don't have to copy
 event JSON into every test file. It works with [Vitest](https://vitest.dev/), and every builder fills in
 sensible defaults, so you only set the fields your test cares about.
 
 ```bash
-npm install --save-dev @lambda-event-router/testing vitest
+npm install --save-dev @latcher/testing vitest
 ```
 
 ## Fixtures
@@ -14,21 +14,21 @@ Import `test` from the package in place of `test` from `vitest`. Every builder i
 fixture in the test callback.
 
 ```ts
-import { createSQSRouter } from '@lambda-event-router/sqs'
-import { test } from '@lambda-event-router/testing'
+import { createSQSMatcher } from '@latcher/sqs'
+import { test } from '@latcher/testing'
 import { expect, vi } from 'vitest'
 
 const queueArn = 'arn:aws:sqs:eu-west-2:123456789012:orders'
 const processOrder = vi.fn()
 
-const sqsRouter = createSQSRouter()
-sqsRouter.route({ filters: { eventSourceArn: queueArn }, handler: processOrder })
+const sqsMatcher = createSQSMatcher()
+sqsMatcher.route({ filters: { eventSourceArn: queueArn }, handler: processOrder })
 
 test('processes an order message', async ({ sqsRecord, sqsHandlerEvent }) => {
   const record = sqsRecord({ eventSourceARN: queueArn, body: { orderId: '123' } })
   const { event, context } = sqsHandlerEvent({ records: [record] })
 
-  await sqsRouter.handleEvent(event, context)
+  await sqsMatcher.handleEvent(event, context)
 
   expect(processOrder).toHaveBeenCalledWith(expect.objectContaining({ body: { orderId: '123' } }))
 })
@@ -38,10 +38,10 @@ To break down the test, we are:
 
 1. Building an SQS record from our queue, with an object body that the builder turns into a JSON string
 2. Wrapping the record in an event, with a mock Lambda `context` to go with it
-3. Passing both to the router's `handleEvent`, which runs the same matching and parsing as it would in Lambda
+3. Passing both to the matcher's `handleEvent`, which runs the same matching and parsing as it would in Lambda
 
-Every router has `handleEvent`, so the same pattern works for all of them. You don't need a
-[`LambdaRouter`](/routers/LambdaRouter) in your tests unless you are testing which router claims an event.
+Every matcher has `handleEvent`, so the same pattern works for all of them. You don't need a
+[`Latcher`](/matchers/Latcher) in your tests unless you are testing which matcher claims an event.
 
 ## Builders
 
@@ -69,7 +69,7 @@ Most services have builders at three levels:
 | Handler event | `createSQSHandlerEvent` | `{ records, context }`, and returns `{ event, context }` |
 
 ```ts
-import { createDynamoDBEvent, createDynamoDBInsertRecord } from '@lambda-event-router/testing'
+import { createDynamoDBEvent, createDynamoDBInsertRecord } from '@latcher/testing'
 
 const record = createDynamoDBInsertRecord({ newImage: { orderId: '123', total: 42 } })
 const event = createDynamoDBEvent([record])
@@ -88,7 +88,7 @@ record level. Your editor's autocomplete on `create` lists every builder.
 reads.
 
 ```ts
-import { createMockContext } from '@lambda-event-router/testing'
+import { createMockContext } from '@latcher/testing'
 
 const context = createMockContext({ functionName: 'orders' })
 ```
@@ -104,21 +104,21 @@ With no arguments it passes every input through unchanged. Pass a result to forc
 example a failure:
 
 ```ts
-import { SchemaValidationError } from '@lambda-event-router/base'
-import { createSQSRouter } from '@lambda-event-router/sqs'
-import { createMockSchema, test } from '@lambda-event-router/testing'
+import { SchemaValidationError } from '@latcher/base'
+import { createSQSMatcher } from '@latcher/sqs'
+import { createMockSchema, test } from '@latcher/testing'
 import { expect, vi } from 'vitest'
 
 test('rejects an invalid body', async ({ sqsHandlerEvent }) => {
   const bodySchema = createMockSchema({ issues: [{ message: 'orderId is required' }] })
   const processOrder = vi.fn()
 
-  const sqsRouter = createSQSRouter()
-  sqsRouter.route({ filters: {}, bodySchema, handler: processOrder })
+  const sqsMatcher = createSQSMatcher()
+  sqsMatcher.route({ filters: {}, bodySchema, handler: processOrder })
 
   const { event, context } = sqsHandlerEvent()
 
-  await expect(sqsRouter.handleEvent(event, context)).rejects.toThrow(SchemaValidationError)
+  await expect(sqsMatcher.handleEvent(event, context)).rejects.toThrow(SchemaValidationError)
   expect(processOrder).not.toHaveBeenCalled()
 })
 ```
@@ -128,21 +128,21 @@ The return type is exported as `MockSchema` if you need to name it.
 ## Event types
 
 Most builders return a type from `@types/aws-lambda`. The services below use their own type instead,
-and you import it from the router package.
+and you import it from the matcher package.
 
 | Package | Types |
 | --- | --- |
-| `@lambda-event-router/documentdb` | `DocumentDBEvent`, `DocumentDBChangeEvent`, `DocumentDBEventEntry`, `DocumentDBOperationType`, `DocumentDBUpdateDescription` |
-| `@lambda-event-router/kafka` | `KafkaMSKEvent`, `KafkaSelfManagedEvent`, `KafkaRetryEvent`, `KafkaRecord`, `KafkaRecordHeader` |
-| `@lambda-event-router/mq` | `ActiveMQDestination`, `ActiveMQMessageType`, `RabbitMQBasicProperties`, `RabbitMQHeaderValue` |
-| `@lambda-event-router/vpclattice` | `VPCLatticeEventV1`, `VPCLatticeEventV2`, `VPCLatticeRequestContextV2` |
-| `@lambda-event-router/apigateway` | `WebSocketEvent` |
-| `@lambda-event-router/appsync` | `AppSyncEventsPublishedEvent` |
-| `@lambda-event-router/secretsmanager` | `SecretsManagerEvent` |
+| `@latcher/documentdb` | `DocumentDBEvent`, `DocumentDBChangeEvent`, `DocumentDBEventEntry`, `DocumentDBOperationType`, `DocumentDBUpdateDescription` |
+| `@latcher/kafka` | `KafkaMSKEvent`, `KafkaSelfManagedEvent`, `KafkaRetryEvent`, `KafkaRecord`, `KafkaRecordHeader` |
+| `@latcher/mq` | `ActiveMQDestination`, `ActiveMQMessageType`, `RabbitMQBasicProperties`, `RabbitMQHeaderValue` |
+| `@latcher/vpclattice` | `VPCLatticeEventV1`, `VPCLatticeEventV2`, `VPCLatticeRequestContextV2` |
+| `@latcher/apigateway` | `WebSocketEvent` |
+| `@latcher/appsync` | `AppSyncEventsPublishedEvent` |
+| `@latcher/secretsmanager` | `SecretsManagerEvent` |
 
 ```ts
-import type { DocumentDBChangeEvent } from '@lambda-event-router/documentdb'
-import { createDocumentDBChangeEvent } from '@lambda-event-router/testing'
+import type { DocumentDBChangeEvent } from '@latcher/documentdb'
+import { createDocumentDBChangeEvent } from '@latcher/testing'
 
 const change: DocumentDBChangeEvent = createDocumentDBChangeEvent()
 ```

@@ -1,6 +1,7 @@
 import { GetRandomPasswordCommand, PutSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/secretsmanager';
+
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/secretsmanager';
 
 import { PAYMENTS_TOKEN_ARN, secretsManagerClient } from '../config.js';
 import { withSecretContext } from '../middleware/withSecretContext.js';
@@ -9,7 +10,7 @@ import { TOKEN_LENGTH } from '../utils/secrets.js';
 
 // The createSecret step for every managed secret. The filter is one list holding an ARN, a regex
 // and a wildcard, which is how the three matcher types combine. The wildcard ends at the secret
-// name, so it only matches because the router tests the name as well as the ARN.
+// name, so it only matches because the matcher tests the name as well as the ARN.
 export const createPendingToken = defineRoute({
   filters: {
     secretId: [PAYMENTS_TOKEN_ARN, /webhooks\/signing-key/, '*/index-key'],

@@ -76,7 +76,7 @@ export function taskFlowContent(workerArn: string): string {
     invoke('triage-invoke', workerArn, { [STEP_PARAMETER]: TRIAGE_STEP }, 'triage-store', RECOVER),
     store('triage-store', { triageStatus: '$.External.triageStatus' }, 'task-unrouted-invoke', RECOVER),
 
-    // No route claims a refund step on any channel, so this one names TASK in the router's error.
+    // No route claims a refund step on any channel, so this one names TASK in the matcher's error.
     invoke('task-unrouted-invoke', workerArn, { [STEP_PARAMETER]: REFUND_STEP }, RECOVER, RECOVER),
 
     store(RECOVER, { [FLOW_COMPLETE_ATTRIBUTE]: 'true' }, 'disconnect', 'disconnect'),
@@ -140,7 +140,7 @@ export function contactFlowContent(workerArn: string): string {
     ),
     store('handover-error-store', { handoverError: '$.External.failedStep' }, 'refund-invoke', RECOVER),
 
-    // No route matches this step, so the router throws and the Error branch is the path again.
+    // No route matches this step, so the matcher throws and the Error branch is the path again.
     invoke('refund-invoke', workerArn, { [STEP_PARAMETER]: REFUND_STEP }, RECOVER, 'unrouted-error-invoke'),
     invoke(
       'unrouted-error-invoke',

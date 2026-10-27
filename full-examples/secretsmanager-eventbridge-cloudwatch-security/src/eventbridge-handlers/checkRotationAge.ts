@@ -1,6 +1,7 @@
 import { DescribeSecretCommand } from '@aws-sdk/client-secrets-manager';
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/eventbridge';
+
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { ROTATION_MAX_AGE_DAYS, SECRET_ARN, secretsManager } from '../config.js';
 import { publishSecurityIssue } from '../utils/publishSecurityIssue.js';

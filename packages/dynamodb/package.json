@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/dynamodb",
+  "name": "@latcher/dynamodb",
   "version": "0.1.0",
-  "description": "DynamoDB Stream handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/DynamoDBRouter",
+  "description": "DynamoDB Stream handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/DynamoDBMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -39,13 +39,13 @@
     "@aws-sdk/util-dynamodb": "catalog:"
   },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^",
+    "@latcher/base": "workspace:^",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "catalog:",
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

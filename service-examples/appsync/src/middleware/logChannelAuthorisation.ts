@@ -1,7 +1,7 @@
-import type { AppSyncEventsAuthorizerMiddleware } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncEventsAuthorizerMiddleware } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
-// Router middleware: runs for every connect, publish and subscribe the Event API asks about.
+// Matcher middleware: runs for every connect, publish and subscribe the Event API asks about.
 export const logChannelAuthorisation: AppSyncEventsAuthorizerMiddleware = async (request, next) => {
   logger.info({
     message: 'Authorising channel request',

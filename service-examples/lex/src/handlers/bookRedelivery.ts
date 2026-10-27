@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/lex';
 
 import { BOT_ID } from '../config.js';
 import { BOOK_REDELIVERY_INTENT } from '../utils/constants.js';

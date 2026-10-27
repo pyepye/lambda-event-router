@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectRestoreRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectRestoreRequest } from '@latcher/s3';
 
 // Catch-all for restore events, registered after the Post and Completed routes, so the only
 // eventName left for it is ObjectRestore:Delete.

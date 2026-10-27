@@ -3,7 +3,7 @@ import type { Context, CustomEmailSenderTriggerEvent } from 'aws-lambda';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { CognitoFilters, UserAttributes } from './common.js';
-import type { CognitoMiddleware } from './router.js';
+import type { CognitoMiddleware } from './matcher.js';
 
 // CustomEmailSender trigger sources - derived from aws-lambda
 export type CustomEmailSenderTriggerSource = CustomEmailSenderTriggerEvent['triggerSource'];

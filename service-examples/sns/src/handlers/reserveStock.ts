@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/sns';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/sns';
 
 import { INVENTORY_TOPIC_ARN } from '../config.js';
 import { StockMovementSchema } from '../utils/schemas.js';

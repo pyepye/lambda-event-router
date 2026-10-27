@@ -1,7 +1,7 @@
 # Service example: Kafka
 
-A deployable CDK app that exercises the `KafkaRouter` end to end. It models an order pipeline. One
-Lambda consumes three topics on one Amazon MSK cluster, and the router does the per-record dispatch.
+A deployable CDK app that exercises the `KafkaMatcher` end to end. It models an order pipeline. One
+Lambda consumes three topics on one Amazon MSK cluster, and the matcher does the per-record dispatch.
 
 The routes are in `src/kafka.ts`, and the handlers are in `src/handlers/`.
 
@@ -24,7 +24,7 @@ failed-records (3 partitions)
 ## What it covers
 
 One invoke of the producer sends a batch to each source topic. Together they hit every filter the
-router has. They also cover each failure path it can take and the partition rules behind a retry.
+matcher has. They also cover each failure path it can take and the partition rules behind a retry.
 
 | Feature | Where |
 | --- | --- |
@@ -33,9 +33,9 @@ router has. They also cover each failure path it can take and the partition rule
 | `bootstrapServer` filter | `capturePayment` matches one broker address |
 | `custom` filter | `escalateUrgentOrder` and `refundPayment` read the decoded headers |
 | Zod schemas | `valueSchema` on every route |
-| Router middleware | `logRecord` runs once per record |
+| Matcher middleware | `logRecord` runs once per record |
 | Route middleware | `withOrderContext` on `processOrder` |
-| Batch item failures | `createKafkaRouter({ batchItemFailures: true })`, reported by all three mappings |
+| Batch item failures | `createKafkaMatcher({ batchItemFailures: true })`, reported by all three mappings |
 | No route matched | A cancelled order, which is neither urgent nor created |
 | Handler failure | `refundPayment` throws after its middleware has run |
 | Schema failures | An order with no total, and a payment that is not JSON |
@@ -77,9 +77,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kafka... install
-pnpm -F @lambda-event-router/service-example-kafka... run build
-pnpm -F @lambda-event-router/service-example-kafka run deploy
+pnpm -F @latcher/service-example-kafka... install
+pnpm -F @latcher/service-example-kafka... run build
+pnpm -F @latcher/service-example-kafka run deploy
 ```
 
 CDK outputs include `ClusterArn`, `BootstrapServers`, `ProducerFunctionName` and
@@ -92,13 +92,13 @@ The cluster and the provisioned pollers cost roughly $0.30 an hour while the sta
 down when you have finished.
 
 To check the routing table without deploying, run
-`pnpm -F @lambda-event-router/service-example-kafka run check`. It drives the built router with a
+`pnpm -F @latcher/service-example-kafka run check`. It drives the built matcher with a
 synthetic record per route and reports where each landed.
 
 ## Send sample messages
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kafka run trigger
+pnpm -F @latcher/service-example-kafka run trigger
 ```
 
 MSK is reachable only from inside its VPC, so a Lambda in that VPC produces the messages. The command
@@ -138,7 +138,7 @@ gets another on every attempt.
 Five records are handled:
 
 - `Order context resolved` then `Order processed` for `order-1001`. Two lines in that order show the
-  route middleware running inside the router middleware.
+  route middleware running inside the matcher middleware.
 - `Urgent order escalated` for `order-1002`. It matches `processOrder`'s filters as well, but the
   urgent route is registered first and wins.
 - `Payment captured` for `pay-5001`, `pay-5002` and `pay-5005`.
@@ -154,10 +154,10 @@ and `error.message` tells them apart:
 - `Refund gateway unavailable for payment pay-5003` comes from the handler. That record has a
   `Handling Kafka record` line, because the handler ran.
 - `order-1004` has no line of its own. It is valid, but it sits behind `order-1003` on `orders-1`.
-  The router reports it as failed without ever running it.
+  The matcher reports it as failed without ever running it.
 
 Note: no record that fails validation or matches no route has a `Handling Kafka record` line. The
-router matches and validates before it runs any middleware.
+matcher matches and validates before it runs any middleware.
 
 The retries and the failure topic show up last:
 
@@ -196,15 +196,15 @@ mappings share one poller group, so they share one event poller unit.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kafka run diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-kafka run watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-kafka run synth  # render template
+pnpm -F @latcher/service-example-kafka run diff   # review pending changeset
+pnpm -F @latcher/service-example-kafka run watch  # hotswap deploys
+pnpm -F @latcher/service-example-kafka run synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-kafka run destroy
+pnpm -F @latcher/service-example-kafka run destroy
 ```
 
 That removes the whole stack, including the cluster, the VPC and all four functions. The log groups

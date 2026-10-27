@@ -1,20 +1,20 @@
 # Full example: HTTP API + DynamoDB + SQS fan-out chain
 
-A deployable CDK app that chains the API Gateway, DynamoDB and SQS routers through one order flow:
+A deployable CDK app that chains the API Gateway, DynamoDB and SQS matchers through one order flow:
 
 ```
 Client
 └── API Gateway (HTTP API)
-    ├── apiFn / authoriseCustomer (authorizerRouter, before POST /orders)
-    └── apiFn / createOrder (apiRouter, POST /orders)
+    ├── apiFn / authoriseCustomer (authorizerMatcher, before POST /orders)
+    └── apiFn / createOrder (apiMatcher, POST /orders)
         └── DynamoDB PutItem on ORDER#<orderId>
-            └── workerFn / orderProcessor (dynamoDBRouter, INSERT on ORDER#*)
+            └── workerFn / orderProcessor (dynamoDBMatcher, INSERT on ORDER#*)
                 ├── SQS message: decrementStock (one per item)
-                │   └── workerFn / decrementStock (sqsRouter)
+                │   └── workerFn / decrementStock (sqsMatcher)
                 │       └── DynamoDB UpdateItem on STOCK#<sku>
-                │           └── workerFn / stockMonitor (dynamoDBRouter, MODIFY on STOCK#*)
+                │           └── workerFn / stockMonitor (dynamoDBMatcher, MODIFY on STOCK#*)
                 └── SQS message: sendConfirmationEmail
-                    └── workerFn / sendConfirmationEmail (sqsRouter)
+                    └── workerFn / sendConfirmationEmail (sqsMatcher)
 ```
 
 `GET /orders/:id` reads an order back through the `getOrder` route on `apiFn`.
@@ -23,10 +23,10 @@ The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permi
 and [Deploy](#deploy).
 
 There are 7 routes on two Lambda functions, `apiFn` and `workerFn`. Both deploy `src/index.ts`, where
-one `LambdaRouter` combines all four routers. Each function receives only its own events, so the
-right router picks them up.
+one `Latcher` combines all four matchers. Each function receives only its own events, so the
+right matcher picks them up.
 
-Each router has a small middleware from `src/middleware/logInvocation.ts`. It logs one line before
+Each matcher has a small middleware from `src/middleware/logInvocation.ts`. It logs one line before
 every route runs.
 
 ## Prerequisites
@@ -54,9 +54,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs... install
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs... build
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs run deploy
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs... install
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs... build
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs run deploy
 ```
 
 CDK outputs include `ApiUrl`, `TableName`, `QueueUrl` and `DlqUrl`.
@@ -64,7 +64,7 @@ CDK outputs include `ApiUrl`, `TableName`, `QueueUrl` and `DlqUrl`.
 ## Auth
 
 `POST /orders` sits behind a Lambda authorizer, and `GET /orders/:id` has none. The authorizer runs on
-`apiFn`, where `authorizerRouter` answers it. It accepts the token `demo-token` in the `authorization`
+`apiFn`, where `authorizerMatcher` answers it. It accepts the token `demo-token` in the `authorization`
 header and passes on `{ customerId: 'cust-demo' }` as its context.
 
 `createOrder` uses the `customerAuth` preset from `src/utils/auth.ts`. It checks the context against a
@@ -161,15 +161,15 @@ Each row has a low-stock threshold of 5.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs diff   # review pending changeset
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs watch  # hotswap deploys
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs synth  # render template
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs diff   # review pending changeset
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs watch  # hotswap deploys
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/full-example-http-api-dynamodb-sqs destroy
+pnpm -F @latcher/full-example-http-api-dynamodb-sqs destroy
 ```
 
 This deletes the table, both queues and all the log groups.

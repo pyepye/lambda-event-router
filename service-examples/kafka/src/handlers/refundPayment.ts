@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/kafka';
+import { defineRoute } from '@latcher/kafka';
 
 import { PAYMENT_KIND_HEADER, PAYMENTS_TOPIC, REFUND_KIND } from '../config.js';
 import { PaymentSchema } from '../utils/schemas.js';

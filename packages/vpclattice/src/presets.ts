@@ -1,8 +1,8 @@
-import type { AuthPreset } from '@lambda-event-router/http';
+import type { AuthPreset } from '@latcher/http';
 
 import type { VPCLatticeAuth, VPCLatticeIamAuth } from './auth.js';
 
-export { noAuth } from '@lambda-event-router/http';
+export { noAuth } from '@latcher/http';
 
 // Lattice names no caller for an unsigned request, so a request without auth is the missing case
 export function iamAuth(): AuthPreset<VPCLatticeAuth, VPCLatticeIamAuth> {

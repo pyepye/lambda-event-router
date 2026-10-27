@@ -1,43 +1,43 @@
-# @lambda-event-router/apigateway
+# @latcher/apigateway
 
-Routes API Gateway requests to handlers by method and path. REST APIs and both HTTP API payload versions give your handler the same request object. The package also has routers for Lambda authorizers and WebSocket APIs.
+Routes API Gateway requests to handlers by method and path. REST APIs and both HTTP API payload versions give your handler the same request object. The package also has matchers for Lambda authorizers and WebSocket APIs.
 
 **Supported AWS Services:** `Amazon API Gateway`
 
-**Available Routers:** `APIGatewayRouter` | `LambdaAuthorizerRouter` | `WebSocketRouter`
+**Available Matchers:** `APIGatewayMatcher` | `LambdaAuthorizerMatcher` | `WebSocketMatcher`
 
-**Docs:** [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) | [LambdaAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaAuthorizerRouter) | [WebSocketRouter](https://pyepye.github.io/lambda-event-router/routers/WebSocketRouter)
+**Docs:** [APIGatewayMatcher](https://pyepye.github.io/latcher/matchers/APIGatewayMatcher) | [LambdaAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/LambdaAuthorizerMatcher) | [WebSocketMatcher](https://pyepye.github.io/latcher/matchers/WebSocketMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/apigateway
+npm install @latcher/base @latcher/apigateway
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { apiRouter } from './api'
-import { authRouter } from './authorizer'
-import { wsRouter } from './websocket'
+import { Latcher } from '@latcher/base'
+import { apiMatcher } from './api'
+import { authMatcher } from './authorizer'
+import { wsMatcher } from './websocket'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter, authRouter, wsRouter],
+const latcher = new Latcher({
+  matchers: [apiMatcher, authMatcher, wsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // api.ts
-import { createAPIGatewayRouter, defineRoute, lambdaAuth } from '@lambda-event-router/apigateway'
+import { createAPIGatewayMatcher, defineRoute, lambdaAuth } from '@latcher/apigateway'
 import { z } from 'zod'
 
-export const apiRouter = createAPIGatewayRouter()
+export const apiMatcher = createAPIGatewayMatcher()
 
 const createOrder = defineRoute({
   filters: {
@@ -51,14 +51,14 @@ const createOrder = defineRoute({
   return { orgId: path.orgId, item: body.item }
 })
 
-apiRouter.route(createOrder)
+apiMatcher.route(createOrder)
 ```
 
 ```ts
 // authorizer.ts
-import { Allow, createLambdaAuthorizerRouter, defineLambdaAuthorizerRoute, Deny } from '@lambda-event-router/apigateway'
+import { Allow, createLambdaAuthorizerMatcher, defineLambdaAuthorizerRoute, Deny } from '@latcher/apigateway'
 
-export const authRouter = createLambdaAuthorizerRouter()
+export const authMatcher = createLambdaAuthorizerMatcher()
 
 const authoriseWrite = defineLambdaAuthorizerRoute({
   filters: {
@@ -70,15 +70,15 @@ const authoriseWrite = defineLambdaAuthorizerRoute({
   return headers['x-api-key'] === 'valid-key' ? Allow('user-123', resourceArn) : Deny('anonymous', resourceArn)
 })
 
-authRouter.route(authoriseWrite)
+authMatcher.route(authoriseWrite)
 ```
 
 ```ts
 // websocket.ts
-import { createWebSocketRouter, defineWebSocketRoute } from '@lambda-event-router/apigateway'
+import { createWebSocketMatcher, defineWebSocketRoute } from '@latcher/apigateway'
 import { z } from 'zod'
 
-export const wsRouter = createWebSocketRouter()
+export const wsMatcher = createWebSocketMatcher()
 
 const sendMessage = defineWebSocketRoute({
   filters: {
@@ -90,21 +90,21 @@ const sendMessage = defineWebSocketRoute({
   console.log(`Message from ${connectionId}: ${body.content}`)
 })
 
-wsRouter.route(sendMessage)
+wsMatcher.route(sendMessage)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/APIGatewayMatcher#annotated-handlers).
 
 ## Documentation
 
-- [APIGatewayRouter](https://pyepye.github.io/lambda-event-router/routers/APIGatewayRouter) covers every filter, schema validation, auth,
+- [APIGatewayMatcher](https://pyepye.github.io/latcher/matchers/APIGatewayMatcher) covers every filter, schema validation, auth,
   CORS and API Gateway event versions.
-- [LambdaAuthorizerRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaAuthorizerRouter) covers every filter, responses
+- [LambdaAuthorizerMatcher](https://pyepye.github.io/latcher/matchers/LambdaAuthorizerMatcher) covers every filter, responses
   and middleware.
-- [WebSocketRouter](https://pyepye.github.io/lambda-event-router/routers/WebSocketRouter) covers every filter, schema validation, responses
+- [WebSocketMatcher](https://pyepye.github.io/latcher/matchers/WebSocketMatcher) covers every filter, schema validation, responses
   and sending messages to a client.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

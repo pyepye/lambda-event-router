@@ -1,11 +1,12 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { apiRouter } from './api.js';
-import { authorizerRouter } from './authorizer.js';
-import { dynamoDBRouter } from './dynamodb.js';
-import { sqsRouter } from './sqs.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [apiRouter, authorizerRouter, dynamoDBRouter, sqsRouter] });
+import { apiMatcher } from './api.js';
+import { authorizerMatcher } from './authorizer.js';
+import { dynamoDBMatcher } from './dynamodb.js';
+import { sqsMatcher } from './sqs.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [apiMatcher, authorizerMatcher, dynamoDBMatcher, sqsMatcher] });
+
+export const handler: Handler = latcher.handler();

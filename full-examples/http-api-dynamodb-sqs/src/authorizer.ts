@@ -1,10 +1,10 @@
-import { createLambdaAuthorizerRouter } from '@lambda-event-router/apigateway';
+import { createLambdaAuthorizerMatcher } from '@latcher/apigateway';
 
 import { authoriseCustomer } from './authorizer-handlers/authoriseCustomer.js';
 import { logAuthorizerInvocation } from './middleware/logInvocation.js';
 
-export const authorizerRouter = createLambdaAuthorizerRouter({
+export const authorizerMatcher = createLambdaAuthorizerMatcher({
   middleware: [logAuthorizerInvocation],
 });
 
-authorizerRouter.route(authoriseCustomer);
+authorizerMatcher.route(authoriseCustomer);

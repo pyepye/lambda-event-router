@@ -1,6 +1,6 @@
-# `@lambda-event-router/docs`
+# `@latcher/docs`
 
-The [VitePress](https://vitepress.dev/) documentation site for `lambda-event-router`. This is a workspace package under the monorepo root but is intentionally isolated: its scripts are prefixed `docs:*` so recursive root commands (`pnpm -r build`, `pnpm -r dev`, `pnpm -r test`, `pnpm -r clean`) skip it.
+The [VitePress](https://vitepress.dev/) documentation site for `latcher`. This is a workspace package under the monorepo root but is intentionally isolated: its scripts are prefixed `docs:*` so recursive root commands (`pnpm -r build`, `pnpm -r dev`, `pnpm -r test`, `pnpm -r clean`) skip it.
 
 ## Local development
 
@@ -11,13 +11,13 @@ Run commands from the repo root using pnpm filters:
 pnpm install
 
 # dev server on http://localhost:5173
-pnpm -F @lambda-event-router/docs docs:dev
+pnpm -F @latcher/docs docs:dev
 
 # production build → docs/.vitepress/dist
-pnpm -F @lambda-event-router/docs docs:build
+pnpm -F @latcher/docs docs:build
 
 # preview the built site
-pnpm -F @lambda-event-router/docs docs:preview
+pnpm -F @latcher/docs docs:preview
 ```
 
 ## Project layout
@@ -30,11 +30,11 @@ docs/
 │       ├── index.ts       # extends the default theme
 │       └── custom.css     # homepage grid + (TODO) brand colour overrides
 ├── public/                # static assets served at the site root
-│   └── lambda-event-router.svg
+│   └── latcher.svg
 ├── index.md               # homepage (hero + 3 side-by-side code blocks)
 ├── about.md               # about page
 ├── docs/                  # "Docs" section - Getting Started guide pages
-├── routers/               # one page per router class
+├── matchers/              # one page per matcher class
 └── examples/              # examples landing page
 ```
 
@@ -42,11 +42,11 @@ docs/
 
 ### 1. Set the `base` path
 
-VitePress serves from `/` by default. If you deploy to `https://pyepye.github.io/lambda-event-router/`, edit `docs/.vitepress/config.ts` and set:
+VitePress serves from `/` by default. If you deploy to `https://pyepye.github.io/latcher/`, edit `docs/.vitepress/config.ts` and set:
 
 ```ts
 export default defineConfig({
-  base: "/lambda-event-router/",
+  base: "/latcher/",
   // ...
 });
 ```
@@ -95,7 +95,7 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm -F @lambda-event-router/docs docs:build
+      - run: pnpm -F @latcher/docs docs:build
 
       - uses: actions/configure-pages@v5
 
@@ -118,4 +118,4 @@ On push to `main`, the workflow builds the docs and publishes `docs/.vitepress/d
 
 ### Custom domain
 
-If serving from a custom domain, add a file at `docs/public/CNAME` containing the domain name (for example `lambda-event-router.dev`). VitePress copies `public/` into the build output, so GitHub Pages will pick it up automatically.
+If serving from a custom domain, add a file at `docs/public/CNAME` containing the domain name (for example `latcher.dev`). VitePress copies `public/` into the build output, so GitHub Pages will pick it up automatically.

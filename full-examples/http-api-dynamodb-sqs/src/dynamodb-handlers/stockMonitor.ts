@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/dynamodb';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/dynamodb';
 
 import { DbStockToStock } from '../utils/schemas.js';
 

@@ -1,6 +1,6 @@
 import { CodePipelineClient } from '@aws-sdk/client-codepipeline';
 
-// An absent name would leave a functionName filter as an empty string, which the router reads as no
+// An absent name would leave a functionName filter as an empty string, which the matcher reads as no
 // filter at all. Every route would then claim every job. Failing at cold start is louder.
 function requiredEnvironment(name: string): string {
   const value = process.env[name];
@@ -10,7 +10,7 @@ function requiredEnvironment(name: string): string {
   return value;
 }
 
-// The router reports every job result through this client. Sharing it from here lets the route check
+// The matcher reports every job result through this client. Sharing it from here lets the route check
 // swap it for a recorder.
 export const codePipelineClient = new CodePipelineClient();
 

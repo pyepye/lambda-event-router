@@ -1,4 +1,4 @@
-import type { ConnectChannel, ConnectInitiationMethod } from '@lambda-event-router/connect';
+import type { ConnectChannel, ConnectInitiationMethod } from '@latcher/connect';
 
 import {
   AGENT_HANDOVER_STEP,
@@ -19,13 +19,13 @@ import {
 } from '../utils/constants.js';
 
 export interface Expected {
-  // JSON.stringify of the ConnectResponse the router returned, matched on fragments.
+  // JSON.stringify of the ConnectResponse the matcher returned, matched on fragments.
   resultIncludes?: string[];
   errorIncludes?: string;
 }
 
 // One invocation of the worker, built into a ConnectEvent by scripts/checkRoutes.ts.
-export interface RouterStep {
+export interface MatcherStep {
   name: string;
   channel: ConnectChannel;
   initiationMethod: ConnectInitiationMethod;
@@ -44,7 +44,7 @@ function step(name: string, extra: Record<string, string> = {}): Record<string, 
   return { [STEP_PARAMETER]: name, ...extra };
 }
 
-export const routerSteps: RouterStep[] = [
+export const matcherSteps: MatcherStep[] = [
   {
     name: 'the greeting block reaches greetChatCustomer',
     channel: 'CHAT',

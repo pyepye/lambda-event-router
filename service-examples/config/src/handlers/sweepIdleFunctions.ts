@@ -1,4 +1,4 @@
-import { defineConfigScheduledRoute } from '@lambda-event-router/config';
+import { defineConfigScheduledRoute } from '@latcher/config';
 
 import { configRuleName } from '../environment.js';
 import { reportAccountEvaluation } from '../utils/evaluations.js';

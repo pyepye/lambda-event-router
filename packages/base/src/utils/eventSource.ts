@@ -18,7 +18,7 @@ function holdsKafkaRecords(records: Record<string, unknown>): boolean {
   );
 }
 
-// Check if event is from a known AWS source that has its own router
+// Check if event is from a known AWS source that has its own matcher
 export function isKnownEventSource(event: Record<string, unknown>): boolean {
   // Records-based events (SQS, SNS, S3, DynamoDB, Kinesis, CodeCommit, SES)
   if (Array.isArray(event.Records) && event.Records.length > 0) {

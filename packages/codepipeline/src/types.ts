@@ -3,7 +3,7 @@ import type { Artifact, CodePipelineEvent, Context, Credentials } from 'aws-lamb
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export interface CodePipelineRequest<TUserParameters = unknown> {
   jobId: string;
@@ -56,7 +56,7 @@ export interface CodePipelineRouteDefinition<TUserParameters = unknown> {
   handler: CodePipelineHandler<TUserParameters>;
 }
 
-export interface CodePipelineRouterOptions {
+export interface CodePipelineMatcherOptions {
   client?: CodePipelineClient;
   middleware?: CodePipelineMiddleware[];
 }

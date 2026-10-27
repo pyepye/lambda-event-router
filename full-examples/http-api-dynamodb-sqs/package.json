@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/full-example-http-api-dynamodb-sqs",
+  "name": "@latcher/full-example-http-api-dynamodb-sqs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -14,10 +14,10 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/apigateway": "workspace:*",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/dynamodb": "workspace:*",
-    "@lambda-event-router/sqs": "workspace:*",
+    "@latcher/apigateway": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/dynamodb": "workspace:*",
+    "@latcher/sqs": "workspace:*",
     "@aws-sdk/client-dynamodb": "catalog:",
     "@aws-sdk/client-sqs": "^3.1034.0",
     "@aws-sdk/lib-dynamodb": "catalog:",

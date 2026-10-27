@@ -1,4 +1,4 @@
-import { createSNSRouter } from '@lambda-event-router/sns';
+import { createSNSMatcher } from '@latcher/sns';
 
 import { cancelOrder } from './handlers/cancelOrder.js';
 import { chargeCard } from './handlers/chargeCard.js';
@@ -10,13 +10,13 @@ import { logDelivery } from './middleware/logDelivery.js';
 
 // SNS delivers one record per invocation and has no partial batch response, so a failing record fails
 // the invocation. That is what gets it retried and then sent to the delivery failures topic.
-export const snsRouter = createSNSRouter({
+export const snsMatcher = createSNSMatcher({
   middleware: [logDelivery],
 });
 
 // Order matters: expediteOrder's custom filter must win over processOrder's eventType filter for an
 // express order, so it is registered first.
-snsRouter
+snsMatcher
   .route(recordDeliveryFailure)
   .route(expediteOrder)
   .route(cancelOrder)

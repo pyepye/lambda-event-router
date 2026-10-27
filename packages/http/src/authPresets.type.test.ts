@@ -1,5 +1,5 @@
 import { type AuthOf, type AuthPreset, noAuth } from './auth.js';
-import { createDefineRoute, HTTPRouter } from './HTTPRouter.js';
+import { createDefineRoute, HTTPMatcher } from './HTTPMatcher.js';
 import { NoContent } from './Response.js';
 import type { ApiRequest, HandlerResponse, HTTPAdapter, NormalizedHTTPEvent } from './types.js';
 
@@ -55,12 +55,12 @@ function handlesRawAuth(_request: ApiRequest<Record<string, string>, Query, RawA
   return Promise.resolve(NoContent());
 }
 
-function makeRouter(): HTTPRouter<unknown, unknown, RawAuth> {
-  return new HTTPRouter(rawAdapter);
+function makeMatcher(): HTTPMatcher<unknown, unknown, RawAuth> {
+  return new HTTPMatcher(rawAdapter);
 }
 
-function makeTeamRouter(): HTTPRouter<unknown, unknown, RawAuth, TeamAuth> {
-  return new HTTPRouter({ adapter: rawAdapter, auth: teamOnly });
+function makeTeamMatcher(): HTTPMatcher<unknown, unknown, RawAuth, TeamAuth> {
+  return new HTTPMatcher({ adapter: rawAdapter, auth: teamOnly });
 }
 
 suite('auth preset types', () => {
@@ -70,58 +70,58 @@ suite('auth preset types', () => {
   });
 
   test('a route preset types the handler auth', () => {
-    makeRouter().get({ filters: { path: '/items' }, auth: teamOnly, handler: handlesTeam });
-    makeRouter().route({ filters: { method: 'POST', path: '/items' }, auth: orgOnly, handler: handlesOrg });
+    makeMatcher().get({ filters: { path: '/items' }, auth: teamOnly, handler: handlesTeam });
+    makeMatcher().route({ filters: { method: 'POST', path: '/items' }, auth: orgOnly, handler: handlesOrg });
 
     // @ts-expect-error - teamOnly hands on TeamAuth, not OrgAuth
-    makeRouter().get({ filters: { path: '/items' }, auth: teamOnly, handler: handlesOrg });
+    makeMatcher().get({ filters: { path: '/items' }, auth: teamOnly, handler: handlesOrg });
   });
 
-  test('a route with no preset and no router default gives the adapter auth', () => {
-    makeRouter().get({ filters: { path: '/items' }, handler: handlesRawAuth });
+  test('a route with no preset and no matcher default gives the adapter auth', () => {
+    makeMatcher().get({ filters: { path: '/items' }, handler: handlesRawAuth });
 
     // @ts-expect-error - nothing checks the auth, so the handler cannot assume TeamAuth
-    makeRouter().get({ filters: { path: '/items' }, handler: handlesTeam });
+    makeMatcher().get({ filters: { path: '/items' }, handler: handlesTeam });
   });
 
-  test('a router default types a route with no preset', () => {
-    makeTeamRouter().get({ filters: { path: '/items' }, handler: handlesTeam });
-    makeTeamRouter().get({ filters: { path: '/items' }, handler: handlesRawAuth });
+  test('a matcher default types a route with no preset', () => {
+    makeTeamMatcher().get({ filters: { path: '/items' }, handler: handlesTeam });
+    makeTeamMatcher().get({ filters: { path: '/items' }, handler: handlesRawAuth });
 
     // @ts-expect-error - the default hands on TeamAuth, not OrgAuth
-    makeTeamRouter().get({ filters: { path: '/items' }, handler: handlesOrg });
+    makeTeamMatcher().get({ filters: { path: '/items' }, handler: handlesOrg });
   });
 
-  test('a route preset overrides the router default', () => {
-    makeTeamRouter().get({ filters: { path: '/items' }, auth: orgOnly, handler: handlesOrg });
-    makeTeamRouter().get({ filters: { path: '/health' }, auth: noAuth(), handler: handlesNoAuth });
+  test('a route preset overrides the matcher default', () => {
+    makeTeamMatcher().get({ filters: { path: '/items' }, auth: orgOnly, handler: handlesOrg });
+    makeTeamMatcher().get({ filters: { path: '/health' }, auth: noAuth(), handler: handlesNoAuth });
 
     // @ts-expect-error - a noAuth route hands on undefined, not TeamAuth
-    makeTeamRouter().get({ filters: { path: '/health' }, auth: noAuth(), handler: handlesTeam });
+    makeTeamMatcher().get({ filters: { path: '/health' }, auth: noAuth(), handler: handlesTeam });
   });
 
   test('a preset built for another adapter is refused', () => {
     // @ts-expect-error - the preset checks a different auth type from the one this adapter produces
-    makeRouter().get({ filters: { path: '/items' }, auth: otherRawPreset, handler: vi.fn() });
+    makeMatcher().get({ filters: { path: '/items' }, auth: otherRawPreset, handler: vi.fn() });
   });
 
-  test('the router defineRoute uses the router default', () => {
-    const itemsRoute = makeTeamRouter()
+  test('the matcher defineRoute uses the matcher default', () => {
+    const itemsRoute = makeTeamMatcher()
       .defineRoute({ filters: { method: 'GET', path: '/items' } })
       .handle(handlesTeam);
-    makeTeamRouter().route(itemsRoute);
+    makeTeamMatcher().route(itemsRoute);
 
-    const untypedBuilder = makeRouter().defineRoute({ filters: { method: 'GET', path: '/items' } });
-    // @ts-expect-error - a router with no default does not promise TeamAuth
+    const untypedBuilder = makeMatcher().defineRoute({ filters: { method: 'GET', path: '/items' } });
+    // @ts-expect-error - a matcher with no default does not promise TeamAuth
     untypedBuilder.handle(handlesTeam);
   });
 
-  test('a route defined without a preset registers on a router with a default', () => {
+  test('a route defined without a preset registers on a matcher with a default', () => {
     const itemsRoute = createDefineRoute<RawAuth>()({ filters: { method: 'GET', path: '/items' } }).handle(
       handlesRawAuth,
     );
 
-    makeTeamRouter().route(itemsRoute);
+    makeTeamMatcher().route(itemsRoute);
   });
 
   test('a route defined with a preset keeps that preset type', () => {
@@ -130,6 +130,6 @@ suite('auth preset types', () => {
       auth: orgOnly,
     }).handle(handlesOrg);
 
-    makeTeamRouter().route(itemsRoute);
+    makeTeamMatcher().route(itemsRoute);
   });
 });

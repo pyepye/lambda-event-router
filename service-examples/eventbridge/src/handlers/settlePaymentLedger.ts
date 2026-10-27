@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/eventbridge';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { PAYMENT_CAPTURED, PAYMENTS_SOURCE } from '../config.js';
 import { PaymentCapturedSchema } from '../utils/schemas.js';

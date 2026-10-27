@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { returnsRouter } from './returnsRouter.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [returnsRouter] });
+import { returnsMatcher } from './returnsMatcher.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [returnsMatcher] });
+
+export const handler: Handler = latcher.handler();

@@ -1,12 +1,12 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kafka';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kafka';
 
 import { PAYMENTS_TOPIC } from '../config.js';
 import { PRIMARY_BOOTSTRAP_SERVER } from '../environment.js';
 import { PaymentSchema } from '../utils/schemas.js';
 
 // Captures are matched by a broker address rather than by the cluster ARN, which is the other string
-// filter the router offers. Lambda reports every broker on the event and the filter matches any one
+// filter the matcher offers. Lambda reports every broker on the event and the filter matches any one
 // of them.
 export const capturePayment = defineRoute({
   filters: {

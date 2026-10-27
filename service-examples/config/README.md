@@ -1,16 +1,16 @@
 # Service example: Config
 
-A deployable CDK app that exercises the `ConfigRouter` and the `ConfigScheduledRouter` end to end.
+A deployable CDK app that exercises the `ConfigMatcher` and the `ConfigScheduledMatcher` end to end.
 It models a platform team's compliance checks for Lambda functions. One Lambda backs ten custom Config
-rules, and the routers decide which handler each evaluation reaches.
+rules, and the matchers decide which handler each evaluation reaches.
 
-The routes are in `src/configRouter.ts` and `src/configScheduledRouter.ts`, and the handlers are in `src/handlers/`.
+The routes are in `src/configMatcher.ts` and `src/configScheduledMatcher.ts`, and the handlers are in `src/handlers/`.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
 ```
-Change-triggered rules (ConfigRouter), evaluating checkout-api and report-builder
+Change-triggered rules (ConfigMatcher), evaluating checkout-api and report-builder
 ├── approved-runtime       checkRuntime             (resourceType and configurationItemStatus filters)
 ├── memory-limit           grantMemoryExemption     (resourceId filter, ranks first)
 │                          checkMemoryLimit         (rule name only)
@@ -19,7 +19,7 @@ Change-triggered rules (ConfigRouter), evaluating checkout-api and report-builde
 ├── on-call-rota           checkOnCallRota          (route middleware, always throws)
 └── confidential-tracing   no route
 
-Periodic rules (ConfigScheduledRouter), evaluating the account
+Periodic rules (ConfigScheduledMatcher), evaluating the account
 ├── lambda-inventory       recordFunctionInventory  (accountId filter, route middleware)
 ├── idle-function-sweep    sweepIdleFunctions       (async custom filter, parameters never pass)
 ├── concurrency-headroom   checkConcurrencyHeadroom (always throws)
@@ -28,7 +28,7 @@ Periodic rules (ConfigScheduledRouter), evaluating the account
 
 ## What it covers
 
-One `evaluate` asks Config to run all ten rules. Together they hit every filter both routers have,
+One `evaluate` asks Config to run all ten rules. Together they hit every filter both matchers have,
 both schemas and every failure.
 
 | Feature | Where |
@@ -43,7 +43,7 @@ both schemas and every failure.
 | Route ranking | `grantMemoryExemption` is registered after `checkMemoryLimit`, but its narrower filters rank it first |
 | `ruleParametersSchema` | Turns `allowedRuntimes` into a list and `maxMemoryMb` and `maxFunctions` into numbers |
 | `configurationSchema` | Reads `runtime`, `memorySize` and `description` from the configuration item |
-| Router middleware | `logEvaluation` and `logScheduledRun`, one per router |
+| Matcher middleware | `logEvaluation` and `logScheduledRun`, one per matcher |
 | Route middleware | `withOwnerContext` on `checkOnCallRota`, `withAccountContext` on `recordFunctionInventory` |
 | Evaluation results | Every handler that succeeds calls `PutEvaluations`, so Config shows its result |
 | No route matched | `confidential-tracing` and `cost-report` have no route |
@@ -85,15 +85,15 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-config... install
-pnpm -F @lambda-event-router/service-example-config... run build
-pnpm -F @lambda-event-router/service-example-config run deploy
+pnpm -F @latcher/service-example-config... install
+pnpm -F @latcher/service-example-config... run build
+pnpm -F @latcher/service-example-config run deploy
 ```
 
 CDK outputs include `DeliveryBucketName` and `WorkerLogGroupName`.
 
 To check the routing table without deploying, run
-`pnpm -F @lambda-event-router/service-example-config run check`. It drives the built routers with a
+`pnpm -F @latcher/service-example-config run check`. It drives the built matchers with a
 synthetic event for each route and reports where each one landed.
 
 Note: deploying runs every rule at least once. Config evaluates each rule within seconds of creating
@@ -102,7 +102,7 @@ it. Wait 5 minutes after the deploy before you evaluate, so those retries are ov
 ## Run a sample evaluation
 
 ```bash
-pnpm -F @lambda-event-router/service-example-config run evaluate
+pnpm -F @latcher/service-example-config run evaluate
 ```
 
 The script first waits until Config has recorded both deployed functions. On a redeploy that reuses
@@ -176,7 +176,7 @@ Six `Evaluation reported` lines carry each result as `complianceType` and `annot
 The inventory count is every Lambda function the recorder has found in the region, so it depends on
 the account.
 
-The router middleware logs `Handling configuration change` or `Handling scheduled evaluation` on every
+The matcher middleware logs `Handling configuration change` or `Handling scheduled evaluation` on every
 attempt that passes routing and validation. That is at least 8 and 4 lines, and a resend adds three
 more of the first. Each carries the raw `event` as Config delivered it, and the configuration item's
 `configurationItemStatus`. That is `ResourceDiscovered` for a function Config has recorded once, and
@@ -193,10 +193,10 @@ Each record carries `errorMessage` and a `stackTrace`:
   `issues` name `description`.
 - `Schema validation failed for ruleParameters` appears for two rules. On `timeout-limit` the
   `issues` name `maxTimeoutSeconds`, and on `idle-function-sweep` they name `maxIdleDays`.
-- `No route matched for config rule ler-example-config-confidential-tracing` comes from the router.
-- `No route matched for scheduled config rule ler-example-config-cost-report` comes from the router.
+- `No route matched for config rule ler-example-config-confidential-tracing` comes from the matcher.
+- `No route matched for scheduled config rule ler-example-config-cost-report` comes from the matcher.
 
-The schema and routing failures have no middleware line. The routers match a route and validate
+The schema and routing failures have no middleware line. The matchers match a route and validate
 before they run any middleware.
 
 Read `name` rather than `errorType` on the validation records. The bundle is minified, so `errorType`
@@ -243,16 +243,16 @@ has no result for the rule.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-config run check  # drive the routes in process
-pnpm -F @lambda-event-router/service-example-config run diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-config run watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-config run synth  # render template
+pnpm -F @latcher/service-example-config run check  # drive the routes in process
+pnpm -F @latcher/service-example-config run diff   # review pending changeset
+pnpm -F @latcher/service-example-config run watch  # hotswap deploys
+pnpm -F @latcher/service-example-config run synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-config run destroy
+pnpm -F @latcher/service-example-config run destroy
 ```
 
 The script empties the delivery bucket, then runs `cdk destroy`. That removes every Config resource,

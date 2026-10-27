@@ -1,7 +1,7 @@
-import type { AppSyncResolverMiddleware } from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+import type { AppSyncResolverMiddleware } from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
-// Router middleware: runs once per resolver invocation, before any route middleware.
+// Matcher middleware: runs once per resolver invocation, before any route middleware.
 export const logResolverRequest: AppSyncResolverMiddleware = async (request, next) => {
   const resolverContext = isObject(request.identity) ? request.identity.resolverContext : undefined;
 

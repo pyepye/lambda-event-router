@@ -1,5 +1,5 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/eventbridge';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { HIGH_VALUE_THRESHOLD_PENCE, ORDER_PLACED, ORDERS_SOURCE } from '../config.js';
 import { OrderPlacedSchema } from '../utils/schemas.js';

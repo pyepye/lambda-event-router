@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { DynamoDBInsertRouteDefinition } from '@lambda-event-router/dynamodb';
+import { logger } from '@latcher/base';
+import type { DynamoDBInsertRouteDefinition } from '@latcher/dynamodb';
 
 import { DECLINED_CARD_TOKEN, ORDERS_STREAM_ARN } from '../config.js';
 import { PaymentKeysSchema, PaymentSchema, type TPayment, type TPaymentKeys } from '../utils/schemas.js';

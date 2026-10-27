@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConfigScheduledMiddleware } from '@lambda-event-router/config';
+import { logger } from '@latcher/base';
+import type { ConfigScheduledMiddleware } from '@latcher/config';
 
 import type { TLambdaInventoryParameters } from '../utils/schemas.js';
 

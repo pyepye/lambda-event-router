@@ -162,7 +162,7 @@ export class AppStack extends Stack {
         batchSize: STREAM_BATCH_SIZE,
         retryAttempts: STREAM_RETRY_ATTEMPTS,
         reportBatchItemFailures: true,
-        // Two filter expressions are OR'd by Lambda. The router does final dispatch.
+        // Two filter expressions are OR'd by Lambda. The matcher does final dispatch.
         filters: [
           FilterCriteria.filter({
             eventName: FilterRule.or('INSERT'),
@@ -187,7 +187,7 @@ export class AppStack extends Stack {
     const httpApi = new HttpApi(this, 'HttpApi');
     const apiIntegration = new HttpLambdaIntegration('ApiIntegration', apiFn);
 
-    // The authorizer runs on apiFn too, where the LambdaRouter sends its events to the authorizer router
+    // The authorizer runs on apiFn too, where the Latcher sends its events to the authorizer matcher
     const customerAuthorizer = new HttpLambdaAuthorizer('CustomerAuthorizer', apiFn, {
       responseTypes: [HttpLambdaResponseType.SIMPLE],
     });

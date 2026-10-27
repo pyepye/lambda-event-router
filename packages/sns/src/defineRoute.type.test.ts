@@ -1,6 +1,6 @@
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockSchema } from '@latcher/testing';
 
-import { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
+import { createSNSMatcher, defineRoute, SNSMatcher } from './SNSMatcher.js';
 import type { SNSMessageAttributes, SNSMiddleware, SNSRequest } from './types.js';
 
 const TOPIC_ARN = 'arn:aws:sns:us-east-1:123456789012:orders';
@@ -91,7 +91,7 @@ suite('coerced message attributes', () => {
   });
 
   test('types an inferred route() handler with the converted attributes when it has no attribute schema', () => {
-    const router = createSNSRouter().route({
+    const matcher = createSNSMatcher().route({
       filters: { topicArn: TOPIC_ARN },
       // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
       handler: async ({ messageAttributes }): Promise<void> => {
@@ -99,7 +99,7 @@ suite('coerced message attributes', () => {
       },
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('accepts an annotated handler for a coerced attribute schema', () => {
@@ -107,13 +107,13 @@ suite('coerced message attributes', () => {
       expectTypeOf(messageAttributes.dryRun).toEqualTypeOf<boolean>();
     }
 
-    const router = createSNSRouter().route({
+    const matcher = createSNSMatcher().route({
       filters: { topicArn: TOPIC_ARN },
       messageAttributesSchema: createMockSchema<DryRunAttributes>(),
       handler: processNotification,
     });
 
-    expect(router).toBeInstanceOf(SNSRouter);
+    expect(matcher).toBeInstanceOf(SNSMatcher);
   });
 
   test('accepts a route middleware typed to a coerced attribute schema', () => {
@@ -146,12 +146,12 @@ suite('SNSFilters', () => {
   });
 });
 
-suite('SNSRouterOptions', () => {
+suite('SNSMatcherOptions', () => {
   test('has no batchItemFailures option', () => {
     // SNS has no partial batch response, so there is nothing for the option to report.
-    // @ts-expect-error - batchItemFailures is not an SNS router option
-    const router = createSNSRouter({ batchItemFailures: true });
+    // @ts-expect-error - batchItemFailures is not an SNS matcher option
+    const matcher = createSNSMatcher({ batchItemFailures: true });
 
-    expect(router).toBeInstanceOf(SNSRouter);
+    expect(matcher).toBeInstanceOf(SNSMatcher);
   });
 });

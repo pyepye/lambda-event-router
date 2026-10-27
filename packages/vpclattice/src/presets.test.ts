@@ -1,9 +1,9 @@
-import { getLogger } from '@lambda-event-router/base';
-import { createMockContext, createVPCLatticeV2Event } from '@lambda-event-router/testing';
+import { getLogger } from '@latcher/base';
+import { createMockContext, createVPCLatticeV2Event } from '@latcher/testing';
 
 import type { VPCLatticeAuth, VPCLatticeIamAuth } from './auth.js';
 import { iamAuth, noAuth } from './presets.js';
-import { createVPCLatticeRouter } from './VPCLatticeRouter.js';
+import { createVPCLatticeMatcher } from './VPCLatticeMatcher.js';
 
 const CALLER: VPCLatticeIamAuth = {
   type: 'iam',
@@ -28,24 +28,24 @@ suite('VPC Lattice auth presets', () => {
     });
   });
 
-  test('a router default of iamAuth answers 401 for an unsigned caller', async () => {
+  test('a matcher default of iamAuth answers 401 for an unsigned caller', async () => {
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
-    const router = createVPCLatticeRouter({ auth: iamAuth() }).get({ filters: { path: '/' }, handler: vi.fn() });
+    const matcher = createVPCLatticeMatcher({ auth: iamAuth() }).get({ filters: { path: '/' }, handler: vi.fn() });
 
-    const result = await router.handleEvent(createVPCLatticeV2Event(), createMockContext());
+    const result = await matcher.handleEvent(createVPCLatticeV2Event(), createMockContext());
 
     expect(result).toMatchObject({ statusCode: 401 });
     warnSpy.mockRestore();
   });
 
-  test('noAuth marks a public route on a router with a default', async () => {
-    const router = createVPCLatticeRouter({ auth: iamAuth() }).get({
+  test('noAuth marks a public route on a matcher with a default', async () => {
+    const matcher = createVPCLatticeMatcher({ auth: iamAuth() }).get({
       filters: { path: '/' },
       auth: noAuth(),
       handler: vi.fn().mockResolvedValue({ ok: true }),
     });
 
-    const result = await router.handleEvent(createVPCLatticeV2Event(), createMockContext());
+    const result = await matcher.handleEvent(createVPCLatticeV2Event(), createMockContext());
 
     expect(result).toMatchObject({ statusCode: 200 });
   });

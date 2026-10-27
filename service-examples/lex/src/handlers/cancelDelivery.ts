@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/lex';
 
 import { withCancellationAudit } from '../middleware/withCancellationAudit.js';
 import { TRACKING_NUMBER_SLOT } from '../utils/constants.js';

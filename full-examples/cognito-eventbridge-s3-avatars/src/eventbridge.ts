@@ -1,12 +1,12 @@
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
+import { createEventBridgeMatcher } from '@latcher/eventbridge';
 
 import { CognitoCloudTrailDetailSchema, userDeleted } from './eventbridge-handlers/userDeleted.js';
 
-export const eventBridgeRouter = createEventBridgeRouter();
+export const eventBridgeMatcher = createEventBridgeMatcher();
 
 // The EventBridge rule in template.yaml only passes AdminDeleteUser and DeleteUser, so the source and
 // detail type are enough to match. The schema validates the payload.
-eventBridgeRouter.route({
+eventBridgeMatcher.route({
   filters: {
     source: 'aws.cognito-idp',
     detailType: 'AWS API Call via CloudTrail',

@@ -8,6 +8,6 @@ Each one uses a different deploy tool. `http-api-dynamodb-sqs` uses CDK,
 `cognito-eventbridge-s3-avatars` uses AWS SAM and `secretsmanager-eventbridge-cloudwatch-security`
 uses Terraform.
 
-They cover how several routers work together in one codebase, which the service examples do not.
+They cover how several matchers work together in one codebase, which the service examples do not.
 
 <ExamplesList group="full" />

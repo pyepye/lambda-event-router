@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/config';
+import { defineRoute } from '@latcher/config';
 
 import { configRuleName } from '../environment.js';
 import { reportOversized, reportResourceEvaluation } from '../utils/evaluations.js';

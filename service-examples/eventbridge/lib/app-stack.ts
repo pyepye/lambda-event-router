@@ -61,7 +61,7 @@ export class AppStack extends Stack {
     const eventBus = new EventBus(this, 'EventBus', { eventBusName: EVENT_BUS_NAME });
     eventBus.applyRemovalPolicy(RemovalPolicy.DESTROY);
 
-    // One rule does the coarse match and the router does the rest. An event whose source is on this
+    // One rule does the coarse match and the matcher does the rest. An event whose source is on this
     // list but which no route claims still reaches the worker, which is how the no route path runs.
     new Rule(this, 'WorkerRule', {
       eventBus,

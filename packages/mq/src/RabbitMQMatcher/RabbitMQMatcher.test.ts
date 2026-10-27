@@ -1,0 +1,1245 @@
+import type { MockInstance } from 'vitest';
+
+import * as base from '@latcher/base';
+import {
+  allEventBuilders,
+  createMockSchema,
+  createRabbitMQEvent,
+  createRabbitMQHandlerEvent,
+  test,
+} from '@latcher/testing';
+
+import { createRabbitMQMatcher, defineRabbitMQRoute, RabbitMQMatcher } from './RabbitMQMatcher.js';
+import type { RabbitMQFilterInput, RabbitMQRequest } from './types.js';
+
+type RabbitMQNext = (request: RabbitMQRequest) => Promise<void>;
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
+
+suite('RabbitMQMatcher', () => {
+  let matcher: RabbitMQMatcher;
+
+  beforeEach(() => {
+    matcher = new RabbitMQMatcher();
+  });
+
+  suite('createRabbitMQMatcher', () => {
+    test('creates a RabbitMQMatcher instance', () => {
+      const matcher = createRabbitMQMatcher();
+      expect(matcher).toBeInstanceOf(RabbitMQMatcher);
+    });
+  });
+
+  suite('defineRabbitMQRoute', () => {
+    test('returns a route builder with a handle method', () => {
+      const builder = defineRabbitMQRoute({
+        filters: { queue: 'orders' },
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(typeof builder.handle).toBe('function');
+    });
+
+    test('preserves filters, bodySchema, and handler in the definition', () => {
+      const bodySchema = createMockSchema();
+      const handler = vi.fn();
+      const filters = {
+        eventSourceArn: ['arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234'],
+        queue: 'orders',
+        contentType: 'application/json',
+      };
+
+      const definition = defineRabbitMQRoute({
+        filters,
+        bodySchema,
+      }).handle(handler);
+
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    test('returns true for a valid RabbitMQ event', () => {
+      const event = createRabbitMQEvent();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns false for wrong eventSource', () => {
+      const event = { eventSource: 'aws:sqs', rmqMessagesByQueue: {} };
+      expect(matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for null', () => {
+      expect(matcher.canHandleEvent(null)).toBe(false);
+    });
+
+    test('returns false when rmqMessagesByQueue is not an object', () => {
+      expect(matcher.canHandleEvent({ eventSource: 'aws:rmq', rmqMessagesByQueue: 'not-an-object' })).toBe(false);
+    });
+
+    test('returns false for non-object input', () => {
+      expect(matcher.canHandleEvent(42)).toBe(false);
+    });
+  });
+
+  suite('route', () => {
+    test('returns the matcher instance for chaining', () => {
+      const definition = defineRabbitMQRoute({
+        filters: {},
+      }).handle(async () => {});
+
+      const result = matcher.route(definition);
+
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('matchRoute', () => {
+    test('matches route by eventSourceArn', async ({ rabbitMQMessage }) => {
+      const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { eventSourceArn: arn },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      event.eventSourceArn = arn;
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by eventSourceArn array', async ({ rabbitMQMessage }) => {
+      const arn = 'arn:aws:mq:us-east-1:123456789012:broker:TestBroker:b-1234';
+      const arn2 = 'arn:aws:mq:eu-west-2:987654321098:broker:OtherBroker:z-9876';
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { eventSourceArn: [arn, arn2] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      event.eventSourceArn = arn;
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when eventSourceArn does not match', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { eventSourceArn: 'arn:aws:mq:us-east-1:123456789012:broker:OtherBroker:b-9999' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by queue', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { queue: 'orders' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when queue is an empty string', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { queue: '' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by queue array', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { queue: ['orders', 'refunds'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when queue does not match', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { queue: 'orders' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'users', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by virtualHost', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', '/production', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by virtualHost array', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: ['/production', '/staging'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', '/staging', message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when virtualHost does not match', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', '/staging', message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a virtualHost filter when the queue key carries no virtual host', async ({
+      rabbitMQMessage,
+    }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { virtualHost: '/production' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by contentType', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: 'application/json' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by contentType array', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: ['application/json', 'application/xml'] },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when contentType does not match', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: 'application/xml' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches a contentType wildcard when the message has a contentType', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: '*' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'application/json' } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match a contentType filter when the message has no contentType', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: '*' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a contentType filter of "null" when the message has no contentType', async ({
+      rabbitMQMessage,
+    }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { contentType: 'null' },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom receives a null contentType when the message has none', async ({ rabbitMQMessage }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { custom: filterSpy },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: null } });
+
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(event, 'orders', undefined, message, message);
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ contentType: null }));
+    });
+
+    test('matches route by custom', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: {
+            custom: ({ queue }: RabbitMQFilterInput): boolean => {
+              return queue === 'orders';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when custom returns false', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { custom: (): boolean => false },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom receives correct RabbitMQFilterInput', async ({ rabbitMQMessage }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { custom: filterSpy },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage({ basicProperties: { contentType: 'text/plain' } });
+
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(event, 'orders', '/production', message, message, null);
+
+      expect(filterSpy).toHaveBeenCalledWith({
+        queue: 'orders',
+        virtualHost: '/production',
+        contentType: 'text/plain',
+        timestamp: null,
+        message,
+        record: message,
+      });
+    });
+
+    test('custom filter receives the raw record and the decoded message', async ({ rabbitMQMessage, context }) => {
+      let filterInput: RabbitMQFilterInput | undefined;
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: {
+            custom: (input: RabbitMQFilterInput): boolean => {
+              filterInput = input;
+              return true;
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const body = { action: 'process' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'orders::/production': [message] });
+      await matcher.handleEvent(event, context());
+
+      // record is the untouched AWS message, so its data is still base64
+      expect(filterInput?.record.data).toBe(message.data);
+      // message has data decoded to text, matching request.message
+      expect(filterInput?.message.data).toBe(JSON.stringify(body));
+    });
+
+    test('custom is not called when a preceding filter rejects', async ({ rabbitMQMessage }) => {
+      const customFilterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: { queue: 'other-queue', custom: customFilterSpy },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(customFilterSpy).not.toHaveBeenCalled();
+    });
+
+    test('matches route by async custom', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: {
+            custom: async ({ queue }: RabbitMQFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return Promise.resolve(queue === 'orders');
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'orders', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ rabbitMQMessage }) => {
+      matcher.route(
+        defineRabbitMQRoute({
+          filters: {},
+        }).handle(async () => {}),
+      );
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+    });
+
+    test('selects the first matching route when multiple routes match', async ({ rabbitMQMessage }) => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(firstHandler));
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(secondHandler));
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result).toBeDefined();
+      expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ rabbitMQMessage }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(broad));
+      matcher.route(defineRabbitMQRoute({ filters: { queue: 'test-queue' } }).handle(narrow));
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ rabbitMQMessage }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: { queue: 'test-queue' } }).handle(fallback));
+      matcher.route(defineRabbitMQRoute({ filters: { queue: 'test-queue', custom: () => true } }).handle(guarded));
+
+      const event = createRabbitMQEvent();
+      const message = rabbitMQMessage();
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event, 'test-queue', undefined, message);
+
+      expect(result?.handler).toBe(guarded);
+    });
+  });
+
+  suite('parseTimestamp', () => {
+    test('parses the text Amazon MQ delivers as UTC', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Sep 21, 2026, 2:13:20 PM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+    });
+
+    test('parses a narrow no-break space before the meridiem', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Sep 21, 2026, 2:13:20\u202FPM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+    });
+
+    test('reads 12 AM as midnight', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Jan 1, 2026, 12:00:00 AM')).toEqual(new Date('2026-01-01T00:00:00Z'));
+    });
+
+    test('reads 12 PM as noon', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Jan 1, 2026, 12:00:00 PM')).toEqual(new Date('2026-01-01T12:00:00Z'));
+    });
+
+    test('parses a two digit day and hour', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Dec 31, 2026, 11:59:59 PM')).toEqual(new Date('2026-12-31T23:59:59Z'));
+    });
+
+    test('gives the same instant whatever the local time zone', () => {
+      vi.stubEnv('TZ', 'Europe/London');
+
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Sep 21, 2026, 2:13:20 PM')).toEqual(new Date('2026-09-21T14:13:20Z'));
+
+      vi.unstubAllEnvs();
+    });
+
+    test('returns null when there is no timestamp', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp(null)).toBeNull();
+    });
+
+    test('returns null for text in another format', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('2026-09-21T14:13:20Z')).toBeNull();
+    });
+
+    test('returns null for an unknown month', () => {
+      // @ts-expect-error testing private method
+      expect(matcher.parseTimestamp('Sept 21, 2026, 2:13:20 PM')).toBeNull();
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('calls matched handler with correct RabbitMQRequest shape', async ({
+      rabbitMQMessage,
+      rabbitMQHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const { event, context } = rabbitMQHandlerEvent({
+        messagesByQueue: { 'orders::/production': [message] },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          queue: 'orders',
+          record: message,
+          context,
+        }),
+      );
+    });
+
+    test('parses the timestamp property into request.timestamp', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'Sep 21, 2026, 2:13:20 PM' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          timestamp: new Date('2026-09-21T14:13:20Z'),
+          record: expect.objectContaining({
+            basicProperties: expect.objectContaining({ timestamp: 'Sep 21, 2026, 2:13:20 PM' }),
+          }),
+        }),
+      );
+    });
+
+    test('sets request.timestamp to null when the message has no timestamp', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: null } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
+    });
+
+    test('custom receives the parsed timestamp', async ({ rabbitMQMessage, context }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(defineRabbitMQRoute({ filters: { custom: filterSpy } }).handle(async () => {}));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'Sep 21, 2026, 2:13:20 PM' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ timestamp: new Date('2026-09-21T14:13:20Z') }));
+    });
+
+    test('custom receives a null timestamp when the message has none', async ({ rabbitMQMessage, context }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(defineRabbitMQRoute({ filters: { custom: filterSpy } }).handle(async () => {}));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: null } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(filterSpy).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
+    });
+
+    test('still handles a message whose timestamp cannot be parsed', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ basicProperties: { timestamp: 'not a timestamp' } });
+      const event = createRabbitMQEvent({ 'orders::/': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ timestamp: null }));
+    });
+
+    test('decodes base64 message data', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const body = { decoded: true };
+      const message = rabbitMQMessage({ data: body }); // This gets auto encoded by rabbitMQMessage
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      const expectedDecodedData = JSON.stringify(body);
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: expect.objectContaining({ data: expectedDecodedData }),
+          body,
+        }),
+      );
+    });
+
+    test('validates body with schema and returns transformed data', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      const bodySchema = createMockSchema();
+      matcher.route(defineRabbitMQRoute({ filters: {}, bodySchema }).handle(handler));
+
+      const body = { action: 'process' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('throws when body schema validation fails', async ({ rabbitMQMessage, context }) => {
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      matcher.route(defineRabbitMQRoute({ filters: {}, bodySchema }).handle(vi.fn()));
+
+      const message = rabbitMQMessage({ data: { bad: 'data' } });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Body validation failed');
+    });
+
+    test('parses queue name from queueName::virtualHost format', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'orders::/production': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'orders' }));
+    });
+
+    test('uses full key as queue name when no :: separator', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'simple-queue': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'simple-queue' }));
+    });
+
+    test('puts the virtual host on the request', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'orders::/production': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'orders', virtualHost: '/production' }));
+    });
+
+    test('leaves virtualHost undefined when the key has no :: separator', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage();
+      const event = createRabbitMQEvent({ 'simple-queue': [message] });
+
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ queue: 'simple-queue', virtualHost: undefined }));
+    });
+
+    test('throws when no route matches', async ({ rabbitMQHandlerEvent }) => {
+      const { event, context } = rabbitMQHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('propagates handler errors', async ({ rabbitMQHandlerEvent }) => {
+      matcher.route(
+        defineRabbitMQRoute({ filters: {} }).handle(async () => {
+          throw new Error('handler exploded');
+        }),
+      );
+
+      const { event, context } = rabbitMQHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('handler exploded');
+    });
+
+    test('returns undefined on success', async ({ rabbitMQHandlerEvent }) => {
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(async () => {}));
+
+      const { event, context } = rabbitMQHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('processes messages sequentially across queue', async ({ rabbitMQMessage, context }) => {
+      const callOrder: string[] = [];
+
+      matcher.route(
+        defineRabbitMQRoute({ filters: {} }).handle(async (request: RabbitMQRequest) => {
+          const queue = request.queue;
+          callOrder.push(`start-${queue}`);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          callOrder.push(`end-${queue}`);
+        }),
+      );
+
+      const event = createRabbitMQEvent({
+        'queue-a::/vhost': [rabbitMQMessage()],
+        'queue-b::/vhost': [rabbitMQMessage()],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(callOrder).toEqual(['start-queue-a', 'end-queue-a', 'start-queue-b', 'end-queue-b']);
+    });
+
+    test('processes messages from multiple queue', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const event = createRabbitMQEvent({
+        'queue-a::/vhost': [rabbitMQMessage(), rabbitMQMessage()],
+        'queue-b::/vhost': [rabbitMQMessage()],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes decoded message data to safeJsonParse', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await matcher.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(JSON.stringify(body));
+    });
+
+    test('handler receives parsed object when data is valid JSON', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const body = { action: 'process', id: '123' };
+      const message = rabbitMQMessage({ data: body });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when data is not valid JSON', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const message = rabbitMQMessage({ data: 'not-json' });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [message] });
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes messages from different queue to different handlers', async ({ rabbitMQMessage, context }) => {
+      const ordersHandler = vi.fn();
+      const usersHandler = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: { queue: 'orders' } }).handle(ordersHandler));
+      matcher.route(defineRabbitMQRoute({ filters: { queue: 'users' } }).handle(usersHandler));
+
+      const event = createRabbitMQEvent({
+        'orders::/vhost': [rabbitMQMessage()],
+        'users::/vhost': [rabbitMQMessage()],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(ordersHandler).toHaveBeenCalledTimes(1);
+      expect(usersHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('routes the same queue name in two virtual hosts to different handlers', async ({
+      rabbitMQMessage,
+      context,
+    }) => {
+      const productionHandler = vi.fn();
+      const stagingHandler = vi.fn();
+
+      matcher.route(
+        defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/production' } }).handle(productionHandler),
+      );
+      matcher.route(
+        defineRabbitMQRoute({ filters: { queue: 'orders', virtualHost: '/staging' } }).handle(stagingHandler),
+      );
+
+      const event = createRabbitMQEvent({
+        'orders::/production': [rabbitMQMessage()],
+        'orders::/staging': [rabbitMQMessage()],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(productionHandler).toHaveBeenCalledTimes(1);
+      expect(stagingHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('routes by contentType to different handlers', async ({ rabbitMQMessage, context }) => {
+      const jsonHandler = vi.fn();
+      const xmlHandler = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: { contentType: 'application/json' } }).handle(jsonHandler));
+      matcher.route(defineRabbitMQRoute({ filters: { contentType: 'application/xml' } }).handle(xmlHandler));
+
+      const event = createRabbitMQEvent({
+        'test-queue::/vhost': [
+          rabbitMQMessage({ basicProperties: { contentType: 'application/json' } }),
+          rabbitMQMessage({ basicProperties: { contentType: 'application/xml' } }),
+        ],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(jsonHandler).toHaveBeenCalledTimes(1);
+      expect(xmlHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('catch-all route handles all messages', async ({ rabbitMQMessage, context }) => {
+      const handler = vi.fn();
+
+      matcher.route(defineRabbitMQRoute({ filters: {} }).handle(handler));
+
+      const event = createRabbitMQEvent({
+        'queue-a::/vhost': [rabbitMQMessage()],
+        'queue-b::/vhost': [rabbitMQMessage(), rabbitMQMessage()],
+      });
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  suite('matcher-level middleware', () => {
+    test('executes middleware before the route handler', async () => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [middleware] });
+      matcher.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-record for multi-record events', async ({ rabbitMQMessage, context }) => {
+      const recordIds: string[] = [];
+
+      async function middleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        recordIds.push(request.record.basicProperties.messageId ?? '');
+        await next(request);
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [middleware] });
+      matcher.route({ filters: {}, handler: async () => {} });
+
+      const messageOne = rabbitMQMessage({ basicProperties: { messageId: 'msg-1' } });
+      const messageTwo = rabbitMQMessage({ basicProperties: { messageId: 'msg-2' } });
+      const event = createRabbitMQEvent({ 'test-queue::/vhost': [messageOne, messageTwo] });
+      await matcher.handleEvent(event, context());
+
+      expect(recordIds).toEqual(['msg-1', 'msg-2']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async () => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: RabbitMQRequest, _next: RabbitMQNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [skipMiddleware] });
+      matcher.route({ filters: {}, handler });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple matcher-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [middlewareOne, middlewareTwo] });
+      matcher.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async () => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: RabbitMQRequest, _next: RabbitMQNext): Promise<void> {
+        return;
+      }
+
+      matcher.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async () => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRabbitMQRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      matcher.route(route);
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined matcher and route middleware', () => {
+    test('executes matcher middleware before route middleware', async () => {
+      const callOrder: string[] = [];
+
+      async function matcherMiddleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('matcher-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: RabbitMQRequest, next: RabbitMQNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [matcherMiddleware] });
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['matcher-mw', 'route-mw', 'handler']);
+    });
+
+    test('matcher middleware short-circuit prevents route middleware from running', async () => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingMatcherMiddleware(_request: RabbitMQRequest, _next: RabbitMQNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createRabbitMQMatcher({ middleware: [blockingMatcherMiddleware] });
+      matcher.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async () => {
+      const middleware = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const matcher = createRabbitMQMatcher({ middleware: [middleware] });
+      matcher.route({ filters: {}, bodySchema, handler: vi.fn() });
+
+      const { event, context } = createRabbitMQHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('validation failed');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+});
+
+suite('RabbitMQMatcher.canHandleEvent', () => {
+  const ownEvents = ['createRabbitMQEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createRabbitMQMatcher().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
+  });
+});

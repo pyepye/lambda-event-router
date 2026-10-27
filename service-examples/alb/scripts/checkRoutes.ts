@@ -1,7 +1,7 @@
 import type { ALBEvent, ALBResult, Context } from 'aws-lambda';
 
 import { buildSteps, type EventForm, type Expected, type Step } from '../src/requests/steps.js';
-import { returnsRouter } from '../src/returnsRouter.js';
+import { returnsMatcher } from '../src/returnsMatcher.js';
 
 const ACCOUNT = '123456789012';
 const REGION = 'eu-west-2';
@@ -11,7 +11,7 @@ const TARGET_GROUP_ARNS: Record<EventForm, string> = {
   'multi-value': `arn:aws:elasticloadbalancing:${REGION}:${ACCOUNT}:targetgroup/ler-example-alb-multi/9f4bd2a10c3e7701`,
 };
 
-// The in-process expectations are the response the router built, so no step compares against this.
+// The in-process expectations are the response the matcher built, so no step compares against this.
 // It stands in for the listener the caller reached.
 const LISTENER_ORIGIN = `http://ler-example-alb.${REGION}.elb.amazonaws.com`;
 
@@ -67,7 +67,7 @@ function buildEvent(step: Step, form: EventForm): ALBEvent {
   };
 }
 
-// The wire lower cases every response header name, so the router's own casing is folded away
+// The wire lower cases every response header name, so the matcher's own casing is folded away
 // before the expectations are compared. A multi-value target group reads `multiValueHeaders` and
 // sends each entry to the caller, which folds a repeat into one comma joined value.
 function receivedHeaders(result: ALBResult): Record<string, string | undefined> {
@@ -112,7 +112,7 @@ const failures: string[] = [];
 for (const form of ['single-value', 'multi-value'] as const) {
   for (const step of buildSteps(form, TARGET_GROUP_ARNS[form], LISTENER_ORIGIN)) {
     const label = `${form} ${step.name}`;
-    const result = await returnsRouter.handleEvent(buildEvent(step, form), context);
+    const result = await returnsMatcher.handleEvent(buildEvent(step, form), context);
     const problems = problemsWith(result, step.expectedInProcess ?? step.expected);
 
     if (problems.length === 0) {
@@ -129,7 +129,7 @@ for (const form of ['single-value', 'multi-value'] as const) {
 // and no `requestContext.elb`.
 const apiGatewayEvent = { httpMethod: 'GET', path: '/returns/open', requestContext: { stage: 'prod' } };
 
-if (returnsRouter.canHandleEvent(apiGatewayEvent)) {
+if (returnsMatcher.canHandleEvent(apiGatewayEvent)) {
   failures.push('canHandleEvent an API Gateway event');
   console.log('FAIL canHandleEvent took an API Gateway event');
 } else {

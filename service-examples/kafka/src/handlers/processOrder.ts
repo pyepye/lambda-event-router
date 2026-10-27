@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kafka';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kafka';
 
 import { EVENT_TYPE_HEADER, ORDER_CREATED, ORDERS_TOPIC } from '../config.js';
 import { CLUSTER_ARN } from '../environment.js';

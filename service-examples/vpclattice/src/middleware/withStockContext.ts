@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { HTTPMiddleware } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import type { HTTPMiddleware } from '@latcher/vpclattice';
 
 // Route middleware on PUT /stock/:sku. The body has no schema, so it stays `unknown` here and in
 // the handler.

@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-kafka",
+  "name": "@latcher/service-example-kafka",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,8 +18,8 @@
   "dependencies": {
     "@aws-sdk/client-kafka": "^3.1034.0",
     "@aws-sdk/client-lambda": "^3.1034.0",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/kafka": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/kafka": "workspace:*",
     "kafkajs": "^2.2.4",
     "zod": "^4.3.5"
   },

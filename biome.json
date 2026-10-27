@@ -9,9 +9,9 @@
             "groups": [
               [":BUN:", ":NODE:", "@aws-sdk/**", "aws-lambda"],
               ":BLANK_LINE:",
-              [":PACKAGE:", "!@lambda-event-router/**"],
+              [":PACKAGE:", "!@latcher/**"],
               ":BLANK_LINE:",
-              "@lambda-event-router/**",
+              "@latcher/**",
               ":BLANK_LINE:",
               [":ALIAS:", ":PATH:"]
             ]

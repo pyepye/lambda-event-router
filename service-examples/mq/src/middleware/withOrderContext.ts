@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ActiveMQMiddleware } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import type { ActiveMQMiddleware } from '@latcher/mq';
 
 import type { TOrder } from '../utils/schemas.js';
 

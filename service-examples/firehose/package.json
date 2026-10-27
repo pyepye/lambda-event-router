@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-firehose",
+  "name": "@latcher/service-example-firehose",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/firehose": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/firehose": "workspace:*",
     "@aws-sdk/client-cloudwatch-logs": "catalog:",
     "@aws-sdk/client-firehose": "^3.1034.0",
     "@aws-sdk/client-kinesis": "catalog:",

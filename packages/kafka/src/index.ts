@@ -1,20 +1,18 @@
-export { createKafkaRouter, defineRoute, KafkaRouter } from './KafkaRouter.js';
+export { createKafkaMatcher, defineRoute, KafkaMatcher } from './KafkaMatcher.js';
 export type {
-  KafkaBatchItemIdentifier,
-  KafkaBatchResponse,
-  KafkaDecodedHeader,
-  KafkaEvent,
-  KafkaFilterInput,
-  KafkaFilters,
-  KafkaHeaders,
-  KafkaMiddleware,
-  KafkaMSKEvent,
-  KafkaRecord,
-  KafkaRecordHeader,
-  KafkaRequest,
-  KafkaResponse,
-  KafkaRetryEvent,
-  KafkaRouteDefinition,
-  KafkaRouterOptions,
-  KafkaSelfManagedEvent,
+    KafkaBatchItemIdentifier,
+    KafkaBatchResponse,
+    KafkaDecodedHeader,
+    KafkaEvent,
+    KafkaFilterInput,
+    KafkaFilters,
+    KafkaHeaders, KafkaMatcherOptions, KafkaMiddleware,
+    KafkaMSKEvent,
+    KafkaRecord,
+    KafkaRecordHeader,
+    KafkaRequest,
+    KafkaResponse,
+    KafkaRetryEvent,
+    KafkaRouteDefinition, KafkaSelfManagedEvent
 } from './types.js';
+

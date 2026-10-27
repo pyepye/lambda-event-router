@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-secretsmanager",
+  "name": "@latcher/service-example-secretsmanager",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "destroy": "cdk destroy --force && tsx scripts/purgeSecrets.ts"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/secretsmanager": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/secretsmanager": "workspace:*",
     "@aws-sdk/client-secrets-manager": "^3.1034.0"
   },
   "devDependencies": {

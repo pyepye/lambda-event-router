@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-stepfunctions",
+  "name": "@latcher/service-example-stepfunctions",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-sfn": "catalog:",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/stepfunctions": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/stepfunctions": "workspace:*",
     "zod": "^4.3.5"
   },
   "devDependencies": {

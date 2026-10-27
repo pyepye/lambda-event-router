@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { FirehoseMiddleware } from '@lambda-event-router/firehose';
+import { logger } from '@latcher/base';
+import type { FirehoseMiddleware } from '@latcher/firehose';
 
 import type { TSignUp } from '../utils/schemas.js';
 

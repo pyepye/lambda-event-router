@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-connect",
+  "name": "@latcher/service-example-connect",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     "@aws-sdk/client-cloudformation": "^3.1034.0",
     "@aws-sdk/client-connect": "^3.1034.0",
     "@aws-sdk/client-connectparticipant": "^3.1077.0",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/connect": "workspace:*"
+    "@latcher/base": "workspace:*",
+    "@latcher/connect": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

@@ -1,4 +1,4 @@
-import { lambdaAuth } from '@lambda-event-router/apigateway';
+import { lambdaAuth } from '@latcher/apigateway';
 import { z } from 'zod';
 
 // A fixed token keeps the example runnable with curl. A real authorizer verifies a token it cannot guess

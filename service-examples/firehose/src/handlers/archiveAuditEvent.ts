@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, Ok } from '@lambda-event-router/firehose';
+import { logger } from '@latcher/base';
+import { defineRoute, Ok } from '@latcher/firehose';
 
 import { AUDIT_STREAM_ARN } from '../config.js';
 import { AuditEventSchema } from '../utils/schemas.js';

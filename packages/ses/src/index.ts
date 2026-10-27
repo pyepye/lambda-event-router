@@ -1,14 +1,13 @@
-export { createSESRouter, defineRoute, SESRouter } from './SESRouter.js';
+export { createSESMatcher, defineRoute, SESMatcher } from './SESMatcher.js';
 export type {
-  SESDisposition,
-  SESFilterInput,
-  SESFilters,
-  SESMiddleware,
-  SESReceiptStatusValue,
-  SESRecordHandler,
-  SESRequest,
-  SESResponse,
-  SESResult,
-  SESRouteDefinition,
-  SESRouterOptions,
+    SESDisposition,
+    SESFilterInput,
+    SESFilters, SESMatcherOptions, SESMiddleware,
+    SESReceiptStatusValue,
+    SESRecordHandler,
+    SESRequest,
+    SESResponse,
+    SESResult,
+    SESRouteDefinition
 } from './types.js';
+

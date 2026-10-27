@@ -1,6 +1,6 @@
-import type { AppSyncEventsPublishResult } from '@lambda-event-router/appsync';
-import { defineEventsRoute } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncEventsPublishResult } from '@latcher/appsync';
+import { defineEventsRoute } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 import { PRESENCE_NAMESPACE } from '../utils/constants.js';
 
 // One route for both operations on the presence namespace: joining a desk is a subscribe, and a

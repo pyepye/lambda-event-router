@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { CognitoMiddleware } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { CognitoMiddleware } from '@latcher/cognito';
 
-// Router middleware: runs once per event, before any route middleware, for every trigger.
+// Matcher middleware: runs once per event, before any route middleware, for every trigger.
 export const logInvocation: CognitoMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling Cognito trigger',

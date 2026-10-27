@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { cognitoRouter } from './cognito.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [cognitoRouter] });
+import { cognitoMatcher } from './cognito.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [cognitoMatcher] });
+
+export const handler: Handler = latcher.handler();

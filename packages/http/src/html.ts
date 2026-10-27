@@ -3,7 +3,7 @@ import type { Html as HtmlBody } from './types.js';
 export type Html = HtmlBody;
 
 /**
- * Marks a string as HTML for an HTML route. The router sends it as it is, so the template engine that made
+ * Marks a string as HTML for an HTML route. The matcher sends it as it is, so the template engine that made
  * it must escape any values it holds.
  */
 // biome-ignore lint/suspicious/noRedeclare: TypeScript keeps the Html type and the Html function apart

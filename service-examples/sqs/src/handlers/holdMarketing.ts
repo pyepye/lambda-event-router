@@ -1,5 +1,5 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/sqs';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/sqs';
 
 import { NOTIFICATIONS_QUEUE_ARN } from '../config.js';
 import { NotificationSchema } from '../utils/schemas.js';

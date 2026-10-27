@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { documentDBRouter } from './documentdb.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [documentDBRouter] });
+import { documentDBMatcher } from './documentdb.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [documentDBMatcher] });
+
+export const handler: Handler = latcher.handler();

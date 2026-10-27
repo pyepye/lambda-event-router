@@ -1,4 +1,4 @@
-import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@lambda-event-router/http';
+import type { FinalizedHTTPResponse, HTTPAdapter, NormalizedHTTPEvent } from '@latcher/http';
 
 import type { VPCLatticeAuth } from './auth.js';
 import { type VPCLatticeEventV1, type VPCLatticeResult, vpcLatticeV1Adapter } from './vpcLatticeV1Adapter.js';

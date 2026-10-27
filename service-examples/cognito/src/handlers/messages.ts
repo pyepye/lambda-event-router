@@ -1,6 +1,6 @@
-import { logger } from '@lambda-event-router/base';
-import type { CustomMessageRequest } from '@lambda-event-router/cognito';
-import { defineRoute } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { CustomMessageRequest } from '@latcher/cognito';
+import { defineRoute } from '@latcher/cognito';
 import type { CustomMessageTriggerEvent } from 'aws-lambda';
 
 // codeParameter is the placeholder {####}, not the code itself. Cognito swaps the real code in after

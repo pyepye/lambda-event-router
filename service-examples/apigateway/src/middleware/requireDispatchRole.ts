@@ -1,4 +1,4 @@
-import { Forbidden, type HTTPMiddleware, Unauthorized } from '@lambda-event-router/apigateway';
+import { Forbidden, type HTTPMiddleware, Unauthorized } from '@latcher/apigateway';
 
 import { DISPATCH_ROLE, STAFF_ROLE_HEADER } from '../utils/constants.js';
 

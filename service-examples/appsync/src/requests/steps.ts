@@ -1,19 +1,19 @@
-import type { JsonValue } from '@lambda-event-router/base';
+import type { JsonValue } from '@latcher/base';
 
 import {
-  ADMIN_OPERATION,
-  AGENT_TOKEN,
-  AUDIT_CHANNEL,
-  AUDIT_CHANNEL_PATTERN,
-  BROKEN_TOKEN,
-  CUSTOMER_TOKEN,
-  EXPIRED_TOKEN,
-  PRESENCE_CHANNEL,
-  PRESENCE_CHANNEL_PATTERN,
-  REVOKED_TOKEN,
-  TICKET_CHANNEL,
-  TICKET_CHANNEL_PATTERN,
-  TYPING_EVENT,
+    ADMIN_OPERATION,
+    AGENT_TOKEN,
+    AUDIT_CHANNEL,
+    AUDIT_CHANNEL_PATTERN,
+    BROKEN_TOKEN,
+    CUSTOMER_TOKEN,
+    EXPIRED_TOKEN,
+    PRESENCE_CHANNEL,
+    PRESENCE_CHANNEL_PATTERN,
+    REVOKED_TOKEN,
+    TICKET_CHANNEL,
+    TICKET_CHANNEL_PATTERN,
+    TYPING_EVENT,
 } from '../utils/constants.js';
 
 export interface Expected {

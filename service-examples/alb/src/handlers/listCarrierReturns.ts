@@ -1,5 +1,5 @@
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { requireDeskRole } from '../middleware/requireDeskRole.js';
 import { CARRIER_RETURNS } from '../utils/returns.js';

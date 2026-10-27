@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/cloudwatch';
+import { defineRoute } from '@latcher/cloudwatch';
 
 import { AUDIT_LOG_GROUP } from '../config.js';
 

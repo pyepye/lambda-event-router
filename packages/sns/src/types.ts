@@ -2,7 +2,7 @@ import type { SNSMessageAttributes as AWSSNSMessageAttributes, Context, SNSEvent
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export type SNSRawMessageAttributes = AWSSNSMessageAttributes;
 export type SNSMessageAttributeValue = string | Buffer;
@@ -47,6 +47,6 @@ export interface SNSRouteDefinition<TBody = unknown, TMessageAttributes = SNSMes
   handler: SNSRecordHandler<TBody, TMessageAttributes>;
 }
 
-export interface SNSRouterOptions {
+export interface SNSMatcherOptions {
   middleware?: SNSMiddleware[];
 }

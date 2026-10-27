@@ -1,4 +1,5 @@
-export * from './AppSyncAuthorizerRouter';
-export * from './AppSyncEventsAuthorizerRouter';
-export * from './AppSyncEventsRouter';
-export * from './AppSyncRouter';
+export * from './AppSyncAuthorizerMatcher';
+export * from './AppSyncEventsAuthorizerMatcher';
+export * from './AppSyncEventsMatcher';
+export * from './AppSyncMatcher';
+

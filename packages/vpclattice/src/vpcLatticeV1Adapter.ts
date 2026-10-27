@@ -1,11 +1,11 @@
-import { isObject } from '@lambda-event-router/base';
+import { isObject } from '@latcher/base';
 import {
-  buildValueMaps,
-  type FinalizedHTTPResponse,
-  type HTTPAdapter,
-  type HttpMethod,
-  type NormalizedHTTPEvent,
-} from '@lambda-event-router/http';
+    buildValueMaps,
+    type FinalizedHTTPResponse,
+    type HTTPAdapter,
+    type HttpMethod,
+    type NormalizedHTTPEvent,
+} from '@latcher/http';
 
 import type { VPCLatticeAuth } from './auth.js';
 import { fieldsFromLatticeHeader, IDENTITY_HEADER, NETWORK_HEADER, pathWithoutQuery } from './latticeEvent.js';

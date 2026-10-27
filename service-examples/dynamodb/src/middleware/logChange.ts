@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { DynamoDBMiddleware } from '@lambda-event-router/dynamodb';
+import { logger } from '@latcher/base';
+import type { DynamoDBMiddleware } from '@latcher/dynamodb';
 
-// Router middleware: runs once per record, before any route middleware, for both streams.
+// Matcher middleware: runs once per record, before any route middleware, for both streams.
 export const logChange: DynamoDBMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling DynamoDB record',

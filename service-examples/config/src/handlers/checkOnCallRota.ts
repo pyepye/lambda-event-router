@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/config';
+import { defineRoute } from '@latcher/config';
 
 import { OWNER_TAG } from '../config.js';
 import { configRuleName } from '../environment.js';

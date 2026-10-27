@@ -1,4 +1,4 @@
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
+import type { AppSyncResolverRequest } from '@latcher/appsync';
 
 import type { TTicketId } from '../utils/schemas.js';
 

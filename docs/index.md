@@ -2,30 +2,30 @@
 layout: home
 
 hero:
-  name: Lambda Event Router
+  name: Latcher
   text: Type-safe event routing for AWS Lambda
   tagline: One handler, any event source. Route API Gateway, SQS, DynamoDB, S3 and more to the right code.
   image:
-    light: /lambda-event-router-light.svg
-    dark: /lambda-event-router-dark.svg
-    alt: Lambda Event Router
+    light: /latcher-light.svg
+    dark: /latcher-dark.svg
+    alt: Latcher
   actions:
     - theme: brand
       text: Get Started
       link: /docs/
     - theme: alt
       text: GitHub
-      link: https://github.com/pyepye/lambda-event-router
+      link: https://github.com/pyepye/latcher
 
 features:
   - title: 🔀 Multi-source routing
-    details: Combine routers from different AWS services in a single Lambda handler.
+    details: Combine matchers from different AWS services in a single Lambda handler.
   - title: 🛡️ Type-safe routing
     details: Full TypeScript support, with handler types inferred from the schemas and filters on the route.
   - title: 🎛️ Declarative filters
     details: Route events by ARN, eventType, topic, bucket, event name, detail type, and custom filter functions.
   - title: 🧱 25 AWS services
-    details: Dedicated routers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more.
+    details: Dedicated matchers for SQS, SNS, EventBridge, DynamoDB Streams, S3, API Gateway, and many more.
   - title: ✅ Schema validation
     details: Built-in schema validation for request bodies, message attributes, path params, and more. Compatible with any Standard Schema compatible library.
   - title: 🧪 Well tested
@@ -38,26 +38,26 @@ features:
 
 ```ts [index.ts]
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { apiRouter } from './api'
-import { sqsRouter } from './sqs'
+import { Latcher } from '@latcher/base'
+import { apiMatcher } from './api'
+import { sqsMatcher } from './sqs'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter, sqsRouter],
+const latcher = new Latcher({
+  matchers: [apiMatcher, sqsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts [api.ts]
-import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
+import { createAPIGatewayMatcher } from '@latcher/apigateway'
 
 import { getOrder } from './getOrder'
 import { createOrder, createOrderSchema } from './createOrder'
 
-const apiRouter = createAPIGatewayRouter()
+const apiMatcher = createAPIGatewayMatcher()
 
-apiRouter.route({
+apiMatcher.route({
   filters: {
     method: 'GET',
     path: '/order/:id/',
@@ -65,7 +65,7 @@ apiRouter.route({
   handler: getOrder,
 })
 
-apiRouter.route({
+apiMatcher.route({
   filters: {
     method: 'POST',
     path: '/order/:id/',
@@ -76,19 +76,19 @@ apiRouter.route({
 ```
 
 ```ts [sqs.ts]
-import { createSQSRouter } from '@lambda-event-router/sqs'
+import { createSQSMatcher } from '@latcher/sqs'
 
 import { processOrder } from './order/process'
 import { refundOrder } from './order/refund'
 
-const sqsRouter = createSQSRouter()
+const sqsMatcher = createSQSMatcher()
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: { messageAttributes: { Type: ['ProcessOrder'] } },
   handler: processOrder,
 })
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: { messageAttributes: { Type: ['RefundOrder'] } },
   handler: refundOrder,
 })

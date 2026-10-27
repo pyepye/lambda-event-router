@@ -1,12 +1,12 @@
 import type { ALBEvent, ALBResult } from 'aws-lambda';
 
-import { isObject } from '@lambda-event-router/base';
+import { isObject } from '@latcher/base';
 import {
-  buildValueMaps,
-  type FinalizedHTTPResponse,
-  type HTTPAdapter,
-  type NormalizedHTTPEvent,
-} from '@lambda-event-router/http';
+    buildValueMaps,
+    type FinalizedHTTPResponse,
+    type HTTPAdapter,
+    type NormalizedHTTPEvent,
+} from '@latcher/http';
 
 function responseHeaders(
   headers: Record<string, string> | undefined,

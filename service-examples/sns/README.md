@@ -1,7 +1,7 @@
 # Service example: SNS
 
-A deployable CDK app that exercises the `SNSRouter` end to end. It models an order fulfilment service.
-One Lambda subscribes to three SNS topics, and the router does the per-record dispatch.
+A deployable CDK app that exercises the `SNSMatcher` end to end. It models an order fulfilment service.
+One Lambda subscribes to three SNS topics, and the matcher does the per-record dispatch.
 
 The routes are in `src/sns.ts`, and the handlers are in `src/handlers/`.
 
@@ -29,12 +29,12 @@ The delivery failures topic is Lambda's on-failure destination. A record that ru
 republished there, and the worker subscribes to it as well, so dead lettering stays inside SNS.
 
 No subscription carries a filter policy. AWS delivers every published message to the worker, and the
-router does all the filtering.
+matcher does all the filtering.
 
 ## What it covers
 
 One `publish:messages` puts a batch on the orders topic and a batch on the inventory topic. Together
-they hit every filter the router has, every attribute type and every failure path.
+they hit every filter the matcher has, every attribute type and every failure path.
 
 | Feature | Where |
 | --- | --- |
@@ -44,7 +44,7 @@ they hit every filter the router has, every attribute type and every failure pat
 | `custom` filter | `expediteOrder` catches express orders before the `eventType` filter |
 | Attribute types | `processOrder` takes a Number, a String.Array and a Binary attribute |
 | Zod schemas | `bodySchema` on five routes, `messageAttributesSchema` on `processOrder` |
-| Router middleware | `logDelivery` runs once per record, on every topic |
+| Matcher middleware | `logDelivery` runs once per record, on every topic |
 | Route middleware | `withOrderContext` on `processOrder` |
 | No route matched | An order with no subject and no attributes, and a version 1 stock message |
 | Handler failure | `chargeCard` throws after its middleware has run |
@@ -62,7 +62,7 @@ Filters run before any schema, so they see those same strings. That is why `rese
 CDK injects all three topic ARNs as env vars, and `src/config.ts` reads them. The `topicArn` filter
 matches against those values.
 
-Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The router
+Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The matcher
 returns nothing, so there is no response to assert.
 
 ## Prerequisites
@@ -88,9 +88,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sns... install
-pnpm -F @lambda-event-router/service-example-sns... build
-pnpm -F @lambda-event-router/service-example-sns run deploy
+pnpm -F @latcher/service-example-sns... install
+pnpm -F @latcher/service-example-sns... build
+pnpm -F @latcher/service-example-sns run deploy
 ```
 
 CDK outputs include `OrdersTopicArn`, `InventoryTopicArn` and `DeliveryFailuresTopicArn`.
@@ -100,7 +100,7 @@ CDK outputs include `OrdersTopicArn`, `InventoryTopicArn` and `DeliveryFailuresT
 Pass the orders and inventory topic ARNs from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sns run publish:messages \
+pnpm -F @latcher/service-example-sns run publish:messages \
   <OrdersTopicArn> <InventoryTopicArn>
 ```
 
@@ -134,7 +134,7 @@ Ten published messages produce 22 invocations: 4 that succeed, 12 failing attemp
 failures.
 
 There is one `Handling SNS record` line per record that reaches a handler, so 12 in all. A record that
-matches no route, or fails a schema, never gets one. The router matches and validates before it runs
+matches no route, or fails a schema, never gets one. The matcher matches and validates before it runs
 middleware.
 
 Four messages are handled:
@@ -183,15 +183,15 @@ The worker allows one retry and then publishes the failed invocation to `Deliver
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sns diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-sns watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-sns synth  # render template
+pnpm -F @latcher/service-example-sns diff   # review pending changeset
+pnpm -F @latcher/service-example-sns watch  # hotswap deploys
+pnpm -F @latcher/service-example-sns synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sns destroy
+pnpm -F @latcher/service-example-sns destroy
 ```
 
 The stack owns its log group, so `destroy` removes the topics, the subscriptions, the worker and the

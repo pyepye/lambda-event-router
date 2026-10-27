@@ -1,7 +1,7 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import type { StepFunctionsMiddleware } from '@lambda-event-router/stepfunctions';
+import { isObject, logger } from '@latcher/base';
+import type { StepFunctionsMiddleware } from '@latcher/stepfunctions';
 
-// Router middleware: runs once per invocation, before any route middleware, for every route.
+// Matcher middleware: runs once per invocation, before any route middleware, for every route.
 export const logTask: StepFunctionsMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling Step Functions task',

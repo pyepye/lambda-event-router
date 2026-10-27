@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-vpclattice",
+  "name": "@latcher/service-example-vpclattice",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     "@aws-crypto/sha256-js": "^5.2.0",
     "@aws-sdk/client-cloudformation": "^3.1034.0",
     "@aws-sdk/client-lambda": "^3.1034.0",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/vpclattice": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/vpclattice": "workspace:*",
     "@smithy/protocol-http": "^5.1.0",
     "@smithy/signature-v4": "^5.1.0",
     "zod": "^4.3.5"

@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-s3",
+  "name": "@latcher/service-example-s3",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/s3": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/s3": "workspace:*",
     "@aws-sdk/client-cloudformation": "^3.1034.0",
     "@aws-sdk/client-cloudwatch-logs": "catalog:",
     "@aws-sdk/client-s3": "^3.1034.0",

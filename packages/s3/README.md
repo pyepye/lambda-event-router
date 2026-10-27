@@ -1,41 +1,41 @@
-# @lambda-event-router/s3
+# @latcher/s3
 
-Routes S3 object notifications to handlers by bucket, key pattern and event name. A second router handles S3 Batch Operations tasks and builds the result the job expects.
+Routes S3 object notifications to handlers by bucket, key pattern and event name. A second matcher handles S3 Batch Operations tasks and builds the result the job expects.
 
 **Supported AWS Services:** `Amazon S3`
 
-**Available Routers:** `S3Router` | `S3BatchRouter`
+**Available Matchers:** `S3Matcher` | `S3BatchMatcher`
 
-**Docs:** [S3Router](https://pyepye.github.io/lambda-event-router/routers/S3Router) | [S3BatchRouter](https://pyepye.github.io/lambda-event-router/routers/S3BatchRouter)
+**Docs:** [S3Matcher](https://pyepye.github.io/latcher/matchers/S3Matcher) | [S3BatchMatcher](https://pyepye.github.io/latcher/matchers/S3BatchMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/s3
+npm install @latcher/base @latcher/s3
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { s3Router } from './s3'
-import { s3BatchRouter } from './s3Batch'
+import { Latcher } from '@latcher/base'
+import { s3Matcher } from './s3'
+import { s3BatchMatcher } from './s3Batch'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [s3Router, s3BatchRouter],
+const latcher = new Latcher({
+  matchers: [s3Matcher, s3BatchMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // s3.ts
-import { createS3Router, defineRoute } from '@lambda-event-router/s3'
+import { createS3Matcher, defineRoute } from '@latcher/s3'
 
-export const s3Router = createS3Router()
+export const s3Matcher = createS3Matcher()
 
 const processUpload = defineRoute({
   filters: {
@@ -47,16 +47,16 @@ const processUpload = defineRoute({
   console.log(`Processing ${key} from ${bucket}, ${objectSize} bytes`)
 })
 
-s3Router.route(processUpload)
+s3Matcher.route(processUpload)
 ```
 
 ```ts
 // s3Batch.ts
-import { createS3BatchRouter, Succeeded } from '@lambda-event-router/s3'
+import { createS3BatchMatcher, Succeeded } from '@latcher/s3'
 
-export const s3BatchRouter = createS3BatchRouter()
+export const s3BatchMatcher = createS3BatchMatcher()
 
-s3BatchRouter.route({
+s3BatchMatcher.route({
   handler: async ({ bucket, key }) => {
     console.log(`Converting ${key} from ${bucket}`)
     return Succeeded(`Converted ${key}`)
@@ -65,15 +65,15 @@ s3BatchRouter.route({
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/S3Router#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/S3Matcher#annotated-handlers).
 
 ## Documentation
 
-- [S3Router](https://pyepye.github.io/lambda-event-router/routers/S3Router) covers every filter, convenience methods,
+- [S3Matcher](https://pyepye.github.io/latcher/matchers/S3Matcher) covers every filter, convenience methods,
   the S3 test event and failures and retries.
-- [S3BatchRouter](https://pyepye.github.io/lambda-event-router/routers/S3BatchRouter) covers task results, schema versions
-  and running one Lambda for both routers.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [S3BatchMatcher](https://pyepye.github.io/latcher/matchers/S3BatchMatcher) covers task results, schema versions
+  and running one Lambda for both matchers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

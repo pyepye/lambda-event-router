@@ -4,7 +4,7 @@ const DEPLOYER = 'ler-example-codepipeline-deployer';
 const NOTIFIER = 'ler-example-codepipeline-notifier';
 
 // environment.ts reads the function names once, at import, and throws when either is missing. The
-// logger builds itself on the first call. Both have to be settled before the router loads.
+// logger builds itself on the first call. Both have to be settled before the matcher loads.
 process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
 process.env.DEPLOYER_FUNCTION_NAME = DEPLOYER;
 process.env.NOTIFIER_FUNCTION_NAME = NOTIFIER;
@@ -12,7 +12,7 @@ process.env.NOTIFIER_FUNCTION_NAME = NOTIFIER;
 const { FIRST_CANARY_TOKEN, SECOND_CANARY_TOKEN } = await import('../src/config.js');
 const { codePipelineClient } = await import('../src/environment.js');
 const { artifactStore } = await import('../src/utils/artifactStore.js');
-const { codePipelineRouter } = await import('../src/codepipeline.js');
+const { codePipelineMatcher } = await import('../src/codepipeline.js');
 
 const ACCOUNT = '123456789012';
 const REGION = 'eu-west-2';
@@ -198,7 +198,7 @@ const jobs: Job[] = [
   },
 ];
 
-// Handlers report by logging, and the router reports by the command it sends. Both are captured.
+// Handlers report by logging, and the matcher reports by the command it sends. Both are captured.
 async function runCapturingLogs(event: CodePipelineEvent): Promise<{ logged: string; error?: unknown }> {
   uploads.length = 0;
   const lines: string[] = [];
@@ -210,7 +210,7 @@ async function runCapturingLogs(event: CodePipelineEvent): Promise<{ logged: str
   Object.assign(console, { log: collect, debug: collect, warn: collect, error: collect });
 
   try {
-    await codePipelineRouter.handleEvent(event, context);
+    await codePipelineMatcher.handleEvent(event, context);
     return { logged: lines.join('\n') };
   } catch (thrown) {
     return { logged: lines.join('\n'), error: thrown };
@@ -281,10 +281,16 @@ for (const job of jobs) {
 const validJob = createJob({ functionName: DEPLOYER, userParameters: { step: 'rollback' } });
 
 const claims: [string, boolean][] = [
-  ['the router takes a CodePipeline job event', codePipelineRouter.canHandleEvent(validJob)],
-  ['the router turns an SQS event away', !codePipelineRouter.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })],
-  ['the router turns a bare string away', !codePipelineRouter.canHandleEvent('CodePipeline.job')],
-  ['the router turns a job with no data away', !codePipelineRouter.canHandleEvent({ 'CodePipeline.job': { id: 'x' } })],
+  ['the matcher takes a CodePipeline job event', codePipelineMatcher.canHandleEvent(validJob)],
+  [
+    'the matcher turns an SQS event away',
+    !codePipelineMatcher.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] }),
+  ],
+  ['the matcher turns a bare string away', !codePipelineMatcher.canHandleEvent('CodePipeline.job')],
+  [
+    'the matcher turns a job with no data away',
+    !codePipelineMatcher.canHandleEvent({ 'CodePipeline.job': { id: 'x' } }),
+  ],
 ];
 
 for (const [label, held] of claims) {

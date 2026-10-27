@@ -1,6 +1,6 @@
 # Logging
 
-Every router logs through one shared logger, and your own code can use the same one. Import `logger`
+Every matcher logs through one shared logger, and your own code can use the same one. Import `logger`
 from `base` and your logs come out in the same shape, at the same level, as the ones the library writes
 for you.
 
@@ -18,7 +18,7 @@ Import `logger` and start logging. There is nothing to construct, and it writes 
 until you change the level.
 
 ```typescript
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 
 logger.info('My log');
 ```
@@ -37,7 +37,7 @@ Build your own `Logger` when the environment variables do not get you far enough
 service or to put account and region on every line.
 
 ```typescript
-import { Logger } from '@lambda-event-router/base';
+import { Logger } from '@latcher/base';
 
 const logger = new Logger({
   logLevel: 'INFO',
@@ -57,13 +57,13 @@ logger.info('My log');
 | `serviceName` | `string` | Not set | Added to every log as `serviceName` |
 | `persistentLogAttributes` | `Record<string, unknown>` | `{}` | Merged into every log, and left alone by the per-invocation reset |
 
-**A logger you build this way is yours alone.** The routers carry on using the shared one, so their
+**A logger you build this way is yours alone.** The matchers carry on using the shared one, so their
 logs will not pick up your `serviceName` or your attributes. Pass it to `setLogger` to make it the
 logger everything uses, as in [custom logger](#custom-logger) below.
 
 ### Per-invocation keys
 
-`LambdaRouter` calls `resetKeys()` on the active logger at the start of every invocation. This clears any temporary keys added with `appendKeys()` during a previous invocation so that state does not leak across warm-container reuse.
+`Latcher` calls `resetKeys()` on the active logger at the start of every invocation. This clears any temporary keys added with `appendKeys()` during a previous invocation so that state does not leak across warm-container reuse.
 
 If you need attributes that persist for the lifetime of the container (e.g. region, account id), use `appendPersistentKeys()` / `persistentLogAttributes` instead. Persistent keys are not affected by the per-invocation reset.
 
@@ -76,14 +76,14 @@ If your Lambda function is configured with log format `JSON` (Advanced Logging C
 
 Powertools for AWS Lambda (TypeScript) has a [logger](https://docs.aws.amazon.com/powertools/typescript/latest/features/logger/) which "provides an opinionated logger with output structured as JSON".
 
-If you have the Powertools logger installed and you are using the default settings / environment variables, you can use the logger as normal. Under the hood the `lambda-event-router` will use the powertools logger for any of its logging
+If you have the Powertools logger installed and you are using the default settings / environment variables, you can use the logger as normal. Under the hood the `latcher` will use the powertools logger for any of its logging
 
 ```bash
 npm install @aws-lambda-powertools/logger
 ```
 
 ```typescript
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 
 logger.info('My log');
 ```
@@ -103,7 +103,7 @@ logger.info('My log');
 
 ```typescript
 import { Logger } from '@aws-lambda-powertools/logger';
-import { setLogger, LambdaRouter } from '@lambda-event-router/base';
+import { setLogger, Latcher } from '@latcher/base';
 
 const customLogger = new Logger({
   serviceName: 'serverlessAirline',
@@ -116,9 +116,9 @@ const customLogger = new Logger({
 
 setLogger(customLogger);
 
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter]
+const latcher = new Latcher({
+  matchers: [sqsMatcher]
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```

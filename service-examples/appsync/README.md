@@ -1,10 +1,10 @@
 # Service example: AppSync
 
-A deployable CDK app that exercises all four AppSync routers end to end. It models a support desk.
+A deployable CDK app that exercises all four AppSync matchers end to end. It models a support desk.
 A GraphQL API serves tickets, an Event API carries live activity, and one Lambda authorizer guards
 both.
 
-The routes are in `src/authorizerRouter.ts`, `src/eventsAuthorizerRouter.ts`, `src/eventsRouter.ts` and `src/resolverRouter.ts`, and the handlers are in `src/handlers/`.
+The routes are in `src/authorizerMatcher.ts`, `src/eventsAuthorizerMatcher.ts`, `src/eventsMatcher.ts` and `src/resolverMatcher.ts`, and the handlers are in `src/handlers/`.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
@@ -42,7 +42,7 @@ AuthorizerFn, Event API
 ## What it covers
 
 One `trigger` run makes GraphQL calls, opens subscriptions and sends publishes. Together they hit
-every filter the four routers offer, both kinds of failure, and every authorizer response.
+every filter the four matchers offer, both kinds of failure, and every authorizer response.
 
 | Feature | Where |
 | --- | --- |
@@ -53,7 +53,7 @@ every filter the four routers offer, both kinds of failure, and every authorizer
 | `custom` filter on a resolver | `getTicketForAgent` reads the role the authorizer set |
 | `query`, `mutation` and `subscription` | The routes registered by field name, rather than by full filters |
 | Arguments schema | `TicketIdSchema` on the two ticket reads, `NewTicketSchema` on `createTicket` |
-| Resolver router middleware | `logResolverRequest` runs once per resolver invocation |
+| Resolver matcher middleware | `logResolverRequest` runs once per resolver invocation |
 | Resolver route middleware | `withTicketContext` on the agent read |
 | No route matched on a resolver | `Mutation.closeTicket` has a resolver on the API and no route here |
 | Handler failure on a resolver | `escalateTicket` throws after its middleware has run |
@@ -63,7 +63,7 @@ every filter the four routers offer, both kinds of failure, and every authorizer
 | `channelNamespace` filter | `trackPresence` matches `presence` and `archiveAuditEntry` matches `audit` |
 | `custom` filter on an Event API route | `holdTypingNotice` drops a batch of typing notices |
 | `publish` and `subscribe` | The ticket routes, registered by channel path |
-| Events router middleware | `logEventsRequest` runs once per publish or subscribe |
+| Events matcher middleware | `logEventsRequest` runs once per publish or subscribe |
 | Events route middleware | `withChannelContext` on `recordTicketActivity` |
 | Several events in one invocation | A publish carries its whole batch into one handler call |
 | Per-event failure | `recordTicketActivity` rejects an event with no body and broadcasts the rest |
@@ -81,7 +81,7 @@ every filter the four routers offer, both kinds of failure, and every authorizer
 | `EventsAuthorized` with `handlerContext` | The agent's role reaches the publish handler as `identity.handlerContext` |
 | `EventsDenied` | A customer publishing to a ticket channel, and anything on the audit namespace |
 | No route matched on an Event API authorizer | Nothing authorises a subscribe to a ticket channel |
-| `canHandleEvent` | Each router is handed the other three event shapes and turns them away |
+| `canHandleEvent` | Each matcher is handed the other three event shapes and turns them away |
 
 AppSync copies the authorizer's `resolverContext` onto `identity` for every resolver the request
 reaches. It takes string values only, so the role the custom filter reads is a plain string.
@@ -126,9 +126,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-appsync... install
-pnpm -F @lambda-event-router/service-example-appsync... build
-pnpm -F @lambda-event-router/service-example-appsync run deploy
+pnpm -F @latcher/service-example-appsync... install
+pnpm -F @latcher/service-example-appsync... build
+pnpm -F @latcher/service-example-appsync run deploy
 ```
 
 CDK outputs include `SupportApiUrl`, `SupportApiRealtimeUrl`, `ActivityApiHttpDns`,
@@ -142,7 +142,7 @@ The Event API takes the same authorizer alongside its API key. A request carryin
 the authorizer, and one carrying `Authorization` reaches it. Both are exercised.
 
 The Event API's three namespaces send both operations straight to the worker. That is what puts a
-subscribe in front of the router.
+subscribe in front of the matcher.
 
 The `Ticket.comments` resolver sets `maxBatchSize` to 5. The comments for a page of tickets then
 reach the worker in one invocation. The field is nullable, because a non-null field would carry a
@@ -154,7 +154,7 @@ holds three hard-coded tickets and writes nothing down.
 ## Send sample requests
 
 ```bash
-pnpm -F @lambda-event-router/service-example-appsync trigger
+pnpm -F @latcher/service-example-appsync trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name as the first
@@ -188,7 +188,7 @@ line the run never wrote.
 Note: the log groups are `/aws/lambda/<stackName>-worker` and `/aws/lambda/<stackName>-authorizer`,
 so the names change if you deploy with a different `stackName`.
 
-`Authorising request` is the authorizer's router middleware, and there is one for every token the
+`Authorising request` is the authorizer's matcher middleware, and there is one for every token the
 API is asked about. The GraphQL subscription adds two of its own, because AppSync authorises the
 WebSocket connection and the subscription separately.
 
@@ -201,7 +201,7 @@ The authorizer log then splits four ways:
 - `Token accepted` is the agent and customer tokens. Its `role` field is what the resolver custom
   filter later reads.
 - `Token refused` is the revoked token. The handler returned `Denied`.
-- `Token expired` is the expired token. The middleware threw `Denied`, and the router recognised the
+- `Token expired` is the expired token. The middleware threw `Denied`, and the matcher recognised the
   thrown response and handed it back.
 - An `ERROR` record with no outcome line above it is the broken token, where the handler threw a
   real error rather than a response.
@@ -209,7 +209,7 @@ The authorizer log then splits four ways:
 The two denials answer 401 with `UnauthorizedException`, and only these log lines tell them apart. A
 failed authorizer answers 500 with `AuthorizerFailureException` and the error's own message.
 
-`Authorising channel request` is the Event API authorizer's router middleware. It has an `operation`
+`Authorising channel request` is the Event API authorizer's matcher middleware. It has an `operation`
 of `EVENT_CONNECT`, `EVENT_PUBLISH` or `EVENT_SUBSCRIBE`, and a `channelPath` on all but the connect.
 
 The Event API authorizer lines say which route ran:
@@ -222,12 +222,12 @@ The Event API authorizer lines say which route ran:
 - `Presence watcher authorised` is the only subscribe with a route.
 - `Audit access refused` is the namespace filter, which turns away every operation on the trail.
 - `No authorizer route matched for EVENT_SUBSCRIBE on channel /ticket/*` is the gap. Nothing
-  authorises a ticket subscribe, so the router throws and the client gets an error.
+  authorises a ticket subscribe, so the matcher throws and the client gets an error.
 
 Note: none of the Event API authorizer lines appear for a request carrying `x-api-key`. The API key
 is checked by AppSync and never reaches the function.
 
-`Handling resolver request` is the resolver router middleware, and there is one for every field
+`Handling resolver request` is the resolver matcher middleware, and there is one for every field
 that reached a route. Its `field` field names the route that matched, and `selectionSet` lists the
 fields the caller asked for.
 
@@ -257,13 +257,13 @@ The resolver failures each leave an `ERROR` record in the worker log:
 - `Error processing AppSync batch item 2` is the closed ticket in the batched comments lookup. Its
   `error.message` is `Comments for t-3 are archived`.
 
-Note: neither validation failure has a `Handling resolver request` line. The router validates the
+Note: neither validation failure has a `Handling resolver request` line. The matcher validates the
 arguments before it runs any middleware.
 
 The batch item is the only failure whose invocation still succeeds. `batchItemFailures` turns it into
 an error entry in place, so the other two tickets in that batch return their comments.
 
-`Handling events request` is the events router middleware, and there is one for every publish and
+`Handling events request` is the events matcher middleware, and there is one for every publish and
 every subscribe. Its `eventCount` field is the size of the batch, and 0 for a subscribe.
 
 The Event API lines say which route ran:
@@ -304,7 +304,7 @@ words, alongside the event's `index` and a `code` of `CustomError`.
 | `ActivityApi` | API key or the same authorizer | `holdTypingNotice`, `recordTicketActivity`, `admitTicketWatcher`, `trackPresence`, `archiveAuditEntry` |
 
 The worker serves both APIs from one function, and the authorizer serves both from another. Each
-function holds two routers, and `LambdaRouter` picks between them by event shape.
+function holds two matchers, and `Latcher` picks between them by event shape.
 
 The Event API has three namespaces. `ticket` and `presence` have routes for both operations, and
 `audit` has a publish route only.
@@ -312,19 +312,19 @@ The Event API has three namespaces. `ticket` and `presence` have routes for both
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-appsync check   # route the step list in process
-pnpm -F @lambda-event-router/service-example-appsync diff    # review pending changeset
-pnpm -F @lambda-event-router/service-example-appsync watch   # hotswap deploys
-pnpm -F @lambda-event-router/service-example-appsync synth   # render template
+pnpm -F @latcher/service-example-appsync check   # route the step list in process
+pnpm -F @latcher/service-example-appsync diff    # review pending changeset
+pnpm -F @latcher/service-example-appsync watch   # hotswap deploys
+pnpm -F @latcher/service-example-appsync synth   # render template
 ```
 
-`check` drives all three routers with a synthetic event for every step. It catches a filter that can
+`check` drives all three matchers with a synthetic event for every step. It catches a filter that can
 never match without waiting for a deploy.
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-appsync destroy
+pnpm -F @latcher/service-example-appsync destroy
 ```
 
 Both APIs, both log groups and both functions belong to the stack, so nothing is left behind.

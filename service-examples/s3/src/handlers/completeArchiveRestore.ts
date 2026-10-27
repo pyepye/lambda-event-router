@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectRestoreRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectRestoreRequest } from '@latcher/s3';
 
 // restoreEventData only carries values on Completed. It is undefined on Post and on Delete.
 export async function completeArchiveRestore(request: S3ObjectRestoreRequest): Promise<void> {

@@ -1,41 +1,41 @@
-# @lambda-event-router/kinesis
+# @latcher/kinesis
 
-Routes each record in a Kinesis Data Streams batch to a handler by stream or partition key. The router decodes the data, unpacks aggregated records and runs them in order.
+Routes each record in a Kinesis Data Streams batch to a handler by stream or partition key. The matcher decodes the data, unpacks aggregated records and runs them in order.
 
 **Supported AWS Services:** `Amazon Kinesis Data Streams`
 
-**Available Routers:** `KinesisRouter`
+**Available Matchers:** `KinesisMatcher`
 
-**Docs:** [KinesisRouter](https://pyepye.github.io/lambda-event-router/routers/KinesisRouter)
+**Docs:** [KinesisMatcher](https://pyepye.github.io/latcher/matchers/KinesisMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/kinesis
+npm install @latcher/base @latcher/kinesis
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { kinesisRouter } from './kinesis'
+import { Latcher } from '@latcher/base'
+import { kinesisMatcher } from './kinesis'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [kinesisRouter],
+const latcher = new Latcher({
+  matchers: [kinesisMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // kinesis.ts
-import { createKinesisRouter, defineRoute } from '@lambda-event-router/kinesis'
+import { createKinesisMatcher, defineRoute } from '@latcher/kinesis'
 import { z } from 'zod'
 
-export const kinesisRouter = createKinesisRouter()
+export const kinesisMatcher = createKinesisMatcher()
 
 const sensorReading = defineRoute({
   filters: {
@@ -47,16 +47,16 @@ const sensorReading = defineRoute({
   console.log(`Device ${data.deviceId} reported ${data.celsius}C`)
 })
 
-kinesisRouter.route(sensorReading)
+kinesisMatcher.route(sensorReading)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/KinesisRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/KinesisMatcher#annotated-handlers).
 
 ## Documentation
 
-- [KinesisRouter](https://pyepye.github.io/lambda-event-router/routers/KinesisRouter) covers every filter, schema validation, aggregated records, and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [KinesisMatcher](https://pyepye.github.io/latcher/matchers/KinesisMatcher) covers every filter, schema validation, aggregated records, and failures and retries.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

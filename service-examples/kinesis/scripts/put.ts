@@ -1,7 +1,6 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { CloudWatchLogsClient, FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 import { KinesisClient, PutRecordCommand } from '@aws-sdk/client-kinesis';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { QUARANTINED_DEVICE_KEY } from '../src/config.js';
 
@@ -152,7 +151,7 @@ const badOrderSequence = await put(orders.streamName, 'customer-1102', {
   currency: 'GBP',
 });
 
-// A reading that is not JSON at all. The router hands the raw string to ReadingSchema, which rejects it.
+// A reading that is not JSON at all. The matcher hands the raw string to ReadingSchema, which rejects it.
 console.log('Putting the reading that is not JSON');
 await put(telemetry.streamName, 'device-0117', reading('device-0117', 'humidity', 51));
 const badReadingSequence = await put(telemetry.streamName, 'device-0117', 'device-0117 humidity 51');

@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, NotFound, Ok, type VPCLatticeEvent } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute, NotFound, Ok, type VPCLatticeEvent } from '@latcher/vpclattice';
 
 import { DEPOT_HEADER, STOCK_VERSION_HEADER } from '../utils/constants.js';
 import { STOCK } from '../utils/inventory.js';

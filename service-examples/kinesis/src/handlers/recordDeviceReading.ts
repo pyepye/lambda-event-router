@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kinesis';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kinesis';
 
 import { TELEMETRY_STREAM_ARN } from '../config.js';
 import { ReadingSchema } from '../utils/schemas.js';

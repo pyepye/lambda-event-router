@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-apigateway",
+  "name": "@latcher/service-example-apigateway",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -19,8 +19,8 @@
     "@aws-sdk/client-api-gateway": "^3.1034.0",
     "@aws-sdk/client-cloudformation": "^3.1034.0",
     "@aws-sdk/credential-providers": "^3.1034.0",
-    "@lambda-event-router/apigateway": "workspace:*",
-    "@lambda-event-router/base": "workspace:*",
+    "@latcher/apigateway": "workspace:*",
+    "@latcher/base": "workspace:*",
     "@smithy/protocol-http": "^5.1.0",
     "@smithy/signature-v4": "^5.1.0",
     "zod": "^4.3.5"

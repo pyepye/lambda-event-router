@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 // DocumentDB operation types (lowercase, unlike DynamoDB's uppercase)
 export type DocumentDBOperationType = 'insert' | 'update' | 'replace' | 'delete';
@@ -196,6 +196,6 @@ export interface DocumentDBRouteDefinition<
   handler: DocumentDBRecordHandler<TDocumentKey, TFullDocument, TFullDocumentBeforeChange>;
 }
 
-export interface DocumentDBRouterOptions {
+export interface DocumentDBMatcherOptions {
   middleware?: DocumentDBMiddleware[];
 }

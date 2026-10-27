@@ -1,5 +1,5 @@
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 import type { ALBEvent } from 'aws-lambda';
 
 import { DESK_HEADER, RETURN_VERSION_HEADER } from '../utils/constants.js';

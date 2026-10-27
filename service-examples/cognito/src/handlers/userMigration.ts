@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { UserMigrationRequest } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { UserMigrationRequest } from '@latcher/cognito';
 import type { UserMigrationTriggerEvent } from 'aws-lambda';
 
 import { findLegacyApplicant } from '../utils/legacyPortal.js';

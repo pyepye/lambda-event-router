@@ -1,10 +1,10 @@
 import { gunzipSync } from 'node:zlib';
 
-import { type ApiRequest, type ApiResponse, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 // The note arrives gzipped. ALB base64 encodes a body its content type says is not text, and the
-// router hands the decoded bytes over as a Buffer, so gunzip only works on a body that survived
+// matcher hands the decoded bytes over as a Buffer, so gunzip only works on a body that survived
 // the trip whole.
 export async function replaceReturnNote(
   request: ApiRequest<{ returnId: string }, Record<string, string | undefined>, undefined, Buffer>,

@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { Dropped, defineRoute } from '@lambda-event-router/firehose';
+import { logger } from '@latcher/base';
+import { Dropped, defineRoute } from '@latcher/firehose';
 
 import { CLICKSTREAM_ARN } from '../config.js';
 import { eventTypeOf } from '../utils/events.js';

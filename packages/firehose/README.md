@@ -1,41 +1,41 @@
-# @lambda-event-router/firehose
+# @latcher/firehose
 
-Routes each record in a Firehose transformation batch to a handler. The router decodes the data and turns your return value into the keep, drop or fail result Firehose needs.
+Routes each record in a Firehose transformation batch to a handler. The matcher decodes the data and turns your return value into the keep, drop or fail result Firehose needs.
 
 **Supported AWS Services:** `Amazon Data Firehose`
 
-**Available Routers:** `FirehoseRouter`
+**Available Matchers:** `FirehoseMatcher`
 
-**Docs:** [FirehoseRouter](https://pyepye.github.io/lambda-event-router/routers/FirehoseRouter)
+**Docs:** [FirehoseMatcher](https://pyepye.github.io/latcher/matchers/FirehoseMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/firehose
+npm install @latcher/base @latcher/firehose
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { firehoseRouter } from './firehose'
+import { Latcher } from '@latcher/base'
+import { firehoseMatcher } from './firehose'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [firehoseRouter],
+const latcher = new Latcher({
+  matchers: [firehoseMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // firehose.ts
-import { createFirehoseRouter, defineRoute, Ok } from '@lambda-event-router/firehose'
+import { createFirehoseMatcher, defineRoute, Ok } from '@latcher/firehose'
 import { z } from 'zod'
 
-export const firehoseRouter = createFirehoseRouter()
+export const firehoseMatcher = createFirehoseMatcher()
 
 const logLine = defineRoute({
   filters: {
@@ -48,16 +48,16 @@ const logLine = defineRoute({
   return Ok({ path: data.path, status: data.status })
 })
 
-firehoseRouter.route(logLine)
+firehoseMatcher.route(logLine)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/FirehoseRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/FirehoseMatcher#annotated-handlers).
 
 ## Documentation
 
-- [FirehoseRouter](https://pyepye.github.io/lambda-event-router/routers/FirehoseRouter) covers every filter, schema validation, responses and dynamic partitioning.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [FirehoseMatcher](https://pyepye.github.io/latcher/matchers/FirehoseMatcher) covers every filter, schema validation, responses and dynamic partitioning.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

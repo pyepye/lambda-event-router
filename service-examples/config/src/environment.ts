@@ -2,7 +2,7 @@ import { ConfigServiceClient } from '@aws-sdk/client-config-service';
 
 import { fleetFunctionName, ruleName, type TRule } from './config.js';
 
-// An absent value would leave a filter as an empty string, which the router reads as no filter at
+// An absent value would leave a filter as an empty string, which the matcher reads as no filter at
 // all. Failing at cold start is louder.
 function requiredEnvironment(name: string): string {
   const value = process.env[name];

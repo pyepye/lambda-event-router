@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { Conflict, type HTTPMiddleware } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { Conflict, type HTTPMiddleware } from '@latcher/vpclattice';
 
 import { STOCKTAKE_FROZEN, STOCKTAKE_HEADER } from '../utils/constants.js';
 

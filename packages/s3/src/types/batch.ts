@@ -1,6 +1,6 @@
 import type { Context, S3BatchEvent, S3BatchEventTask, S3BatchResultResultCode } from 'aws-lambda';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { Middleware } from '@latcher/base';
 
 import type { S3BatchResponse } from '../batchResponse.js';
 
@@ -60,7 +60,7 @@ export type S3BatchMiddleware = Middleware<S3BatchRequest, S3BatchResponse>;
 // Route Definition Types
 // =============================================================================
 
-export interface S3BatchRouterOptions {
+export interface S3BatchMatcherOptions {
   middleware?: S3BatchMiddleware[];
 }
 
@@ -76,3 +76,4 @@ export interface S3BatchRouteDefinition {
 
 export type { S3BatchEvent, S3BatchEventJob, S3BatchEventTask, S3BatchResult, S3BatchResultResult } from 'aws-lambda';
 export type { S3BatchResultResultCode };
+

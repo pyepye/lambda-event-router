@@ -1,4 +1,4 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 
 import { HTTP_STATUS_CODES } from './constants.js';
 import { HTTPException } from './HTTPException.js';

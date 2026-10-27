@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/full-example-cognito-eventbridge-s3-avatars",
+  "name": "@latcher/full-example-cognito-eventbridge-s3-avatars",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -13,10 +13,10 @@
     "destroy": "tsx scripts/emptyBuckets.ts && sam delete --no-prompts"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/cognito": "workspace:*",
-    "@lambda-event-router/eventbridge": "workspace:*",
-    "@lambda-event-router/s3": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/cognito": "workspace:*",
+    "@latcher/eventbridge": "workspace:*",
+    "@latcher/s3": "workspace:*",
     "@aws-sdk/client-s3": "^3.1034.0",
     "jimp": "^1.6.0",
     "zod": "^4.3.6"

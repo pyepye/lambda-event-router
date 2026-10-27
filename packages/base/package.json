@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/base",
+  "name": "@latcher/base",
   "version": "0.1.0",
-  "description": "Dispatches AWS Lambda events to source-specific routers",
-  "homepage": "https://pyepye.github.io/lambda-event-router/",
+  "description": "Dispatches AWS Lambda events to source-specific matchers",
+  "homepage": "https://pyepye.github.io/latcher/",
   "type": "module",
   "exports": {
     ".": {
@@ -39,7 +39,7 @@
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

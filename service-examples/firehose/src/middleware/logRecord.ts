@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { FirehoseMiddleware } from '@lambda-event-router/firehose';
+import { logger } from '@latcher/base';
+import type { FirehoseMiddleware } from '@latcher/firehose';
 
-// Router middleware: runs once per record, before any route middleware, for both delivery streams.
+// Matcher middleware: runs once per record, before any route middleware, for both delivery streams.
 // `metadata` only carries a shard id on the stream that reads from Kinesis.
 export const logRecord: FirehoseMiddleware = async (request, next) => {
   logger.info({

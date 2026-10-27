@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/cloudwatch';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/cloudwatch';
 
 import { FAILED_LOGIN_FILTER } from '../config.js';
 import { publishSecurityIssue } from '../utils/publishSecurityIssue.js';

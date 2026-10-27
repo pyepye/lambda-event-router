@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { LexMiddleware } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import type { LexMiddleware } from '@latcher/lex';
 
 import { TRACKING_NUMBER_SLOT } from '../utils/constants.js';
 

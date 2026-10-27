@@ -1,10 +1,10 @@
 import type {
-  AppSyncEventsAuthorizerChannelRequest,
-  AppSyncEventsAuthorizerConnectRequest,
-  AppSyncEventsAuthorizerFilterInput,
-} from '@lambda-event-router/appsync';
-import { EventsAuthorized, EventsDenied } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+    AppSyncEventsAuthorizerChannelRequest,
+    AppSyncEventsAuthorizerConnectRequest,
+    AppSyncEventsAuthorizerFilterInput,
+} from '@latcher/appsync';
+import { EventsAuthorized, EventsDenied } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import { AGENT_ROLE, TOKEN_GRANTS } from '../utils/constants.js';
 

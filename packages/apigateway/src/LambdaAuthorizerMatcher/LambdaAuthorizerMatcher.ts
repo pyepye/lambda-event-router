@@ -1,0 +1,324 @@
+import type {
+  APIGatewayAuthorizerResult,
+  APIGatewayRequestAuthorizerEvent,
+  APIGatewayRequestAuthorizerEventV2,
+  APIGatewayTokenAuthorizerEvent,
+  Context,
+} from 'aws-lambda';
+
+import type { EventTypeMatcher } from '@latcher/base';
+import { handleEventWithMiddleware, isObject, orderRoutesBySpecificity } from '@latcher/base';
+import { buildValueMaps } from '@latcher/http';
+
+import { isAuthorizerResponse } from './response.js';
+import type {
+  AuthorizerType,
+  HttpApiRequestAuthorizerEventV1,
+  LambdaAuthorizerContext,
+  LambdaAuthorizerEvent,
+  LambdaAuthorizerFilterInput,
+  LambdaAuthorizerFilters,
+  LambdaAuthorizerHandler,
+  LambdaAuthorizerMatcherOptions,
+  LambdaAuthorizerMiddleware,
+  LambdaAuthorizerRequest,
+  LambdaAuthorizerRequestRequest,
+  LambdaAuthorizerResult,
+  LambdaAuthorizerRouteDefinition,
+  LambdaAuthorizerTokenRequest,
+} from './types.js';
+
+interface InternalRoute {
+  filters: LambdaAuthorizerFilters;
+  middleware?: LambdaAuthorizerMiddleware[];
+  handler: LambdaAuthorizerHandler;
+}
+
+type InferRequest<TType extends AuthorizerType | undefined> = TType extends 'TOKEN'
+  ? LambdaAuthorizerTokenRequest
+  : TType extends 'REQUEST'
+    ? LambdaAuthorizerRequestRequest
+    : LambdaAuthorizerRequest;
+
+interface RouteInput<TType extends AuthorizerType | undefined = AuthorizerType | undefined> {
+  filters: {
+    type?: TType;
+    method?: string;
+    custom?: (input: LambdaAuthorizerFilterInput) => boolean | Promise<boolean>;
+  };
+  middleware?: LambdaAuthorizerMiddleware[];
+}
+
+interface RouteBuilder<TRequest, TContext extends LambdaAuthorizerContext> {
+  handle(
+    handler: (request: TRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>,
+  ): LambdaAuthorizerRouteDefinition<TContext>;
+}
+
+export function defineLambdaAuthorizerRoute<
+  TType extends AuthorizerType | undefined = undefined,
+  TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext,
+>(config: RouteInput<TType>): RouteBuilder<InferRequest<TType>, TContext> {
+  return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
+    handle(handler) {
+      return { ...config, handler } as LambdaAuthorizerRouteDefinition<TContext>;
+    },
+  };
+}
+
+// TODO: This needs to be able to support multiple resources as the policy can be cached by API Gateway and used for
+// multiple routes. We can allow returning an array of resources or a wildcard, but we should be careful to document
+// the implications (e.g. security risks of wildcard, potential performance implications of many resources).
+export function generatePolicy(
+  principalId: string,
+  effect: 'Allow' | 'Deny',
+  resource: string,
+): APIGatewayAuthorizerResult {
+  return {
+    principalId,
+    policyDocument: {
+      Version: '2012-10-17',
+      Statement: [
+        {
+          Action: 'execute-api:Invoke',
+          Effect: effect,
+          Resource: resource,
+        },
+      ],
+    },
+  };
+}
+
+export interface LambdaAuthorizerTokenInput<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> {
+  middleware?: LambdaAuthorizerMiddleware[];
+  handler: (request: LambdaAuthorizerTokenRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>;
+}
+
+export interface LambdaAuthorizerRequestInput<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext> {
+  method?: string;
+  middleware?: LambdaAuthorizerMiddleware[];
+  handler: (request: LambdaAuthorizerRequestRequest) => Promise<LambdaAuthorizerResult<TContext> | boolean>;
+}
+
+function isTokenEvent(event: LambdaAuthorizerEvent): event is APIGatewayTokenAuthorizerEvent {
+  return event.type === 'TOKEN' && 'authorizationToken' in event;
+}
+
+function isRequestV1Event(
+  event: LambdaAuthorizerEvent,
+): event is APIGatewayRequestAuthorizerEvent | HttpApiRequestAuthorizerEventV1 {
+  return event.type === 'REQUEST' && 'methodArn' in event;
+}
+
+function isRequestV2Event(event: LambdaAuthorizerEvent): event is APIGatewayRequestAuthorizerEventV2 {
+  return event.type === 'REQUEST' && 'routeArn' in event;
+}
+
+// HTTP API authorizer events carry a version, or a routeArn on payload 2.0. REST ones carry neither
+function isHttpApiEvent(event: LambdaAuthorizerEvent): boolean {
+  return isRequestV2Event(event) || (isObject(event) && typeof event.version === 'string');
+}
+
+// The path to the first number that is not a whole number, such as 'limits.ratio' or 'rates.1'
+function findFraction(value: unknown, path: string): { path: string; value: number } | undefined {
+  if (typeof value === 'number') return Number.isInteger(value) ? undefined : { path, value };
+  const isContainer = isObject(value) || Array.isArray(value);
+  if (!isContainer) return undefined;
+
+  for (const [key, child] of Object.entries(value)) {
+    const childPath = path === '' ? key : `${path}.${key}`;
+    const fraction = findFraction(child, childPath);
+    if (fraction) return fraction;
+  }
+  return undefined;
+}
+
+function assertNoFractions(result: LambdaAuthorizerResult): void {
+  const fraction = findFraction(result.context, '');
+  if (!fraction) return;
+  throw new Error(
+    `An HTTP API delivers every number that is not a whole number as 0. The authorizer context holds ${fraction.value} at ${fraction.path}, so send it as a string`,
+  );
+}
+
+export class LambdaAuthorizerMatcher implements EventTypeMatcher<LambdaAuthorizerEvent, LambdaAuthorizerResult> {
+  private routes: InternalRoute[] = [];
+  private routesOrdered = false;
+  private middleware: LambdaAuthorizerMiddleware[];
+
+  constructor(options?: LambdaAuthorizerMatcherOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
+
+  canHandleEvent(event: unknown): event is LambdaAuthorizerEvent {
+    if (!isObject(event)) return false;
+
+    const eventType = event.type;
+    if (eventType !== 'TOKEN' && eventType !== 'REQUEST') return false;
+
+    if (eventType === 'TOKEN') {
+      return typeof event.authorizationToken === 'string' && typeof event.methodArn === 'string';
+    }
+
+    // REQUEST type V1 has methodArn + httpMethod, V2 has routeArn
+    if (typeof event.methodArn === 'string' && typeof event.httpMethod === 'string') {
+      return true;
+    }
+
+    if (typeof event.routeArn === 'string') {
+      return true;
+    }
+
+    return false;
+  }
+
+  route<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>(
+    definition: LambdaAuthorizerRouteDefinition<TContext>,
+  ): this {
+    this.routes.push({
+      filters: definition.filters,
+      middleware: definition.middleware,
+      handler: definition.handler as LambdaAuthorizerHandler,
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  token<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>({
+    middleware,
+    handler,
+  }: LambdaAuthorizerTokenInput<TContext>): this {
+    this.routes.push({
+      filters: { type: 'TOKEN' },
+      middleware,
+      handler: handler as LambdaAuthorizerHandler,
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  request<TContext extends LambdaAuthorizerContext = LambdaAuthorizerContext>({
+    method,
+    middleware,
+    handler,
+  }: LambdaAuthorizerRequestInput<TContext>): this {
+    this.routes.push({
+      filters: { type: 'REQUEST', method },
+      middleware,
+      handler: handler as LambdaAuthorizerHandler,
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: LambdaAuthorizerEvent, context: Context): Promise<LambdaAuthorizerResult> {
+    const request = this.buildRequest(event, context);
+
+    const route = await this.matchRoute(request);
+    if (!route) {
+      throw new Error(
+        `No route matched for Lambda Authorizer event (type: ${request.type}, method: ${request.method ?? 'N/A'})`,
+      );
+    }
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+
+    try {
+      const result = await handleEventWithMiddleware(allMiddleware, request, route.handler);
+
+      if (isRequestV2Event(event) && typeof result === 'boolean') {
+        return { isAuthorized: result };
+      }
+
+      if (typeof result === 'boolean') {
+        throw new Error(
+          'Boolean responses are only supported for HTTP API (v2) request authorizers using simple response mode',
+        );
+      }
+
+      if (isHttpApiEvent(event)) assertNoFractions(result);
+      return result;
+    } catch (error) {
+      if (isAuthorizerResponse(error)) {
+        if (isHttpApiEvent(event)) assertNoFractions(error);
+        return error;
+      }
+      throw error;
+    }
+  }
+
+  private buildRequest(event: LambdaAuthorizerEvent, context: Context): LambdaAuthorizerRequest {
+    if (isTokenEvent(event)) {
+      return {
+        type: event.type,
+        resourceArn: event.methodArn,
+        authorizationToken: event.authorizationToken,
+        event,
+        context,
+      };
+    }
+
+    if (isRequestV1Event(event)) {
+      return {
+        type: event.type,
+        resourceArn: event.methodArn,
+        method: event.httpMethod,
+        path: event.path,
+        headers: buildValueMaps({ single: event.headers, lowercaseKeys: true }).flat,
+        query: event.queryStringParameters ?? {},
+        event,
+        context,
+      };
+    }
+
+    if (isRequestV2Event(event)) {
+      return {
+        type: event.type,
+        resourceArn: event.routeArn,
+        method: event.requestContext.http.method,
+        path: event.rawPath,
+        headers: buildValueMaps({ single: event.headers, lowercaseKeys: true }).flat,
+        query: event.queryStringParameters ?? {},
+        event,
+        context,
+      };
+    }
+
+    throw new Error('Unrecognized Lambda Authorizer event format');
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(filterInput: LambdaAuthorizerFilterInput): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.type !== undefined && filters.type !== filterInput.type) {
+        continue;
+      }
+
+      if (filters.method !== undefined && filters.method !== filterInput.method) {
+        continue;
+      }
+
+      if (filters.custom) {
+        const match = await filters.custom(filterInput);
+        if (!match) continue;
+      }
+      return route;
+    }
+    return undefined;
+  }
+}
+
+export function createLambdaAuthorizerMatcher(options?: LambdaAuthorizerMatcherOptions): LambdaAuthorizerMatcher {
+  return new LambdaAuthorizerMatcher(options);
+}

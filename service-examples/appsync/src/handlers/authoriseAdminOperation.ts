@@ -1,6 +1,6 @@
-import type { AppSyncAuthorizerFilterInput, AppSyncAuthorizerRequest } from '@lambda-event-router/appsync';
-import { Authorized, Denied } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncAuthorizerFilterInput, AppSyncAuthorizerRequest } from '@latcher/appsync';
+import { Authorized, Denied } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import { AGENT_ROLE, TOKEN_GRANTS } from '../utils/constants.js';
 

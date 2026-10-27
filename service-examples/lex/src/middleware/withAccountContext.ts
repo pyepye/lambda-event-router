@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { LexMiddleware } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import type { LexMiddleware } from '@latcher/lex';
 
 import { ACCOUNT_TIER_ATTRIBUTE } from '../utils/constants.js';
 

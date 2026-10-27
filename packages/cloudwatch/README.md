@@ -1,40 +1,40 @@
-# @lambda-event-router/cloudwatch
+# @latcher/cloudwatch
 
-Routes CloudWatch Logs subscription deliveries to handlers by log group, subscription filter or message type. The router decodes the gzipped payload into log events for you.
+Routes CloudWatch Logs subscription deliveries to handlers by log group, subscription filter or message type. The matcher decodes the gzipped payload into log events for you.
 
 **Supported AWS Services:** `Amazon CloudWatch Logs`
 
-**Available Routers:** `CloudWatchLogsRouter`
+**Available Matchers:** `CloudWatchLogsMatcher`
 
-**Docs:** [CloudWatchLogsRouter](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter)
+**Docs:** [CloudWatchLogsMatcher](https://pyepye.github.io/latcher/matchers/CloudWatchLogsMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/cloudwatch
+npm install @latcher/base @latcher/cloudwatch
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { cloudWatchLogsRouter } from './cloudwatch'
+import { Latcher } from '@latcher/base'
+import { cloudWatchLogsMatcher } from './cloudwatch'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [cloudWatchLogsRouter],
+const latcher = new Latcher({
+  matchers: [cloudWatchLogsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // cloudwatch.ts
-import { createCloudWatchLogsRouter, defineRoute } from '@lambda-event-router/cloudwatch'
+import { createCloudWatchLogsMatcher, defineRoute } from '@latcher/cloudwatch'
 
-export const cloudWatchLogsRouter = createCloudWatchLogsRouter()
+export const cloudWatchLogsMatcher = createCloudWatchLogsMatcher()
 
 const processLogs = defineRoute({
   filters: {
@@ -46,17 +46,17 @@ const processLogs = defineRoute({
   console.log(`${logEvents.length} events from ${logGroup}`)
 })
 
-cloudWatchLogsRouter.route(processLogs)
+cloudWatchLogsMatcher.route(processLogs)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/CloudWatchLogsMatcher#annotated-handlers).
 
 ## Documentation
 
-- [CloudWatchLogsRouter](https://pyepye.github.io/lambda-event-router/routers/CloudWatchLogsRouter) covers every filter,
+- [CloudWatchLogsMatcher](https://pyepye.github.io/latcher/matchers/CloudWatchLogsMatcher) covers every filter,
   convenience methods, the request object and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

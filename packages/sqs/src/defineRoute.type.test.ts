@@ -1,6 +1,6 @@
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockSchema } from '@latcher/testing';
 
-import { createSQSRouter, defineRoute } from './SQSRouter.js';
+import { createSQSMatcher, defineRoute } from './SQSMatcher.js';
 import type { SQSMessageAttributes, SQSMiddleware, SQSRequest } from './types.js';
 
 const QUEUE_ARN = 'arn:aws:sqs:us-east-1:123456789012:orders';
@@ -32,7 +32,7 @@ suite('coerced message attributes', () => {
   });
 
   test('types an inferred route() handler with the converted attributes when it has no attribute schema', () => {
-    const router = createSQSRouter().route({
+    const matcher = createSQSMatcher().route({
       filters: { eventSourceArn: QUEUE_ARN },
       // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
       handler: async ({ messageAttributes }): Promise<void> => {
@@ -40,7 +40,7 @@ suite('coerced message attributes', () => {
       },
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('accepts an annotated handler for a coerced attribute schema', () => {
@@ -48,13 +48,13 @@ suite('coerced message attributes', () => {
       expectTypeOf(messageAttributes.dryRun).toEqualTypeOf<boolean>();
     }
 
-    const router = createSQSRouter().route({
+    const matcher = createSQSMatcher().route({
       filters: { eventSourceArn: QUEUE_ARN },
       messageAttributesSchema: createMockSchema<DryRunAttributes>(),
       handler: processOrder,
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('accepts a route middleware typed to a coerced attribute schema', () => {

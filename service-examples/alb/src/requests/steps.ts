@@ -29,7 +29,7 @@ export interface Expected {
   bodyExcludes?: string;
   bodyIs?: string;
   // Bytes the response carries. The caller compares what came off the wire, and the in-process run
-  // compares the base64 the router handed the adapter.
+  // compares the base64 the matcher handed the adapter.
   bodyBase64?: string;
   headers?: Record<string, string | null>;
 }
@@ -38,7 +38,7 @@ export interface Step {
   name: string;
   request: RequestInput;
   expected: Expected;
-  // Set where the load balancer answers instead of the router, or rewrites what the router built,
+  // Set where the load balancer answers instead of the matcher, or rewrites what the matcher built,
   // so the in-process check has its own expectation to compare against.
   expectedInProcess?: Expected;
 }
@@ -54,7 +54,7 @@ const RETURN_NOTE_ARCHIVE = gzipSync(RETURN_NOTE);
 // Every route is called on both listeners, so the two event forms run the same requests. Only the
 // return read answers differently, because a single-value target group cannot carry a repeated
 // query param or a repeated header. `targetGroupArn` is the one the listener under test serves
-// from, which is what the read asserts the router handed the handler. `origin` is the scheme, host
+// from, which is what the read asserts the matcher handed the handler. `origin` is the scheme, host
 // and port the caller reached, which the redirects need because the load balancer rewrites a
 // relative `Location` against it.
 export function buildSteps(form: EventForm, targetGroupArn: string, origin: string): Step[] {
@@ -374,7 +374,7 @@ export function buildSteps(form: EventForm, targetGroupArn: string, origin: stri
       expected: { status: 200, headers: { 'access-control-allow-origin': null, vary: 'Origin' } },
     },
     {
-      name: 'preflight a path the router answers itself',
+      name: 'preflight a path the matcher answers itself',
       request: {
         method: 'OPTIONS',
         path: '/reports/returns',

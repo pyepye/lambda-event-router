@@ -1,5 +1,5 @@
-import { postToConnection, type WebSocketMessageRequest } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { postToConnection, type WebSocketMessageRequest } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { TStockAlert } from '../utils/schemas.js';
 import { STOCK } from '../utils/warehouse.js';

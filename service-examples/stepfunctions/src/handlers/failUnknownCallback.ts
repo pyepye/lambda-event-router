@@ -1,12 +1,13 @@
 import { SendTaskFailureCommand } from '@aws-sdk/client-sfn';
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/stepfunctions';
+
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/stepfunctions';
 
 import { sfnClient } from '../config.js';
 
 // The fallback for callback tasks. It carries no custom filter and no eventSchema, so it takes any
 // payload with a TaskToken that the routes above it did not claim, and fails the waiting state.
-// Registered last, because the router returns the first route that matches.
+// Registered last, because the matcher returns the first route that matches.
 export const failUnknownCallback = defineRoute({
   filters: {
     taskToken: true,

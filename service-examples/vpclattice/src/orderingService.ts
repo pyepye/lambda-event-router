@@ -1,4 +1,4 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 import type { Handler } from 'aws-lambda';
 import { latticeRequest, type RequestResult } from './ordering/latticeRequest.js';
 import { buildSteps, type Expected, type PayloadVersion, type Step } from './ordering/steps.js';

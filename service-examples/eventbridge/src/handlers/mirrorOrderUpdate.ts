@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { MIRROR_REGION_PATTERN, ORDER_UPDATED, ORDERS_SOURCE } from '../config.js';
 import { OrderUpdatedSchema } from '../utils/schemas.js';

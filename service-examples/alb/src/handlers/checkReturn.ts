@@ -1,10 +1,10 @@
-import { type ApiRequest, type ApiResponse, NotFound, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, NotFound, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { RETURN_VERSION_HEADER } from '../utils/constants.js';
 import { RETURNS, type ReturnRecord } from '../utils/returns.js';
 
-// Builds the same response the GET route does. The router drops the body and keeps the status and
+// Builds the same response the GET route does. The matcher drops the body and keeps the status and
 // the headers, so a HEAD answers 200 with nothing in it.
 export async function checkReturn(request: ApiRequest<{ returnId: string }>): Promise<ApiResponse<ReturnRecord>> {
   const record = RETURNS[request.path.returnId];

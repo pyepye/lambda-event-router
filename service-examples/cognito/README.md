@@ -1,7 +1,7 @@
 # Service example: Cognito
 
-A deployable CDK app that exercises the `CognitoRouter` end to end. It models an applicant portal.
-Two user pools send every Lambda trigger to the same worker, and the router dispatches on the
+A deployable CDK app that exercises the `CognitoMatcher` end to end. It models an applicant portal.
+Two user pools send every Lambda trigger to the same worker, and the matcher dispatches on the
 trigger source.
 
 The routes are in `src/cognito.ts`, and the handlers are in `src/handlers/`.
@@ -36,7 +36,7 @@ style and all three failure paths.
 | `userAttributes` filter | A list of departments on staff, the `msc-*` wildcard on applicants |
 | `custom` filter | `rejectTestAccount` reads `userName`, which no other filter sees |
 | Zod schema | `StaffAttributesSchema` on the senior staff route |
-| Router middleware | `logInvocation` runs once per event |
+| Matcher middleware | `logInvocation` runs once per event |
 | Route middleware | `withDepartment` on the senior staff route |
 | Family methods | `preTokenGeneration`, `customMessage`, `customEmailSender`, `userMigration` |
 | Single source methods | `preSignUpSignUp`, `postConfirmationConfirmSignUp` and the rest |
@@ -47,7 +47,7 @@ style and all three failure paths.
 | Response fields | Auto-confirmation, token claims, challenge parameters and migrated attributes |
 
 Handlers prove what they did by logging. The sign-in flows also prove it in the ID token, which the
-trigger script decodes and checks against the claims the router added.
+trigger script decodes and checks against the claims the matcher added.
 
 The staff pool has a custom email sender trigger, so Cognito sends none of its mail. The worker gets
 the verification code instead, decrypts it with the pool's KMS key and logs it. The applicant pool
@@ -59,7 +59,7 @@ sign-up with `LimitExceededException` once an address is over its limit. A share
 run after the first code goes out.
 
 Only an admin creation sends `CLIENT_ID_NOT_APPLICABLE` as the client id. An admin confirmation sends
-no client id at all, even though the event type says there is one. The router skips a `clientId`
+no client id at all, even though the event type says there is one. The matcher skips a `clientId`
 filter when the id is missing, so no route can match on it being absent.
 
 A pool holds the ARN of the Lambda it triggers, so CloudFormation rejects a template that also puts
@@ -96,9 +96,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cognito... install
-pnpm -F @lambda-event-router/service-example-cognito... build
-pnpm -F @lambda-event-router/service-example-cognito run deploy
+pnpm -F @latcher/service-example-cognito... install
+pnpm -F @latcher/service-example-cognito... build
+pnpm -F @latcher/service-example-cognito run deploy
 ```
 
 CDK outputs include `ApplicantsPoolId`, `ApplicantsClientId`, `StaffPoolId`, `StaffClientId` and
@@ -107,7 +107,7 @@ CDK outputs include `ApplicantsPoolId`, `ApplicantsClientId`, `StaffPoolId`, `St
 ## Trigger sample user flows
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cognito trigger
+pnpm -F @latcher/service-example-cognito trigger
 ```
 
 Pass a stack name as the first argument if you deployed with one other than `ler-example-cognito`.
@@ -140,7 +140,7 @@ different `stackName`.
 
 One run is 54 invocations. 52 carry a `Handling Cognito trigger` line naming the trigger source, the
 pool and the app client. The two without it are the schema failure and the unmatched sign-up, because
-the router validates and matches before any middleware runs.
+the matcher validates and matches before any middleware runs.
 
 `Admin created a user` appears four times. Two are the invited staff member and the invited applicant.
 The other two are the migrated users, because Cognito runs the pre sign-up trigger as an admin
@@ -192,7 +192,7 @@ Four records are errors:
 - `User attributes validation failed for trigger PreSignUp_SignUp` for the staff sign-up with no staff
   number, also without one. It carries an `issues` array naming `custom:staffNumber`.
 
-Read `errorMessage` rather than `errorType` on those records. The bundle is minified, so a router
+Read `errorMessage` rather than `errorType` on those records. The bundle is minified, so a matcher
 error class arrives as a two character `errorType` with its real name in `name`.
 
 The wrong custom auth answer is the one failure with no error record. Failing authentication is a
@@ -235,15 +235,15 @@ more specific ones turn down.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cognito diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-cognito watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-cognito synth  # render template
+pnpm -F @latcher/service-example-cognito diff   # review pending changeset
+pnpm -F @latcher/service-example-cognito watch  # hotswap deploys
+pnpm -F @latcher/service-example-cognito synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cognito destroy
+pnpm -F @latcher/service-example-cognito destroy
 ```
 
 Destroying the stack deletes both pools and every user in them. The KMS key is the one thing left

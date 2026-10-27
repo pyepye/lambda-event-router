@@ -1,4 +1,4 @@
-import { createS3BatchRouter, createS3Router } from '@lambda-event-router/s3';
+import { createS3BatchMatcher, createS3Matcher } from '@latcher/s3';
 
 import { MAX_UPLOAD_BYTES, REPORTS_BUCKET, UPLOADS_BUCKET } from './config.js';
 import { acceptFormUpload } from './handlers/acceptFormUpload.js';
@@ -28,12 +28,12 @@ import { logRecord } from './middleware/logRecord.js';
 import { withBatchContext } from './middleware/withBatchContext.js';
 import { withDocumentContext } from './middleware/withDocumentContext.js';
 
-export const s3Router = createS3Router({ middleware: [logRecord] });
+export const s3Matcher = createS3Matcher({ middleware: [logRecord] });
 
 // rejectOversizedUpload's size filter and scanDocument's key filter cannot be ranked against each
 // other, so rejectOversizedUpload goes first to claim a large PDF. logRemoval and expireRestoredCopy
-// are wildcards, which the router ranks behind the narrower routes in their event family.
-s3Router
+// are wildcards, which the matcher ranks behind the narrower routes in their event family.
+s3Matcher
   .objectCreated({
     filters: {
       bucket: UPLOADS_BUCKET,
@@ -115,7 +115,7 @@ s3Router
   })
   .testEvent({ handler: recordNotificationSetup });
 
-export const s3BatchRouter = createS3BatchRouter().route({
+export const s3BatchMatcher = createS3BatchMatcher().route({
   treatMissingKeysAs: 'TemporaryFailure',
   middleware: [withBatchContext],
   handler: processArchiveTask,

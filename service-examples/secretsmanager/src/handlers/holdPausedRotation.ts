@@ -1,6 +1,6 @@
 import { DescribeSecretCommand } from '@aws-sdk/client-secrets-manager';
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, type SecretsManagerFilterInput } from '@lambda-event-router/secretsmanager';
+import { logger } from '@latcher/base';
+import { defineRoute, type SecretsManagerFilterInput } from '@latcher/secretsmanager';
 import { secretsManagerClient } from '../config.js';
 import { ROTATION_PAUSED_TAG } from '../utils/secrets.js';
 

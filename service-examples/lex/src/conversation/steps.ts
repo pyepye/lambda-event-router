@@ -1,4 +1,4 @@
-import type { LexInputMode, LexInvocationSource } from '@lambda-event-router/lex';
+import type { LexInputMode, LexInvocationSource } from '@latcher/lex';
 
 import {
   BOOK_REDELIVERY_INTENT,
@@ -11,13 +11,13 @@ import {
 } from '../utils/constants.js';
 
 export interface Expected {
-  // JSON.stringify of the LexV2Result the router returned, matched on fragments.
+  // JSON.stringify of the LexV2Result the matcher returned, matched on fragments.
   resultIncludes?: string[];
   errorIncludes?: string;
 }
 
 // One invocation of the worker, built into a LexV2Event by scripts/checkRoutes.ts.
-export interface RouterStep {
+export interface MatcherStep {
   name: string;
   intentName: string;
   invocationSource: LexInvocationSource;
@@ -30,7 +30,7 @@ export interface RouterStep {
 
 export const DEPLOYED_BOT_ID = 'LERLEXBOT1';
 
-export const routerSteps: RouterStep[] = [
+export const matcherSteps: MatcherStep[] = [
   {
     name: 'opening tracking turn reaches checkTrackingNumber',
     intentName: TRACK_PARCEL_INTENT,

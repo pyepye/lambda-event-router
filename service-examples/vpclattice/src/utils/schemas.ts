@@ -1,14 +1,14 @@
 import { z } from 'zod';
 
 // Query on GET /stock/:sku. `page` arrives as a string, so it is coerced; a value that will not
-// coerce fails the schema and the router answers 400.
+// coerce fails the schema and the matcher answers 400.
 export const StockQuerySchema = z.object({
   expand: z.enum(['movements', 'supplier']).optional(),
   depot: z.string().optional(),
   page: z.coerce.number().int().min(1).default(1),
 });
 
-// Body on POST /stock. A missing field fails the schema and the router answers 422.
+// Body on POST /stock. A missing field fails the schema and the matcher answers 422.
 export const NewStockItemSchema = z.object({
   sku: z.string().min(1),
   description: z.string().min(1),

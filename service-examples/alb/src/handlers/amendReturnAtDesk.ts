@@ -1,11 +1,11 @@
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound, Ok } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { CHANNEL_HEADER, RETURNS_DESK_CHANNEL } from '../utils/constants.js';
 import { RETURNS } from '../utils/returns.js';
 import { ReturnAmendmentSchema } from '../utils/schemas.js';
 
-// The custom filter reads a header, which no other filter key on this router can see. It is
+// The custom filter reads a header, which no other filter key on this matcher can see. It is
 // registered ahead of the plain PATCH route, which matches the same method and path.
 export const amendReturnAtDesk = defineRoute({
   filters: {

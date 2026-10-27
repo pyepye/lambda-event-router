@@ -1,11 +1,11 @@
-import { defineRoute } from '@lambda-event-router/config';
+import { defineRoute } from '@latcher/config';
 
 import { configRuleName } from '../environment.js';
 import { reportOversized, reportResourceEvaluation } from '../utils/evaluations.js';
 import { MemoryConfigurationSchema, MemoryLimitParametersSchema } from '../utils/schemas.js';
 
 // Claims every evaluation of the memory rule. grantMemoryExemption shares this rule name and adds a
-// resourceId, so the router tries it first.
+// resourceId, so the matcher tries it first.
 export const checkMemoryLimit = defineRoute({
   filters: {
     configRuleName: configRuleName('memoryLimit'),

@@ -1,11 +1,11 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRabbitMQRoute } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import { defineRabbitMQRoute } from '@latcher/mq';
 
 import { DEFAULT_VIRTUAL_HOST } from '../config.js';
 import { PAYMENT_QUEUES } from '../utils/brokers.js';
 import { PaymentSchema } from '../utils/schemas.js';
 
-// The normal run. The queue key in the event is `payment-events::/`, and the router splits it, so the
+// The normal run. The queue key in the event is `payment-events::/`, and the matcher splits it, so the
 // queue filter reads the name and the virtualHost filter reads the host.
 export const capturePayment = defineRabbitMQRoute({
   filters: {

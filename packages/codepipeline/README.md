@@ -1,40 +1,40 @@
-# @lambda-event-router/codepipeline
+# @latcher/codepipeline
 
-Routes CodePipeline custom action jobs to handlers. The router reports success or failure back to the pipeline for you.
+Routes CodePipeline custom action jobs to handlers. The matcher reports success or failure back to the pipeline for you.
 
 **Supported AWS Services:** `AWS CodePipeline`
 
-**Available Routers:** `CodePipelineRouter`
+**Available Matchers:** `CodePipelineMatcher`
 
-**Docs:** [CodePipelineRouter](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter)
+**Docs:** [CodePipelineMatcher](https://pyepye.github.io/latcher/matchers/CodePipelineMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/codepipeline
+npm install @latcher/base @latcher/codepipeline
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { codePipelineRouter } from './codepipeline'
+import { Latcher } from '@latcher/base'
+import { codePipelineMatcher } from './codepipeline'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [codePipelineRouter],
+const latcher = new Latcher({
+  matchers: [codePipelineMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // codepipeline.ts
-import { createCodePipelineRouter, defineRoute } from '@lambda-event-router/codepipeline'
+import { createCodePipelineMatcher, defineRoute } from '@latcher/codepipeline'
 
-export const codePipelineRouter = createCodePipelineRouter()
+export const codePipelineMatcher = createCodePipelineMatcher()
 
 const runDeploy = defineRoute({
   filters: {
@@ -47,17 +47,17 @@ const runDeploy = defineRoute({
   return { outputVariables: { deployedRegion: 'eu-west-2' } }
 })
 
-codePipelineRouter.route(runDeploy)
+codePipelineMatcher.route(runDeploy)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/CodePipelineMatcher#annotated-handlers).
 
 ## Documentation
 
-- [CodePipelineRouter](https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter) covers every filter, schema validation, responses
+- [CodePipelineMatcher](https://pyepye.github.io/latcher/matchers/CodePipelineMatcher) covers every filter, schema validation, responses
   and middleware.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

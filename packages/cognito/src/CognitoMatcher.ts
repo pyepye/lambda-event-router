@@ -1,0 +1,720 @@
+import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeMatcher } from '@latcher/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@latcher/base';
+
+import type {
+  CognitoEvent,
+  CognitoFilters,
+  CognitoMatcherOptions,
+  CognitoMiddleware,
+  CognitoRequest,
+  CognitoRouteDefinition,
+  CognitoTriggerSource,
+  // CreateAuthChallenge
+  CreateAuthChallengeRouteDefinition,
+  CreateAuthChallengeTriggerSource,
+  // CustomEmailSender
+  CustomEmailSenderRouteDefinition,
+  CustomEmailSenderTriggerSource,
+  // CustomMessage
+  CustomMessageRouteDefinition,
+  CustomMessageTriggerSource,
+  // DefineAuthChallenge
+  DefineAuthChallengeRouteDefinition,
+  DefineAuthChallengeTriggerSource,
+  EventForTrigger,
+  // PostAuthentication
+  PostAuthenticationRouteDefinition,
+  PostAuthenticationTriggerSource,
+  // PostConfirmation
+  PostConfirmationRouteDefinition,
+  PostConfirmationTriggerSource,
+  // PreAuthentication
+  PreAuthenticationRouteDefinition,
+  PreAuthenticationTriggerSource,
+  // PreSignUp
+  PreSignUpRouteDefinition,
+  PreSignUpTriggerSource,
+  // PreTokenGeneration
+  PreTokenGenerationRouteDefinition,
+  PreTokenGenerationTriggerSource,
+  RequestForTrigger,
+  RouteBuilder,
+  RouteInput,
+  TypedRouteDefinition,
+  UserAttributes,
+  // UserMigration
+  UserMigrationRouteDefinition,
+  UserMigrationTriggerSource,
+  // VerifyAuthChallengeResponse
+  VerifyAuthChallengeResponseRouteDefinition,
+  VerifyAuthChallengeResponseTriggerSource,
+} from './types/index.js';
+
+// Re-export types for convenience
+export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './types/index.js';
+
+// =============================================================================
+// defineRoute function
+// =============================================================================
+
+// defineRoute function with type inference from triggerSource
+// Handlers modify the cloned event and return it
+export function defineRoute<
+  const TTrigger extends CognitoTriggerSource,
+  TUserAttributesSchema extends StandardSchemaV1 | undefined = undefined,
+  TUserAttributes = TUserAttributesSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TUserAttributesSchema>
+    : UserAttributes,
+>(config: RouteInput<TTrigger, TUserAttributesSchema, TUserAttributes>): RouteBuilder<TTrigger, TUserAttributes> {
+  return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
+    handle(handler): TypedRouteDefinition<TTrigger, TUserAttributes> {
+      return {
+        filters: config.filters as CognitoFilters<TTrigger> | undefined,
+        userAttributesSchema: config.userAttributesSchema as StandardSchemaV1<unknown, TUserAttributes> | undefined,
+        middleware: config.middleware,
+        handler: handler as (
+          request: RequestForTrigger<TTrigger, TUserAttributes>,
+        ) => Promise<EventForTrigger<TTrigger>>,
+      };
+    },
+  };
+}
+
+// =============================================================================
+// Trigger source constants
+// =============================================================================
+
+const PRE_SIGN_UP_TRIGGER_SOURCES: PreSignUpTriggerSource[] = [
+  'PreSignUp_SignUp',
+  'PreSignUp_AdminCreateUser',
+  'PreSignUp_ExternalProvider',
+];
+
+const PRE_AUTHENTICATION_TRIGGER_SOURCES: PreAuthenticationTriggerSource[] = ['PreAuthentication_Authentication'];
+const POST_AUTHENTICATION_TRIGGER_SOURCES: PostAuthenticationTriggerSource[] = ['PostAuthentication_Authentication'];
+
+const POST_CONFIRMATION_TRIGGER_SOURCES: PostConfirmationTriggerSource[] = [
+  'PostConfirmation_ConfirmSignUp',
+  'PostConfirmation_ConfirmForgotPassword',
+];
+
+const DEFINE_AUTH_CHALLENGE_TRIGGER_SOURCES: DefineAuthChallengeTriggerSource[] = [
+  'DefineAuthChallenge_Authentication',
+];
+const CREATE_AUTH_CHALLENGE_TRIGGER_SOURCES: CreateAuthChallengeTriggerSource[] = [
+  'CreateAuthChallenge_Authentication',
+];
+const VERIFY_AUTH_CHALLENGE_RESPONSE_TRIGGER_SOURCES: VerifyAuthChallengeResponseTriggerSource[] = [
+  'VerifyAuthChallengeResponse_Authentication',
+];
+
+const CUSTOM_MESSAGE_TRIGGER_SOURCES: CustomMessageTriggerSource[] = [
+  'CustomMessage_SignUp',
+  'CustomMessage_AdminCreateUser',
+  'CustomMessage_ResendCode',
+  'CustomMessage_ForgotPassword',
+  'CustomMessage_UpdateUserAttribute',
+  'CustomMessage_VerifyUserAttribute',
+  'CustomMessage_Authentication',
+];
+
+const CUSTOM_EMAIL_SENDER_TRIGGER_SOURCES: CustomEmailSenderTriggerSource[] = [
+  'CustomEmailSender_SignUp',
+  'CustomEmailSender_ResendCode',
+  'CustomEmailSender_ForgotPassword',
+  'CustomEmailSender_UpdateUserAttribute',
+  'CustomEmailSender_VerifyUserAttribute',
+  'CustomEmailSender_AdminCreateUser',
+  'CustomEmailSender_Authentication',
+  'CustomEmailSender_AccountTakeOverNotification',
+];
+
+const PRE_TOKEN_GENERATION_TRIGGER_SOURCES: PreTokenGenerationTriggerSource[] = [
+  'TokenGeneration_HostedAuth',
+  'TokenGeneration_Authentication',
+  'TokenGeneration_NewPasswordChallenge',
+  'TokenGeneration_AuthenticateDevice',
+  'TokenGeneration_RefreshTokens',
+];
+
+const USER_MIGRATION_TRIGGER_SOURCES: UserMigrationTriggerSource[] = [
+  'UserMigration_Authentication',
+  'UserMigration_ForgotPassword',
+];
+
+// =============================================================================
+// Type guards
+// =============================================================================
+
+// Type guard using Object.hasOwn() for property checking
+function hasUserAttributes(request: object): request is { userAttributes: UserAttributes } {
+  return Object.hasOwn(request, 'userAttributes');
+}
+
+// =============================================================================
+// Internal types
+// =============================================================================
+
+interface InternalRoute {
+  filters: CognitoFilters<CognitoTriggerSource>;
+  userAttributesSchema?: StandardSchemaV1;
+  middleware?: CognitoMiddleware[];
+  handler: (request: CognitoRequest) => Promise<CognitoEvent>;
+}
+
+interface InternalRouteInput {
+  filters?: CognitoFilters<CognitoTriggerSource>;
+  userAttributesSchema?: StandardSchemaV1;
+  middleware?: CognitoMiddleware[];
+  handler: unknown;
+}
+
+// Response type (returns the modified event)
+type CognitoResponse = CognitoEvent;
+
+// =============================================================================
+// CognitoMatcher class
+// =============================================================================
+
+export class CognitoMatcher implements EventTypeMatcher<CognitoEvent, CognitoResponse> {
+  private routes: InternalRoute[] = [];
+  private routesOrdered = false;
+  private middleware: CognitoMiddleware[] = [];
+
+  constructor(options?: CognitoMatcherOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
+
+  canHandleEvent(event: unknown): event is CognitoEvent {
+    if (!isObject(event)) return false;
+    if (typeof event.triggerSource !== 'string') return false;
+    if (typeof event.userPoolId !== 'string') return false;
+    return true;
+  }
+
+  // Generic route method
+  // Handlers receive a cloned event, modify it, and return it
+  route<TUserAttributes = UserAttributes>(definition: CognitoRouteDefinition<TUserAttributes>): this;
+  route<TTrigger extends CognitoTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  route(
+    definition: CognitoRouteDefinition<UserAttributes> | TypedRouteDefinition<CognitoTriggerSource, UserAttributes>,
+  ): this {
+    this.routes.push({
+      filters: definition.filters ?? {},
+      userAttributesSchema: definition.userAttributesSchema,
+      // Cast needed: storing an attribute-typed chain in general storage (contravariance)
+      middleware: definition.middleware as CognitoMiddleware[] | undefined,
+      handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  // =============================================================================
+  // Convenience methods for each trigger type
+  // =============================================================================
+
+  preSignUp<TUserAttributes = UserAttributes>(definition: PreSignUpRouteDefinition<TUserAttributes>): this;
+  preSignUp<TTrigger extends PreSignUpTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  preSignUp(
+    definition: PreSignUpRouteDefinition<UserAttributes> | TypedRouteDefinition<PreSignUpTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, PRE_SIGN_UP_TRIGGER_SOURCES);
+  }
+
+  preAuthentication<TUserAttributes = UserAttributes>(
+    definition: PreAuthenticationRouteDefinition<TUserAttributes>,
+  ): this;
+  preAuthentication<TTrigger extends PreAuthenticationTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  preAuthentication(
+    definition:
+      | PreAuthenticationRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<PreAuthenticationTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, PRE_AUTHENTICATION_TRIGGER_SOURCES);
+  }
+
+  postAuthentication<TUserAttributes = UserAttributes>(
+    definition: PostAuthenticationRouteDefinition<TUserAttributes>,
+  ): this;
+  postAuthentication<TTrigger extends PostAuthenticationTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  postAuthentication(
+    definition:
+      | PostAuthenticationRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<PostAuthenticationTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, POST_AUTHENTICATION_TRIGGER_SOURCES);
+  }
+
+  postConfirmation<TUserAttributes = UserAttributes>(
+    definition: PostConfirmationRouteDefinition<TUserAttributes>,
+  ): this;
+  postConfirmation<TTrigger extends PostConfirmationTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  postConfirmation(
+    definition:
+      | PostConfirmationRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<PostConfirmationTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, POST_CONFIRMATION_TRIGGER_SOURCES);
+  }
+
+  defineAuthChallenge<TUserAttributes = UserAttributes>(
+    definition: DefineAuthChallengeRouteDefinition<TUserAttributes>,
+  ): this;
+  defineAuthChallenge<TTrigger extends DefineAuthChallengeTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  defineAuthChallenge(
+    definition:
+      | DefineAuthChallengeRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<DefineAuthChallengeTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, DEFINE_AUTH_CHALLENGE_TRIGGER_SOURCES);
+  }
+
+  createAuthChallenge<TUserAttributes = UserAttributes>(
+    definition: CreateAuthChallengeRouteDefinition<TUserAttributes>,
+  ): this;
+  createAuthChallenge<TTrigger extends CreateAuthChallengeTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  createAuthChallenge(
+    definition:
+      | CreateAuthChallengeRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<CreateAuthChallengeTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, CREATE_AUTH_CHALLENGE_TRIGGER_SOURCES);
+  }
+
+  verifyAuthChallengeResponse<TUserAttributes = UserAttributes>(
+    definition: VerifyAuthChallengeResponseRouteDefinition<TUserAttributes>,
+  ): this;
+  verifyAuthChallengeResponse<
+    TTrigger extends VerifyAuthChallengeResponseTriggerSource,
+    TUserAttributes = UserAttributes,
+  >(definition: TypedRouteDefinition<TTrigger, TUserAttributes>): this;
+  verifyAuthChallengeResponse(
+    definition:
+      | VerifyAuthChallengeResponseRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<VerifyAuthChallengeResponseTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, VERIFY_AUTH_CHALLENGE_RESPONSE_TRIGGER_SOURCES);
+  }
+
+  customMessage<TUserAttributes = UserAttributes>(definition: CustomMessageRouteDefinition<TUserAttributes>): this;
+  customMessage<TTrigger extends CustomMessageTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  customMessage(
+    definition:
+      | CustomMessageRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<CustomMessageTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, CUSTOM_MESSAGE_TRIGGER_SOURCES);
+  }
+
+  customEmailSender<TUserAttributes = UserAttributes>(
+    definition: CustomEmailSenderRouteDefinition<TUserAttributes>,
+  ): this;
+  customEmailSender<TTrigger extends CustomEmailSenderTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  customEmailSender(
+    definition:
+      | CustomEmailSenderRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<CustomEmailSenderTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, CUSTOM_EMAIL_SENDER_TRIGGER_SOURCES);
+  }
+
+  preTokenGeneration<TUserAttributes = UserAttributes>(
+    definition: PreTokenGenerationRouteDefinition<TUserAttributes>,
+  ): this;
+  preTokenGeneration<TTrigger extends PreTokenGenerationTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  preTokenGeneration(
+    definition:
+      | PreTokenGenerationRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<PreTokenGenerationTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, PRE_TOKEN_GENERATION_TRIGGER_SOURCES);
+  }
+
+  userMigration<TUserAttributes = UserAttributes>(definition: UserMigrationRouteDefinition<TUserAttributes>): this;
+  userMigration<TTrigger extends UserMigrationTriggerSource, TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<TTrigger, TUserAttributes>,
+  ): this;
+  userMigration(
+    definition:
+      | UserMigrationRouteDefinition<UserAttributes>
+      | TypedRouteDefinition<UserMigrationTriggerSource, UserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, USER_MIGRATION_TRIGGER_SOURCES);
+  }
+
+  // =============================================================================
+  // Individual trigger source methods
+  // These provide type-safe routing for specific trigger sources
+  // =============================================================================
+
+  // PreSignUp individual methods
+  preSignUpSignUp<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PreSignUp_SignUp', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_SignUp']);
+  }
+
+  preSignUpAdminCreateUser<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PreSignUp_AdminCreateUser', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_AdminCreateUser']);
+  }
+
+  preSignUpExternalProvider<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PreSignUp_ExternalProvider', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PreSignUp_ExternalProvider']);
+  }
+
+  // PreAuthentication individual method
+  preAuthenticationAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PreAuthentication_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PreAuthentication_Authentication']);
+  }
+
+  // PostAuthentication individual method
+  postAuthenticationAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PostAuthentication_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PostAuthentication_Authentication']);
+  }
+
+  // PostConfirmation individual methods
+  postConfirmationConfirmSignUp<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PostConfirmation_ConfirmSignUp', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PostConfirmation_ConfirmSignUp']);
+  }
+
+  postConfirmationConfirmForgotPassword<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'PostConfirmation_ConfirmForgotPassword', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['PostConfirmation_ConfirmForgotPassword']);
+  }
+
+  // DefineAuthChallenge individual method
+  defineAuthChallengeAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'DefineAuthChallenge_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['DefineAuthChallenge_Authentication']);
+  }
+
+  // CreateAuthChallenge individual method
+  createAuthChallengeAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CreateAuthChallenge_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CreateAuthChallenge_Authentication']);
+  }
+
+  // VerifyAuthChallengeResponse individual method
+  verifyAuthChallengeResponseAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'VerifyAuthChallengeResponse_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['VerifyAuthChallengeResponse_Authentication']);
+  }
+
+  // CustomMessage individual methods
+  customMessageSignUp<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_SignUp', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_SignUp']);
+  }
+
+  customMessageAdminCreateUser<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_AdminCreateUser', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_AdminCreateUser']);
+  }
+
+  customMessageResendCode<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_ResendCode', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_ResendCode']);
+  }
+
+  customMessageForgotPassword<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_ForgotPassword', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_ForgotPassword']);
+  }
+
+  customMessageUpdateUserAttribute<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_UpdateUserAttribute', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_UpdateUserAttribute']);
+  }
+
+  customMessageVerifyUserAttribute<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_VerifyUserAttribute', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_VerifyUserAttribute']);
+  }
+
+  customMessageAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomMessage_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomMessage_Authentication']);
+  }
+
+  // CustomEmailSender individual methods
+  customEmailSenderSignUp<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_SignUp', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_SignUp']);
+  }
+
+  customEmailSenderResendCode<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_ResendCode', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_ResendCode']);
+  }
+
+  customEmailSenderForgotPassword<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_ForgotPassword', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_ForgotPassword']);
+  }
+
+  customEmailSenderUpdateUserAttribute<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_UpdateUserAttribute', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_UpdateUserAttribute']);
+  }
+
+  customEmailSenderVerifyUserAttribute<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_VerifyUserAttribute', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_VerifyUserAttribute']);
+  }
+
+  customEmailSenderAdminCreateUser<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_AdminCreateUser', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_AdminCreateUser']);
+  }
+
+  customEmailSenderAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_Authentication']);
+  }
+
+  customEmailSenderAccountTakeOverNotification<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'CustomEmailSender_AccountTakeOverNotification', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['CustomEmailSender_AccountTakeOverNotification']);
+  }
+
+  // PreTokenGeneration individual methods
+  preTokenGenerationHostedAuth<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'TokenGeneration_HostedAuth', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_HostedAuth']);
+  }
+
+  preTokenGenerationAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'TokenGeneration_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_Authentication']);
+  }
+
+  preTokenGenerationNewPasswordChallenge<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'TokenGeneration_NewPasswordChallenge', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_NewPasswordChallenge']);
+  }
+
+  preTokenGenerationAuthenticateDevice<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'TokenGeneration_AuthenticateDevice', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_AuthenticateDevice']);
+  }
+
+  preTokenGenerationRefreshTokens<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'TokenGeneration_RefreshTokens', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['TokenGeneration_RefreshTokens']);
+  }
+
+  // UserMigration individual methods
+  userMigrationAuthentication<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'UserMigration_Authentication', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['UserMigration_Authentication']);
+  }
+
+  userMigrationForgotPassword<TUserAttributes = UserAttributes>(
+    definition: TypedRouteDefinition<'UserMigration_ForgotPassword', TUserAttributes>,
+  ): this {
+    return this.addTriggerRoute(definition as InternalRouteInput, ['UserMigration_ForgotPassword']);
+  }
+
+  // =============================================================================
+  // Private helper methods
+  // =============================================================================
+
+  private addTriggerRoute(definition: InternalRouteInput, defaultTriggerSources: CognitoTriggerSource[]): this {
+    let triggerSources = defaultTriggerSources;
+    if (definition.filters?.triggerSource) {
+      triggerSources = Array.isArray(definition.filters?.triggerSource)
+        ? definition.filters?.triggerSource
+        : [definition.filters?.triggerSource];
+    }
+
+    this.routes.push({
+      filters: {
+        userPoolId: definition.filters?.userPoolId,
+        clientId: definition.filters?.clientId,
+        userAttributes: definition.filters?.userAttributes,
+        custom: definition.filters?.custom,
+        triggerSource: triggerSources,
+      },
+      userAttributesSchema: definition.userAttributesSchema,
+      // Cast needed: storing an attribute-typed chain in general storage (contravariance)
+      middleware: definition.middleware as CognitoMiddleware[] | undefined,
+      handler: definition.handler as (request: CognitoRequest) => Promise<CognitoEvent>,
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: CognitoEvent, context: Context): Promise<CognitoResponse> {
+    const triggerSource = event.triggerSource;
+
+    const route = await this.matchRoute(event, triggerSource);
+    if (!route) {
+      throw new Error(`No route matched for trigger ${triggerSource}`);
+    }
+
+    // Clone the event to treat the original as immutable
+    const eventClone = structuredClone(event);
+
+    // UserMigration events don't have userAttributes on request (user doesn't exist yet)
+    const rawUserAttributes = hasUserAttributes(eventClone.request) ? eventClone.request.userAttributes : {};
+    const userAttributes = await validateSchema(
+      rawUserAttributes,
+      route.userAttributesSchema,
+      `User attributes validation failed for trigger ${triggerSource}`,
+    );
+
+    const request: CognitoRequest = { triggerSource, userAttributes, event: eventClone, context } as CognitoRequest;
+    // Handler modifies the cloned event and returns it
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    return await handleEventWithMiddleware(allMiddleware, request, route.handler);
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(
+    event: CognitoEvent,
+    triggerSource: CognitoTriggerSource,
+  ): Promise<InternalRoute | undefined> {
+    // UserMigration events don't have userAttributes on request
+    const userAttributes = hasUserAttributes(event.request) ? event.request.userAttributes : undefined;
+
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.triggerSource !== undefined) {
+        const triggerSources = Array.isArray(filters.triggerSource) ? filters.triggerSource : [filters.triggerSource];
+        if (!triggerSources.includes(triggerSource)) {
+          continue;
+        }
+      }
+
+      if (filters.userPoolId !== undefined) {
+        const userPoolIdMatch = filterStringMatcher(event.userPoolId, filters.userPoolId);
+        if (!userPoolIdMatch) continue;
+      }
+
+      if (filters.clientId !== undefined) {
+        // Cognito omits clientId on an admin confirmation, though the event type declares a string.
+        // Without this guard the absent value stringifies and a wildcard filter matches it.
+        const { clientId } = event.callerContext;
+        if (!clientId) continue;
+        const clientIdMatch = filterStringMatcher(clientId, filters.clientId);
+        if (!clientIdMatch) continue;
+      }
+
+      if (filters.userAttributes !== undefined) {
+        if (!userAttributes) continue;
+        let matched = true;
+        for (const [key, allowed] of Object.entries(filters.userAttributes)) {
+          const userAttribute = userAttributes[key];
+          if (!userAttribute) {
+            matched = false;
+            break;
+          }
+          const attributeMatch = filterStringMatcher(userAttribute, allowed);
+          if (!attributeMatch) {
+            matched = false;
+            break;
+          }
+        }
+        if (!matched) continue;
+      }
+
+      if (filters.custom) {
+        const filterInput = {
+          triggerSource,
+          userPoolId: event.userPoolId,
+          userName: event.userName,
+          callerContext: event.callerContext,
+          request: { userAttributes },
+          event,
+        };
+        const match = await filters.custom(filterInput);
+        if (!match) continue;
+      }
+
+      return route;
+    }
+
+    return undefined;
+  }
+}
+
+export function createCognitoMatcher(options?: CognitoMatcherOptions): CognitoMatcher {
+  return new CognitoMatcher(options);
+}

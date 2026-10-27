@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/cognito",
+  "name": "@latcher/cognito",
   "version": "0.1.0",
-  "description": "Cognito handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/CognitoRouter",
+  "description": "Cognito handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/CognitoMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -36,11 +36,11 @@
   ],
   "license": "UNLICENSED",
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^",
+    "@latcher/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

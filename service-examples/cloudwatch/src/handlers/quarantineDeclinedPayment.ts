@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/cloudwatch';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/cloudwatch';
 
 import { DECLINED_PAYMENT_MARKER, PAYMENTS_LOG_GROUP_PATTERN } from '../config.js';
 

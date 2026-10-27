@@ -1,5 +1,5 @@
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound, Ok } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { DEPOT_HEADER } from '../utils/constants.js';
 import { STOCK } from '../utils/warehouse.js';

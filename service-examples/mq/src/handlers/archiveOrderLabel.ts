@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ActiveMQBytesMessageRequest } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import type { ActiveMQBytesMessageRequest } from '@latcher/mq';
 
 // A shipping label is a PDF, so it travels as a bytes message and the body is the raw Buffer decoded
 // from base64. There is no JSON to check, which is why a bytes route takes no bodySchema.

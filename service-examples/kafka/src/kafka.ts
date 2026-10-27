@@ -1,4 +1,4 @@
-import { createKafkaRouter } from '@lambda-event-router/kafka';
+import { createKafkaMatcher } from '@latcher/kafka';
 
 import { capturePayment } from './handlers/capturePayment.js';
 import { escalateUrgentOrder } from './handlers/escalateUrgentOrder.js';
@@ -7,14 +7,14 @@ import { quarantineFailedRecord } from './handlers/quarantineFailedRecord.js';
 import { refundPayment } from './handlers/refundPayment.js';
 import { logRecord } from './middleware/logRecord.js';
 
-export const kafkaRouter = createKafkaRouter({
+export const kafkaMatcher = createKafkaMatcher({
   batchItemFailures: true,
   middleware: [logRecord],
 });
 
 // Order matters twice. escalateUrgentOrder's header filter has to win over processOrder for an urgent
 // order, and refundPayment's over capturePayment for a refund.
-kafkaRouter
+kafkaMatcher
   .route(escalateUrgentOrder)
   .route(processOrder)
   .route(refundPayment)

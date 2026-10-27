@@ -17,7 +17,7 @@ export interface Expected {
   bodyIncludes?: string;
   bodyIs?: string;
   // Bytes the response carries. The caller compares what came off the wire, and the in-process run
-  // compares the base64 the router handed the adapter.
+  // compares the base64 the matcher handed the adapter.
   bodyBase64?: string;
   headers?: Record<string, string | null>;
 }
@@ -270,7 +270,7 @@ export function buildSteps(version: PayloadVersion): Step[] {
       expected: { status: 200, headers: { 'access-control-allow-origin': null, vary: 'Origin' } },
     },
     {
-      name: 'preflight a path the router answers itself',
+      name: 'preflight a path the matcher answers itself',
       request: {
         method: 'OPTIONS',
         path: '/reports/valuation',

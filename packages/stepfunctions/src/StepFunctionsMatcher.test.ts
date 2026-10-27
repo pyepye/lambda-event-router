@@ -1,0 +1,901 @@
+import type { Context } from 'aws-lambda';
+
+import type { MockInstance } from 'vitest';
+
+import * as base from '@latcher/base';
+import { allEventBuilders, createMockContext, createMockSchema } from '@latcher/testing';
+
+import { createStepFunctionsMatcher, defineRoute, StepFunctionsMatcher } from './StepFunctionsMatcher.js';
+import type { StepFunctionsFilterInput, StepFunctionsMiddleware, StepFunctionsRequest } from './types.js';
+
+type StepFunctionsNext = (request: StepFunctionsRequest) => Promise<unknown>;
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+
+const context: Context = createMockContext();
+
+suite('StepFunctionsMatcher', () => {
+  let matcher: StepFunctionsMatcher;
+
+  beforeEach(() => {
+    matcher = new StepFunctionsMatcher();
+  });
+
+  suite('createStepFunctionsMatcher', () => {
+    test('creates a StepFunctionsMatcher instance', () => {
+      const matcher = createStepFunctionsMatcher();
+      expect(matcher).toBeInstanceOf(StepFunctionsMatcher);
+    });
+  });
+
+  suite('matcher ordering', () => {
+    test('marks itself a catch-all so Latcher sorts it after dedicated matchers', () => {
+      expect(matcher.matchTier).toBe('catchAll');
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    beforeEach(() => {
+      matcher.route(defineRoute({ filters: {} }).handle(vi.fn()));
+    });
+
+    test('returns true for a plain object event', async () => {
+      expect(await matcher.canHandleEvent({ action: 'process', data: 123 })).toBe(true);
+    });
+
+    test('returns false for null', async () => {
+      expect(await matcher.canHandleEvent(null)).toBe(false);
+    });
+
+    test('returns false for a string', async () => {
+      expect(await matcher.canHandleEvent('not an event')).toBe(false);
+    });
+
+    test('returns false for an array', async () => {
+      expect(await matcher.canHandleEvent([1, 2, 3])).toBe(false);
+    });
+
+    test('returns false for undefined', async () => {
+      expect(await matcher.canHandleEvent(undefined)).toBe(false);
+    });
+
+    test('returns false for a number', async () => {
+      expect(await matcher.canHandleEvent(42)).toBe(false);
+    });
+
+    test('returns false for a known SQS event', async () => {
+      const event = { Records: [{ eventSource: 'aws:sqs' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a known SNS event', async () => {
+      const event = { Records: [{ EventSource: 'aws:sns' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a known S3 event', async () => {
+      const event = { Records: [{ eventSource: 'aws:s3' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a known DynamoDB event', async () => {
+      const event = { Records: [{ eventSource: 'aws:dynamodb' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a known Kinesis event', async () => {
+      const event = { Records: [{ eventSource: 'aws:kinesis' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for an API Gateway V2 event', async () => {
+      const event = { rawPath: '/api/users', requestContext: { http: {} } };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a Cognito event', async () => {
+      const event = { triggerSource: 'PreSignUp_SignUp', userPoolId: 'us-east-1_abc123' };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for an EventBridge event', async () => {
+      const event = { source: 'custom.app', 'detail-type': 'OrderCreated', detail: { orderId: '123' } };
+      expect(await matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for a Connect contact flow event', async () => {
+      expect(await matcher.canHandleEvent({ Name: 'ContactFlowEvent', Details: {} })).toBe(false);
+    });
+
+    test('returns false for a Lex event', async () => {
+      expect(await matcher.canHandleEvent({ sessionState: {}, bot: { name: 'orders' } })).toBe(false);
+    });
+
+    test('returns false for a CloudWatch Logs event', async () => {
+      expect(await matcher.canHandleEvent({ awslogs: { data: 'H4sIA' } })).toBe(false);
+    });
+
+    test('returns false for a Firehose event', async () => {
+      expect(await matcher.canHandleEvent({ deliveryStreamArn: 'arn:aws:firehose:::x', records: [] })).toBe(false);
+    });
+
+    test('returns true for an empty Records array', async () => {
+      expect(await matcher.canHandleEvent({ Records: [] })).toBe(true);
+    });
+
+    test('returns true when Records contains a non-object element', async () => {
+      expect(await matcher.canHandleEvent({ Records: ['not-an-object'] })).toBe(true);
+    });
+
+    test('returns true for an unknown eventSource in Records', async () => {
+      const event = { Records: [{ eventSource: 'custom:source' }] };
+      expect(await matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true when eventSource is not a string', async () => {
+      const event = { Records: [{ eventSource: 123 }] };
+      expect(await matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true for an empty object', async () => {
+      expect(await matcher.canHandleEvent({})).toBe(true);
+    });
+
+    test('returns true for an object with TaskToken', async () => {
+      const event = { TaskToken: 'abc-123', input: { action: 'process' } };
+      expect(await matcher.canHandleEvent(event)).toBe(true);
+    });
+  });
+
+  suite('canHandleEvent route matching', () => {
+    test('declines an event when no route is registered', async () => {
+      expect(await matcher.canHandleEvent({ taskType: 'processOrder' })).toBe(false);
+    });
+
+    test('declines an event no custom filter matches', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput): boolean =>
+              base.isObject(event) && event.taskType === 'processOrder',
+          },
+        }).handle(async () => {}),
+      );
+
+      expect(await matcher.canHandleEvent({ taskType: 'enrichData' })).toBe(false);
+    });
+
+    test('claims an event a custom filter matches', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput): boolean =>
+              base.isObject(event) && event.taskType === 'processOrder',
+          },
+        }).handle(async () => {}),
+      );
+
+      expect(await matcher.canHandleEvent({ taskType: 'processOrder' })).toBe(true);
+    });
+
+    test('declines a task with no TaskToken when every route wants one', async () => {
+      matcher.route(defineRoute({ filters: { taskToken: true } }).handle(async () => {}));
+
+      expect(await matcher.canHandleEvent({ taskType: 'humanApproval' })).toBe(false);
+    });
+
+    test('claims a task carrying a TaskToken', async () => {
+      matcher.route(defineRoute({ filters: { taskToken: true } }).handle(async () => {}));
+
+      expect(await matcher.canHandleEvent({ TaskToken: 'abc-123', taskType: 'humanApproval' })).toBe(true);
+    });
+
+    test('runs a custom filter once across canHandleEvent and handleEvent', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      const handler = vi.fn().mockResolvedValue({ done: true });
+      matcher.route(defineRoute({ filters: { custom } }).handle(handler));
+      const event = { taskType: 'processOrder' };
+
+      expect(await matcher.canHandleEvent(event)).toBe(true);
+      await expect(matcher.handleEvent(event, context)).resolves.toEqual({ done: true });
+
+      expect(custom).toHaveBeenCalledOnce();
+    });
+  });
+
+  suite('defineRoute', () => {
+    test('returns a route builder with a handle method', () => {
+      const builder = defineRoute({
+        filters: {},
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(typeof builder.handle).toBe('function');
+    });
+
+    test('preserves filters, eventSchema, and handler in a regular route definition', () => {
+      const eventSchema = createMockSchema();
+      const handler = vi.fn();
+      const filters = {
+        custom: () => true,
+      };
+
+      const definition = defineRoute({
+        filters,
+        eventSchema,
+      }).handle(handler);
+
+      expect(definition.filters).toEqual(filters);
+      expect(definition.eventSchema).toBe(eventSchema);
+      expect(definition.handler).toBe(handler);
+    });
+
+    test('preserves filters, eventSchema, and handler in a task token route definition', () => {
+      const eventSchema = createMockSchema();
+      const handler = vi.fn();
+      const filters = {
+        taskToken: true as const,
+      };
+
+      const definition = defineRoute({
+        filters,
+        eventSchema,
+      }).handle(handler);
+
+      expect(definition.filters).toEqual(filters);
+      expect(definition.eventSchema).toBe(eventSchema);
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('route', () => {
+    test('returns the matcher instance for chaining', () => {
+      const definition = defineRoute({
+        filters: {},
+      }).handle(async () => {});
+
+      const result = matcher.route(definition);
+
+      expect(result).toBe(matcher);
+    });
+
+    test('types an inferred handler on a taskToken route', () => {
+      const result = matcher.route({
+        filters: { taskToken: true },
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        handler: async ({ taskToken, input }) => {
+          expectTypeOf(taskToken).toEqualTypeOf<string>();
+          expectTypeOf(input).toEqualTypeOf<unknown>();
+        },
+      });
+
+      expect(result).toBe(matcher);
+    });
+
+    test('types an inferred handler on a regular route', () => {
+      const result = matcher.route({
+        filters: {},
+        // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
+        handler: async ({ event }) => {
+          expectTypeOf(event).toEqualTypeOf<unknown>();
+        },
+      });
+
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('matchRoute', () => {
+    test('matches a route with taskToken filter when event has a TaskToken string', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(async () => {}),
+      );
+
+      const event = { TaskToken: 'token-abc', data: 'payload' };
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(event);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match a taskToken route when TaskToken is missing', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ data: 'no-token' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a taskToken route when TaskToken is not a string', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ TaskToken: 123 });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a taskToken route when event is not an object', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute('not-an-object');
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a taskToken false route when the event carries a TaskToken', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: false },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ TaskToken: 'token-abc', data: 'payload' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches a taskToken false route when the event carries no TaskToken', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: false },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ data: 'no-token' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('passes a callback payload to a later route when an earlier one sets taskToken false', async () => {
+      const regular = vi.fn();
+      const callback = vi.fn();
+
+      matcher
+        .route(defineRoute({ filters: { taskToken: false } }).handle(regular))
+        .route(defineRoute({ filters: { taskToken: true } }).handle(callback));
+
+      await matcher.handleEvent({ TaskToken: 'token-abc', orderId: 'AB-1029' }, context);
+
+      expect(regular).not.toHaveBeenCalled();
+      expect(callback).toHaveBeenCalledOnce();
+    });
+
+    test('matches a route by custom', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput): boolean => {
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'process';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ action: 'process' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a route by async custom', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: async ({ event }: StepFunctionsFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'process';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ action: 'process' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when custom returns false', async () => {
+      matcher.route(
+        defineRoute({
+          filters: { custom: () => false },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ action: 'process' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('passes { event } to the custom', async () => {
+      const custom = vi.fn(() => true);
+      matcher.route(
+        defineRoute({
+          filters: { custom },
+        }).handle(async () => {}),
+      );
+
+      const event = { action: 'test' };
+      // @ts-expect-error - testing private method directly
+      matcher.matchRoute(event);
+
+      expect(custom).toHaveBeenCalledWith({ event });
+    });
+
+    test('matches a catch-all route with empty filters', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ anything: 'goes' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a taskToken route with custom when both conditions are met', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            taskToken: true,
+            custom: ({ event }: StepFunctionsFilterInput) => {
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'approve';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ TaskToken: 'token-1', action: 'approve' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match a taskToken route with custom when custom returns false', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            taskToken: true,
+            custom: () => false,
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ TaskToken: 'token-1', action: 'reject' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match a taskToken route with custom when TaskToken is missing', async () => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            taskToken: true,
+            custom: () => true,
+          },
+        }).handle(async () => {}),
+      );
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ action: 'approve' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('selects the first matching route when multiple routes match', async () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+      matcher.route(defineRoute({ filters: {} }).handle(firstHandler));
+      matcher.route(defineRoute({ filters: {} }).handle(secondHandler));
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ data: 'test' });
+
+      expect(result).toBeDefined();
+      expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('orders a taskToken route ahead of the catch-all it shares filters with', async () => {
+      const catchAll = vi.fn();
+      const tokenRoute = vi.fn();
+      matcher.route(defineRoute({ filters: {} }).handle(catchAll));
+      matcher.route(defineRoute({ filters: { taskToken: true } }).handle(tokenRoute));
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ TaskToken: 'token-123', data: 'test' });
+
+      expect(result?.handler).toBe(tokenRoute);
+    });
+
+    test('orders a guarded route ahead of the catch-all it shares filters with', async () => {
+      const catchAll = vi.fn();
+      const guarded = vi.fn();
+      matcher.route(defineRoute({ filters: {} }).handle(catchAll));
+      matcher.route(defineRoute({ filters: { custom: () => true } }).handle(guarded));
+
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ data: 'test' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
+    test('returns undefined when no routes are registered', async () => {
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute({ data: 'test' });
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('calls the matched handler with the event and returns the result', async () => {
+      const handler = vi.fn().mockResolvedValue({ status: 'done' });
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      const event = { action: 'process', orderId: '123' };
+      const result = await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith({ event, context });
+      expect(result).toEqual({ status: 'done' });
+    });
+
+    test('runs a route for a non-object event handed straight to handleEvent', async () => {
+      const handler = vi.fn().mockResolvedValue({ status: 'done' });
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      await expect(matcher.handleEvent(42, context)).resolves.toEqual({ status: 'done' });
+      expect(handler).toHaveBeenCalledWith({ event: 42, context });
+    });
+
+    test('throws when no route matches', async () => {
+      await expect(matcher.handleEvent({ action: 'unknown' }, context)).rejects.toThrow(
+        'No route matched for Step Functions event',
+      );
+    });
+
+    test('throws a NoRouteMatchedError when no route matches', async () => {
+      const error = await matcher.handleEvent({ action: 'unknown' }, context).catch((thrown: unknown) => thrown);
+
+      expect(base.NoRouteMatchedError.isNoRouteMatchedError(error)).toBe(true);
+    });
+
+    test('extracts TaskToken and passes { taskToken, input } to a task token handler', async () => {
+      const handler = vi.fn().mockResolvedValue({ sent: true });
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(handler),
+      );
+
+      const event = { TaskToken: 'token-xyz', orderId: '456', status: 'approved' };
+      const result = await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith({
+        taskToken: 'token-xyz',
+        input: { orderId: '456', status: 'approved' },
+        event,
+        context,
+      });
+      expect(result).toEqual({ sent: true });
+    });
+
+    test('propagates handler errors', async () => {
+      matcher.route(
+        defineRoute({ filters: {} }).handle(async () => {
+          throw new Error('handler exploded');
+        }),
+      );
+
+      await expect(matcher.handleEvent({ data: 'test' }, context)).rejects.toThrow('handler exploded');
+    });
+  });
+
+  suite('handleEvent - schema validation', () => {
+    test('handler receives validated event from eventSchema for a regular route', async () => {
+      const handler = vi.fn();
+      const eventSchema = createMockSchema();
+      matcher.route(
+        defineRoute({
+          filters: {},
+          eventSchema,
+        }).handle(handler),
+      );
+
+      const rawEvent = { action: 'process' };
+      await matcher.handleEvent(rawEvent, context);
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(rawEvent, eventSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith({ event: rawEvent, context });
+    });
+
+    test('throws when eventSchema validation fails for a regular route', async () => {
+      const eventSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route(
+        defineRoute({
+          filters: {},
+          eventSchema,
+        }).handle(async () => {}),
+      );
+
+      const rawEvent = { bad: 'data' };
+      await expect(matcher.handleEvent(rawEvent, context)).rejects.toThrow('Event validation failed');
+    });
+
+    test('passes raw event to handler when no eventSchema is provided', async () => {
+      const handler = vi.fn();
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      const event = { action: 'process', raw: true };
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith({ event, context });
+    });
+
+    test('validates input (not TaskToken) with eventSchema for a task token route', async () => {
+      const handler = vi.fn();
+      const eventSchema = createMockSchema();
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+          eventSchema,
+        }).handle(handler),
+      );
+
+      const rawEvent = { TaskToken: 'token-abc', orderId: '123' };
+      await matcher.handleEvent(rawEvent, context);
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ orderId: '123' }, eventSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith({
+        taskToken: 'token-abc',
+        input: { orderId: '123' },
+        event: rawEvent,
+        context,
+      });
+    });
+
+    test('throws when eventSchema validation fails for a task token route', async () => {
+      const eventSchema = createMockSchema({ issues: [{ message: 'invalid input' }] });
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+          eventSchema,
+        }).handle(async () => {}),
+      );
+
+      await expect(matcher.handleEvent({ TaskToken: 'token-abc', bad: 'data' }, context)).rejects.toThrow(
+        'Event validation failed',
+      );
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes to different handlers via custom', async () => {
+      const createHandler = vi.fn();
+      const deleteHandler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput) => {
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'create';
+            },
+          },
+        }).handle(createHandler),
+      );
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput) => {
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'delete';
+            },
+          },
+        }).handle(deleteHandler),
+      );
+
+      await matcher.handleEvent({ action: 'create', id: '1' }, context);
+      await matcher.handleEvent({ action: 'delete', id: '2' }, context);
+
+      expect(createHandler).toHaveBeenCalledTimes(1);
+      expect(createHandler).toHaveBeenCalledWith({ event: { action: 'create', id: '1' }, context });
+      expect(deleteHandler).toHaveBeenCalledTimes(1);
+      expect(deleteHandler).toHaveBeenCalledWith({ event: { action: 'delete', id: '2' }, context });
+    });
+
+    test('same matcher handles both task token and regular events', async () => {
+      const taskTokenHandler = vi.fn().mockResolvedValue({ sent: true });
+      const regularHandler = vi.fn().mockResolvedValue({ processed: true });
+      matcher.route(
+        defineRoute({
+          filters: { taskToken: true },
+        }).handle(taskTokenHandler),
+      );
+      matcher.route(
+        defineRoute({
+          filters: {},
+        }).handle(regularHandler),
+      );
+
+      const taskTokenResult = await matcher.handleEvent({ TaskToken: 'token-1', orderId: '100' }, context);
+      const regularResult = await matcher.handleEvent({ action: 'process', orderId: '200' }, context);
+
+      expect(taskTokenHandler).toHaveBeenCalledWith({
+        taskToken: 'token-1',
+        input: { orderId: '100' },
+        event: { TaskToken: 'token-1', orderId: '100' },
+        context,
+      });
+      expect(taskTokenResult).toEqual({ sent: true });
+
+      expect(regularHandler).toHaveBeenCalledWith({ event: { action: 'process', orderId: '200' }, context });
+      expect(regularResult).toEqual({ processed: true });
+    });
+
+    test('catch-all handles non-matching events', async () => {
+      const specificHandler = vi.fn();
+      const catchAllHandler = vi.fn().mockResolvedValue({ fallback: true });
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ event }: StepFunctionsFilterInput) => {
+              // @ts-expect-error - event is unknown, testing filter with known shape
+              return event.action === 'specific';
+            },
+          },
+        }).handle(specificHandler),
+      );
+      matcher.route(
+        defineRoute({
+          filters: {},
+        }).handle(catchAllHandler),
+      );
+
+      const result = await matcher.handleEvent({ action: 'unknown' }, context);
+
+      expect(specificHandler).not.toHaveBeenCalled();
+      expect(catchAllHandler).toHaveBeenCalledWith({ event: { action: 'unknown' }, context });
+      expect(result).toEqual({ fallback: true });
+    });
+  });
+
+  suite('context', () => {
+    test('passes the Lambda context to a regular handler', async () => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      await matcher.handleEvent({ action: 'process' }, context);
+
+      expect(handler.mock.calls[0]?.[0].context).toBe(context);
+    });
+
+    test('passes the Lambda context to a task token handler', async () => {
+      const handler = vi.fn().mockResolvedValue(undefined);
+      matcher.route(defineRoute({ filters: { taskToken: true } }).handle(handler));
+
+      await matcher.handleEvent({ TaskToken: 'token-abc', orderId: '1' }, context);
+
+      expect(handler.mock.calls[0]?.[0].context).toBe(context);
+    });
+  });
+
+  suite('middleware', () => {
+    function trace(name: string, calls: string[]): StepFunctionsMiddleware {
+      return async function tracer(request: StepFunctionsRequest, next: StepFunctionsNext): Promise<unknown> {
+        calls.push(`${name}-pre`);
+        const result = await next(request);
+        calls.push(`${name}-post`);
+        return result;
+      };
+    }
+
+    test('runs matcher middleware then route middleware around the handler', async () => {
+      const calls: string[] = [];
+      const matcherLevel = createStepFunctionsMatcher({ middleware: [trace('matcher', calls)] });
+      matcherLevel.route(
+        defineRoute({ filters: {}, middleware: [trace('route', calls)] }).handle(async () => {
+          calls.push('handler');
+          return { done: true };
+        }),
+      );
+
+      const result = await matcherLevel.handleEvent({ action: 'process' }, context);
+
+      expect(calls).toEqual(['matcher-pre', 'route-pre', 'handler', 'route-post', 'matcher-post']);
+      expect(result).toEqual({ done: true });
+    });
+
+    test('runs middleware for a task token route as well', async () => {
+      const calls: string[] = [];
+      const matcherLevel = createStepFunctionsMatcher({ middleware: [trace('matcher', calls)] });
+      matcherLevel.route(
+        defineRoute({ filters: { taskToken: true } }).handle(async () => {
+          calls.push('handler');
+        }),
+      );
+
+      await matcherLevel.handleEvent({ TaskToken: 'token-abc', orderId: '1' }, context);
+
+      expect(calls).toEqual(['matcher-pre', 'handler', 'matcher-post']);
+    });
+
+    test('gives middleware the event and context, and lets it read the request', async () => {
+      const seen: unknown[] = [];
+      async function record(request: StepFunctionsRequest, next: StepFunctionsNext): Promise<unknown> {
+        seen.push({ event: request.event, context: request.context });
+        return next(request);
+      }
+
+      const matcherLevel = createStepFunctionsMatcher({ middleware: [record] });
+      matcherLevel.route(defineRoute({ filters: {} }).handle(async () => undefined));
+
+      await matcherLevel.handleEvent({ action: 'process' }, context);
+
+      expect(seen).toEqual([{ event: { action: 'process' }, context }]);
+    });
+
+    test('lets middleware short-circuit without calling the handler', async () => {
+      const handler = vi.fn();
+      async function block(): Promise<unknown> {
+        return { blocked: true };
+      }
+
+      const matcherLevel = createStepFunctionsMatcher({ middleware: [block] });
+      matcherLevel.route(defineRoute({ filters: {} }).handle(handler));
+
+      const result = await matcherLevel.handleEvent({ action: 'process' }, context);
+
+      expect(result).toEqual({ blocked: true });
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('runs no middleware when none is registered', async () => {
+      const handler = vi.fn().mockResolvedValue({ done: true });
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      await expect(matcher.handleEvent({ action: 'process' }, context)).resolves.toEqual({ done: true });
+    });
+  });
+});
+
+suite('StepFunctionsMatcher.canHandleEvent', () => {
+  // createDocumentDBChangeEvent builds one change document rather than an event, so this
+  // catch-all matcher is the only thing that recognises it.
+  const ownEvents = ['createDocumentDBChangeEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const matcher = createStepFunctionsMatcher().route(defineRoute({ filters: {} }).handle(async () => {}));
+
+    const claimed = await matcher.canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
+  });
+});

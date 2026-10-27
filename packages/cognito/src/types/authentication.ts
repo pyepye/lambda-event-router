@@ -10,7 +10,7 @@ import type {
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
 import type { CognitoFilters, UserAttributes } from './common.js';
-import type { CognitoMiddleware } from './router.js';
+import type { CognitoMiddleware } from './matcher.js';
 
 // =============================================================================
 // Trigger Sources - derived from aws-lambda

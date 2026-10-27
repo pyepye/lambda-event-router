@@ -1,5 +1,5 @@
-import { defineEventsAuthorizerRoute, EventsDenied } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import { defineEventsAuthorizerRoute, EventsDenied } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import { AUDIT_NAMESPACE } from '../utils/constants.js';
 

@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { KinesisMiddleware } from '@lambda-event-router/kinesis';
+import { logger } from '@latcher/base';
+import type { KinesisMiddleware } from '@latcher/kinesis';
 
 import type { TOrder } from '../utils/schemas.js';
 

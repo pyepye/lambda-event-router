@@ -1,11 +1,11 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 import {
-  type ApiRequest,
-  type ApiResponse,
-  Conflict,
-  Created,
-  type VPCLatticeAuth,
-} from '@lambda-event-router/vpclattice';
+    type ApiRequest,
+    type ApiResponse,
+    Conflict,
+    Created,
+    type VPCLatticeAuth,
+} from '@latcher/vpclattice';
 
 import { STOCK, type StockItem } from '../utils/inventory.js';
 import type { TNewStockItem } from '../utils/schemas.js';

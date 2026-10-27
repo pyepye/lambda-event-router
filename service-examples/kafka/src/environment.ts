@@ -1,4 +1,4 @@
-// An absent value would leave a string filter as an empty string, which the router reads as no
+// An absent value would leave a string filter as an empty string, which the matcher reads as no
 // filter at all. Every route would then claim every record. Failing at cold start is louder.
 function requiredEnvironment(name: string): string {
   const value = process.env[name];

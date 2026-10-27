@@ -67,7 +67,7 @@ export class AppStack extends Stack {
     });
 
     // No subscription filter policies anywhere: every published message reaches the worker, and the
-    // router does all the filtering.
+    // matcher does all the filtering.
     ordersTopic.addSubscription(new LambdaSubscription(workerFn));
     inventoryTopic.addSubscription(new LambdaSubscription(workerFn));
     deliveryFailuresTopic.addSubscription(new LambdaSubscription(workerFn));

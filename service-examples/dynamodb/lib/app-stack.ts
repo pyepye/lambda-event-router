@@ -22,7 +22,7 @@ const WORKER_RETRY_ATTEMPTS = 1;
 const srcDir = fileURLToPath(new URL('../src', import.meta.url));
 const entry = join(srcDir, 'index.ts');
 
-// Nothing is external: the router reads stream records through `@aws-sdk/util-dynamodb`, which the
+// Nothing is external: the matcher reads stream records through `@aws-sdk/util-dynamodb`, which the
 // Lambda runtime does not supply, so it has to be in the bundle.
 const sharedBundling: NodejsFunctionProps['bundling'] = {
   format: OutputFormat.ESM,

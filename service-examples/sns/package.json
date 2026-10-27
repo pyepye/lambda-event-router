@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-sns",
+  "name": "@latcher/service-example-sns",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/sns": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/sns": "workspace:*",
     "@aws-sdk/client-sns": "^3.1034.0",
     "zod": "^4.3.5"
   },

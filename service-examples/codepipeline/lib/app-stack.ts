@@ -69,7 +69,7 @@ export class AppStack extends Stack {
       runtime: Runtime.NODEJS_22_X,
       memorySize: 512,
       timeout: Duration.seconds(30),
-      // The router reports the job as failed before the handler's error reaches Lambda, so an async
+      // The matcher reports the job as failed before the handler's error reaches Lambda, so an async
       // retry would only repeat a failure CodePipeline has recorded.
       retryAttempts: 0,
       loggingFormat: LoggingFormat.JSON,
@@ -140,13 +140,13 @@ export class AppStack extends Stack {
         new LambdaInvokeAction({
           actionName: 'AnnounceRelease',
           lambda: notifierFn,
-          // Not JSON, so the router hands the handler the raw string rather than an object.
+          // Not JSON, so the matcher hands the handler the raw string rather than an object.
           userParametersString: 'releases',
         }),
       ],
     });
 
-    // Every action here fails, one per failure the router can produce. They share a runOrder, so all
+    // Every action here fails, one per failure the matcher can produce. They share a runOrder, so all
     // three run before the stage gives up.
     pipeline.addStage({
       stageName: 'Recover',
@@ -160,7 +160,7 @@ export class AppStack extends Stack {
           actionName: 'ReconcileLedger',
           lambda: deployerFn,
           // Consuming the verification report proves VerifyBundle uploaded it. A missing output
-          // artifact fails this action before the router ever sees the job.
+          // artifact fails this action before the matcher ever sees the job.
           inputs: [releaseBundle, verificationReport],
           userParameters: { step: RECONCILE_STEP, environment: ENVIRONMENT },
         }),

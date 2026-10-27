@@ -1,4 +1,4 @@
-import type { DocumentDBInsertRequest, DocumentDBResponse } from '@lambda-event-router/documentdb';
+import type { DocumentDBInsertRequest, DocumentDBResponse } from '@latcher/documentdb';
 
 import type { TDocumentKey, TPayment } from '../utils/schemas.js';
 

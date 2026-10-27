@@ -1,4 +1,4 @@
-import type { ConnectFilterInput } from '@lambda-event-router/connect';
+import type { ConnectFilterInput } from '@latcher/connect';
 
 import { STEP_PARAMETER } from './constants.js';
 

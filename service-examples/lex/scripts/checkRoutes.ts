@@ -1,13 +1,13 @@
 import type { Context, LexV2Event, LexV2Slots } from 'aws-lambda';
 
-import type { Expected, RouterStep } from '../src/conversation/steps.js';
-import { DEPLOYED_BOT_ID, routerSteps } from '../src/conversation/steps.js';
+import type { Expected, MatcherStep } from '../src/conversation/steps.js';
+import { DEPLOYED_BOT_ID, matcherSteps } from '../src/conversation/steps.js';
 import { LOCALE_ID, TRACKING_NUMBER_SLOT } from '../src/utils/constants.js';
 
-// The botId filter is read from the environment when the router module loads, so the value has to be
+// The botId filter is read from the environment when the matcher module loads, so the value has to be
 // in place before the import runs.
 process.env.BOT_ID = DEPLOYED_BOT_ID;
-const { lexRouter } = await import('../src/lex.js');
+const { lexMatcher } = await import('../src/lex.js');
 
 const ACCOUNT = '123456789012';
 const REGION = 'eu-west-2';
@@ -22,7 +22,7 @@ const context = {
 // The delivered event, copied field for field. Lex sends the resolved intent twice: once under
 // interpretations and once under sessionState, and a filled slot carries both the raw and the
 // interpreted value.
-function buildEvent(step: RouterStep): LexV2Event {
+function buildEvent(step: MatcherStep): LexV2Event {
   const slots: LexV2Slots = step.trackingNumber
     ? {
         [TRACKING_NUMBER_SLOT]: {
@@ -107,19 +107,19 @@ function report(label: string, problems: string[]): void {
   console.log(`FAIL ${label}: ${problems.join(', ')}`);
 }
 
-for (const step of routerSteps) {
+for (const step of matcherSteps) {
   const event = buildEvent(step);
   try {
-    report(step.name, problemsWith(await lexRouter.handleEvent(event, context), undefined, step.expected));
+    report(step.name, problemsWith(await lexMatcher.handleEvent(event, context), undefined, step.expected));
   } catch (error) {
     report(step.name, problemsWith(undefined, error, step.expected));
   }
 }
 
 const claims: [string, boolean][] = [
-  ['the router takes a Lex turn', lexRouter.canHandleEvent(buildEvent(routerSteps[0] as RouterStep))],
-  ['the router turns a plain object away', !lexRouter.canHandleEvent({ detail: {} })],
-  ['the router turns an SQS event away', !lexRouter.canHandleEvent({ Records: [] })],
+  ['the matcher takes a Lex turn', lexMatcher.canHandleEvent(buildEvent(matcherSteps[0] as MatcherStep))],
+  ['the matcher turns a plain object away', !lexMatcher.canHandleEvent({ detail: {} })],
+  ['the matcher turns an SQS event away', !lexMatcher.canHandleEvent({ Records: [] })],
 ];
 
 for (const [label, held] of claims) {

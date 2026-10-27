@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/stepfunctions",
+  "name": "@latcher/stepfunctions",
   "version": "0.1.0",
-  "description": "Step Functions handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/StepFunctionsRouter",
+  "description": "Step Functions handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/StepFunctionsMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -36,11 +36,11 @@
   ],
   "license": "UNLICENSED",
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^",
+    "@latcher/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

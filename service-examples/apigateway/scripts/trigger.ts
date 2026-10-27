@@ -1,9 +1,9 @@
-import { request as httpsRequest } from 'node:https';
-
-import { Sha256 } from '@aws-crypto/sha256-js';
 import { APIGatewayClient, GetApiKeyCommand } from '@aws-sdk/client-api-gateway';
 import { CloudFormationClient, DescribeStacksCommand } from '@aws-sdk/client-cloudformation';
 import { fromNodeProviderChain } from '@aws-sdk/credential-providers';
+import { request as httpsRequest } from 'node:https';
+
+import { Sha256 } from '@aws-crypto/sha256-js';
 import { HttpRequest } from '@smithy/protocol-http';
 import { SignatureV4 } from '@smithy/signature-v4';
 import WebSocket from 'ws';
@@ -625,7 +625,7 @@ await expectFrame(
 await expectFrame('WebSocket send an unknown action', JSON.stringify({ action: 'reindex' }), 'Unknown action');
 
 await expectFrame(
-  'WebSocket send an action the router has no route for',
+  'WebSocket send an action the matcher has no route for',
   JSON.stringify({ action: 'subscribe' }),
   'Internal server error',
 );

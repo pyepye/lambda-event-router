@@ -1,5 +1,5 @@
-import type { HTTPMiddleware } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import type { HTTPMiddleware } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 // Route middleware on PUT /returns/:returnId/note. The body has no schema, so it stays `unknown`
 // here and in the handler.

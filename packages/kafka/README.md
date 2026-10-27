@@ -1,41 +1,41 @@
-# @lambda-event-router/kafka
+# @latcher/kafka
 
-Routes each record in a Kafka batch to a handler by topic or broker, for Amazon MSK and self-managed clusters. The router decodes the key, value and headers, and runs records in order.
+Routes each record in a Kafka batch to a handler by topic or broker, for Amazon MSK and self-managed clusters. The matcher decodes the key, value and headers, and runs records in order.
 
 **Supported AWS Services:** `Amazon MSK` | `Self-managed Apache Kafka`
 
-**Available Routers:** `KafkaRouter`
+**Available Matchers:** `KafkaMatcher`
 
-**Docs:** [KafkaRouter](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter)
+**Docs:** [KafkaMatcher](https://pyepye.github.io/latcher/matchers/KafkaMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/kafka
+npm install @latcher/base @latcher/kafka
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { kafkaRouter } from './kafka'
+import { Latcher } from '@latcher/base'
+import { kafkaMatcher } from './kafka'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [kafkaRouter],
+const latcher = new Latcher({
+  matchers: [kafkaMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // kafka.ts
-import { createKafkaRouter, defineRoute } from '@lambda-event-router/kafka'
+import { createKafkaMatcher, defineRoute } from '@latcher/kafka'
 import { z } from 'zod'
 
-export const kafkaRouter = createKafkaRouter()
+export const kafkaMatcher = createKafkaMatcher()
 
 const stockMoved = defineRoute({
   filters: {
@@ -49,16 +49,16 @@ const stockMoved = defineRoute({
   console.log(`Moved ${value.quantity} of ${value.sku}`)
 })
 
-kafkaRouter.route(stockMoved)
+kafkaMatcher.route(stockMoved)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/KafkaMatcher#annotated-handlers).
 
 ## Documentation
 
-- [KafkaRouter](https://pyepye.github.io/lambda-event-router/routers/KafkaRouter) covers every filter, tombstones, message headers, and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [KafkaMatcher](https://pyepye.github.io/latcher/matchers/KafkaMatcher) covers every filter, tombstones, message headers, and failures and retries.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

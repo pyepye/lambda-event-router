@@ -2,7 +2,7 @@ import type { SQSRecord as AWSSQSRecord, Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export type SQSMessageAttributeValue = string | string[] | number | Buffer;
 export type SQSMessageAttributes = Record<string, SQSMessageAttributeValue>;
@@ -46,7 +46,7 @@ export interface SQSRouteDefinition<TBody = unknown, TMessageAttributes = SQSMes
   handler: SQSRecordHandler<TBody, TMessageAttributes>;
 }
 
-export interface SQSRouterOptions {
+export interface SQSMatcherOptions {
   batchItemFailures?: boolean;
   middleware?: SQSMiddleware[];
 }

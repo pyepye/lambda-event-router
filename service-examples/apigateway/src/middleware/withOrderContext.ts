@@ -1,5 +1,5 @@
-import type { HTTPMiddleware, LambdaAuth } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { HTTPMiddleware, LambdaAuth } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { TOrderQuery } from '../utils/schemas.js';
 

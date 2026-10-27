@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { DocumentDBDeleteRequest, DocumentDBResponse } from '@lambda-event-router/documentdb';
+import { logger } from '@latcher/base';
+import type { DocumentDBDeleteRequest, DocumentDBResponse } from '@latcher/documentdb';
 
 import type { TDocumentKey } from '../utils/schemas.js';
 

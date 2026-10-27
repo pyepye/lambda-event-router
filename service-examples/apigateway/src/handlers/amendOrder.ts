@@ -1,5 +1,5 @@
-import { type APIGatewayAuth, type ApiRequest, type ApiResponse, NoContent } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { type APIGatewayAuth, type ApiRequest, type ApiResponse, NoContent } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { TOrderAmendment } from '../utils/schemas.js';
 

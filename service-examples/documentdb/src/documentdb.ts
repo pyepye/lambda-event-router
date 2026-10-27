@@ -1,4 +1,4 @@
-import { createDocumentDBRouter } from '@lambda-event-router/documentdb';
+import { createDocumentDBMatcher } from '@latcher/documentdb';
 
 import { CLUSTER_ARN } from './config.js';
 import { adjustStockLevel } from './handlers/adjustStockLevel.js';
@@ -18,20 +18,20 @@ import { logChange } from './middleware/logChange.js';
 import { withOrderContext } from './middleware/withOrderContext.js';
 import { COLLECTIONS, DATABASES } from './utils/cluster.js';
 import {
-  DocumentKeySchema,
-  OrderSchema,
-  PaymentSchema,
-  PriceHistorySchema,
-  ProductSchema,
-  ShipmentSchema,
-  StockLevelSchema,
+    DocumentKeySchema,
+    OrderSchema,
+    PaymentSchema,
+    PriceHistorySchema,
+    ProductSchema,
+    ShipmentSchema,
+    StockLevelSchema,
 } from './utils/schemas.js';
 
-export const documentDBRouter = createDocumentDBRouter({ middleware: [logChange] });
+export const documentDBMatcher = createDocumentDBMatcher({ middleware: [logChange] });
 
 // Order matters: escalateHighValueOrder's custom filter must win over createOrder for a large order,
 // so it is registered first.
-documentDBRouter
+documentDBMatcher
   .route(escalateHighValueOrder)
   .insert({
     filters: { eventSourceArn: CLUSTER_ARN, database: DATABASES.storefront, collection: COLLECTIONS.orders },

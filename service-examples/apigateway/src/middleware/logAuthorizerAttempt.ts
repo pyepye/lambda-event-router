@@ -1,7 +1,7 @@
-import type { LambdaAuthorizerMiddleware } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { LambdaAuthorizerMiddleware } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
-// Router middleware on the authorizer: runs for every authorizer event, whatever its type.
+// Matcher middleware on the authorizer: runs for every authorizer event, whatever its type.
 export const logAuthorizerAttempt: LambdaAuthorizerMiddleware = async (request, next) => {
   logger.info({
     message: 'Authorising request',

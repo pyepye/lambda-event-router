@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/eventbridge';
 
 import { LOCAL_ACCOUNT_ID, LOCAL_REGION, ORDER_UPDATED, ORDERS_SOURCE } from '../config.js';
 import { OrderUpdatedSchema } from '../utils/schemas.js';

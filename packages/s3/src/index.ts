@@ -1,7 +1,7 @@
-export type { S3BatchResponse } from './batchResponse.js';
 export { isS3BatchResponse, PermanentFailure, Succeeded, TemporaryFailure } from './batchResponse.js';
-export { createS3BatchRouter, S3BatchRouter } from './S3BatchRouter.js';
-export { createS3Router, defineRoute, S3Router } from './S3Router.js';
+export type { S3BatchResponse } from './batchResponse.js';
+export { createS3BatchMatcher, S3BatchMatcher } from './S3BatchMatcher.js';
+export { createS3Matcher, defineRoute, S3Matcher } from './S3Matcher.js';
 // Re-export all types
 export type {
   // Common types
@@ -11,13 +11,13 @@ export type {
   S3BatchEventJob,
   S3BatchEventTask,
   S3BatchHandler,
+  S3BatchMatcherOptions,
   S3BatchMiddleware,
   S3BatchRequest,
   S3BatchResult,
   S3BatchResultResult,
   S3BatchResultResultCode,
   S3BatchRouteDefinition,
-  S3BatchRouterOptions,
   S3FilterInput,
   S3Filters,
   S3FiltersWithoutEventNames,
@@ -35,6 +35,8 @@ export type {
   S3LifecycleTransitionHandler,
   S3LifecycleTransitionRequest,
   S3LifecycleTransitionRouteDefinition,
+  // MatcherOptions
+  S3MatcherOptions,
   // Middleware
   S3Middleware,
   // ObjectAcl types
@@ -67,8 +69,6 @@ export type {
   S3ReducedRedundancyLostObjectRequest,
   S3ReducedRedundancyLostObjectRouteDefinition,
   S3RouteDefinition,
-  // RouterOptions
-  S3RouterOptions,
   S3TestEvent,
   S3TestEventHandler,
   S3TestEventRequest,

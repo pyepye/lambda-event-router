@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/secretsmanager';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/secretsmanager';
 
 import { readPendingToken } from '../utils/pendingToken.js';
 

@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { s3BatchRouter, s3Router } from './s3.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [s3Router, s3BatchRouter] });
+import { s3BatchMatcher, s3Matcher } from './s3.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [s3Matcher, s3BatchMatcher] });
+
+export const handler: Handler = latcher.handler();

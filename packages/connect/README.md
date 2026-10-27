@@ -1,40 +1,40 @@
-# @lambda-event-router/connect
+# @latcher/connect
 
 Routes Amazon Connect contact flow calls to handlers by channel and initiation method. Your handler returns a map of values to the flow.
 
 **Supported AWS Services:** `Amazon Connect`
 
-**Available Routers:** `ConnectRouter`
+**Available Matchers:** `ConnectMatcher`
 
-**Docs:** [ConnectRouter](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter)
+**Docs:** [ConnectMatcher](https://pyepye.github.io/latcher/matchers/ConnectMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/connect
+npm install @latcher/base @latcher/connect
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { connectRouter } from './connect'
+import { Latcher } from '@latcher/base'
+import { connectMatcher } from './connect'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [connectRouter],
+const latcher = new Latcher({
+  matchers: [connectMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // connect.ts
-import { createConnectRouter, defineRoute } from '@lambda-event-router/connect'
+import { createConnectMatcher, defineRoute } from '@latcher/connect'
 
-export const connectRouter = createConnectRouter()
+export const connectMatcher = createConnectMatcher()
 
 const greetInboundCaller = defineRoute({
   filters: {
@@ -47,17 +47,17 @@ const greetInboundCaller = defineRoute({
   return { greeting: 'Welcome back' }
 })
 
-connectRouter.route(greetInboundCaller)
+connectMatcher.route(greetInboundCaller)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/ConnectMatcher#annotated-handlers).
 
 ## Documentation
 
-- [ConnectRouter](https://pyepye.github.io/lambda-event-router/routers/ConnectRouter) covers every filter, responses
+- [ConnectMatcher](https://pyepye.github.io/latcher/matchers/ConnectMatcher) covers every filter, responses
   and middleware.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

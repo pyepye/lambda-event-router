@@ -1,4 +1,4 @@
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockSchema } from '@latcher/testing';
 
 import { SchemaValidationError } from '../errors/SchemaValidationError.js';
 import type { JsonValue } from './data.js';

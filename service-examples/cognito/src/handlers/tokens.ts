@@ -1,6 +1,6 @@
-import { logger } from '@lambda-event-router/base';
-import type { PreTokenGenerationRequest } from '@lambda-event-router/cognito';
-import { defineRoute } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { PreTokenGenerationRequest } from '@latcher/cognito';
+import { defineRoute } from '@latcher/cognito';
 import type { PreTokenGenerationTriggerEvent } from 'aws-lambda';
 
 // Refresh tokens get their own route so the claim says which grant produced the token. Registered

@@ -1,7 +1,7 @@
 # Service example: Lex
 
-A deployable CDK app that exercises the `LexRouter` end to end. It models a parcel support bot. One
-Lambda is the code hook for every intent, and the router picks the handler for each turn.
+A deployable CDK app that exercises the `LexMatcher` end to end. It models a parcel support bot. One
+Lambda is the code hook for every intent, and the matcher picks the handler for each turn.
 
 The routes are in `src/lex.ts`, and the handlers are in `src/handlers/`.
 
@@ -20,7 +20,7 @@ ParcelSupport (Amazon Lex V2 bot, en_GB)
 
 ## What it covers
 
-One `trigger` holds six conversations with the bot. Together they hit every filter the router has,
+One `trigger` holds six conversations with the bot. Together they hit every filter the matcher has,
 both convenience methods, and both ways a turn can fail.
 
 | Feature | Where |
@@ -38,7 +38,7 @@ both convenience methods, and both ways a turn can fail.
 | `fulfillmentCodeHook` method | `reportParcelLocation` and `escalateToSupervisor` register through it |
 | `route` method | `cancelDelivery`, `bookRedelivery` and `handOverToAgent` register through it |
 | `defineRoute` | The three `route` handlers take their request type from their filters, and `cancelDelivery` carries its middleware there |
-| Router middleware | `logTurn` runs once per matched turn |
+| Matcher middleware | `logTurn` runs once per matched turn |
 | Route middleware | `withAccountContext` on the escalation route, `withCancellationAudit` on `cancelDelivery` |
 | Match order | A priority account reaches `escalateToSupervisor` on the same utterance others use for `bookRedelivery` |
 | No route matched | The fallback intent reaches the worker and matches nothing |
@@ -78,9 +78,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-lex... install
-pnpm -F @lambda-event-router/service-example-lex... build
-pnpm -F @lambda-event-router/service-example-lex run deploy
+pnpm -F @latcher/service-example-lex... install
+pnpm -F @latcher/service-example-lex... build
+pnpm -F @latcher/service-example-lex run deploy
 ```
 
 CDK outputs include `BotId`, `BotAliasId`, `LocaleId` and `WorkerLogGroupName`.
@@ -98,7 +98,7 @@ hard-coded parcels and writes nothing down.
 ## Send sample utterances
 
 ```bash
-pnpm -F @lambda-event-router/service-example-lex trigger
+pnpm -F @latcher/service-example-lex trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name as the first
@@ -132,7 +132,7 @@ logs in JSON, so `--format json` pretty prints the fields.
 Note: the log group is `/aws/lambda/<stackName>-worker`, so the name changes if you deploy with a
 different `stackName`.
 
-One trigger run puts 11 invocations in the log. Ten of them log `Handling Lex turn` from the router
+One trigger run puts 11 invocations in the log. Ten of them log `Handling Lex turn` from the matcher
 middleware, which carries the intent, the hook, the input mode and the bot id.
 
 Nine invocations succeed:
@@ -153,8 +153,8 @@ Two invocations fail, and each leaves an `ERROR` record carrying `errorType`, `e
 - `No agent is free to take "speak to an agent"` comes from the handler. That invocation has a
   `Handling Lex turn` line, because the middleware ran before the handler threw.
 - `No route matched for Amazon Lex event (intent: FallbackIntent, invocationSource:
-  FulfillmentCodeHook)` comes from the router. That invocation has no `Handling Lex turn` line. The
-  router matches a route before it runs any middleware.
+  FulfillmentCodeHook)` comes from the matcher. That invocation has no `Handling Lex turn` line. The
+  matcher matches a route before it runs any middleware.
 
 Lex answers both failures with the intent's configured failure response. The intent state comes back
 as `Failed`, and the trigger asserts both.
@@ -178,10 +178,10 @@ whatever the intent.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-lex check    # drive the routes in process
-pnpm -F @lambda-event-router/service-example-lex diff     # review pending changeset
-pnpm -F @lambda-event-router/service-example-lex watch    # hotswap deploys
-pnpm -F @lambda-event-router/service-example-lex synth    # render template
+pnpm -F @latcher/service-example-lex check    # drive the routes in process
+pnpm -F @latcher/service-example-lex diff     # review pending changeset
+pnpm -F @latcher/service-example-lex watch    # hotswap deploys
+pnpm -F @latcher/service-example-lex synth    # render template
 ```
 
 `check` builds a Lex event for every turn the deployed run makes, plus three the conversation cannot
@@ -190,7 +190,7 @@ reach. It asserts that each one lands on the handler it should. It needs no AWS 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-lex destroy
+pnpm -F @latcher/service-example-lex destroy
 ```
 
 That removes the bot, its test alias, the worker, its log group and both roles. Open Lex sessions

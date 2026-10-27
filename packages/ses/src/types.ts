@@ -1,6 +1,6 @@
 import type { Context, SESEventRecord, SESMail, SESReceipt } from 'aws-lambda';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export type SESReceiptStatusValue = 'PASS' | 'FAIL' | 'GRAY' | 'PROCESSING_FAILED' | 'DISABLED';
 
@@ -52,6 +52,6 @@ export interface SESRouteDefinition {
   handler: SESRecordHandler;
 }
 
-export interface SESRouterOptions {
+export interface SESMatcherOptions {
   middleware?: SESMiddleware[];
 }

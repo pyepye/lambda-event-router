@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectCreatedRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectCreatedRequest } from '@latcher/s3';
 
 export async function archiveDocument(request: S3ObjectCreatedRequest): Promise<void> {
   logger.info({

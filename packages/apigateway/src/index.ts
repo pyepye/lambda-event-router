@@ -1,3 +1,4 @@
-export * from './APIGatewayRouter';
-export * from './LambdaAuthorizerRouter';
-export * from './WebSocketRouter';
+export * from './APIGatewayMatcher';
+export * from './LambdaAuthorizerMatcher';
+export * from './WebSocketMatcher';
+

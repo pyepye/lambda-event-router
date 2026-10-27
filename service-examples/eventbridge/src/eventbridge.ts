@@ -1,4 +1,4 @@
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
+import { createEventBridgeMatcher } from '@latcher/eventbridge';
 
 import { archivePartnerOrder } from './handlers/archivePartnerOrder.js';
 import { dispatchShipment } from './handlers/dispatchShipment.js';
@@ -10,14 +10,14 @@ import { settlePaymentLedger } from './handlers/settlePaymentLedger.js';
 import { updateOrder } from './handlers/updateOrder.js';
 import { logEvent } from './middleware/logEvent.js';
 
-export const eventBridgeRouter = createEventBridgeRouter({
+export const eventBridgeMatcher = createEventBridgeMatcher({
   middleware: [logEvent],
 });
 
 // Order matters twice here. flagHighValueOrder must win over processOrder for a large order, and
 // routeToLeedsWarehouse must win over dispatchShipment for Leeds stock, so both narrow routes are
 // registered ahead of the broad one they share a source and detail type with.
-eventBridgeRouter
+eventBridgeMatcher
   .route(flagHighValueOrder)
   .route(processOrder)
   .route(archivePartnerOrder)

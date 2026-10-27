@@ -1,4 +1,4 @@
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockSchema } from '@latcher/testing';
 
 import { PathRouter } from './PathRouter.js';
 import type { HTTPFilterInput } from './types.js';

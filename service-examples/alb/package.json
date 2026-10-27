@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-alb",
+  "name": "@latcher/service-example-alb",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1034.0",
-    "@lambda-event-router/alb": "workspace:*",
-    "@lambda-event-router/base": "workspace:*",
+    "@latcher/alb": "workspace:*",
+    "@latcher/base": "workspace:*",
     "zod": "^4.3.5"
   },
   "devDependencies": {

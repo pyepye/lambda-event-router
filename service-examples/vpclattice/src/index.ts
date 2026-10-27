@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { inventoryRouter } from './inventoryRouter.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [inventoryRouter] });
+import { inventoryMatcher } from './inventoryMatcher.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [inventoryMatcher] });
+
+export const handler: Handler = latcher.handler();

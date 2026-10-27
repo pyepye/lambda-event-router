@@ -1,10 +1,10 @@
-import { createCloudWatchLogsRouter } from '@lambda-event-router/cloudwatch';
+import { createCloudWatchLogsMatcher } from '@latcher/cloudwatch';
 
 import { reportFailedLogins } from './cloudwatch-handlers/reportFailedLogins.js';
 import { logLogsInvocation } from './middleware/logInvocation.js';
 
-export const cloudWatchLogsRouter = createCloudWatchLogsRouter({
+export const cloudWatchLogsMatcher = createCloudWatchLogsMatcher({
   middleware: [logLogsInvocation],
 });
 
-cloudWatchLogsRouter.route(reportFailedLogins);
+cloudWatchLogsMatcher.route(reportFailedLogins);

@@ -107,7 +107,7 @@ export function createKafkaRecord(overrides: KafkaRecordOverrides = {}): KafkaRe
 }
 
 // Lambda keys `records` by topic and partition together, such as `orders-0`, and each entry holds
-// only that partition's records. The router checkpoints a partition at a time, so a key that names a
+// only that partition's records. The matcher checkpoints a partition at a time, so a key that names a
 // topic alone describes an event Lambda never sends.
 export function createMSKEvent(
   recordsByTopicPartition: Record<string, KafkaRecord[]> = { 'test-topic-0': [createKafkaRecord()] },

@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, Failed, Ok } from '@lambda-event-router/firehose';
+import { logger } from '@latcher/base';
+import { defineRoute, Failed, Ok } from '@latcher/firehose';
 
 import { CLICKSTREAM_ARN, EVENT_FRESHNESS_MS } from '../config.js';
 import { eventTypeOf } from '../utils/events.js';
@@ -8,7 +8,7 @@ import { PageViewSchema } from '../utils/schemas.js';
 // Page views are stored as they arrive, so the handler returns Ok with no data and Firehose keeps the
 // record it was given.
 //
-// An event past the freshness window is refused by throwing Failed(). The router recognises a thrown
+// An event past the freshness window is refused by throwing Failed(). The matcher recognises a thrown
 // response and maps it straight to ProcessingFailed, so nothing is logged as an error.
 export const recordPageView = defineRoute({
   filters: {

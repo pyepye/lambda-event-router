@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectRemovedRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectRemovedRequest } from '@latcher/s3';
 
 // Catch-all for removals, registered after the two bucket-scoped routes, so only a removal from
 // somewhere other than the uploads bucket reaches it.

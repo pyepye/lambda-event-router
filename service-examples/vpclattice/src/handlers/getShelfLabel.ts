@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, NotFound } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute, NotFound } from '@latcher/vpclattice';
 
 import { SHELF_LABEL_PNG } from '../utils/inventory.js';
 

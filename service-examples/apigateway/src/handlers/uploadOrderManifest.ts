@@ -1,10 +1,10 @@
-import { BinaryBody, defineRoute, NotFound, Ok } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { BinaryBody, defineRoute, NotFound, Ok } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { ORDERS } from '../utils/warehouse.js';
 
 // A manifest is uploaded as binary rather than JSON. API Gateway base64 encodes a body whose content
-// type is one of the API's binary media types, and the router decodes it to the bytes that were sent.
+// type is one of the API's binary media types, and the matcher decodes it to the bytes that were sent.
 export const uploadOrderManifest = defineRoute({
   filters: { method: 'PUT', path: '/orders/:orderId/manifest' },
   bodySchema: BinaryBody,

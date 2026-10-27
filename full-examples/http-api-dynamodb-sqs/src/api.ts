@@ -1,11 +1,11 @@
-import { createAPIGatewayRouter } from '@lambda-event-router/apigateway';
+import { createAPIGatewayMatcher } from '@latcher/apigateway';
 
 import { createOrder } from './api-handlers/createOrder.js';
 import { getOrder } from './api-handlers/getOrder.js';
 import { logApiInvocation } from './middleware/logInvocation.js';
 
-export const apiRouter = createAPIGatewayRouter({
+export const apiMatcher = createAPIGatewayMatcher({
   middleware: [logApiInvocation],
 });
 
-apiRouter.route(createOrder).route(getOrder);
+apiMatcher.route(createOrder).route(getOrder);

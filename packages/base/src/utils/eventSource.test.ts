@@ -1,4 +1,4 @@
-import * as testing from '@lambda-event-router/testing';
+import * as testing from '@latcher/testing';
 import {
   createApiGatewayLambdaAuthorizerRequestV1Event,
   createApiGatewayLambdaAuthorizerTokenEvent,
@@ -6,7 +6,7 @@ import {
   createKafkaRetryEvent,
   createS3TestEvent,
   createWebSocketEvent,
-} from '@lambda-event-router/testing';
+} from '@latcher/testing';
 
 import { isObject } from './data.js';
 import { isKnownEventSource } from './eventSource.js';
@@ -46,7 +46,7 @@ suite('isKnownEventSource', () => {
     expect(check(createKafkaRetryEvent())).toBe(true);
   });
 
-  // AppSync Events sends channel as { path, segments }, and no router claims a string one.
+  // AppSync Events sends channel as { path, segments }, and no matcher claims a string one.
   test('leaves a custom payload naming a string channel alone', () => {
     expect(isKnownEventSource({ info: { channel: '/default/test' } })).toBe(false);
   });

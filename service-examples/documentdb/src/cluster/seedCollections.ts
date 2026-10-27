@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
-import { logger } from '@lambda-event-router/base';
 import { ObjectId } from 'mongodb';
+
+import { logger } from '@latcher/base';
 
 import { COLLECTIONS, DATABASES } from '../utils/cluster.js';
 import { connectToCluster } from './mongoClient.js';
@@ -10,7 +11,7 @@ interface SeedResult {
   runId: string;
 }
 
-// Writes every change the router has a route for, plus the five that are meant to fail. Each group
+// Writes every change the matcher has a route for, plus the five that are meant to fail. Each group
 // goes in one run of writes so its event source mapping batches them into a single invocation, which
 // is the only way ordering and a failure taking out the changes behind it are visible.
 export async function handler(): Promise<SeedResult> {

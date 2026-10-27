@@ -1,5 +1,5 @@
-import { Forbidden, type HTTPMiddleware, Unauthorized } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { Forbidden, type HTTPMiddleware, Unauthorized } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { DESK_ROLE_HEADER, RETURNS_DESK_ROLE } from '../utils/constants.js';
 

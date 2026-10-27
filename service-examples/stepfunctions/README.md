@@ -1,8 +1,8 @@
 # Service example: Step Functions
 
-A deployable CDK app that exercises the `StepFunctionsRouter` end to end. It models an order
+A deployable CDK app that exercises the `StepFunctionsMatcher` end to end. It models an order
 fulfilment workflow. One state machine invokes one Lambda across ten parallel branches, and the
-router decides which handler each payload reaches.
+matcher decides which handler each payload reaches.
 
 The routes are in `src/stepfunctions.ts`, and the handlers are in `src/handlers/`.
 
@@ -21,24 +21,24 @@ OrderFulfilment (standard workflow)
 ## What it covers
 
 One `trigger` starts one execution. Its `Parallel` state runs ten branches. Together they hit every
-filter the router has, both request shapes and every failure it can produce.
+filter the matcher has, both request shapes and every failure it can produce.
 
 | Feature | Where |
 | --- | --- |
 | `custom` filter | `reserveStock` and `releaseStockHold` match on the `task` field |
-| Async `custom` filter | `chargePayment` returns a promise, which the router awaits |
+| Async `custom` filter | `chargePayment` returns a promise, which the matcher awaits |
 | `taskToken` filter | The four callback branches match on a `TaskToken` in the payload |
 | `taskToken` false | `reserveStock` refuses `AwaitStockReservation`, which carries a `TaskToken` |
 | Route order | `approveFraudReview` declines `AwaitManualRelease`, so `failUnknownCallback` takes it |
 | Standard schemas | `eventSchema` on four routes, and none on `failUnknownCallback` |
 | TaskToken stripping | `approveFraudReview` logs that `input` has no `TaskToken` and `event` still does |
-| Router middleware | `logTask` runs once per matched route |
+| Matcher middleware | `logTask` runs once per matched route |
 | Route middleware | `withOrderContext` on a regular route, `withApprovalContext` on a callback route |
 | Task results | Three branches return a value, which becomes the branch result |
-| No route matched | `ReconcileLedger` carries a task name no filter claims, so the router declines it |
+| No route matched | `ReconcileLedger` carries a task name no filter claims, so the matcher declines it |
 | Handler failure | `ReleaseStockHold` throws, and the state retries it twice |
 | Schema failures | A worded order total, and a fraud review with no risk score |
-| Declined event | `ForwardScheduledEvent` sends an EventBridge payload, which the router refuses |
+| Declined event | `ForwardScheduledEvent` sends an EventBridge payload, which the matcher refuses |
 
 Every branch catches its own failure and writes the result into the execution output. That output is
 the whole run in one JSON array. The worker log is the second view of it.
@@ -70,21 +70,21 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-stepfunctions... install
-pnpm -F @lambda-event-router/service-example-stepfunctions... build
-pnpm -F @lambda-event-router/service-example-stepfunctions run deploy
+pnpm -F @latcher/service-example-stepfunctions... install
+pnpm -F @latcher/service-example-stepfunctions... build
+pnpm -F @latcher/service-example-stepfunctions run deploy
 ```
 
 CDK outputs include `StateMachineArn` and `WorkerLogGroupName`.
 
 To check the routing table without deploying, run
-`pnpm -F @lambda-event-router/service-example-stepfunctions check`. It drives the built router with a
+`pnpm -F @latcher/service-example-stepfunctions check`. It drives the built matcher with a
 synthetic payload for each branch and reports where each one landed.
 
 ## Start a sample execution
 
 ```bash
-pnpm -F @lambda-event-router/service-example-stepfunctions trigger
+pnpm -F @latcher/service-example-stepfunctions trigger
 ```
 
 The script finds the state machine by name and starts an execution with `{"orderId":"AB-1029"}`. It
@@ -105,7 +105,7 @@ The execution output is the first thing to read. The trigger prints it, and each
 - `reserveStock` returns `RES-AB-1029` for `SKU-8891` from warehouse `LDN-1`. That proves the custom
   filter, the schema, the route middleware and the result in one entry.
 - `chargePayment` returns `PAY-AB-1029` and `capturedPence` 4250. The filter that matched it is
-  async, so the router awaited a promise to get there.
+  async, so the matcher awaited a promise to get there.
 - `approveFraudReview` returns `decision` `approved` with `riskScore` 12. That value comes from
   `SendTaskSuccess` rather than from the Lambda response, so the callback completed.
 - `failUnknownCallback` fails with `UnknownCallbackTask` and a `Cause` of
@@ -115,13 +115,13 @@ The execution output is the first thing to read. The trigger prints it, and each
   `No callback route handles reserve-stock`. `reserveStock` claims that task name but sets
   `taskToken` to `false`, so a callback payload goes past it.
 - `releaseStockHold` fails with a `Cause` holding `Warehouse API unavailable for RES-AB-1029`.
-- `reconcileLedger` fails with a `Cause` holding `No router found for event`. No route claims the task
-  name, so the router declines the payload and `LambdaRouter` runs out of routers to try.
+- `reconcileLedger` fails with a `Cause` holding `No matcher found for event`. No route claims the task
+  name, so the matcher declines the payload and `Latcher` runs out of matchers to try.
 - `chargeUnpricedOrder` fails with `SchemaValidationError` and `Event validation failed`, because
   `amountPence` arrived as a sentence.
 - `awaitUnscoredReview` fails with `SchemaValidationError` the same way. The payload carries a
-  `TaskToken`, so the router matched the callback route. It then rejected the rest of the payload.
-- `forwardScheduledEvent` fails with a `Cause` holding `No router found for event`. The payload looks
+  `TaskToken`, so the matcher matched the callback route. It then rejected the rest of the payload.
+- `forwardScheduledEvent` fails with a `Cause` holding `No matcher found for event`. The payload looks
   like an EventBridge event, so `canHandleEvent` refuses it before any route is considered.
 
 Save the worker logs to a file:
@@ -141,11 +141,11 @@ different `stackName`.
 
 The log holds twelve invocations: one per branch, plus two retries of `ReleaseStockHold`.
 
-Eight of them log `Handling Step Functions task`, which is the router middleware. The other four
+Eight of them log `Handling Step Functions task`, which is the matcher middleware. The other four
 never reach it. Two failed their schema, one matched no route, and one was refused by
 `canHandleEvent`.
 
-The router runs middleware only after a route has matched and its schema has passed. That is why a
+The matcher runs middleware only after a route has matched and its schema has passed. That is why a
 rejected payload has no `Handling Step Functions task` line.
 
 The routes that ran log what they did:
@@ -153,7 +153,7 @@ The routes that ran log what they did:
 - `Order context resolved` then `Stock reserved`, which is route middleware before its handler.
 - `Payment captured` for the order total.
 - `Fraud review context resolved` then `Fraud review decided`. The second line carries
-  `taskTokenInInput` `false` and `taskTokenInEvent` `true`. The router removes `TaskToken` from
+  `taskTokenInInput` `false` and `taskTokenInEvent` `true`. The matcher removes `TaskToken` from
   `input` and leaves `event` alone.
 - `Unknown callback task refused` at WARN, twice, once per unclaimed callback.
 
@@ -196,15 +196,15 @@ timeout is there so a branch that never calls back ends the execution rather tha
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-stepfunctions diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-stepfunctions watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-stepfunctions synth  # render template
+pnpm -F @latcher/service-example-stepfunctions diff   # review pending changeset
+pnpm -F @latcher/service-example-stepfunctions watch  # hotswap deploys
+pnpm -F @latcher/service-example-stepfunctions synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-stepfunctions destroy
+pnpm -F @latcher/service-example-stepfunctions destroy
 ```
 
 That removes the state machine, the worker and its log group, which is everything the stack creates.

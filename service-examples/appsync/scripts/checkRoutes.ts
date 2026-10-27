@@ -1,9 +1,10 @@
-import type { AppSyncEventsAuthorizerEvent, AppSyncEventsEvent } from '@lambda-event-router/appsync';
 import type { AppSyncAuthorizerEvent, AppSyncResolverEvent, Context } from 'aws-lambda';
 
-import { authorizerRouter } from '../src/authorizerRouter.js';
-import { eventsAuthorizerRouter } from '../src/eventsAuthorizerRouter.js';
-import { eventsRouter } from '../src/eventsRouter.js';
+import type { AppSyncEventsAuthorizerEvent, AppSyncEventsEvent } from '@latcher/appsync';
+
+import { authorizerMatcher } from '../src/authorizerMatcher.js';
+import { eventsAuthorizerMatcher } from '../src/eventsAuthorizerMatcher.js';
+import { eventsMatcher } from '../src/eventsMatcher.js';
 import type {
   AuthorizerStep,
   EventsAuthorizerStep,
@@ -18,7 +19,7 @@ import {
   resolverBatchSteps,
   resolverSteps,
 } from '../src/requests/steps.js';
-import { resolverRouter } from '../src/resolverRouter.js';
+import { resolverMatcher } from '../src/resolverMatcher.js';
 import { TOKEN_GRANTS } from '../src/utils/constants.js';
 
 const ACCOUNT = '123456789012';
@@ -162,7 +163,7 @@ async function run(label: string, handle: () => Promise<unknown>, expected: Expe
 for (const step of resolverSteps) {
   await run(
     `resolver ${step.name}`,
-    () => resolverRouter.handleEvent(buildResolverEvent(step), context),
+    () => resolverMatcher.handleEvent(buildResolverEvent(step), context),
     step.expected,
   );
 }
@@ -178,17 +179,17 @@ for (const step of resolverBatchSteps) {
     }),
   );
 
-  await run(`resolver ${step.name}`, () => resolverRouter.handleEvent(events, context), step.expected);
+  await run(`resolver ${step.name}`, () => resolverMatcher.handleEvent(events, context), step.expected);
 }
 
 for (const step of eventsSteps) {
-  await run(`events ${step.name}`, () => eventsRouter.handleEvent(buildEventsEvent(step), context), step.expected);
+  await run(`events ${step.name}`, () => eventsMatcher.handleEvent(buildEventsEvent(step), context), step.expected);
 }
 
 for (const step of authorizerSteps) {
   await run(
     `authorizer ${step.name}`,
-    () => authorizerRouter.handleEvent(buildAuthorizerEvent(step), context),
+    () => authorizerMatcher.handleEvent(buildAuthorizerEvent(step), context),
     step.expected,
   );
 }
@@ -196,12 +197,12 @@ for (const step of authorizerSteps) {
 for (const step of eventsAuthorizerSteps) {
   await run(
     `events authorizer ${step.name}`,
-    () => eventsAuthorizerRouter.handleEvent(buildEventsAuthorizerEvent(step), context),
+    () => eventsAuthorizerMatcher.handleEvent(buildEventsAuthorizerEvent(step), context),
     step.expected,
   );
 }
 
-// Four routers share one AppSync account, and they share two Lambdas, so each one has to turn the
+// Four matchers share one AppSync account, and they share two Lambdas, so each one has to turn the
 // others' events away on shape alone.
 const firstResolverStep = resolverSteps[0];
 const firstEventsStep = eventsSteps[0];
@@ -220,28 +221,31 @@ const authorizerEvent = buildAuthorizerEvent(firstAuthorizerStep);
 const eventsAuthorizerEvent = buildEventsAuthorizerEvent(firstEventsAuthorizerStep);
 
 const claims: [string, boolean][] = [
-  ['resolver router takes a resolver event', resolverRouter.canHandleEvent(resolverEvent)],
-  ['resolver router takes a batch of resolver events', resolverRouter.canHandleEvent([resolverEvent, resolverEvent])],
-  ['resolver router turns an empty batch away', !resolverRouter.canHandleEvent([])],
-  ['resolver router turns an events event away', !resolverRouter.canHandleEvent(eventsEvent)],
-  ['resolver router turns an authorizer event away', !resolverRouter.canHandleEvent(authorizerEvent)],
-  ['events router takes an events event', eventsRouter.canHandleEvent(eventsEvent)],
-  ['events router turns a resolver event away', !eventsRouter.canHandleEvent(resolverEvent)],
-  ['events router turns an authorizer event away', !eventsRouter.canHandleEvent(authorizerEvent)],
-  ['authorizer router takes an authorizer event', authorizerRouter.canHandleEvent(authorizerEvent)],
-  ['authorizer router turns a resolver event away', !authorizerRouter.canHandleEvent(resolverEvent)],
-  ['authorizer router turns an events event away', !authorizerRouter.canHandleEvent(eventsEvent)],
-  ['authorizer router turns an events authorizer event away', !authorizerRouter.canHandleEvent(eventsAuthorizerEvent)],
+  ['resolver matcher takes a resolver event', resolverMatcher.canHandleEvent(resolverEvent)],
+  ['resolver matcher takes a batch of resolver events', resolverMatcher.canHandleEvent([resolverEvent, resolverEvent])],
+  ['resolver matcher turns an empty batch away', !resolverMatcher.canHandleEvent([])],
+  ['resolver matcher turns an events event away', !resolverMatcher.canHandleEvent(eventsEvent)],
+  ['resolver matcher turns an authorizer event away', !resolverMatcher.canHandleEvent(authorizerEvent)],
+  ['events matcher takes an events event', eventsMatcher.canHandleEvent(eventsEvent)],
+  ['events matcher turns a resolver event away', !eventsMatcher.canHandleEvent(resolverEvent)],
+  ['events matcher turns an authorizer event away', !eventsMatcher.canHandleEvent(authorizerEvent)],
+  ['authorizer matcher takes an authorizer event', authorizerMatcher.canHandleEvent(authorizerEvent)],
+  ['authorizer matcher turns a resolver event away', !authorizerMatcher.canHandleEvent(resolverEvent)],
+  ['authorizer matcher turns an events event away', !authorizerMatcher.canHandleEvent(eventsEvent)],
   [
-    'events authorizer router takes an events authorizer event',
-    eventsAuthorizerRouter.canHandleEvent(eventsAuthorizerEvent),
+    'authorizer matcher turns an events authorizer event away',
+    !authorizerMatcher.canHandleEvent(eventsAuthorizerEvent),
   ],
   [
-    'events authorizer router turns a GraphQL authorizer event away',
-    !eventsAuthorizerRouter.canHandleEvent(authorizerEvent),
+    'events authorizer matcher takes an events authorizer event',
+    eventsAuthorizerMatcher.canHandleEvent(eventsAuthorizerEvent),
   ],
-  ['events authorizer router turns a resolver event away', !eventsAuthorizerRouter.canHandleEvent(resolverEvent)],
-  ['events authorizer router turns an events event away', !eventsAuthorizerRouter.canHandleEvent(eventsEvent)],
+  [
+    'events authorizer matcher turns a GraphQL authorizer event away',
+    !eventsAuthorizerMatcher.canHandleEvent(authorizerEvent),
+  ],
+  ['events authorizer matcher turns a resolver event away', !eventsAuthorizerMatcher.canHandleEvent(resolverEvent)],
+  ['events authorizer matcher turns an events event away', !eventsAuthorizerMatcher.canHandleEvent(eventsEvent)],
 ];
 
 for (const [label, held] of claims) {

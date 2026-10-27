@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/sqs';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/sqs';
 
 import { removeStock } from '../utils/dynamodb.js';
 import { DecrementStockMessageSchema } from '../utils/schemas.js';

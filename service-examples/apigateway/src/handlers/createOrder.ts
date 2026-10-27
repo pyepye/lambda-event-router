@@ -1,5 +1,5 @@
-import { type ApiRequest, type ApiResponse, type AuthOf, Created } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, type AuthOf, Created } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { staffAuth } from '../utils/auth.js';
 import type { TNewOrder } from '../utils/schemas.js';

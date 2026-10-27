@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { DynamoDBModifyRouteDefinition } from '@lambda-event-router/dynamodb';
+import { logger } from '@latcher/base';
+import type { DynamoDBModifyRouteDefinition } from '@latcher/dynamodb';
 
 import { ORDERS_STREAM_ARN } from '../config.js';
 import { OrderSchema, type TOrder } from '../utils/schemas.js';

@@ -1,8 +1,8 @@
-import { logger } from '@lambda-event-router/base';
-import type { CloudWatchLogsRequest } from '@lambda-event-router/cloudwatch';
+import { logger } from '@latcher/base';
+import type { CloudWatchLogsRequest } from '@latcher/cloudwatch';
 
 // Every checkout line goes to the search index. Written as a plain function and wired up with the
-// router's dataMessage helper, so the type has to be stated rather than inferred.
+// matcher's dataMessage helper, so the type has to be stated rather than inferred.
 export async function indexCheckoutTraffic(request: CloudWatchLogsRequest): Promise<void> {
   logger.info({
     message: 'Checkout traffic indexed',

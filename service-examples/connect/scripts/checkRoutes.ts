@@ -1,13 +1,14 @@
-import type { ConnectEvent } from '@lambda-event-router/connect';
 import type { Context } from 'aws-lambda';
 
-import type { Expected, RouterStep } from '../src/contactFlow/steps.js';
-import { DEPLOYED_INSTANCE_ARN, routerSteps } from '../src/contactFlow/steps.js';
+import type { ConnectEvent } from '@latcher/connect';
 
-// The instanceArn filters read the environment when the router module loads, so the value has to be
+import type { Expected, MatcherStep } from '../src/contactFlow/steps.js';
+import { DEPLOYED_INSTANCE_ARN, matcherSteps } from '../src/contactFlow/steps.js';
+
+// The instanceArn filters read the environment when the matcher module loads, so the value has to be
 // in place before the import runs.
 process.env.CONNECT_INSTANCE_ARN = DEPLOYED_INSTANCE_ARN;
-const { connectRouter } = await import('../src/connect.js');
+const { connectMatcher } = await import('../src/connect.js');
 
 const ACCOUNT = '123456789012';
 const REGION = 'eu-west-2';
@@ -21,7 +22,7 @@ const context = {
 
 // The delivered event, copied field for field. A chat contact has no customer endpoint and no queue,
 // and Connect sends both as null rather than leaving them off.
-function buildEvent(step: RouterStep): ConnectEvent {
+function buildEvent(step: MatcherStep): ConnectEvent {
   return {
     Name: 'ContactFlowEvent',
     Details: {
@@ -74,19 +75,19 @@ function report(label: string, problems: string[]): void {
   console.log(`FAIL ${label}: ${problems.join(', ')}`);
 }
 
-for (const step of routerSteps) {
+for (const step of matcherSteps) {
   const event = buildEvent(step);
   try {
-    report(step.name, problemsWith(await connectRouter.handleEvent(event, context), undefined, step.expected));
+    report(step.name, problemsWith(await connectMatcher.handleEvent(event, context), undefined, step.expected));
   } catch (error) {
     report(step.name, problemsWith(undefined, error, step.expected));
   }
 }
 
 const claims: [string, boolean][] = [
-  ['the router takes a contact flow event', connectRouter.canHandleEvent(buildEvent(routerSteps[0] as RouterStep))],
-  ['the router turns a plain object away', !connectRouter.canHandleEvent({ Details: {} })],
-  ['the router turns an SQS event away', !connectRouter.canHandleEvent({ Records: [] })],
+  ['the matcher takes a contact flow event', connectMatcher.canHandleEvent(buildEvent(matcherSteps[0] as MatcherStep))],
+  ['the matcher turns a plain object away', !connectMatcher.canHandleEvent({ Details: {} })],
+  ['the matcher turns an SQS event away', !connectMatcher.canHandleEvent({ Records: [] })],
 ];
 
 for (const [label, held] of claims) {

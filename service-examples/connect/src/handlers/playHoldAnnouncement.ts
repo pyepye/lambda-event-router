@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConnectRequest, ConnectResponse } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import type { ConnectRequest, ConnectResponse } from '@latcher/connect';
 
 // The last voice route, so it takes every voice contact the inbound route above it leaves.
 export async function playHoldAnnouncement({ contactData }: ConnectRequest): Promise<ConnectResponse> {

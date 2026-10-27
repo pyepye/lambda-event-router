@@ -1,6 +1,6 @@
 import type { Context } from 'aws-lambda';
 
-import { safeJsonParse, validateSchemaResult } from '@lambda-event-router/base';
+import { safeJsonParse, validateSchemaResult } from '@latcher/base';
 
 import { decodeBody } from './binaryBody.js';
 import type { InternalRoute } from './PathRouter.js';
@@ -9,7 +9,7 @@ import type { ApiRequest, BodyMethod, HttpMethod, NormalizedHTTPEvent } from './
 
 const BODY_METHODS: ReadonlySet<HttpMethod> = new Set<BodyMethod>(['POST', 'PUT', 'PATCH']);
 
-export type RouterRequest<TAuth, TEvent = unknown> = ApiRequest<
+export type MatcherRequest<TAuth, TEvent = unknown> = ApiRequest<
   Record<string, string>,
   Record<string, string | undefined>,
   TAuth,
@@ -65,7 +65,7 @@ export class Request<TAuth = unknown, TEvent = unknown> {
   }
 
   // Parses the body on first read, so a handler that never reads it skips the parse
-  private withLazyBody(apiRequest: RouterRequest<TAuth, TEvent>): RouterRequest<TAuth, TEvent> {
+  private withLazyBody(apiRequest: MatcherRequest<TAuth, TEvent>): MatcherRequest<TAuth, TEvent> {
     Object.defineProperty(apiRequest, 'body', {
       enumerable: true,
       configurable: true,
@@ -113,8 +113,8 @@ export class Request<TAuth = unknown, TEvent = unknown> {
     return result.data;
   }
 
-  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): RouterRequest<TAuth, TEvent> {
-    const apiRequest: RouterRequest<TAuth, TEvent> = {
+  buildApiRequest(query: Record<string, string | undefined>, validatedBody: unknown): MatcherRequest<TAuth, TEvent> {
+    const apiRequest: MatcherRequest<TAuth, TEvent> = {
       method: this.method,
       path: this.pathParams,
       rawPath: this.path,

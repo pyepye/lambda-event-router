@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-cloudwatch",
+  "name": "@latcher/service-example-cloudwatch",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-cloudwatch-logs": "catalog:",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/cloudwatch": "workspace:*"
+    "@latcher/base": "workspace:*",
+    "@latcher/cloudwatch": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

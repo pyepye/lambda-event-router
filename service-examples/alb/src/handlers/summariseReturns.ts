@@ -1,5 +1,5 @@
-import { defineRoute } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { RETURNS, WRITE_OFFS } from '../utils/returns.js';
 import { ReturnsSummarySchema } from '../utils/schemas.js';

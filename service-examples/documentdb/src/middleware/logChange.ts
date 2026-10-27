@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { DocumentDBMiddleware } from '@lambda-event-router/documentdb';
+import { logger } from '@latcher/base';
+import type { DocumentDBMiddleware } from '@latcher/documentdb';
 
-// Router middleware: runs once per change, for every collection, before any route middleware.
+// Matcher middleware: runs once per change, for every collection, before any route middleware.
 export const logChange: DocumentDBMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling change',

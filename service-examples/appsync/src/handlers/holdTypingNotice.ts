@@ -1,9 +1,9 @@
 import type {
-  AppSyncEventsFilterInput,
-  AppSyncEventsPublishResult,
-  AppSyncEventsRequest,
-} from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+    AppSyncEventsFilterInput,
+    AppSyncEventsPublishResult,
+    AppSyncEventsRequest,
+} from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
 import { TYPING_EVENT } from '../utils/constants.js';
 

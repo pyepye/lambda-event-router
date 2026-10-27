@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { StepFunctionsMiddleware } from '@lambda-event-router/stepfunctions';
+import { logger } from '@latcher/base';
+import type { StepFunctionsMiddleware } from '@latcher/stepfunctions';
 
 import type { TReserveStock } from '../utils/schemas.js';
 

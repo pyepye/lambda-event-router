@@ -1,0 +1,1841 @@
+import type { MockInstance } from 'vitest';
+
+import * as base from '@latcher/base';
+import { allEventBuilders, createDynamoDBEvent, createMockSchema, test } from '@latcher/testing';
+
+import { createDynamoDBMatcher, defineRoute, DynamoDBMatcher } from './DynamoDBMatcher.js';
+import type { DynamoDBFilterInput, DynamoDBFilters, DynamoDBInsertRequest, DynamoDBRequest } from './types.js';
+
+type DynamoDBNext = (request: DynamoDBRequest) => Promise<void>;
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+
+suite('DynamoDBMatcher', () => {
+  let matcher: DynamoDBMatcher;
+
+  beforeEach(() => {
+    matcher = new DynamoDBMatcher();
+  });
+
+  suite('createDynamoDBMatcher', () => {
+    test('creates a DynamoDBMatcher instance', () => {
+      const matcher = createDynamoDBMatcher();
+      expect(matcher).toBeInstanceOf(DynamoDBMatcher);
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    test('returns true for a valid DynamoDB stream event', () => {
+      const event = createDynamoDBEvent();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns false for a non-DynamoDB event', () => {
+      const event = { Records: [{ eventSource: 'aws:sqs' }] };
+      expect(matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for null', () => {
+      expect(matcher.canHandleEvent(null)).toBe(false);
+    });
+
+    test('returns false when Records is not an array', () => {
+      expect(matcher.canHandleEvent({ Records: 'not-an-array' })).toBe(false);
+    });
+
+    test('returns false when first record is not an object', () => {
+      expect(matcher.canHandleEvent({ Records: ['not-an-object'] })).toBe(false);
+    });
+  });
+
+  suite('defineRoute', () => {
+    test('returns a route builder with a handle method', () => {
+      const builder = defineRoute({
+        filters: { eventName: 'INSERT' },
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(typeof builder.handle).toBe('function');
+    });
+
+    test('preserves filters, schemas, and handler in the definition', () => {
+      const keysSchema = createMockSchema();
+      const newImageSchema = createMockSchema();
+      const oldImageSchema = createMockSchema();
+      const handler = vi.fn();
+      const filters = {
+        eventName: ['MODIFY' as const],
+        eventSourceArn: ['arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000'],
+        streamViewType: ['NEW_AND_OLD_IMAGES' as const],
+      };
+
+      const definition = defineRoute({
+        filters,
+        keysSchema,
+        newImageSchema,
+        oldImageSchema,
+      }).handle(handler);
+
+      expect(definition.filters).toEqual(filters);
+      expect(definition.keysSchema).toBe(keysSchema);
+      expect(definition.newImageSchema).toBe(newImageSchema);
+      expect(definition.oldImageSchema).toBe(oldImageSchema);
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('route', () => {
+    test('returns the matcher instance for chaining', () => {
+      const definition = defineRoute({
+        filters: { eventName: 'INSERT' },
+      }).handle(async () => {});
+
+      const result = matcher.route(definition);
+
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('insert', () => {
+    test('returns the matcher instance for chaining', () => {
+      const result = matcher.insert({
+        filters: {},
+        handler: async () => {},
+      });
+
+      expect(result).toBe(matcher);
+    });
+
+    test('only matches INSERT records', async ({ dynamoDBInsertRecord }) => {
+      matcher.insert({ filters: {}, handler: async () => {} });
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const insertResult = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const modifyResult = await matcher.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const removeResult = await matcher.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+
+      expect(insertResult).toBeDefined();
+      expect(modifyResult).toBeUndefined();
+      expect(removeResult).toBeUndefined();
+    });
+  });
+
+  suite('modify', () => {
+    test('returns the matcher instance for chaining', () => {
+      const result = matcher.modify({
+        filters: {},
+        handler: async () => {},
+      });
+
+      expect(result).toBe(matcher);
+    });
+
+    test('only matches MODIFY records', async ({ dynamoDBModifyRecord }) => {
+      matcher.modify({ filters: {}, handler: async () => {} });
+
+      const record = dynamoDBModifyRecord();
+      // @ts-expect-error - testing private method directly
+      const insertResult = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const modifyResult = await matcher.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const removeResult = await matcher.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+
+      expect(insertResult).toBeUndefined();
+      expect(modifyResult).toBeDefined();
+      expect(removeResult).toBeUndefined();
+    });
+  });
+
+  suite('remove', () => {
+    test('returns the matcher instance for chaining', () => {
+      const result = matcher.remove({
+        filters: {},
+        handler: async () => {},
+      });
+
+      expect(result).toBe(matcher);
+    });
+
+    test('only matches REMOVE records', async ({ dynamoDBRemoveRecord }) => {
+      matcher.remove({ filters: {}, handler: async () => {} });
+
+      const record = dynamoDBRemoveRecord();
+      // @ts-expect-error - testing private method directly
+      const insertResult = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const modifyResult = await matcher.matchRoute(record, 'MODIFY', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+      // @ts-expect-error - testing private method directly
+      const removeResult = await matcher.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {
+        pk: 'pk-123',
+        sk: 'sk-123',
+      });
+
+      expect(insertResult).toBeUndefined();
+      expect(modifyResult).toBeUndefined();
+      expect(removeResult).toBeDefined();
+    });
+  });
+
+  suite('matchRoute', () => {
+    test('matches route by eventName', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { eventName: 'INSERT' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by eventName array', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { eventName: ['INSERT', 'MODIFY'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventName does not match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { eventName: 'REMOVE' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by eventSourceArn', async ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      matcher.route(
+        defineRoute({
+          filters: { eventSourceArn: tableArn },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when eventSourceArn is an empty string', async ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      matcher.route(
+        defineRoute({
+          filters: { eventSourceArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by eventSourceArn array', async ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      const tableArn2 = 'arn:aws:dynamodb:us-east-1:987654321098:table/refunds/stream/2025-01-01T00:00:00.000';
+      matcher.route(
+        defineRoute({
+          filters: { eventSourceArn: [tableArn, tableArn2] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when eventSourceArn does not match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({
+        eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
+      });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by streamViewType', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { streamViewType: 'NEW_AND_OLD_IMAGES' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by streamViewType array', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { streamViewType: ['NEW_AND_OLD_IMAGES', 'KEYS_ONLY'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when streamViewType does not match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { streamViewType: 'KEYS_ONLY' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by custom', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ eventName }: DynamoDBFilterInput): boolean => {
+              return eventName === 'INSERT';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when custom returns false', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { custom: (): boolean => false },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom receives correct DynamoDBFilterInput', async ({ dynamoDBInsertRecord }) => {
+      const filterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRoute({
+          filters: { custom: filterSpy },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(filterSpy).toHaveBeenCalledWith({
+        eventName: 'INSERT',
+        streamViewType: 'NEW_AND_OLD_IMAGES',
+        record,
+        keys: { pk: 'pk-123', sk: 'sk-123' },
+      });
+    });
+
+    test('custom is not called when a preceding filter rejects', async ({ dynamoDBInsertRecord }) => {
+      const customFilterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRoute({
+          filters: { eventName: 'REMOVE', custom: customFilterSpy },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(customFilterSpy).not.toHaveBeenCalled();
+    });
+
+    test('matches route by async custom', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: async ({ eventName }: DynamoDBFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return eventName === 'INSERT';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('selects the first matching route when multiple routes match', async ({ dynamoDBInsertRecord }) => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+
+      matcher.route(
+        defineRoute({
+          filters: { eventName: 'INSERT' },
+        }).handle(firstHandler),
+      );
+      matcher.route(
+        defineRoute({
+          filters: { eventName: 'INSERT' },
+        }).handle(secondHandler),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+      expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('orders a single event name ahead of the list that covers it', async ({ dynamoDBInsertRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      matcher.route(defineRoute({ filters: { eventName: ['INSERT', 'MODIFY'] } }).handle(broad));
+      matcher.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(narrow));
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ dynamoDBInsertRecord }) => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+
+      matcher.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(broad));
+      matcher.route(
+        defineRoute({ filters: { eventName: 'INSERT', streamViewType: 'NEW_AND_OLD_IMAGES' } }).handle(narrow),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ dynamoDBInsertRecord }) => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+
+      matcher.route(defineRoute({ filters: { eventName: 'INSERT' } }).handle(fallback));
+      matcher.route(defineRoute({ filters: { eventName: 'INSERT', custom: () => true } }).handle(guarded));
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
+    test('does not match when eventName matches but eventSourceArn does not', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            eventName: 'INSERT',
+            eventSourceArn: 'arn:aws:dynamodb:us-east-1:123456789012:table/other-table/stream/2024-01-01T00:00:00.000',
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({
+        eventSourceARN: 'arn:aws:dynamodb:us-east-1:123456789012:table/my-table/stream/2024-01-01T00:00:00.000',
+      });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches when all three filters match', async ({ dynamoDBInsertRecord }) => {
+      const tableArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      matcher.route(
+        defineRoute({
+          filters: {
+            eventName: 'INSERT',
+            eventSourceArn: tableArn,
+            streamViewType: 'NEW_AND_OLD_IMAGES',
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord({ eventSourceARN: tableArn });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-123', sk: 'sk-123' });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  suite('partitionKey / sortKey filters', () => {
+    beforeEach(() => {
+      matcher = new DynamoDBMatcher({ keys: { partitionKey: 'pk', sortKey: 'sk' } });
+    });
+
+    test('matches route when partitionKey equals a single value', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when partitionKey is in an array (mixed string | number)', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: ['items', 42] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42, sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when partitionKey does not match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'orders', sk: 'sk-1' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route when sortKey equals a single value', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route when sortKey is in an array of values', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: ['sk-1', 'sk-2'] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-2' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when sortKey does not match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-9' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches only when both partitionKey and sortKey match', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items', sortKey: 'sk-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const bothMatch = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-1' });
+      // @ts-expect-error - testing private method directly
+      const sortMiss = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items', sk: 'sk-9' });
+      // @ts-expect-error - testing private method directly
+      const partitionMiss = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'orders',
+        sk: 'sk-1',
+      });
+
+      expect(bothMatch).toBeDefined();
+      expect(sortMiss).toBeUndefined();
+      expect(partitionMiss).toBeUndefined();
+    });
+
+    test('matches numeric partition value', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 42 },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42 });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a string partition key against a RegExp', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: /^ORDER#/ },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const match = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ORDER#1', sk: 'sk-1' });
+      // @ts-expect-error - testing private method directly
+      const miss = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ITEM#1', sk: 'sk-1' });
+
+      expect(match).toBeDefined();
+      expect(miss).toBeUndefined();
+    });
+
+    test('matches a string partition key against an array holding a RegExp', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: ['ORDER#1', /^ITEM#/] },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'ITEM#9', sk: 'sk-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches a numeric partition key against every string matcher form', async ({ dynamoDBInsertRecord }) => {
+      const record = dynamoDBInsertRecord();
+
+      async function matches(partitionKey: DynamoDBFilters['partitionKey']): Promise<boolean> {
+        const scoped = new DynamoDBMatcher({ keys: { partitionKey: 'pk', sortKey: 'sk' } });
+        scoped.route(defineRoute({ filters: { partitionKey } }).handle(async () => {}));
+        // @ts-expect-error - testing private method directly
+        return Boolean(await scoped.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 42 }));
+      }
+
+      expect(await matches('42')).toBe(true);
+      expect(await matches('4*')).toBe(true);
+      expect(await matches(/^4/)).toBe(true);
+      expect(await matches(['7', '42'])).toBe(true);
+      expect(await matches('43')).toBe(false);
+    });
+
+    test('matches a sort key against a RegExp', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: /^PAYMENT#/ },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const match = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 'PAYMENT#1' });
+      // @ts-expect-error - testing private method directly
+      const miss = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 'REFUND#1' });
+
+      expect(match).toBeDefined();
+      expect(miss).toBeUndefined();
+    });
+
+    test('matches a numeric sort key against a wildcard', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: '20*' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'pk-1', sk: 2026 });
+
+      expect(result).toBeDefined();
+    });
+
+    test('infers partition key from a single-attribute keys map when matcher has no keys option', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      const inferMatcher = new DynamoDBMatcher();
+      inferMatcher.route(
+        defineRoute({
+          filters: { partitionKey: 'user-1' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await inferMatcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { userId: 'user-1' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('partition-only record: sortKey filter never matches but partitionKey still works', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      matcher.route(
+        defineRoute({
+          filters: { sortKey: 'any-value' },
+        }).handle(async () => {}),
+      );
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'items' });
+
+      expect(result).toBeDefined();
+      expect(result?.filters.partitionKey).toBe('items');
+    });
+
+    test('partitionKey miss short-circuits before custom is called', async ({ dynamoDBInsertRecord }) => {
+      const customFilterSpy = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items', custom: customFilterSpy },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { pk: 'orders', sk: 'sk-1' });
+
+      expect(customFilterSpy).not.toHaveBeenCalled();
+    });
+
+    test('matches partitionKey regardless of Keys map attribute order (regression)', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', { sk: 'sk-1', pk: 'items' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('throws when record has multiple key attributes and matcher has no keys option', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      const unconfiguredMatcher = new DynamoDBMatcher();
+      unconfiguredMatcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const matchPromise = unconfiguredMatcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      await expect(matchPromise).rejects.toThrow(/Cannot infer partitionKey\/sortKey/);
+      await expect(matchPromise).rejects.toThrow(/"keys" option/);
+    });
+
+    test('routes without partitionKey/sortKey filters resolve normally on multi-key records without keys option', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      const unconfiguredMatcher = new DynamoDBMatcher();
+      unconfiguredMatcher.route(
+        defineRoute({
+          filters: { eventName: 'INSERT' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await unconfiguredMatcher.matchRoute(record, 'INSERT', 'NEW_AND_OLD_IMAGES', {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      expect(result).toBeDefined();
+    });
+
+    test('falls back to NewImage when Keys map is empty', async ({ dynamoDBInsertRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(
+        record,
+        'INSERT',
+        'NEW_AND_OLD_IMAGES',
+        {},
+        { pk: 'items', sk: 'sk-1', other: 'value' },
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    test('falls back to OldImage when Keys map and NewImage do not contain the configured key', async ({
+      dynamoDBInsertRecord,
+    }) => {
+      matcher.route(
+        defineRoute({
+          filters: { partitionKey: 'items' },
+        }).handle(async () => {}),
+      );
+
+      const record = dynamoDBInsertRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, 'REMOVE', 'NEW_AND_OLD_IMAGES', {}, undefined, {
+        pk: 'items',
+        sk: 'sk-1',
+      });
+
+      expect(result).toBeDefined();
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('calls the matched handler with the parsed request', async ({ dynamoDBStreamHandlerEvent }) => {
+      const handler = vi.fn();
+      matcher.insert({
+        filters: {},
+        handler,
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          keys: { pk: 'pk-123', sk: 'sk-123' },
+          newImage: { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' },
+          eventName: 'INSERT',
+          record: event.Records[0],
+          context,
+        }),
+      );
+    });
+
+    test('handler receives undefined for newImage on REMOVE', async ({
+      dynamoDBRemoveRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      matcher.remove({ filters: {}, handler });
+
+      const record = dynamoDBRemoveRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          newImage: undefined,
+          oldImage: { pk: 'pk-123', sk: 'sk-123', name: 'Deleted Item' },
+          eventName: 'REMOVE',
+        }),
+      );
+    });
+
+    test('handler receives undefined for oldImage on INSERT', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      matcher.insert({ filters: {}, handler });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          oldImage: undefined,
+          eventName: 'INSERT',
+        }),
+      );
+    });
+
+    test('throws when no route matches and batchItemFailures is disabled', async ({ dynamoDBStreamHandlerEvent }) => {
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('propagates handler errors', async ({ dynamoDBStreamHandlerEvent }) => {
+      matcher.insert({
+        filters: {},
+        handler: async () => {
+          throw new Error('handler exploded');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('handler exploded');
+    });
+
+    test('returns undefined on success when batchItemFailures is disabled', async ({ dynamoDBStreamHandlerEvent }) => {
+      matcher.insert({ filters: {}, handler: async () => {} });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('processes records sequentially', async ({ dynamoDBInsertRecord, dynamoDBStreamEvent, context }) => {
+      const callOrder: string[] = [];
+
+      matcher.insert({
+        filters: {},
+        handler: async (request: DynamoDBInsertRequest) => {
+          const eventId = request.record.eventID;
+          callOrder.push(`start-${eventId}`);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          callOrder.push(`end-${eventId}`);
+        },
+      });
+
+      const recordA = dynamoDBInsertRecord();
+      const recordB = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([recordA, recordB]);
+      await matcher.handleEvent(event, context());
+
+      // Sequential: first record must finish before second starts
+      expect(callOrder).toEqual([
+        `start-${recordA.eventID}`,
+        `end-${recordA.eventID}`,
+        `start-${recordB.eventID}`,
+        `end-${recordB.eventID}`,
+      ]);
+    });
+  });
+
+  suite('handleEvent - number attributes', () => {
+    test('unmarshalls a number a JS number holds exactly as a number', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      matcher.insert({ filters: {}, handler });
+
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { total: { N: '42.5' } } } });
+      await matcher.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ newImage: expect.objectContaining({ total: 42.5 }) }),
+      );
+    });
+
+    test('keeps a whole number beyond the safe range as its original text', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      matcher.insert({ filters: {}, handler });
+
+      const orderId = '123456789012345678901234567890';
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { orderId: { N: orderId } } } });
+      await matcher.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: expect.objectContaining({ orderId }) }));
+    });
+
+    test('keeps a decimal beyond the safe range as its original text instead of throwing', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      matcher.insert({ filters: {}, handler });
+
+      const ratio = '123456789012345678.5';
+      const record = dynamoDBInsertRecord({ dynamodb: { NewImage: { ratio: { N: ratio } } } });
+      await matcher.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: expect.objectContaining({ ratio }) }));
+    });
+
+    test('keeps an oversized key value as text, so a string filter still matches it', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      const partitionKey = '123456789012345678901234567890';
+      const keyedMatcher = new DynamoDBMatcher({ keys: { partitionKey: 'pk' } });
+      keyedMatcher.insert({ filters: { partitionKey }, handler });
+
+      const record = dynamoDBInsertRecord();
+      record.dynamodb = { ...record.dynamodb, Keys: { pk: { N: partitionKey } } };
+      await keyedMatcher.handleEvent(dynamoDBStreamEvent([record]), context());
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ keys: expect.objectContaining({ pk: partitionKey }) }),
+      );
+    });
+  });
+
+  suite('handleEvent - batchItemFailures', () => {
+    let matcher: DynamoDBMatcher;
+
+    beforeEach(() => {
+      matcher = new DynamoDBMatcher({ batchItemFailures: true });
+    });
+
+    test('returns undefined when all records succeed', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      matcher.insert({ filters: {}, handler: async () => {} });
+
+      const records = [dynamoDBInsertRecord(), dynamoDBInsertRecord(), dynamoDBInsertRecord()];
+      const event = dynamoDBStreamEvent(records);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toBeUndefined();
+    });
+
+    test('returns failed record sequence number as itemIdentifier', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const failingRecord = dynamoDBInsertRecord();
+
+      matcher.insert({
+        filters: {},
+        handler: async (request: DynamoDBInsertRequest) => {
+          if (request.record.eventID === failingRecord.eventID) {
+            throw new Error('processing failed');
+          }
+        },
+      });
+
+      const event = dynamoDBStreamEvent([failingRecord]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: failingRecord.dynamodb?.SequenceNumber }],
+      });
+    });
+
+    test('marks failed record and all remaining records as failures', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const recordA = dynamoDBInsertRecord();
+      const failingRecord = dynamoDBInsertRecord();
+      const recordC = dynamoDBInsertRecord();
+      const recordD = dynamoDBInsertRecord();
+      matcher.insert({
+        filters: {},
+        handler: async (request: DynamoDBInsertRequest) => {
+          if (request.record.eventID === failingRecord.eventID) {
+            throw new Error('processing failed');
+          }
+        },
+      });
+
+      const event = dynamoDBStreamEvent([recordA, failingRecord, recordC, recordD]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [
+          { itemIdentifier: failingRecord.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordC.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordD.dynamodb?.SequenceNumber },
+        ],
+      });
+    });
+
+    test('returns batchItemFailures when no route matches', async ({ dynamoDBStreamHandlerEvent }) => {
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: event.Records[0]?.dynamodb?.SequenceNumber }],
+      });
+    });
+
+    test('only processes records up to first failure', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const recordA = dynamoDBInsertRecord();
+      const recordC = dynamoDBInsertRecord();
+      const failingRecord = dynamoDBInsertRecord();
+
+      const handler = vi.fn().mockImplementation(async (request: DynamoDBInsertRequest) => {
+        if (request.record.eventID === failingRecord.eventID) {
+          throw new Error('processing failed');
+        }
+      });
+
+      matcher.insert({ filters: {}, handler });
+
+      const event = dynamoDBStreamEvent([recordA, failingRecord, recordC]);
+      await matcher.handleEvent(event, context());
+
+      // Only recordA and failingRecord are processed; recordC is never called
+      expect(handler).toHaveBeenCalledTimes(2);
+    });
+
+    test('first record failure marks all records as failed', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      matcher.insert({
+        filters: {},
+        handler: async () => {
+          throw new Error('first record failed');
+        },
+      });
+
+      const recordA = dynamoDBInsertRecord();
+      const recordB = dynamoDBInsertRecord();
+      const recordC = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([recordA, recordB, recordC]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [
+          { itemIdentifier: recordA.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordB.dynamodb?.SequenceNumber },
+          { itemIdentifier: recordC.dynamodb?.SequenceNumber },
+        ],
+      });
+    });
+
+    test('last record failure only includes that record', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const recordA = dynamoDBInsertRecord();
+      const recordB = dynamoDBInsertRecord();
+      const lastRecord = dynamoDBInsertRecord();
+
+      matcher.insert({
+        filters: {},
+        handler: async (request: DynamoDBInsertRequest) => {
+          if (request.record.eventID === lastRecord.eventID) {
+            throw new Error('last record failed');
+          }
+        },
+      });
+
+      const event = dynamoDBStreamEvent([recordA, recordB, lastRecord]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: lastRecord.dynamodb?.SequenceNumber }],
+      });
+    });
+  });
+
+  suite('handleEvent - schema validation', () => {
+    test('handler receives validated keys from keysSchema', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      const keysSchema = createMockSchema();
+      matcher.insert({ filters: {}, keysSchema, handler });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith({ pk: 'pk-123', sk: 'sk-123' }, keysSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ keys: { pk: 'pk-123', sk: 'sk-123' } }));
+    });
+
+    test('throws when keysSchema validation fails and batchItemFailures is disabled', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.insert({ filters: {}, keysSchema, handler: async () => {} });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Image validation failed for Keys');
+    });
+
+    test('returns batchItemFailure when keysSchema validation fails', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const matcher = new DynamoDBMatcher({ batchItemFailures: true });
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.insert({ filters: {}, keysSchema, handler: async () => {} });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
+      });
+    });
+
+    test('handler receives validated newImage from newImageSchema', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      const newImageSchema = createMockSchema();
+      matcher.insert({ filters: {}, newImageSchema, handler });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' },
+        newImageSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ newImage: { pk: 'pk-123', sk: 'sk-123', name: 'Test Item' } }),
+      );
+    });
+
+    test('throws when newImageSchema validation fails and batchItemFailures is disabled', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.insert({ filters: {}, newImageSchema, handler: async () => {} });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Image validation failed for NewImage');
+    });
+
+    test('returns batchItemFailure when newImageSchema validation fails', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const matcher = new DynamoDBMatcher({ batchItemFailures: true });
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.insert({ filters: {}, newImageSchema, handler: async () => {} });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
+      });
+    });
+
+    test('handler receives validated oldImage from oldImageSchema', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+      const oldImageSchema = createMockSchema();
+      matcher.modify({ filters: {}, oldImageSchema, handler });
+
+      const record = dynamoDBModifyRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { pk: 'pk-123', sk: 'sk-123', name: 'Old Item' },
+        oldImageSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ oldImage: { pk: 'pk-123', sk: 'sk-123', name: 'Old Item' } }),
+      );
+    });
+
+    test('throws when oldImageSchema validation fails and batchItemFailures is disabled', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.modify({ filters: {}, oldImageSchema, handler: async () => {} });
+
+      const record = dynamoDBModifyRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Image validation failed for OldImage');
+    });
+
+    test('returns batchItemFailure when oldImageSchema validation fails', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const matcher = new DynamoDBMatcher({ batchItemFailures: true });
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.modify({ filters: {}, oldImageSchema, handler: async () => {} });
+
+      const record = dynamoDBModifyRecord();
+      const event = dynamoDBStreamEvent([record]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
+      });
+    });
+
+    test('skips newImageSchema on REMOVE', async ({ dynamoDBRemoveRecord, dynamoDBStreamEvent, context }) => {
+      const handler = vi.fn();
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route({
+        filters: { eventName: ['MODIFY', 'REMOVE'] },
+        newImageSchema,
+        handler,
+      });
+
+      const record = dynamoDBRemoveRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).not.toHaveBeenCalledWith(undefined, newImageSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ newImage: undefined }));
+    });
+
+    test('skips oldImageSchema on INSERT', async ({ dynamoDBInsertRecord, dynamoDBStreamEvent, context }) => {
+      const handler = vi.fn();
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route({
+        filters: { eventName: ['INSERT', 'MODIFY'] },
+        oldImageSchema,
+        handler,
+      });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).not.toHaveBeenCalledWith(undefined, oldImageSchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ oldImage: undefined }));
+    });
+
+    test('still validates oldImageSchema on MODIFY when the route takes two event names', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const oldImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route({
+        filters: { eventName: ['INSERT', 'MODIFY'] },
+        oldImageSchema,
+        handler: async () => {},
+      });
+
+      const record = dynamoDBModifyRecord();
+      const event = dynamoDBStreamEvent([record]);
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Image validation failed for OldImage');
+    });
+
+    test('throws when the event carries an image the stream view type left out', async ({
+      dynamoDBModifyRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const newImageSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.modify({ filters: {}, newImageSchema, handler: async () => {} });
+
+      const record = dynamoDBModifyRecord();
+      delete record.dynamodb?.NewImage;
+      const event = dynamoDBStreamEvent([record]);
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Image validation failed for NewImage');
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes all three event types to respective handlers', async ({
+      dynamoDBInsertRecord,
+      dynamoDBModifyRecord,
+      dynamoDBRemoveRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const insertHandler = vi.fn();
+      const modifyHandler = vi.fn();
+      const removeHandler = vi.fn();
+
+      matcher.insert({ filters: {}, handler: insertHandler });
+      matcher.modify({ filters: {}, handler: modifyHandler });
+      matcher.remove({ filters: {}, handler: removeHandler });
+
+      const insertRecord = dynamoDBInsertRecord();
+      const modifyRecord = dynamoDBModifyRecord();
+      const removeRecord = dynamoDBRemoveRecord();
+      const event = dynamoDBStreamEvent([insertRecord, modifyRecord, removeRecord]);
+      await matcher.handleEvent(event, context());
+
+      expect(insertHandler).toHaveBeenCalledTimes(1);
+      expect(modifyHandler).toHaveBeenCalledTimes(1);
+      expect(removeHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('routes by eventSourceArn for different tables', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const ordersArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/orders/stream/2024-01-01T00:00:00.000';
+      const usersArn = 'arn:aws:dynamodb:us-east-1:123456789012:table/users/stream/2024-01-01T00:00:00.000';
+
+      const ordersHandler = vi.fn();
+      const usersHandler = vi.fn();
+
+      matcher.insert({ filters: { eventSourceArn: [ordersArn] }, handler: ordersHandler });
+      matcher.insert({ filters: { eventSourceArn: [usersArn] }, handler: usersHandler });
+
+      const ordersRecord = dynamoDBInsertRecord({ eventSourceARN: ordersArn });
+      const usersRecord = dynamoDBInsertRecord({ eventSourceARN: usersArn });
+      const event = dynamoDBStreamEvent([ordersRecord, usersRecord]);
+      await matcher.handleEvent(event, context());
+
+      expect(ordersHandler).toHaveBeenCalledTimes(1);
+      expect(usersHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('catch-all route handles all event types', async ({
+      dynamoDBInsertRecord,
+      dynamoDBModifyRecord,
+      dynamoDBRemoveRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+
+      matcher.route(defineRoute({ filters: {} }).handle(handler));
+
+      const event = dynamoDBStreamEvent([dynamoDBInsertRecord(), dynamoDBModifyRecord(), dynamoDBRemoveRecord()]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+  });
+
+  suite('matcher-level middleware', () => {
+    test('executes middleware before the route handler for each record', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [middleware] });
+      matcher.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('executes middleware per-record for multi-record events', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const recordIds: string[] = [];
+
+      async function middleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        recordIds.push(request.record.eventID ?? '');
+        await next(request);
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [middleware] });
+      matcher.insert({ filters: {}, handler: async () => {} });
+
+      const recordA = dynamoDBInsertRecord({ eventID: 'evt-1' });
+      const recordB = dynamoDBInsertRecord({ eventID: 'evt-2' });
+      const event = dynamoDBStreamEvent([recordA, recordB]);
+      await matcher.handleEvent(event, context());
+
+      expect(recordIds).toEqual(['evt-1', 'evt-2']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ dynamoDBStreamHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [skipMiddleware] });
+      matcher.insert({ filters: {}, handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple matcher-level middleware in order', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [middlewareOne, middlewareTwo] });
+      matcher.insert({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      matcher.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({
+      dynamoDBStreamHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      matcher.insert({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      matcher.insert({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({
+        filters: {},
+        middleware: [routeMiddleware],
+      }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      matcher.route(route);
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined matcher and route middleware', () => {
+    test('executes matcher middleware before route middleware', async ({ dynamoDBStreamHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function matcherMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('matcher-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: DynamoDBRequest, next: DynamoDBNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [matcherMiddleware] });
+      matcher.insert({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['matcher-mw', 'route-mw', 'handler']);
+    });
+
+    test('matcher middleware short-circuit prevents route middleware from running', async ({
+      dynamoDBStreamHandlerEvent,
+    }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingMatcherMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createDynamoDBMatcher({ middleware: [blockingMatcherMiddleware] });
+      matcher.insert({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ dynamoDBStreamHandlerEvent }) => {
+      const middleware = vi.fn();
+      const keysSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const matcher = createDynamoDBMatcher({ middleware: [middleware] });
+      matcher.insert({ filters: {}, keysSchema, handler: vi.fn() });
+
+      const { event, context } = dynamoDBStreamHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('Image validation failed for Keys');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('batch item failures with middleware', () => {
+    test('middleware errors are tracked as batch item failures', async ({
+      dynamoDBInsertRecord,
+      dynamoDBStreamEvent,
+      context,
+    }) => {
+      const handler = vi.fn();
+
+      async function failingMiddleware(_request: DynamoDBRequest, _next: DynamoDBNext): Promise<void> {
+        throw new Error('middleware error');
+      }
+
+      const matcher = createDynamoDBMatcher({ batchItemFailures: true, middleware: [failingMiddleware] });
+      matcher.insert({ filters: {}, handler });
+
+      const record = dynamoDBInsertRecord();
+      const event = dynamoDBStreamEvent([record]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toEqual({
+        batchItemFailures: [{ itemIdentifier: record.dynamodb?.SequenceNumber }],
+      });
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+});
+
+suite('DynamoDBMatcher.canHandleEvent', () => {
+  const ownEvents = ['createDynamoDBEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createDynamoDBMatcher().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
+  });
+});

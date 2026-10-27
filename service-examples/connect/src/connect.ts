@@ -1,4 +1,4 @@
-import { createConnectRouter } from '@lambda-event-router/connect';
+import { createConnectMatcher } from '@latcher/connect';
 
 import { answerInboundCall } from './handlers/answerInboundCall.js';
 import { checkDeliverySlot } from './handlers/checkDeliverySlot.js';
@@ -18,12 +18,12 @@ import { logContact } from './middleware/logContact.js';
 import { atStep } from './utils/atStep.js';
 import { GREET_STEP, LOOKUP_ORDER_STEP, TRIAGE_STEP } from './utils/constants.js';
 
-export const connectRouter = createConnectRouter({ middleware: [logContact] });
+export const connectMatcher = createConnectMatcher({ middleware: [logContact] });
 
 // Order matters twice. escalateToSupervisor takes every high priority contact whatever step it asks
 // for, so it is registered ahead of the step routes that would otherwise claim it. answerInboundCall
 // sits ahead of playHoldAnnouncement, which is the voice route with no other filter on it.
-connectRouter
+connectMatcher
   .route(escalateToSupervisor)
   .chat({
     filters: { initiationMethod: 'API', custom: atStep(GREET_STEP) },

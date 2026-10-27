@@ -1,40 +1,40 @@
-# @lambda-event-router/cognito
+# @latcher/cognito
 
 Routes Cognito User Pool triggers to a handler for each trigger source, such as PreSignUp or PostAuthentication. Your handler gets the event to change and return.
 
 **Supported AWS Services:** `Amazon Cognito`
 
-**Available Routers:** `CognitoRouter`
+**Available Matchers:** `CognitoMatcher`
 
-**Docs:** [CognitoRouter](https://pyepye.github.io/lambda-event-router/routers/CognitoRouter)
+**Docs:** [CognitoMatcher](https://pyepye.github.io/latcher/matchers/CognitoMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/cognito
+npm install @latcher/base @latcher/cognito
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { cognitoRouter } from './cognito'
+import { Latcher } from '@latcher/base'
+import { cognitoMatcher } from './cognito'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [cognitoRouter],
+const latcher = new Latcher({
+  matchers: [cognitoMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // cognito.ts
-import { createCognitoRouter, defineRoute } from '@lambda-event-router/cognito'
+import { createCognitoMatcher, defineRoute } from '@latcher/cognito'
 
-export const cognitoRouter = createCognitoRouter()
+export const cognitoMatcher = createCognitoMatcher()
 
 const autoConfirm = defineRoute({
   filters: {
@@ -49,17 +49,17 @@ const autoConfirm = defineRoute({
   return event
 })
 
-cognitoRouter.preSignUp(autoConfirm)
+cognitoMatcher.preSignUp(autoConfirm)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/CognitoRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/CognitoMatcher#annotated-handlers).
 
 ## Documentation
 
-- [CognitoRouter](https://pyepye.github.io/lambda-event-router/routers/CognitoRouter) covers every filter, schema validation, responses
+- [CognitoMatcher](https://pyepye.github.io/latcher/matchers/CognitoMatcher) covers every filter, schema validation, responses
   and trigger sources.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

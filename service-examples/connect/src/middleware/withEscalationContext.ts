@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConnectMiddleware } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import type { ConnectMiddleware } from '@latcher/connect';
 
 import { ORDER_REF_PARAMETER } from '../utils/constants.js';
 

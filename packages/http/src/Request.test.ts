@@ -1,7 +1,7 @@
 import type { MockInstance } from 'vitest';
 
-import * as base from '@lambda-event-router/base';
-import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import * as base from '@latcher/base';
+import { createMockContext, createMockSchema } from '@latcher/testing';
 
 import { HTTPException } from './HTTPException.js';
 import type { InternalRoute } from './PathRouter.js';

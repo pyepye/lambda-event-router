@@ -1,4 +1,4 @@
-import { Authorized, Denied, defineLambdaAuthorizerRoute } from '@lambda-event-router/apigateway';
+import { Authorized, Denied, defineLambdaAuthorizerRoute } from '@latcher/apigateway';
 
 import { DEMO_TOKEN } from '../utils/auth.js';
 

@@ -1,7 +1,7 @@
 # Service example: Connect
 
-A deployable CDK app that exercises the `ConnectRouter` end to end. It models a parcel support desk.
-One Lambda is the code hook for every Invoke AWS Lambda function block in a contact flow. The router
+A deployable CDK app that exercises the `ConnectMatcher` end to end. It models a parcel support desk.
+One Lambda is the code hook for every Invoke AWS Lambda function block in a contact flow. The matcher
 picks the handler for each block.
 
 The routes are in `src/connect.ts`, and the handlers are in `src/handlers/`.
@@ -30,7 +30,7 @@ ler-example-connect-support (Amazon Connect contact flow)
 ## What it covers
 
 One `trigger` starts one chat contact and one task contact. The chat walks nine Invoke AWS Lambda
-function blocks. Together they hit every filter the router has and both ways a contact can fail.
+function blocks. Together they hit every filter the matcher has and both ways a contact can fail.
 
 | Feature | Where |
 | --- | --- |
@@ -46,7 +46,7 @@ function blocks. Together they hit every filter the router has and both ways a c
 | `voice`, `email`, `inbound`, `outbound`, `transfer` and `callback` methods | The six telephony routes register through them |
 | `route` method | `escalateToSupervisor`, `checkDeliverySlot`, `offerCallback`, `failAgentHandover` and `recordFlowError` |
 | `defineRoute` | Those five take their request type from their filters, and `escalateToSupervisor` carries its middleware there |
-| Router middleware | `logContact` runs once per matched contact |
+| Matcher middleware | `logContact` runs once per matched contact |
 | Route middleware | `withEscalationContext` on the escalation route |
 | Match order | A high priority block reaches `escalateToSupervisor` on the same step others use for `lookupOrder` |
 | No route matched | The refund block asks for a step no route claims |
@@ -57,7 +57,7 @@ function blocks. Together they hit every filter the router has and both ways a c
 CDK injects the instance ARN as an env var on the worker, and `src/config.ts` reads it. The
 `instanceArn` filters match against that value.
 
-The router has no schema support, so there is no validation failure to cover. A contact carries
+The matcher has no schema support, so there is no validation failure to cover. A contact carries
 metadata rather than a payload you control.
 
 `ConnectChannel` and `ConnectInitiationMethod` follow the Connect service model, so they carry the
@@ -98,9 +98,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-connect... install
-pnpm -F @lambda-event-router/service-example-connect... build
-pnpm -F @lambda-event-router/service-example-connect run deploy
+pnpm -F @latcher/service-example-connect... install
+pnpm -F @latcher/service-example-connect... build
+pnpm -F @latcher/service-example-connect run deploy
 ```
 
 CDK outputs include `InstanceId`, `InstanceArn`, `ContactFlowId`, `TaskFlowId` and
@@ -118,7 +118,7 @@ depends on the `AWS::Connect::IntegrationAssociation`.
 ## Start a sample contact
 
 ```bash
-pnpm -F @lambda-event-router/service-example-connect trigger
+pnpm -F @latcher/service-example-connect trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name as the first
@@ -164,9 +164,9 @@ One trigger run puts 17 invocations in the log. Eleven of those are blocks the t
 Connect runs a failing block three times before it takes the Error branch, so the three failing
 blocks add the other six.
 
-Eleven invocations log `Handling Connect contact` from the router middleware. That line carries the
+Eleven invocations log `Handling Connect contact` from the matcher middleware. That line carries the
 contact id, the channel, the initiation method and the step. Three of the eleven are the handover
-block, once per attempt, because the router matched it every time.
+block, once per attempt, because the matcher matched it every time.
 
 Eight invocations succeed:
 
@@ -189,7 +189,7 @@ Nine invocations fail, and each leaves an `ERROR` record carrying `errorType`, `
 - `No agent is free to take contact <id>` comes from the handler. That invocation has a `Handling
   Connect contact` line, because the middleware ran before the handler threw.
 - `No route matched for Amazon Connect event (channel: CHAT, initiationMethod: API)` comes from the
-  router. That invocation has no `Handling Connect contact` line. The router matches a route before
+  matcher. That invocation has no `Handling Connect contact` line. The matcher matches a route before
   it runs any middleware.
 - `No route matched for Amazon Connect event (channel: TASK, initiationMethod: API)` is the refund
   block of the task flow, which no route claims on any channel.
@@ -248,10 +248,10 @@ then reports the missing attributes instead of timing out.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-connect check    # drive the routes in process
-pnpm -F @lambda-event-router/service-example-connect diff     # review pending changeset
-pnpm -F @lambda-event-router/service-example-connect watch    # hotswap deploys
-pnpm -F @lambda-event-router/service-example-connect synth    # render template
+pnpm -F @latcher/service-example-connect check    # drive the routes in process
+pnpm -F @latcher/service-example-connect diff     # review pending changeset
+pnpm -F @latcher/service-example-connect watch    # hotswap deploys
+pnpm -F @latcher/service-example-connect synth    # render template
 ```
 
 `check` builds a Connect event for every block the deployed run makes. It adds the six routes the
@@ -261,7 +261,7 @@ lands on the handler it should, and needs no AWS credentials.
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-connect destroy
+pnpm -F @latcher/service-example-connect destroy
 ```
 
 That removes the Connect instance, both contact flows, the Lambda association, the worker, its log

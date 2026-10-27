@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { activeMqRouter } from './activeMq.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [activeMqRouter] });
+import { activeMqMatcher } from './activeMq.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [activeMqMatcher] });
+
+export const handler: Handler = latcher.handler();

@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-documentdb",
+  "name": "@latcher/service-example-documentdb",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "destroy": "cdk destroy --force && tsx scripts/purgeSecret.ts"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/documentdb": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/documentdb": "workspace:*",
     "@aws-sdk/client-lambda": "^3.1034.0",
     "@aws-sdk/client-secrets-manager": "^3.1034.0",
     "mongodb": "^6.12.0",

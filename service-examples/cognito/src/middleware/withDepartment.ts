@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { CognitoMiddleware } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { CognitoMiddleware } from '@latcher/cognito';
 
 import type { TStaffAttributes } from '../utils/schemas.js';
 

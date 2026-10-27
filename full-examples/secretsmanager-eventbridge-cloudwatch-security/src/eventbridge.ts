@@ -1,10 +1,10 @@
-import { createEventBridgeRouter } from '@lambda-event-router/eventbridge';
+import { createEventBridgeMatcher } from '@latcher/eventbridge';
 
 import { checkRotationAge } from './eventbridge-handlers/checkRotationAge.js';
 import { logEventBridgeInvocation } from './middleware/logInvocation.js';
 
-export const eventBridgeRouter = createEventBridgeRouter({
+export const eventBridgeMatcher = createEventBridgeMatcher({
   middleware: [logEventBridgeInvocation],
 });
 
-eventBridgeRouter.route(checkRotationAge);
+eventBridgeMatcher.route(checkRotationAge);

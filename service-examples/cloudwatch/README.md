@@ -1,7 +1,7 @@
 # Service example: CloudWatch Logs
 
-A deployable CDK app that exercises the `CloudWatchLogsRouter` end to end. It models a log triage
-service. Five log groups are subscribed to one Lambda, and the router decides what happens to each
+A deployable CDK app that exercises the `CloudWatchLogsMatcher` end to end. It models a log triage
+service. Five log groups are subscribed to one Lambda, and the matcher decides what happens to each
 delivery.
 
 The routes are in `src/cloudwatch.ts`, and the handlers are in `src/handlers/`.
@@ -28,7 +28,7 @@ and [Deploy](#deploy).
 ## What it covers
 
 One `trigger` writes log lines to all five groups. Six subscription filters turn those into six
-deliveries. Between them they hit every filter the router has and both of its failure paths.
+deliveries. Between them they hit every filter the matcher has and both of its failure paths.
 
 | Feature | Where |
 | --- | --- |
@@ -37,7 +37,7 @@ deliveries. Between them they hit every filter the router has and both of its fa
 | `subscriptionFilter` filter | `escalateCheckoutFailure` matches the filter named `checkout-errors` |
 | `messageType` filter | `indexCheckoutTraffic` is registered with `dataMessage`, and `forwardAuditToSiem` names both types |
 | `custom` filter | `quarantineDeclinedPayment` reads the log events for a declined payment |
-| Router middleware | `logDelivery` runs once per delivery |
+| Matcher middleware | `logDelivery` runs once per delivery |
 | Route middleware | `withIncidentContext` runs only on the checkout error route |
 | Route order | An error delivery matches two routes, and the first registered one takes it |
 | Several events per delivery | The checkout group sends four log lines to one invocation |
@@ -45,7 +45,7 @@ deliveries. Between them they hit every filter the router has and both of its fa
 | Handler failure | `forwardAuditToSiem` throws after its middleware has run |
 | Retries | A failed delivery runs three times |
 
-The router has no schemas, so a delivery either matches a route or it does not.
+The matcher has no schemas, so a delivery either matches a route or it does not.
 
 Handlers do their work by logging, so the worker's own log group is how you confirm routing.
 
@@ -73,9 +73,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cloudwatch... install
-pnpm -F @lambda-event-router/service-example-cloudwatch... build
-pnpm -F @lambda-event-router/service-example-cloudwatch run deploy
+pnpm -F @latcher/service-example-cloudwatch... install
+pnpm -F @latcher/service-example-cloudwatch... build
+pnpm -F @latcher/service-example-cloudwatch run deploy
 ```
 
 The CDK output is `WorkerLogGroupName`.
@@ -87,7 +87,7 @@ fails, because the log group names are already taken.
 ## Write sample log events
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cloudwatch trigger
+pnpm -F @latcher/service-example-cloudwatch trigger
 ```
 
 The script takes no arguments.
@@ -122,7 +122,7 @@ different `stackName`.
 One trigger run puts 10 invocations in the log. Four are the deliveries that succeed. The other six
 are the two failing deliveries, three attempts each.
 
-Seven invocations log `Handling log delivery` from the router middleware. That line carries the log
+Seven invocations log `Handling log delivery` from the matcher middleware. That line carries the log
 group, the log stream, the subscription filter names, the message type and the event count.
 
 Four invocations succeed:
@@ -142,8 +142,8 @@ Six invocations fail. Each leaves an `ERROR` record carrying `errorType`, `error
 
 - `SIEM endpoint unreachable for /ler-example/audit-trail` comes from the handler. Those three
   attempts have a `Handling log delivery` line, because the middleware ran before the handler threw.
-- `No route matched for log group /ler-example/legacy-batch` comes from the router. Those three
-  attempts have no `Handling log delivery` line. The router matches a route before it runs any
+- `No route matched for log group /ler-example/legacy-batch` comes from the matcher. Those three
+  attempts have no `Handling log delivery` line. The matcher matches a route before it runs any
   middleware.
 
 Note: an invocation whose handler threw still reports a `status` of `success` in its
@@ -171,19 +171,19 @@ Every log group in the stack keeps one day of logs.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cloudwatch check    # drive the routes in process
-pnpm -F @lambda-event-router/service-example-cloudwatch diff     # review pending changeset
-pnpm -F @lambda-event-router/service-example-cloudwatch watch    # hotswap deploys
-pnpm -F @lambda-event-router/service-example-cloudwatch synth    # render template
+pnpm -F @latcher/service-example-cloudwatch check    # drive the routes in process
+pnpm -F @latcher/service-example-cloudwatch diff     # review pending changeset
+pnpm -F @latcher/service-example-cloudwatch watch    # hotswap deploys
+pnpm -F @latcher/service-example-cloudwatch synth    # render template
 ```
 
-`check` gzips a delivery for every route, sends it through the router and reads the log the handler
+`check` gzips a delivery for every route, sends it through the matcher and reads the log the handler
 wrote. It adds a control message and both failure paths. It needs no AWS credentials.
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-cloudwatch destroy
+pnpm -F @latcher/service-example-cloudwatch destroy
 ```
 
 That removes the five subscribed log groups and their filters. It also removes the worker, its log

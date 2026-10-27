@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3BatchMiddleware } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3BatchMiddleware } from '@latcher/s3';
 
 // Batch middleware: a different request and response type from the notification middleware, so a
 // batch route takes its own chain. It returns the handler's response untouched.

@@ -1,11 +1,11 @@
-import { createS3Router } from '@lambda-event-router/s3';
+import { createS3Matcher } from '@latcher/s3';
 
 import { cleanupProcessed } from './s3-handlers/cleanupProcessed.js';
 import { convertToBlackAndWhite } from './s3-handlers/convertToBlackAndWhite.js';
 
-export const s3Router = createS3Router();
+export const s3Matcher = createS3Matcher();
 
-s3Router
+s3Matcher
   .objectCreated({
     filters: { key: ['originals/*.jpg', 'originals/*.jpeg', 'originals/*.png'] },
     handler: convertToBlackAndWhite,

@@ -1,2 +1,3 @@
-export * from './ActiveMQRouter';
-export * from './RabbitMQRouter';
+export * from './ActiveMQMatcher';
+export * from './RabbitMQMatcher';
+

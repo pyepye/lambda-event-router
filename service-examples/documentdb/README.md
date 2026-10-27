@@ -1,7 +1,7 @@
 # Service example: DocumentDB
 
-A deployable CDK app that exercises the `DocumentDBRouter` end to end. It models an online shop. One
-Lambda consumes seven change streams from one Amazon DocumentDB cluster, and the router does the
+A deployable CDK app that exercises the `DocumentDBMatcher` end to end. It models an online shop. One
+Lambda consumes seven change streams from one Amazon DocumentDB cluster, and the matcher does the
 per-change dispatch.
 
 The routes are in `src/documentdb.ts`, and the handlers are in `src/handlers/`.
@@ -41,7 +41,7 @@ and only the first failure is ever seen.
 
 ## What it covers
 
-One `seed` run writes 18 changes across eight collections. Together they hit every filter the router
+One `seed` run writes 18 changes across eight collections. Together they hit every filter the matcher
 reads, every schema it validates and every way it can fail.
 
 | Feature | Where |
@@ -56,7 +56,7 @@ reads, every schema it validates and every way it can fail.
 | Zod schemas | `documentKeySchema` on every route, `fullDocumentSchema` on most, `fullDocumentBeforeChangeSchema` on `comparePriceChange` |
 | Coerced values | `total` is stored as a string, so the handler receives a number |
 | Extended JSON | An `_id` arrives as `{ $oid: '...' }`, which is what the document key schema matches |
-| Router middleware | `logChange` runs once per change |
+| Matcher middleware | `logChange` runs once per change |
 | Route middleware | `withOrderContext` on `createOrder` |
 | Ordered batch | Eight storefront changes reach one invocation in the order they were written |
 | No route matched | A carrier webhook |
@@ -99,9 +99,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-documentdb... install
-pnpm -F @lambda-event-router/service-example-documentdb... build
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-documentdb run deploy
+pnpm -F @latcher/service-example-documentdb... install
+pnpm -F @latcher/service-example-documentdb... build
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-documentdb run deploy
 ```
 
 CDK outputs include `SeedFunctionName`, `WorkerLogGroupName` and `ClusterArn`.
@@ -125,7 +125,7 @@ delivered. The seed command waits for all seven mappings before it writes anythi
 Pass the seed function name from the deploy outputs:
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-documentdb seed <SeedFunctionName>
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-documentdb seed <SeedFunctionName>
 ```
 
 DocumentDB has no public endpoint, so the writes come from a Lambda inside the VPC rather than from
@@ -212,7 +212,7 @@ The five fulfilment mappings each fail:
   carries a before image, so that route fails every update it takes.
 - `No route matched for record ... from arn:aws:rds:...` is the carrier webhook.
 
-Note: no change that failed validation has a `Handling change` line. The router validates before it
+Note: no change that failed validation has a `Handling change` line. The matcher validates before it
 runs middleware.
 
 Each of those five errors appears six times. The mapping replays the batch it could not finish, so
@@ -242,7 +242,7 @@ whole seed group into one invocation.
 The cluster runs with `change_stream_log_retention_duration` at 3600 seconds, the shortest it allows.
 That keeps the change stream log small.
 
-`fullDocument` and `fullDocumentBeforeChange` are the two filters the router never matches on. They
+`fullDocument` and `fullDocumentBeforeChange` are the two filters the matcher never matches on. They
 declare how the change stream was opened. What they do is make those fields non-optional in an
 inferred handler. `applyOrderDiscount` and `comparePriceChange` are the routes that set them.
 
@@ -253,9 +253,9 @@ what a change event actually carries before writing a schema against it.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-documentdb diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-documentdb watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-documentdb synth  # render template
+pnpm -F @latcher/service-example-documentdb diff   # review pending changeset
+pnpm -F @latcher/service-example-documentdb watch  # hotswap deploys
+pnpm -F @latcher/service-example-documentdb synth  # render template
 ```
 
 A code change needs a redeploy before the next seed run. A stale worker sends changes down the wrong
@@ -264,7 +264,7 @@ route, which is worse than not testing them.
 ## Tear down
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-documentdb run destroy
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-documentdb run destroy
 ```
 
 That destroys the stack and then force deletes the cluster secret. Destroying takes between eight

@@ -1,5 +1,5 @@
-import { isObject } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/stepfunctions';
+import { isObject } from '@latcher/base';
+import { defineRoute } from '@latcher/stepfunctions';
 
 import { RELEASE_STOCK_HOLD_TASK } from '../config.js';
 import { ReleaseStockHoldSchema } from '../utils/schemas.js';

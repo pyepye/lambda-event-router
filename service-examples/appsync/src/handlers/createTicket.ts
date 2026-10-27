@@ -1,5 +1,5 @@
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncResolverRequest } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import type { TNewTicket } from '../utils/schemas.js';
 import { raiseTicket, type Ticket } from '../utils/supportDesk.js';

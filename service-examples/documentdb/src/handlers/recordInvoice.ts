@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/documentdb';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/documentdb';
 
 import { CLUSTER_ARN } from '../config.js';
 import { COLLECTIONS, DATABASES } from '../utils/cluster.js';

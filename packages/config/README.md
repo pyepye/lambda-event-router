@@ -1,41 +1,41 @@
-# @lambda-event-router/config
+# @latcher/config
 
-Routes AWS Config rule evaluations to handlers by rule name, resource type, resource id or item status. There is one router for configuration changes and one for scheduled evaluations.
+Routes AWS Config rule evaluations to handlers by rule name, resource type, resource id or item status. There is one matcher for configuration changes and one for scheduled evaluations.
 
 **Supported AWS Services:** `AWS Config`
 
-**Available Routers:** `ConfigRouter` | `ConfigScheduledRouter`
+**Available Matchers:** `ConfigMatcher` | `ConfigScheduledMatcher`
 
-**Docs:** [ConfigRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter) | [ConfigScheduledRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigScheduledRouter)
+**Docs:** [ConfigMatcher](https://pyepye.github.io/latcher/matchers/ConfigMatcher) | [ConfigScheduledMatcher](https://pyepye.github.io/latcher/matchers/ConfigScheduledMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/config
+npm install @latcher/base @latcher/config
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { configRouter } from './config'
-import { scheduledRouter } from './scheduled'
+import { Latcher } from '@latcher/base'
+import { configMatcher } from './config'
+import { scheduledMatcher } from './scheduled'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [configRouter, scheduledRouter],
+const latcher = new Latcher({
+  matchers: [configMatcher, scheduledMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // config.ts
-import { createConfigRouter, defineRoute } from '@lambda-event-router/config'
+import { createConfigMatcher, defineRoute } from '@latcher/config'
 
-export const configRouter = createConfigRouter()
+export const configMatcher = createConfigMatcher()
 
 const evaluateInstance = defineRoute({
   filters: {
@@ -48,14 +48,14 @@ const evaluateInstance = defineRoute({
   console.log(`Evaluating ${configRuleName}, report with token ${resultToken}`)
 })
 
-configRouter.route(evaluateInstance)
+configMatcher.route(evaluateInstance)
 ```
 
 ```ts
 // scheduled.ts
-import { createConfigScheduledRouter, defineConfigScheduledRoute } from '@lambda-event-router/config'
+import { createConfigScheduledMatcher, defineConfigScheduledRoute } from '@latcher/config'
 
-export const scheduledRouter = createConfigScheduledRouter()
+export const scheduledMatcher = createConfigScheduledMatcher()
 
 const runTagAudit = defineConfigScheduledRoute({
   filters: {
@@ -66,19 +66,19 @@ const runTagAudit = defineConfigScheduledRoute({
   console.log(`Auditing account ${accountId}, report with token ${resultToken}`)
 })
 
-scheduledRouter.route(runTagAudit)
+scheduledMatcher.route(runTagAudit)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/ConfigMatcher#annotated-handlers).
 
 ## Documentation
 
-- [ConfigRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigRouter) covers every filter, schema validation, failures and retries
+- [ConfigMatcher](https://pyepye.github.io/latcher/matchers/ConfigMatcher) covers every filter, schema validation, failures and retries
   and reporting evaluations.
-- [ConfigScheduledRouter](https://pyepye.github.io/lambda-event-router/routers/ConfigScheduledRouter) covers every filter, schema validation
+- [ConfigScheduledMatcher](https://pyepye.github.io/latcher/matchers/ConfigScheduledMatcher) covers every filter, schema validation
   and reporting evaluations.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

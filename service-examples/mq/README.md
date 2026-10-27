@@ -1,14 +1,14 @@
 # Service example: MQ
 
-A deployable CDK app that exercises both Amazon MQ routers end to end. It models an order and payment
-pipeline. Two brokers feed a Lambda each, and the router does the per-message dispatch.
+A deployable CDK app that exercises both Amazon MQ matchers end to end. It models an order and payment
+pipeline. Two brokers feed a Lambda each, and the matcher does the per-message dispatch.
 
 The routes are in `src/activeMq.ts` and `src/rabbitMq.ts`, and the handlers are in `src/handlers/`.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-The two engines send different event shapes, so `ActiveMQRouter` and `RabbitMQRouter` get a worker
+The two engines send different event shapes, so `ActiveMQMatcher` and `RabbitMQMatcher` get a worker
 each rather than sharing one.
 
 ```
@@ -54,7 +54,7 @@ it. RabbitMQ retries until the message expires, so the failures are published wi
 ## What it covers
 
 One `publish` run puts seven messages on the ActiveMQ broker and eight on the RabbitMQ one. Together
-they hit every filter both routers read, every schema they validate and every way they can fail.
+they hit every filter both matchers read, every schema they validate and every way they can fail.
 
 | Feature | Where |
 | --- | --- |
@@ -69,7 +69,7 @@ they hit every filter both routers read, every schema they validate and every wa
 | Non-JSON body | `recordPaymentNote` declares no `bodySchema`, so the note arrives as the string |
 | Zod schemas | `bodySchema` on every route that takes one |
 | Coerced values | `total` and `amount` are published as strings and reach the handler as numbers |
-| Router middleware | `logOrderMessage` and `logPaymentMessage` run once per message |
+| Matcher middleware | `logOrderMessage` and `logPaymentMessage` run once per message |
 | Route middleware | `withOrderContext` on the escalation, `withPaymentContext` on the settlement |
 | Ordered batch | The four payments reach one invocation, in the order they were sent |
 | No route matched | A bytes message on the order failure queue, a receipt with no content type |
@@ -132,9 +132,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-mq... install
-pnpm -F @lambda-event-router/service-example-mq... build
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-mq run deploy \
+pnpm -F @latcher/service-example-mq... install
+pnpm -F @latcher/service-example-mq... build
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-mq run deploy \
   --context allowedCidr=$(curl -s https://checkip.amazonaws.com)/32
 ```
 
@@ -153,7 +153,7 @@ after the deploy finishes before you publish, or the first run reaches nothing.
 Pass the two endpoints from the deploy outputs:
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-mq run publish \
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-mq run publish \
   <OrderBrokerStompEndpoint> <PaymentBrokerAmqpEndpoint>
 ```
 
@@ -203,8 +203,8 @@ Four orders are handled:
 Nothing logs `Order sent to legacy fulfilment`. The urgent order carries everything that route asks
 for apart from the broker ARN.
 
-Three orders fail, one message per batch, all three at the same time. Neither router catches an error,
-so each failure is Lambda's own `ERROR` record rather than a line a router wrote. `errorMessage` tells
+Three orders fail, one message per batch, all three at the same time. Neither matcher catches an error,
+so each failure is Lambda's own `ERROR` record rather than a line a matcher wrote. `errorMessage` tells
 the three apart:
 
 - `Body validation failed for message <id>` is O-9001, which has no `currency`.
@@ -233,7 +233,7 @@ Five payments are handled:
 
 Nothing logs `Payment reconciled` or `Payment sent to legacy settlement`. Every `Handling RabbitMQ
 message` line carries `virtualHost` as `/`. The event keys the queue as `payment-events::/`, and the
-router splits the name from the host.
+matcher splits the name from the host.
 
 Three payments fail, one queue each, all three at the same time:
 
@@ -246,7 +246,7 @@ Three payments fail, one queue each, all three at the same time:
 Each one repeats until its 60 second expiry removes it. Six runs gave between 6 and 48 `ERROR` records
 for one message. Lambda slows a mapping's polling down while it keeps failing.
 
-Note: no message that fails validation has a `Handling` line. Both routers validate the body before
+Note: no message that fails validation has a `Handling` line. Both matchers validate the body before
 they run middleware, so only the two handler failures reach one.
 
 ## Brokers and routes
@@ -282,9 +282,9 @@ group.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-mq diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-mq watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-mq synth  # render template
+pnpm -F @latcher/service-example-mq diff   # review pending changeset
+pnpm -F @latcher/service-example-mq watch  # hotswap deploys
+pnpm -F @latcher/service-example-mq synth  # render template
 ```
 
 Changing a route means redeploying before the next publish. A stale worker sends messages down the
@@ -293,7 +293,7 @@ wrong path.
 ## Tear down
 
 ```bash
-AWS_REGION=eu-west-2 pnpm -F @lambda-event-router/service-example-mq run destroy
+AWS_REGION=eu-west-2 pnpm -F @latcher/service-example-mq run destroy
 ```
 
 That destroys the stack and then force deletes the two broker secrets. Destroying takes about six

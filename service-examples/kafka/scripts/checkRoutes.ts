@@ -1,5 +1,6 @@
-import type { KafkaMSKEvent, KafkaRecord, KafkaRecordHeader } from '@lambda-event-router/kafka';
 import type { Context } from 'aws-lambda';
+
+import type { KafkaMSKEvent, KafkaRecord, KafkaRecordHeader } from '@latcher/kafka';
 
 import {
   CAPTURE_KIND,
@@ -24,12 +25,12 @@ const BROKER_TWO = `b-2.lerexamplekafka.a1b2c3.c2.kafka.${REGION}.amazonaws.com:
 const BOOTSTRAP_SERVERS = `${BROKER_ONE},${BROKER_TWO}`;
 
 // environment.ts reads the cluster ARN and the broker list once, at import, and throws when either is
-// missing. The logger builds itself on the first call. Both have to be settled before the router loads.
+// missing. The logger builds itself on the first call. Both have to be settled before the matcher loads.
 process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
 process.env.CLUSTER_ARN = CLUSTER_ARN;
 process.env.BOOTSTRAP_SERVERS = BOOTSTRAP_SERVERS;
 
-const { kafkaRouter } = await import('../src/kafka.js');
+const { kafkaMatcher } = await import('../src/kafka.js');
 
 const context = {
   functionName: WORKER_FUNCTION_NAME,
@@ -362,7 +363,7 @@ async function runCapturingLogs(kafkaEvent: KafkaMSKEvent): Promise<{ logged: st
   Object.assign(console, { log: collect, debug: collect, warn: collect, error: collect });
 
   try {
-    const result = await kafkaRouter.handleEvent(kafkaEvent, context);
+    const result = await kafkaMatcher.handleEvent(kafkaEvent, context);
     const reported = (result?.batchItemFailures ?? []).map((failure) => failure.itemIdentifier);
     return { logged: lines.join('\n'), failures: JSON.stringify(reported) };
   } finally {
@@ -414,14 +415,14 @@ for (const check of checks) {
 const anyOrder = checks[0]?.event as KafkaMSKEvent;
 
 const claims: [string, boolean][] = [
-  ['the router takes an MSK event', kafkaRouter.canHandleEvent(anyOrder)],
+  ['the matcher takes an MSK event', kafkaMatcher.canHandleEvent(anyOrder)],
   [
-    'the router takes a self-managed Kafka event',
-    kafkaRouter.canHandleEvent({ ...anyOrder, eventSource: 'SelfManagedKafka' }),
+    'the matcher takes a self-managed Kafka event',
+    kafkaMatcher.canHandleEvent({ ...anyOrder, eventSource: 'SelfManagedKafka' }),
   ],
-  ['the router turns an SQS event away', !kafkaRouter.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })],
-  ['the router turns a bare string away', !kafkaRouter.canHandleEvent('aws:kafka')],
-  ['the router turns an event with no records away', !kafkaRouter.canHandleEvent({ eventSource: 'aws:kafka' })],
+  ['the matcher turns an SQS event away', !kafkaMatcher.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })],
+  ['the matcher turns a bare string away', !kafkaMatcher.canHandleEvent('aws:kafka')],
+  ['the matcher turns an event with no records away', !kafkaMatcher.canHandleEvent({ eventSource: 'aws:kafka' })],
 ];
 
 for (const [label, held] of claims) {

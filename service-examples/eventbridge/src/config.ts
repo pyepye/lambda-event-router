@@ -7,7 +7,7 @@ export const SHIPPING_SOURCE = 'ler.shipping';
 export const PAYMENTS_SOURCE = 'ler.payments';
 export const LEGACY_SOURCE = 'ler.legacy';
 
-// The rule sends every one of these to the worker. The router does the rest of the sorting.
+// The rule sends every one of these to the worker. The matcher does the rest of the sorting.
 export const RULE_SOURCES = [ORDERS_SOURCE, SHIPPING_SOURCE, PAYMENTS_SOURCE, LEGACY_SOURCE];
 
 export const ORDER_PLACED = 'Order Placed';

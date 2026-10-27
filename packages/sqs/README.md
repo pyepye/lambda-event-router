@@ -1,41 +1,41 @@
-# @lambda-event-router/sqs
+# @latcher/sqs
 
-Routes each message in an SQS batch to a handler by queue or message attribute. The router parses and validates the body, and can report failed messages back to SQS.
+Routes each message in an SQS batch to a handler by queue or message attribute. The matcher parses and validates the body, and can report failed messages back to SQS.
 
 **Supported AWS Services:** `Amazon SQS`
 
-**Available Routers:** `SQSRouter`
+**Available Matchers:** `SQSMatcher`
 
-**Docs:** [SQSRouter](https://pyepye.github.io/lambda-event-router/routers/SQSRouter)
+**Docs:** [SQSMatcher](https://pyepye.github.io/latcher/matchers/SQSMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/sqs
+npm install @latcher/base @latcher/sqs
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { sqsRouter } from './sqs'
+import { Latcher } from '@latcher/base'
+import { sqsMatcher } from './sqs'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [sqsRouter],
+const latcher = new Latcher({
+  matchers: [sqsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // sqs.ts
-import { createSQSRouter, defineRoute } from '@lambda-event-router/sqs'
+import { createSQSMatcher, defineRoute } from '@latcher/sqs'
 import { z } from 'zod'
 
-export const sqsRouter = createSQSRouter()
+export const sqsMatcher = createSQSMatcher()
 
 const processOrder = defineRoute({
   filters: {
@@ -47,17 +47,17 @@ const processOrder = defineRoute({
   console.log(`Processing order ${body.orderId} for ${body.total}`)
 })
 
-sqsRouter.route(processOrder)
+sqsMatcher.route(processOrder)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SQSRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/SQSMatcher#annotated-handlers).
 
 ## Documentation
 
-- [SQSRouter](https://pyepye.github.io/lambda-event-router/routers/SQSRouter) covers every filter, schema validation, message attribute types
+- [SQSMatcher](https://pyepye.github.io/latcher/matchers/SQSMatcher) covers every filter, schema validation, message attribute types
   and batch failure reporting.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

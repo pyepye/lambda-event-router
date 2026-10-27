@@ -1,4 +1,4 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 import { Kafka } from 'kafkajs';
 
 import { BROKER_COUNT, FAILED_RECORDS_TOPIC, ORDERS_TOPIC, PAYMENTS_TOPIC, TOPIC_PARTITIONS } from './config.js';

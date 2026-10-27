@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/lex';
+import { defineRoute } from '@latcher/lex';
 
 import { SPEAK_TO_AGENT_INTENT } from '../utils/constants.js';
 

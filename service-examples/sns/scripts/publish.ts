@@ -49,7 +49,7 @@ function order(orderId: string, total: number, shippingSpeed: 'standard' | 'expr
 
 const orderEntries: PublishBatchRequestEntry[] = [
   {
-    // processOrder. Carries one attribute of each SNS type, so the handler can log what the router
+    // processOrder. Carries one attribute of each SNS type, so the handler can log what the matcher
     // decoded them to.
     Id: 'order-placed',
     Subject: 'Order placed',

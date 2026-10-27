@@ -17,7 +17,7 @@ import { LogGroup, RetentionDays } from 'aws-cdk-lib/aws-logs';
 import { BlockPublicAccess, Bucket } from 'aws-cdk-lib/aws-s3';
 import type { Construct } from 'constructs';
 
-// Long enough that one put of several records reaches the worker as a single invocation. The router's
+// Long enough that one put of several records reaches the worker as a single invocation. The matcher's
 // per-record results only sit side by side in the log when that happens.
 const PROCESSOR_BUFFER_SECONDS = 60;
 

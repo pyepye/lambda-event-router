@@ -1,41 +1,41 @@
-# @lambda-event-router/alb
+# @latcher/alb
 
-Routes Application Load Balancer requests to handlers by method and path. Your handler returns a body, and the router builds the response the load balancer expects.
+Routes Application Load Balancer requests to handlers by method and path. Your handler returns a body, and the matcher builds the response the load balancer expects.
 
 **Supported AWS Services:** `Application Load Balancer`
 
-**Available Routers:** `ALBRouter`
+**Available Matchers:** `ALBMatcher`
 
-**Docs:** [ALBRouter](https://pyepye.github.io/lambda-event-router/routers/ALBRouter)
+**Docs:** [ALBMatcher](https://pyepye.github.io/latcher/matchers/ALBMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/alb
+npm install @latcher/base @latcher/alb
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { albRouter } from './alb'
+import { Latcher } from '@latcher/base'
+import { albMatcher } from './alb'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [albRouter],
+const latcher = new Latcher({
+  matchers: [albMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // alb.ts
-import { createALBRouter, defineRoute } from '@lambda-event-router/alb'
+import { createALBMatcher, defineRoute } from '@latcher/alb'
 import { z } from 'zod'
 
-export const albRouter = createALBRouter()
+export const albMatcher = createALBMatcher()
 
 const createOrder = defineRoute({
   filters: {
@@ -48,17 +48,17 @@ const createOrder = defineRoute({
   return { orgId: path.orgId, item: body.item }
 })
 
-albRouter.route(createOrder)
+albMatcher.route(createOrder)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/ALBRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/ALBMatcher#annotated-handlers).
 
 ## Documentation
 
-- [ALBRouter](https://pyepye.github.io/lambda-event-router/routers/ALBRouter) covers every filter, schema validation, responses
+- [ALBMatcher](https://pyepye.github.io/latcher/matchers/ALBMatcher) covers every filter, schema validation, responses
   and CORS.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

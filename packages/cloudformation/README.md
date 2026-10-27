@@ -1,38 +1,38 @@
-# @lambda-event-router/cloudformation
+# @latcher/cloudformation
 
 Routes CloudFormation custom resource requests to a handler for each request type: Create, Update or Delete.
 
 **Supported AWS Services:** `AWS CloudFormation`
 
-**Available Routers:** `CloudFormationRouter`
+**Available Matchers:** `CloudFormationMatcher`
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/cloudformation
+npm install @latcher/base @latcher/cloudformation
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { cloudformationRouter } from './cloudformation'
+import { Latcher } from '@latcher/base'
+import { cloudformationMatcher } from './cloudformation'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [cloudformationRouter]
+const latcher = new Latcher({
+  matchers: [cloudformationMatcher]
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // cloudformation.ts
-import { createCloudFormationRouter, defineRoute } from '@lambda-event-router/cloudformation'
+import { createCloudFormationMatcher, defineRoute } from '@latcher/cloudformation'
 
-const cloudformationRouter = createCloudFormationRouter()
+const cloudformationMatcher = createCloudFormationMatcher()
 
 // An inferred handler takes its types from the route
 const handleCreate = defineRoute({
@@ -42,18 +42,18 @@ const handleCreate = defineRoute({
 }).handle(async ({ requestType, resourceProperties, stackId }) => {
   console.log(`Creating custom resource in stack ${stackId}`)
 })
-cloudformationRouter.route(handleCreate)
+cloudformationMatcher.route(handleCreate)
 ```
 
 Or use an annotated handler, which names its types rather than inferring them:
 
 ```ts
 // cloudformation.ts
-import { createCloudFormationRouter } from '@lambda-event-router/cloudformation'
+import { createCloudFormationMatcher } from '@latcher/cloudformation'
 
-const cloudformationRouter = createCloudFormationRouter()
+const cloudformationMatcher = createCloudFormationMatcher()
 
-cloudformationRouter.route({
+cloudformationMatcher.route({
   filters: { requestType: 'Create' },
   handler: handleCreate,
 })
@@ -70,9 +70,9 @@ export async function handleCreate({ requestType, resourceProperties, stackId })
 #### Inferred handlers
 
 ```ts
-import { createCloudFormationRouter, defineRoute } from '@lambda-event-router/cloudformation'
+import { createCloudFormationMatcher, defineRoute } from '@latcher/cloudformation'
 
-const cloudformationRouter = createCloudFormationRouter()
+const cloudformationMatcher = createCloudFormationMatcher()
 
 const handleCreate = defineRoute({
   filters: { requestType: 'Create' },
@@ -80,17 +80,17 @@ const handleCreate = defineRoute({
   console.log(`Creating custom resource in stack ${stackId}`)
 })
 
-cloudformationRouter.route(handleCreate)
+cloudformationMatcher.route(handleCreate)
 ```
 
 #### Annotated handlers
 
 ```ts
-import { createCloudFormationRouter } from '@lambda-event-router/cloudformation'
+import { createCloudFormationMatcher } from '@latcher/cloudformation'
 
-const cloudformationRouter = createCloudFormationRouter()
+const cloudformationMatcher = createCloudFormationMatcher()
 
-cloudformationRouter.route({
+cloudformationMatcher.route({
   filters: { requestType: 'Create' },
   handler: handleCreate,
 })

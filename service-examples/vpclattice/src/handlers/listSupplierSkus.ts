@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute, NotFound, Ok } from '@latcher/vpclattice';
 
 import { requireCallerPrincipal } from '../middleware/requireCallerPrincipal.js';
 import { SUPPLIER_SKUS } from '../utils/inventory.js';

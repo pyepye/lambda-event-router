@@ -1,6 +1,6 @@
 import type { Context, SecretsManagerRotationEvent, SecretsManagerRotationEventStep } from 'aws-lambda';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 // Secrets Manager sends a fourth key that `SecretsManagerRotationEvent` does not type.
 // `PutSecretValue` needs it when a rotation assumes a role or crosses accounts.
@@ -53,6 +53,6 @@ export interface SecretsManagerStepRouteDefinition {
   handler: SecretsManagerHandler;
 }
 
-export interface SecretsManagerRouterOptions {
+export interface SecretsManagerMatcherOptions {
   middleware?: SecretsManagerMiddleware[];
 }

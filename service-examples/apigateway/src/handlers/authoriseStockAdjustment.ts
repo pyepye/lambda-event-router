@@ -1,5 +1,5 @@
-import type { LambdaAuthorizerRequestRequest } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { LambdaAuthorizerRequestRequest } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { SERVICE_TOKEN } from '../utils/constants.js';
 

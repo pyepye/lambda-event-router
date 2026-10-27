@@ -1,11 +1,11 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute, NotFound, Ok } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute, NotFound, Ok } from '@latcher/vpclattice';
 
 import { CHANNEL_HEADER, WAREHOUSE_FLOOR_CHANNEL } from '../utils/constants.js';
 import { STOCK } from '../utils/inventory.js';
 import { StockAdjustmentSchema } from '../utils/schemas.js';
 
-// The custom filter reads a header, which no other filter key on this router can see. It is
+// The custom filter reads a header, which no other filter key on this matcher can see. It is
 // registered ahead of the plain PATCH route, which matches the same method and path.
 export const adjustStockOnFloor = defineRoute({
   filters: {

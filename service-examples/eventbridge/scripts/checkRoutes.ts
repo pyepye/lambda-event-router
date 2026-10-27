@@ -1,17 +1,18 @@
-import type { EventBridgeEventEnvelope } from '@lambda-event-router/eventbridge';
 import type { Context } from 'aws-lambda';
+
+import type { EventBridgeEventEnvelope } from '@latcher/eventbridge';
 
 const ACCOUNT = '739650895623';
 const REGION = 'eu-west-2';
 
-// The router reads the account and region filters from the environment at import time, and the
-// logger builds itself on the first call. Both have to be set before the router module loads, which
+// The matcher reads the account and region filters from the environment at import time, and the
+// logger builds itself on the first call. Both have to be set before the matcher module loads, which
 // is why the imports below are dynamic. JSON is the format the deployed worker writes.
 process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
 process.env.LOCAL_ACCOUNT_ID = ACCOUNT;
 process.env.LOCAL_REGION = REGION;
 
-const { eventBridgeRouter } = await import('../src/eventbridge.js');
+const { eventBridgeMatcher } = await import('../src/eventbridge.js');
 const {
   BATCH_COMPLETED,
   BRISTOL_WAREHOUSE_ARN,
@@ -159,7 +160,7 @@ async function runCapturingLogs(event: EventBridgeEventEnvelope): Promise<{ logg
   Object.assign(console, { log: collect, debug: collect, warn: collect, error: collect });
 
   try {
-    await eventBridgeRouter.handleEvent(event, context);
+    await eventBridgeMatcher.handleEvent(event, context);
     return { logged: lines.join('\n') };
   } catch (thrown) {
     return { logged: lines.join('\n'), error: thrown };
@@ -201,15 +202,15 @@ for (const [index, check] of checks.entries()) {
 const sampleEvent = buildEvent(checks[0] as Check, 0);
 
 const claims: [string, boolean][] = [
-  ['the router takes an EventBridge envelope', eventBridgeRouter.canHandleEvent(sampleEvent)],
-  ['the router turns an SQS event away', !eventBridgeRouter.canHandleEvent({ Records: [] })],
+  ['the matcher takes an EventBridge envelope', eventBridgeMatcher.canHandleEvent(sampleEvent)],
+  ['the matcher turns an SQS event away', !eventBridgeMatcher.canHandleEvent({ Records: [] })],
   [
-    'the router turns an envelope with no detail type away',
-    !eventBridgeRouter.canHandleEvent({ source: 'ler.orders' }),
+    'the matcher turns an envelope with no detail type away',
+    !eventBridgeMatcher.canHandleEvent({ source: 'ler.orders' }),
   ],
   [
-    'the router turns an envelope whose detail is not an object away',
-    !eventBridgeRouter.canHandleEvent({ source: 'ler.orders', 'detail-type': ORDER_PLACED, detail: 'AB-2041' }),
+    'the matcher turns an envelope whose detail is not an object away',
+    !eventBridgeMatcher.canHandleEvent({ source: 'ler.orders', 'detail-type': ORDER_PLACED, detail: 'AB-2041' }),
   ],
 ];
 

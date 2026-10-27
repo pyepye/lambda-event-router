@@ -1,7 +1,7 @@
 # Service example: SQS
 
-A deployable CDK app that exercises the `SQSRouter` end to end. It models a notifications dispatcher.
-One Lambda consumes two SQS queues, and the router does the final per-record dispatch.
+A deployable CDK app that exercises the `SQSMatcher` end to end. It models a notifications dispatcher.
+One Lambda consumes two SQS queues, and the matcher does the final per-record dispatch.
 
 The routes are in `src/sqs.ts`, and the handlers are in `src/handlers/`.
 
@@ -30,9 +30,9 @@ the FIFO grouping paths.
 | `eventSourceArn` filter | `deliverPriorityAlert` matches the FIFO queue by ARN |
 | Number attributes | `retryCount` is sent as a Number, so the handler receives a number |
 | Zod schemas | `bodySchema` on every route, `messageAttributesSchema` on `sendEmail` |
-| Router middleware | `logInvocation` runs once per record |
+| Matcher middleware | `logInvocation` runs once per record |
 | Route middleware | `withAlertContext` on the priority route |
-| Batch item failures | `createSQSRouter({ batchItemFailures: true })`, both event sources report them |
+| Batch item failures | `createSQSMatcher({ batchItemFailures: true })`, both event sources report them |
 | No route matched | A notification with no `channel` attribute and no marketing category |
 | Handler failure | `failDelivery` throws after its middleware has run |
 | Schema failures | A missing `subject`, a `retryCount` that will not coerce, and a body that is not JSON |
@@ -67,9 +67,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sqs... install
-pnpm -F @lambda-event-router/service-example-sqs... build
-pnpm -F @lambda-event-router/service-example-sqs run deploy
+pnpm -F @latcher/service-example-sqs... install
+pnpm -F @latcher/service-example-sqs... build
+pnpm -F @latcher/service-example-sqs run deploy
 ```
 
 CDK outputs include `NotificationsQueueUrl`, `PriorityQueueUrl`, `NotificationsDlqUrl` and
@@ -80,7 +80,7 @@ CDK outputs include `NotificationsQueueUrl`, `PriorityQueueUrl`, `NotificationsD
 Pass the two queue URLs from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sqs send \
+pnpm -F @latcher/service-example-sqs send \
   <NotificationsQueueUrl> <PriorityQueueUrl>
 ```
 
@@ -128,7 +128,7 @@ them apart:
 
 The priority queue shows the FIFO paths:
 
-- `tenant-99` delivers `b-1`, `b-2` then `b-3` in order, inside one invocation. The router produces
+- `tenant-99` delivers `b-1`, `b-2` then `b-3` in order, inside one invocation. The matcher produces
   that order, because it walks a message group one record at a time.
 - `tenant-42` delivers `a-1`, fails on `a-2`, and never runs `a-3`. A failure stops the rest of its
   group, so `a-3` never appears in the log.
@@ -137,7 +137,7 @@ The priority queue shows the FIFO paths:
 - `a-2` and `a-3` retry once a minute. The third receive puts both in `PriorityDlq`, so a valid
   record is dead-lettered behind a broken one.
 
-Note: no record that fails validation has a `logInvocation` line. The router validates before it runs
+Note: no record that fails validation has a `logInvocation` line. The matcher validates before it runs
 middleware.
 
 ## Queues and routes
@@ -152,13 +152,13 @@ Both queues have a dead letter queue with `maxReceiveCount` 3.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sqs diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-sqs watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-sqs synth  # render template
+pnpm -F @latcher/service-example-sqs diff   # review pending changeset
+pnpm -F @latcher/service-example-sqs watch  # hotswap deploys
+pnpm -F @latcher/service-example-sqs synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-sqs destroy
+pnpm -F @latcher/service-example-sqs destroy
 ```

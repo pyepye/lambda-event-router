@@ -1,10 +1,10 @@
 # Service example: API Gateway
 
-A deployable CDK app that exercises the `APIGatewayRouter`, `LambdaAuthorizerRouter` and
-`WebSocketRouter` end to end. It models a warehouse fulfilment service across three APIs, and every
-route belongs to one of the three routers.
+A deployable CDK app that exercises the `APIGatewayMatcher`, `LambdaAuthorizerMatcher` and
+`WebSocketMatcher` end to end. It models a warehouse fulfilment service across three APIs, and every
+route belongs to one of the three matchers.
 
-The routes are in `src/apiRouter.ts`, `src/authorizerRouter.ts` and `src/webSocketRouter.ts`, and the handlers are in `src/handlers/`.
+The routes are in `src/apiMatcher.ts`, `src/authorizerMatcher.ts` and `src/webSocketMatcher.ts`, and the handlers are in `src/handlers/`.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
@@ -46,13 +46,13 @@ alerts (WebSocket API)
 ├── sendAlert                              broadcastAlert
 ├── admin*                                 runAdminCommand       custom filter on the route key
 ├── $default                               rejectUnknownAction
-└── subscribe                              no router route matches
+└── subscribe                              no matcher route matches
 ```
 
 ## What it covers
 
-One command sends every request. Together they hit every filter the three routers support and every
-failure path each router has. They also cover all three payload formats API Gateway can send.
+One command sends every request. Together they hit every filter the three matchers support and every
+failure path each matcher has. They also cover all three payload formats API Gateway can send.
 
 | Feature | Where |
 | --- | --- |
@@ -67,11 +67,11 @@ failure path each router has. They also cover all three payload formats API Gate
 | `querySchema` | `getOrder` coerces `page` to a number |
 | `bodySchema` | `createOrder`, `amendOrder`, `bookConsignment`, `adjustStock`, `reconcileStock` |
 | `responseSchema` | `quoteCarrierRate` returns a price its own schema rejects |
-| Router middleware | `logRequest`, `logSocketEvent` and `logAuthorizerAttempt`, one per router |
+| Matcher middleware | `logRequest`, `logSocketEvent` and `logAuthorizerAttempt`, one per matcher |
 | Route middleware | `withOrderContext` logs, `requireDispatchRole` throws, `withAuditTrail` reads the result |
 | CORS | An origin function, credentials, exposed headers, an automatic preflight, and a registered `options()` route that wins |
 | Multi-value headers and query | A repeated query param on all three payload formats, and a repeated header on both adapters |
-| HEAD responses | `headStockRecord` builds a body and the router strips it |
+| HEAD responses | `headStockRecord` builds a body and the matcher strips it |
 | Auth from a TOKEN authorizer | `createOrder` sits behind `staffAuth`, a `lambdaAuth` preset whose schema reads the context |
 | Auth from a REQUEST authorizer | `getOrder` reads the principal the policy named behind `lambdaAuth()`. `generatePolicy` attaches no context, so `auth.context` is empty |
 | Auth from an HTTP API authorizer | `reconcileStock` reads `auth.context` behind a `lambdaAuth` preset with a schema |
@@ -90,10 +90,10 @@ failure path each router has. They also cover all three payload formats API Gate
 | No route matched | An unrouted path, an unrouted authorizer method, an unrouted WebSocket route key |
 | Schema failures | A query, three bodies and a WebSocket frame |
 | Thrown responses | 401, 403, 404, 409, 307 and 308, from handlers and from a middleware |
-| Handler failure | `bookConsignment` throws an error, which the router answers 500 without its message |
+| Handler failure | `bookConsignment` throws an error, which the matcher answers 500 without its message |
 
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. Everything
-the routers answer with is asserted by the trigger.
+the matchers answer with is asserted by the trigger.
 
 ## Prerequisites
 
@@ -119,9 +119,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-apigateway... install
-pnpm -F @lambda-event-router/service-example-apigateway... build
-pnpm -F @lambda-event-router/service-example-apigateway run deploy
+pnpm -F @latcher/service-example-apigateway... install
+pnpm -F @latcher/service-example-apigateway... build
+pnpm -F @latcher/service-example-apigateway run deploy
 ```
 
 CDK outputs include `RestApiUrl`, `HttpApiUrl`, `WebSocketUrl`, `StockApiKeyId`,
@@ -136,7 +136,7 @@ the stack, or the stock levels step answers 403.
 ## Send sample requests
 
 ```bash
-pnpm -F @lambda-event-router/service-example-apigateway trigger
+pnpm -F @latcher/service-example-apigateway trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name as the first
@@ -172,22 +172,22 @@ so the names change if you deploy with a different `stackName`.
 
 ### The worker log
 
-`Handling API request` is the router middleware, and there is one for every request that reached a
+`Handling API request` is the matcher middleware, and there is one for every request that reached a
 route. A full run has 28. Its `payloadVersion` field says which adapter normalised the event: `rest`
 for the REST API, `1.0` for the `/dispatch` routes and `2.0` for the rest of the HTTP API.
 
-Two `ERROR` records are the router reporting a handler that had already run:
+Two `ERROR` records are the matcher reporting a handler that had already run:
 
 - `Handler response failed its responseSchema` follows `Carrier quote fetched`. The handler returned
   a price of -1 and its own schema requires a positive one.
 - `Unhandled error processing HTTP request` carries `Carrier palletline rejected the booking`. That
-  is the error the handler threw. The router logs its message and leaves it out of the 500 body.
+  is the error the handler threw. The matcher logs its message and leaves it out of the 500 body.
 
 Seven requests reach the worker with no `Handling API request` line:
 
 - The two automatic preflights and the request to `/nowhere` match no route, and are answered before
   any middleware runs.
-- The four schema failures do match a route. The router validates the query and the body before it
+- The four schema failures do match a route. The matcher validates the query and the body before it
   builds the middleware chain, and a request that fails either one gets no further.
 
 The rest of the log is one line per handler:
@@ -205,8 +205,8 @@ The rest of the log is one line per handler:
   method and path without the `x-channel` header.
 - `Order line read` proves both path params reach the handler.
 - `Order manifest uploaded` carries `lines` as 3 and `isBase64Encoded` as true. The content type is
-  one of the API's binary media types, so the router hands the manifest over as a `Buffer`. The
-  manifest is three lines of text, so a body the router had not decoded would count as one. `bytes`
+  one of the API's binary media types, so the matcher hands the manifest over as a `Buffer`. The
+  manifest is three lines of text, so a body the matcher had not decoded would count as one. `bytes`
   is the length of the manifest the caller sent.
 - `Packing slip read` carries `bytes` as 67, the size of the PNG.
 - `Stock levels read` carries the API key's id. The key value is a credential, so the handler logs
@@ -215,10 +215,10 @@ The rest of the log is one line per handler:
   1.0 sends the multi-value form of the query and the headers, so the two values survive.
 - `Stock record read` carries `depot` and `depotHeader` as `'leeds,hull'`, and `depots` and
   `depotHeaders` as `['leeds,hull']`. Payload format 2.0 has no multi-value form. API Gateway joins
-  the repeats before the Lambda sees them, and the router does not split them back apart.
+  the repeats before the Lambda sees them, and the matcher does not split them back apart.
 - `Stock audit read` carries the `accountId` and `userArn` API Gateway resolved the signature to.
 - `Stock record checked` is the HEAD route. It builds the same response as the GET route and the
-  router strips the body.
+  matcher strips the body.
 - `Stock options described` is the registered `options()` route answering a preflight itself.
 - `Stock adjusted` carries `auth` as `{ type: 'lambda', context: {} }`. The simple-response authorizer
   answers with a boolean, so it has no context to pass on.
@@ -243,19 +243,19 @@ message and disconnect that matched a route and passed its schema. A full run ha
 - Two `ERROR` records have no `Handling WebSocket event` line before them. One is
   `Body validation failed for WebSocket body`, from the alert missing its `message`. The other is
   `No route matched for WebSocket event (eventType: MESSAGE, routeKey: subscribe)`, from a route key
-  API Gateway knows and the router does not. Both reach the client as an internal server error
+  API Gateway knows and the matcher does not. Both reach the client as an internal server error
   frame.
 
 ### The authorizer log
 
-A full run invokes the authorizer 14 times. `Authorising request` is the router middleware and has 13
+A full run invokes the authorizer 14 times. `Authorising request` is the matcher middleware and has 13
 of them. The IAM authorized route is not one of them: API Gateway checks a signature itself and calls
 no Lambda.
 
 - `Staff token presented` appears 5 times, once per TOKEN invocation, and logs the token's length
   rather than the token.
 - `Token decision recorded` appears 4 times. It is the route middleware reading the policy on the way
-  back out. It is absent for the revoked token, whose handler throws its policy: the router catches
+  back out. It is absent for the revoked token, whose handler throws its policy: the matcher catches
   the throw above the middleware.
 - One of those four carries no `effect`. That is the token whose handler answers with a boolean, so
   there is no policy for the middleware to read.
@@ -267,11 +267,11 @@ no Lambda.
   route.
 - One `ERROR` record says
   `Boolean responses are only supported for HTTP API (v2) request authorizers using simple response mode`.
-  A TOKEN authorizer has no simple response shape, so the router refuses the boolean and the
+  A TOKEN authorizer has no simple response shape, so the matcher refuses the boolean and the
   invocation fails. API Gateway answers 500.
 - One `ERROR` record says
   `No route matched for Lambda Authorizer event (type: REQUEST, method: DELETE)`, and it has no
-  `Authorising request` line before it. The router matches a route before it builds the request, so
+  `Authorising request` line before it. The matcher matches a route before it builds the request, so
   the middleware never runs.
 
 ## APIs and routes
@@ -283,7 +283,7 @@ no Lambda.
 | `AlertsApi` (WebSocket) | Six route keys and no authorizer |
 
 The HTTP API has a catch-all integration on payload format 2.0. Any path it does not route explicitly
-still reaches the worker, and the router answers the 404.
+still reaches the worker, and the matcher answers the 404.
 
 The TOKEN authorizer answers four ways, picked by the token it is given. Two more tokens drive the
 HTTP API's authorizers. `src/utils/constants.ts` holds all six.
@@ -291,15 +291,15 @@ HTTP API's authorizers. `src/utils/constants.ts` holds all six.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-apigateway diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-apigateway watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-apigateway synth  # render template
+pnpm -F @latcher/service-example-apigateway diff   # review pending changeset
+pnpm -F @latcher/service-example-apigateway watch  # hotswap deploys
+pnpm -F @latcher/service-example-apigateway synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-apigateway destroy
+pnpm -F @latcher/service-example-apigateway destroy
 ```
 
 The stack owns every resource it creates, including the two log groups, the API key and the usage

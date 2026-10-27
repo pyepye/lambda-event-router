@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
 import { withBase } from 'vitepress';
+import { computed, onMounted, ref, watch } from 'vue';
 import { filterPills, iconUrl, type PackageEntry, packages } from '../data/packages';
 
 const searchQuery = ref<string>('');
@@ -26,7 +26,7 @@ const filteredPackages = computed<PackageEntry[]>(function filterPackages() {
   return results;
 });
 
-// A package's `homepage` links here as ?search=<package>, so the page opens filtered to its routers
+// A package's `homepage` links here as ?search=<package>, so the page opens filtered to its matchers
 onMounted(function applySearchParam() {
   const search = new URLSearchParams(window.location.search).get('search');
   if (search) {
@@ -75,7 +75,7 @@ function clearFilters(): void {
         <input
           v-model="searchQuery"
           type="search"
-          placeholder="Search by router name or AWS service..."
+          placeholder="Search by matcher name or AWS service..."
           aria-label="Search packages"
         />
       </label>

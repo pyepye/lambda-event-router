@@ -1,5 +1,5 @@
-import type { WebSocketMiddleware } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { WebSocketMiddleware } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { TStockAlert } from '../utils/schemas.js';
 

@@ -1,7 +1,7 @@
 # Service example: DynamoDB
 
-A deployable CDK app that exercises the `DynamoDBRouter` end to end. It models an order service. One
-Lambda consumes two DynamoDB streams, and the router does the per-record dispatch.
+A deployable CDK app that exercises the `DynamoDBMatcher` end to end. It models an order service. One
+Lambda consumes two DynamoDB streams, and the matcher does the per-record dispatch.
 
 The routes are in `src/dynamodb.ts`, and the handlers are in `src/handlers/`.
 
@@ -26,12 +26,12 @@ in order, and a failing record holds that shard. The worker allows one retry, an
 the rest of that batch. There is no on-failure destination. Lambda only writes those to SQS or SNS, and
 this example stays on one service.
 
-Both tables use `pk` and `sk`, because the router's `keys` option names one pair for every route.
+Both tables use `pk` and `sk`, because the matcher's `keys` option names one pair for every route.
 
 ## What it covers
 
 One `write:items` puts six groups of writes on the two tables. Together they hit every filter the
-router has, all four ways of registering a route, and every failure path.
+matcher has, all four ways of registering a route, and every failure path.
 
 | Feature | Where |
 | --- | --- |
@@ -41,12 +41,12 @@ router has, all four ways of registering a route, and every failure path.
 | `sortKey` filter | `chargeCard` matches `PAYMENT#*`, four routes match `SUMMARY` |
 | `streamViewType` filter | `invalidateSearchCache` matches the `KEYS_ONLY` stream, and nothing else does |
 | `custom` filter | `handleOrderStatusChange` compares the old status with the new one |
-| Router `keys` option | Names `pk` and `sk`, which the two key filters read |
+| Matcher `keys` option | Names `pk` and `sk`, which the two key filters read |
 | Zod schemas | `keysSchema` on two routes, `newImageSchema` on five, `oldImageSchema` on two |
 | Unmarshalled values | `processOrder` gets `total` as a number and `tags` as a `Set` |
-| Router middleware | `logChange` runs once per record, on both streams |
+| Matcher middleware | `logChange` runs once per record, on both streams |
 | Route middleware | `withOrderContext` on `processOrder` |
-| Batch item failures | `createDynamoDBRouter({ batchItemFailures: true })`, both streams report them |
+| Batch item failures | `createDynamoDBMatcher({ batchItemFailures: true })`, both streams report them |
 | No route matched | A `SUPPLIER#` item, which no partition key filter covers |
 | Handler failure | `chargeCard` throws on a declined card, after its middleware has run |
 | Schema failures | A payment key with no reference, an order with no total, and the deletion of that order |
@@ -62,7 +62,7 @@ both images are there before it compares them.
 CDK injects both stream ARNs as env vars, and `src/config.ts` reads them. The `eventSourceArn` filters
 match against those values.
 
-Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The router
+Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. The matcher
 returns a batch response rather than anything a handler produces, so there is nothing else to assert.
 
 ## Prerequisites
@@ -88,9 +88,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-dynamodb... install
-pnpm -F @lambda-event-router/service-example-dynamodb... build
-pnpm -F @lambda-event-router/service-example-dynamodb run deploy
+pnpm -F @latcher/service-example-dynamodb... install
+pnpm -F @latcher/service-example-dynamodb... build
+pnpm -F @latcher/service-example-dynamodb run deploy
 ```
 
 CDK outputs include `OrdersTableArn` and `SearchIndexTableArn`.
@@ -100,7 +100,7 @@ CDK outputs include `OrdersTableArn` and `SearchIndexTableArn`.
 Pass the two table ARNs from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-dynamodb run write:items \
+pnpm -F @latcher/service-example-dynamodb run write:items \
   <OrdersTableArn> <SearchIndexTableArn>
 ```
 
@@ -139,7 +139,7 @@ Sixteen writes produce thirteen invocations: eight first attempts and five retri
 splits across shards by partition key, so that count moves by one or two between runs.
 
 There is one `Handling DynamoDB record` line per record that reaches a handler, so twelve in all. A
-record that matches no route, or fails a schema, never gets one. The router matches and validates
+record that matches no route, or fails a schema, never gets one. The matcher matches and validates
 before it runs middleware.
 
 The five order records share a partition key, so they arrive in one invocation in the order they were
@@ -209,15 +209,15 @@ retry. Each takes up to ten records, with a two second batching window.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-dynamodb diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-dynamodb watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-dynamodb synth  # render template
+pnpm -F @latcher/service-example-dynamodb diff   # review pending changeset
+pnpm -F @latcher/service-example-dynamodb watch  # hotswap deploys
+pnpm -F @latcher/service-example-dynamodb synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-dynamodb destroy
+pnpm -F @latcher/service-example-dynamodb destroy
 ```
 
 The stack owns both tables and its log group. `destroy` removes the tables, the worker, the event

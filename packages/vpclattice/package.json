@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/vpclattice",
+  "name": "@latcher/vpclattice",
   "version": "0.1.0",
-  "description": "VPC Lattice handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/VPCLatticeRouter",
+  "description": "VPC Lattice handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/VPCLatticeMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -37,14 +37,14 @@
   ],
   "license": "UNLICENSED",
   "dependencies": {
-    "@lambda-event-router/http": "workspace:*"
+    "@latcher/http": "workspace:*"
   },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^",
+    "@latcher/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "tsup": "catalog:",

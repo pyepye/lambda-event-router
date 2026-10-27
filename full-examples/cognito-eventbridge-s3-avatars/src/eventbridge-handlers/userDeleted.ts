@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { EventBridgeRequest } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import type { EventBridgeRequest } from '@latcher/eventbridge';
 import { z } from 'zod';
 
 import { deleteAvatar, getBucketName, listAvatarsForUserName } from '../utils/s3.js';

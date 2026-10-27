@@ -1,15 +1,15 @@
-// Router exports
+// Matcher exports
 
-export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoRouter.js';
-export { CognitoRouter, createCognitoRouter, defineRoute } from './CognitoRouter.js';
+export { CognitoMatcher, createCognitoMatcher, defineRoute } from './CognitoMatcher.js';
+export type { CognitoRequest, CognitoRouteDefinition, TypedRouteDefinition } from './CognitoMatcher.js';
 // All type exports
 export type {
   // Common
   CognitoEvent,
   CognitoFilterInput,
   CognitoFilters,
+  CognitoMatcherOptions,
   CognitoMiddleware,
-  CognitoRouterOptions,
   CognitoTriggerSource,
   // CreateAuthChallenge
   CreateAuthChallengeHandler,

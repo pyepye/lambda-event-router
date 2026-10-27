@@ -1,5 +1,5 @@
 import { type ComplianceType, PutEvaluationsCommand } from '@aws-sdk/client-config-service';
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 
 import { configServiceClient } from '../environment.js';
 

@@ -1,8 +1,8 @@
 import { buildDecrypt } from '@aws-crypto/decrypt-node';
 import { KmsKeyringNode } from '@aws-crypto/kms-keyring-node';
 import { CommitmentPolicy } from '@aws-crypto/material-management-node';
-import { logger } from '@lambda-event-router/base';
-import type { CustomEmailSenderRequest } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { CustomEmailSenderRequest } from '@latcher/cognito';
 import type { CustomEmailSenderTriggerEvent } from 'aws-lambda';
 
 import { CUSTOM_SENDER_KEY_ARN } from '../config.js';

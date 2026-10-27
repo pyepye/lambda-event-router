@@ -1,40 +1,40 @@
-# @lambda-event-router/lex
+# @latcher/lex
 
 Routes Lex V2 code hook calls to handlers by intent, hook and bot. Your handler gets one turn of the conversation and returns the dialog action.
 
 **Supported AWS Services:** `Amazon Lex`
 
-**Available Routers:** `LexRouter`
+**Available Matchers:** `LexMatcher`
 
-**Docs:** [LexRouter](https://pyepye.github.io/lambda-event-router/routers/LexRouter)
+**Docs:** [LexMatcher](https://pyepye.github.io/latcher/matchers/LexMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/lex
+npm install @latcher/base @latcher/lex
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { lexRouter } from './lex'
+import { Latcher } from '@latcher/base'
+import { lexMatcher } from './lex'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [lexRouter],
+const latcher = new Latcher({
+  matchers: [lexMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // lex.ts
-import { createLexRouter, defineRoute } from '@lambda-event-router/lex'
+import { createLexMatcher, defineRoute } from '@latcher/lex'
 
-export const lexRouter = createLexRouter()
+export const lexMatcher = createLexMatcher()
 
 const placePizzaOrder = defineRoute({
   filters: {
@@ -53,17 +53,17 @@ const placePizzaOrder = defineRoute({
   }
 })
 
-lexRouter.route(placePizzaOrder)
+lexMatcher.route(placePizzaOrder)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/LexRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/LexMatcher#annotated-handlers).
 
 ## Documentation
 
-- [LexRouter](https://pyepye.github.io/lambda-event-router/routers/LexRouter) covers every filter, responses
+- [LexMatcher](https://pyepye.github.io/latcher/matchers/LexMatcher) covers every filter, responses
   and middleware.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

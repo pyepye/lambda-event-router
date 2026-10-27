@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/vpclattice';
 
 import { STOCK } from '../utils/inventory.js';
 

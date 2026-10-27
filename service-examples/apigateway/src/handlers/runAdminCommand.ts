@@ -1,5 +1,5 @@
-import { defineWebSocketRoute, postToConnection } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineWebSocketRoute, postToConnection } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { ADMIN_ROUTE_KEY_PREFIX } from '../utils/constants.js';
 

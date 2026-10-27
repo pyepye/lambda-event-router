@@ -1,5 +1,5 @@
-import { Conflict, type HTTPMiddleware } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { Conflict, type HTTPMiddleware } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { DESK_CLOSED, DESK_STATE_HEADER } from '../utils/constants.js';
 

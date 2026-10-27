@@ -1,3 +1,4 @@
-export * from './ConfigRouter';
-export * from './ConfigScheduledRouter';
+export * from './ConfigMatcher';
+export * from './ConfigScheduledMatcher';
 export type { ConfigEvent, ConfigResponse } from './types.js';
+

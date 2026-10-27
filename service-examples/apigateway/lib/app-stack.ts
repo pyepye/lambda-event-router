@@ -213,7 +213,7 @@ export class AppStack extends Stack {
     alertsApi.addRoute('adminDrainQueue', {
       integration: new WebSocketLambdaIntegration('AlertsAdminDrainQueue', workerFn),
     });
-    // The router has no route for this key, so a frame sent to it fails the invocation.
+    // The matcher has no route for this key, so a frame sent to it fails the invocation.
     alertsApi.addRoute('subscribe', {
       integration: new WebSocketLambdaIntegration('AlertsSubscribe', workerFn),
     });

@@ -1,5 +1,5 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kinesis';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kinesis';
 
 import { HIGH_VALUE_TOTAL, ORDERS_STREAM_ARN } from '../config.js';
 import { withOrderContext } from '../middleware/withOrderContext.js';

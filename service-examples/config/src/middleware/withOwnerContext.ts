@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConfigMiddleware } from '@lambda-event-router/config';
+import { logger } from '@latcher/base';
+import type { ConfigMiddleware } from '@latcher/config';
 
 import { OWNER_TAG } from '../config.js';
 

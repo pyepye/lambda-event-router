@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-kinesis",
+  "name": "@latcher/service-example-kinesis",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/kinesis": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/kinesis": "workspace:*",
     "@aws-sdk/client-cloudwatch-logs": "catalog:",
     "@aws-sdk/client-kinesis": "catalog:",
     "zod": "^4.3.5"

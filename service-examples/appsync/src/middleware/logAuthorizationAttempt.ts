@@ -1,7 +1,7 @@
-import type { AppSyncAuthorizerMiddleware } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncAuthorizerMiddleware } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
-// Router middleware: runs for every token the API is asked to authorise.
+// Matcher middleware: runs for every token the API is asked to authorise.
 export const logAuthorizationAttempt: AppSyncAuthorizerMiddleware = async (request, next) => {
   logger.info({
     message: 'Authorising request',

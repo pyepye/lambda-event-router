@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRabbitMQRoute } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import { defineRabbitMQRoute } from '@latcher/mq';
 
 import { LEGACY_PAYMENT_BROKER_ARN } from '../config.js';
 import { PAYMENT_QUEUES } from '../utils/brokers.js';

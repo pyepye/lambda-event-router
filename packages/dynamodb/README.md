@@ -1,41 +1,41 @@
-# @lambda-event-router/dynamodb
+# @latcher/dynamodb
 
-Routes each record in a DynamoDB Streams batch to a handler by event name, table or key. The router converts the images to plain objects and validates them against your schemas.
+Routes each record in a DynamoDB Streams batch to a handler by event name, table or key. The matcher converts the images to plain objects and validates them against your schemas.
 
 **Supported AWS Services:** `Amazon DynamoDB`
 
-**Available Routers:** `DynamoDBRouter`
+**Available Matchers:** `DynamoDBMatcher`
 
-**Docs:** [DynamoDBRouter](https://pyepye.github.io/lambda-event-router/routers/DynamoDBRouter)
+**Docs:** [DynamoDBMatcher](https://pyepye.github.io/latcher/matchers/DynamoDBMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/dynamodb
+npm install @latcher/base @latcher/dynamodb
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { dynamoDBRouter } from './dynamodb'
+import { Latcher } from '@latcher/base'
+import { dynamoDBMatcher } from './dynamodb'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [dynamoDBRouter],
+const latcher = new Latcher({
+  matchers: [dynamoDBMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // dynamodb.ts
-import { createDynamoDBRouter, defineRoute } from '@lambda-event-router/dynamodb'
+import { createDynamoDBMatcher, defineRoute } from '@latcher/dynamodb'
 import { z } from 'zod'
 
-export const dynamoDBRouter = createDynamoDBRouter({
+export const dynamoDBMatcher = createDynamoDBMatcher({
   keys: { partitionKey: 'pk', sortKey: 'sk' },
 })
 
@@ -55,16 +55,16 @@ const orderChanged = defineRoute({
   console.log(`Order ${newImage.orderId} moved from ${oldImage.status} to ${newImage.status}`)
 })
 
-dynamoDBRouter.route(orderChanged)
+dynamoDBMatcher.route(orderChanged)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/DynamoDBRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/DynamoDBMatcher#annotated-handlers).
 
 ## Documentation
 
-- [DynamoDBRouter](https://pyepye.github.io/lambda-event-router/routers/DynamoDBRouter) covers every filter, schema validation, numbers, and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [DynamoDBMatcher](https://pyepye.github.io/latcher/matchers/DynamoDBMatcher) covers every filter, schema validation, numbers, and failures and retries.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

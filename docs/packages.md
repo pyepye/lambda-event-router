@@ -8,7 +8,7 @@ next: false
 
 hero:
   name: Packages
-  tagline: Each package includes routers for specific AWS event sources. Install only the ones you need.
+  tagline: Each package includes matchers for specific AWS event sources. Install only the ones you need.
 ---
 
 <PackagesGrid />

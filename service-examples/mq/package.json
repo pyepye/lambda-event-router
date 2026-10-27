@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-mq",
+  "name": "@latcher/service-example-mq",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,8 @@
     "destroy": "cdk destroy --force && tsx scripts/purgeSecrets.ts"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/mq": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/mq": "workspace:*",
     "@aws-sdk/client-secrets-manager": "^3.1034.0",
     "amqplib": "^2.0.0",
     "zod": "^4.3.5"

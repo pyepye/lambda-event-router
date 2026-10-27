@@ -1,5 +1,5 @@
-import type { AppSyncResolverFilterInput, AppSyncResolverRequest } from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+import type { AppSyncResolverFilterInput, AppSyncResolverRequest } from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
 import { AGENT_ROLE } from '../utils/constants.js';
 import type { TTicketId } from '../utils/schemas.js';

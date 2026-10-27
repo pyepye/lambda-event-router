@@ -51,6 +51,20 @@ export type {
   CustomMessageRouteDefinition,
   CustomMessageTriggerSource,
 } from './customMessage.js';
+// Matcher types
+export type {
+  CognitoEvent,
+  CognitoMatcherOptions,
+  CognitoMiddleware,
+  CognitoRequest,
+  CognitoRouteDefinition,
+  CognitoTriggerSource,
+  EventForTrigger,
+  RequestForTrigger,
+  RouteBuilder,
+  RouteInput,
+  TypedRouteDefinition,
+} from './matcher.js';
 // PostConfirmation types
 export type {
   PostConfirmationHandler,
@@ -75,20 +89,6 @@ export type {
   PreTokenGenerationRouteDefinition,
   PreTokenGenerationTriggerSource,
 } from './preTokenGeneration.js';
-// Router types
-export type {
-  CognitoEvent,
-  CognitoMiddleware,
-  CognitoRequest,
-  CognitoRouteDefinition,
-  CognitoRouterOptions,
-  CognitoTriggerSource,
-  EventForTrigger,
-  RequestForTrigger,
-  RouteBuilder,
-  RouteInput,
-  TypedRouteDefinition,
-} from './router.js';
 // UserMigration types
 export type {
   UserMigrationHandler,

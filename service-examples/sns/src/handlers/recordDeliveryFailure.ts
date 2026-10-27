@@ -1,5 +1,5 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/sns';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/sns';
 
 import { DELIVERY_FAILURES_TOPIC_ARN } from '../config.js';
 

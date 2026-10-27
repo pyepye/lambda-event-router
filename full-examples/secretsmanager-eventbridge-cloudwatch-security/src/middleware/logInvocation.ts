@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { CloudWatchLogsMiddleware } from '@lambda-event-router/cloudwatch';
-import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge';
-import type { SecretsManagerMiddleware } from '@lambda-event-router/secretsmanager';
+import { logger } from '@latcher/base';
+import type { CloudWatchLogsMiddleware } from '@latcher/cloudwatch';
+import type { EventBridgeMiddleware } from '@latcher/eventbridge';
+import type { SecretsManagerMiddleware } from '@latcher/secretsmanager';
 
 export const logEventBridgeInvocation: EventBridgeMiddleware = async (request, next) => {
   logger.info({ message: 'Handling EventBridge event', source: request.source, detailType: request.detailType });

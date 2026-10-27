@@ -1,7 +1,7 @@
 import { createHash } from 'node:crypto';
 
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/codepipeline';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/codepipeline';
 
 import { VERIFY_STEP } from '../config.js';
 import { DEPLOYER_FUNCTION_NAME } from '../environment.js';

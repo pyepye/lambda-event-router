@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/connect';
+import { defineRoute } from '@latcher/connect';
 
 import { atStep } from '../utils/atStep.js';
 import { AGENT_HANDOVER_STEP } from '../utils/constants.js';

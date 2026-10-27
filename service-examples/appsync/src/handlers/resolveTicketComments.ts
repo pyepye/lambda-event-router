@@ -1,5 +1,5 @@
-import { defineRoute } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import { commentsFor, findTicket } from '../utils/supportDesk.js';
 

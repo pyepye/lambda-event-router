@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { SQSMiddleware } from '@lambda-event-router/sqs';
+import { logger } from '@latcher/base';
+import type { SQSMiddleware } from '@latcher/sqs';
 
 import type { TPriorityAlert } from '../utils/schemas.js';
 

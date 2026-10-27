@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-lex",
+  "name": "@latcher/service-example-lex",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,8 +18,8 @@
   "dependencies": {
     "@aws-sdk/client-cloudformation": "^3.1034.0",
     "@aws-sdk/client-lex-runtime-v2": "^3.1034.0",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/lex": "workspace:*"
+    "@latcher/base": "workspace:*",
+    "@latcher/lex": "workspace:*"
   },
   "devDependencies": {
     "@types/aws-lambda": "catalog:",

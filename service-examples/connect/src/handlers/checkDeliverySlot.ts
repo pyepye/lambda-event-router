@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/connect';
 
 import { CONNECT_INSTANCE_ARN } from '../config.js';
 import { atStep } from '../utils/atStep.js';

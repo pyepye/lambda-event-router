@@ -22,7 +22,7 @@ const logsClient = new CloudWatchLogsClient({ region });
 const TASKS: Array<{ key: string; body?: string }> = [
   { key: 'batch/enrolment-1001.json', body: JSON.stringify({ enrolmentId: '1001', status: 'ready' }) },
   { key: 'batch/enrolment-1002.json', body: JSON.stringify({ enrolmentId: '1002', status: 'ready' }) },
-  // A space in the key survives only if the router decodes what S3 Batch sends.
+  // A space in the key survives only if the matcher decodes what S3 Batch sends.
   { key: 'batch/enrolment 1003 final.json', body: JSON.stringify({ enrolmentId: '1003', status: 'ready' }) },
   { key: 'batch/enrolment-1004.json', body: JSON.stringify({ enrolmentId: '1004', status: 'ready' }) },
   { key: LOCKED_KEY, body: JSON.stringify({ enrolmentId: '2001', status: 'locked' }) },

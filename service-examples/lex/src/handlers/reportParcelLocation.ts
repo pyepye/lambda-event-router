@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { LexFulfillmentCodeHookRequest, LexResponse } from '@lambda-event-router/lex';
+import { logger } from '@latcher/base';
+import type { LexFulfillmentCodeHookRequest, LexResponse } from '@latcher/lex';
 
 import { TRACKING_NUMBER_SLOT } from '../utils/constants.js';
 import { locateParcel } from '../utils/parcels.js';

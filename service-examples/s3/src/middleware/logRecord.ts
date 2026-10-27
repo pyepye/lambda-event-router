@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3Middleware } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3Middleware } from '@latcher/s3';
 
-// Router middleware: runs once per record, before any route middleware, for every bucket.
+// Matcher middleware: runs once per record, before any route middleware, for every bucket.
 export const logRecord: S3Middleware = async (request, next) => {
   logger.info({
     message: 'Handling S3 record',

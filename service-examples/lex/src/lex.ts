@@ -1,4 +1,4 @@
-import { createLexRouter } from '@lambda-event-router/lex';
+import { createLexMatcher } from '@latcher/lex';
 
 import { bookRedelivery } from './handlers/bookRedelivery.js';
 import { cancelDelivery } from './handlers/cancelDelivery.js';
@@ -11,11 +11,11 @@ import { withAccountContext } from './middleware/withAccountContext.js';
 import { CANCEL_DELIVERY_INTENT, PRIORITY_TIER, TRACK_PARCEL_INTENT } from './utils/constants.js';
 import { readAccountTier } from './utils/parcels.js';
 
-export const lexRouter = createLexRouter({ middleware: [logTurn] });
+export const lexMatcher = createLexMatcher({ middleware: [logTurn] });
 
 // Order matters: escalateToSupervisor takes every fulfilment turn on a priority account, so it is
 // registered ahead of the intent routes that would otherwise claim those turns.
-lexRouter
+lexMatcher
   .fulfillmentCodeHook({
     filters: {
       custom: async ({ event }) =>

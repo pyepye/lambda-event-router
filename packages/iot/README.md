@@ -1,22 +1,22 @@
-# @lambda-event-router/iot
+# @latcher/iot
 
-Handles IoT Core rule actions. They arrive as plain Lambda invocations, so you route them with `EventRouter` from `@lambda-event-router/base`.
+Handles IoT Core rule actions. They arrive as plain Lambda invocations, so you route them with `EventMatcher` from `@latcher/base`.
 
 **Supported AWS Services:** `AWS IoT Core`
 
-**Available Routers:** None (uses `EventRouter` from `@lambda-event-router/base`)
+**Available Matchers:** None (uses `EventMatcher` from `@latcher/base`)
 
-**Docs:** [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter)
+**Docs:** [EventMatcher](https://pyepye.github.io/latcher/matchers/EventMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/iot
+npm install @latcher/base @latcher/iot
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
-See [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter) for how to route, filter and
+See [EventMatcher](https://pyepye.github.io/latcher/matchers/EventMatcher) for how to route, filter and
 validate these events.

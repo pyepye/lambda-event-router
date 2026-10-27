@@ -1,0 +1,230 @@
+import type {
+  Context,
+  FirehoseTransformationEvent,
+  FirehoseTransformationEventRecord,
+  FirehoseTransformationResult,
+  FirehoseTransformationResultRecord,
+} from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeMatcher } from '@latcher/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  orderRoutesBySpecificity,
+  safeJsonParse,
+  validateSchema,
+} from '@latcher/base';
+
+import type { FirehoseResponseResult } from './response.js';
+import { isFirehoseResponse } from './response.js';
+import type {
+  FirehoseFilters,
+  FirehoseMatcherOptions,
+  FirehoseMiddleware,
+  FirehoseRequest,
+  FirehoseResponse,
+  FirehoseRouteDefinition,
+} from './types.js';
+
+interface InternalRoute {
+  filters: FirehoseFilters;
+  dataSchema?: StandardSchemaV1;
+  middleware?: FirehoseMiddleware[];
+  handler: (request: FirehoseRequest) => Promise<FirehoseResponse>;
+}
+
+interface RouteInput<
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
+> {
+  filters: FirehoseFilters;
+  middleware?: FirehoseMiddleware<NoInfer<TData>>[];
+  dataSchema?: TDataSchema;
+}
+
+interface RouteBuilder<TData> {
+  handle(handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>): FirehoseRouteDefinition<TData>;
+}
+
+export function defineRoute<
+  TDataSchema extends StandardSchemaV1 | undefined = undefined,
+  TData = TDataSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TDataSchema> : unknown,
+>(config: RouteInput<TDataSchema, TData>): RouteBuilder<TData> {
+  return {
+    handle(handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>): FirehoseRouteDefinition<TData> {
+      return {
+        filters: config.filters as FirehoseFilters,
+        dataSchema: config.dataSchema as StandardSchemaV1<unknown, TData> | undefined,
+        middleware: config.middleware,
+        handler: handler as (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>,
+      };
+    },
+  };
+}
+
+export class FirehoseMatcher implements EventTypeMatcher<FirehoseTransformationEvent, FirehoseTransformationResult> {
+  private routes: InternalRoute[] = [];
+  private routesOrdered = false;
+  private middleware: FirehoseMiddleware[] = [];
+
+  constructor(options?: FirehoseMatcherOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
+
+  canHandleEvent(event: unknown): event is FirehoseTransformationEvent {
+    if (!isObject(event)) return false;
+    if (typeof event.deliveryStreamArn !== 'string') return false;
+    if (!Array.isArray(event.records)) return false;
+
+    const firstRecord = event.records[0];
+    if (!isObject(firstRecord)) return false;
+
+    return typeof firstRecord.recordId === 'string';
+  }
+
+  route<TData>(definition: FirehoseRouteDefinition<TData>): this {
+    this.routes.push(definition as InternalRoute);
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: FirehoseTransformationEvent, context: Context): Promise<FirehoseTransformationResult> {
+    const resultRecords: FirehoseTransformationResultRecord[] = [];
+
+    for (const record of event.records) {
+      const resultRecord = await this.processRecord(record, event, context);
+      resultRecords.push(resultRecord);
+    }
+
+    return { records: resultRecords };
+  }
+
+  private async processRecord(
+    record: FirehoseTransformationEventRecord,
+    event: FirehoseTransformationEvent,
+    context: Context,
+  ): Promise<FirehoseTransformationResultRecord> {
+    try {
+      const rawData = Buffer.from(record.data, 'base64');
+      const data = safeJsonParse(rawData.toString('utf-8'));
+
+      const route = await this.matchRoute(event, record, data, rawData);
+      if (!route) {
+        throw new Error(`No route matched for record ${record.recordId} from ${event.deliveryStreamArn}`);
+      }
+
+      const validatedData = await validateSchema(
+        data,
+        route.dataSchema,
+        `Data validation failed for record ${record.recordId}`,
+      );
+
+      const request: FirehoseRequest = {
+        data: validatedData,
+        rawData,
+        recordId: record.recordId,
+        approximateArrivalTimestamp: record.approximateArrivalTimestamp,
+        record,
+        context,
+        metadata: record.kinesisRecordMetadata,
+      };
+
+      const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+      const response = await handleEventWithMiddleware(allMiddleware, request, route.handler);
+      return this.mapResponseToResult(record, response);
+    } catch (error: unknown) {
+      if (isFirehoseResponse(error)) {
+        return this.mapResponseToResult(record, error);
+      }
+      logger.error(`Error processing Firehose record ${record.recordId}`, { error });
+      return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
+    }
+  }
+
+  private mapResponseToResult(
+    record: FirehoseTransformationEventRecord,
+    response: FirehoseResponseResult,
+  ): FirehoseTransformationResultRecord {
+    if (response.status === 'ProcessingFailed') {
+      return { recordId: record.recordId, result: 'ProcessingFailed', data: record.data };
+    }
+
+    if (response.status === 'Dropped') {
+      return { recordId: record.recordId, result: 'Dropped', data: record.data };
+    }
+
+    if (response.data !== undefined) {
+      return {
+        recordId: record.recordId,
+        result: 'Ok',
+        data: response.data,
+        metadata: response.metadata,
+      };
+    }
+
+    return {
+      recordId: record.recordId,
+      result: 'Ok',
+      data: record.data,
+      metadata: response.metadata,
+    };
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(
+    event: FirehoseTransformationEvent,
+    record: FirehoseTransformationEventRecord,
+    data: unknown,
+    rawData: Buffer,
+  ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.deliveryStreamArn !== undefined) {
+        const deliveryStreamArnMatch = filterStringMatcher(event.deliveryStreamArn, filters.deliveryStreamArn);
+        if (!deliveryStreamArnMatch) continue;
+      }
+
+      if (filters.sourceKinesisStreamArn !== undefined) {
+        if (!event.sourceKinesisStreamArn) continue;
+        const sourceKinesisStreamArnMatch = filterStringMatcher(
+          event.sourceKinesisStreamArn,
+          filters.sourceKinesisStreamArn,
+        );
+        if (!sourceKinesisStreamArnMatch) continue;
+      }
+
+      if (filters.custom) {
+        const match = await filters.custom({
+          data,
+          rawData,
+          recordId: record.recordId,
+          approximateArrivalTimestamp: record.approximateArrivalTimestamp,
+          record,
+          metadata: record.kinesisRecordMetadata,
+        });
+        if (!match) continue;
+      }
+
+      return route;
+    }
+
+    return undefined;
+  }
+}
+
+export function createFirehoseMatcher(options?: FirehoseMatcherOptions): FirehoseMatcher {
+  return new FirehoseMatcher(options);
+}

@@ -1,10 +1,11 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { cloudWatchLogsRouter } from './cloudwatch.js';
-import { eventBridgeRouter } from './eventbridge.js';
-import { secretsManagerRouter } from './secretsmanager.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [eventBridgeRouter, cloudWatchLogsRouter, secretsManagerRouter] });
+import { cloudWatchLogsMatcher } from './cloudwatch.js';
+import { eventBridgeMatcher } from './eventbridge.js';
+import { secretsManagerMatcher } from './secretsmanager.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [eventBridgeMatcher, cloudWatchLogsMatcher, secretsManagerMatcher] });
+
+export const handler: Handler = latcher.handler();

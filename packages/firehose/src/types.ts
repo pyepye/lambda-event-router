@@ -2,7 +2,7 @@ import type { Context, FirehoseRecordMetadata, FirehoseTransformationEventRecord
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 import type { FirehoseResponseResult } from './response.js';
 
@@ -42,6 +42,6 @@ export interface FirehoseRouteDefinition<TData = unknown> {
   handler: (request: FirehoseRequest<TData>) => Promise<FirehoseResponse>;
 }
 
-export interface FirehoseRouterOptions {
+export interface FirehoseMatcherOptions {
   middleware?: FirehoseMiddleware[];
 }

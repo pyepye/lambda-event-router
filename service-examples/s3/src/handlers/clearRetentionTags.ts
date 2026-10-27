@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectTaggingRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectTaggingRequest } from '@latcher/s3';
 
 export async function clearRetentionTags(request: S3ObjectTaggingRequest): Promise<void> {
   logger.info({

@@ -1,5 +1,5 @@
-import { type ApiRequest, type ApiResponse, type AuthOf, NotFound, Ok } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, type AuthOf, NotFound, Ok } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import type { stockAdjustmentAuth } from '../utils/auth.js';
 import type { TStockAdjustment } from '../utils/schemas.js';

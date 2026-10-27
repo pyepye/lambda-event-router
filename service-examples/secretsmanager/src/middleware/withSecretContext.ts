@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { SecretsManagerMiddleware } from '@lambda-event-router/secretsmanager';
+import { logger } from '@latcher/base';
+import type { SecretsManagerMiddleware } from '@latcher/secretsmanager';
 
 // Route middleware for the createSecret step. Every later line in the invocation carries the secret
 // name, which the ARN in the event hides behind a random suffix.

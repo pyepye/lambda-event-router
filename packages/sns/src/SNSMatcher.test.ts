@@ -1,0 +1,1297 @@
+import type { MockInstance } from 'vitest';
+
+import * as base from '@latcher/base';
+import { allEventBuilders, createMockSchema, createSNSEvent, test } from '@latcher/testing';
+
+import { createSNSMatcher, defineRoute, SNSMatcher } from './SNSMatcher.js';
+import type { SNSFilterInput, SNSRequest } from './types.js';
+
+type SNSNext = (request: SNSRequest) => Promise<void>;
+
+const validateSchemaSpy: MockInstance = vi.spyOn(base, 'validateSchema');
+const safeJsonParseSpy: MockInstance = vi.spyOn(base, 'safeJsonParse');
+
+let matcher: SNSMatcher;
+
+beforeEach(() => {
+  matcher = new SNSMatcher();
+});
+
+suite('SNSMatcher', () => {
+  suite('createSNSMatcher', () => {
+    test('creates an SNSMatcher instance', () => {
+      const matcher = createSNSMatcher();
+      expect(matcher).toBeInstanceOf(SNSMatcher);
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    test('returns true for a valid SNS event', () => {
+      const event = createSNSEvent();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns false for a non-SNS event', () => {
+      const event = { detail: { foo: 'bar' }, source: 'custom.app' };
+      expect(matcher.canHandleEvent(event)).toBe(false);
+    });
+
+    test('returns false for null', () => {
+      expect(matcher.canHandleEvent(null)).toBe(false);
+    });
+
+    test('returns false for a string', () => {
+      expect(matcher.canHandleEvent('not an event')).toBe(false);
+    });
+
+    test('returns false when Records is not an array', () => {
+      expect(matcher.canHandleEvent({ Records: 'not-an-array' })).toBe(false);
+    });
+
+    test('returns false when first record is not an object', () => {
+      expect(matcher.canHandleEvent({ Records: ['not-an-object'] })).toBe(false);
+    });
+
+    test('returns false when EventSource is not aws:sns', () => {
+      expect(matcher.canHandleEvent({ Records: [{ EventSource: 'aws:sqs' }] })).toBe(false);
+    });
+  });
+
+  suite('defineRoute', () => {
+    test('returns a route builder with a handle method', () => {
+      const builder = defineRoute({
+        filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(typeof builder.handle).toBe('function');
+    });
+
+    test('preserves filters, schemas, and handler in the definition', () => {
+      const bodySchema = createMockSchema();
+      const messageAttributesSchema = createMockSchema();
+      const handler = vi.fn();
+      const filters = {
+        topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'],
+        messageAttributes: { eventType: 'order.created' },
+      };
+
+      const definition = defineRoute({
+        filters,
+        bodySchema,
+        messageAttributesSchema,
+      }).handle(handler);
+
+      expect(definition.filters).toBe(filters);
+      expect(definition.bodySchema).toBe(bodySchema);
+      expect(definition.messageAttributesSchema).toBe(messageAttributesSchema);
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('route', () => {
+    test('returns the matcher instance for chaining', () => {
+      const definition = defineRoute({
+        filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+      }).handle(async () => {});
+
+      const result = matcher.route(definition);
+
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('matchRoute', () => {
+    test('matches route by topicArn', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by topicArn array', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const topicArn2 = 'arn:aws:sns:eu-west-2:987654321098:other-topic';
+      matcher.route(
+        defineRoute({
+          filters: { topicArn: [topicArn, topicArn2] },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when topicArn is an empty string', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: { topicArn: '' },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match route when topicArn does not match', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'] },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by subject', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { subject: 'Order Notification' },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by subject array', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { subject: ['Order Notification', 'Refund Notification'] },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when subject does not match', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { subject: ['Shipping Update'] },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match when subject is undefined and subject filter is set', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { subject: 'Order Notification' },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { Subject: undefined } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route by messageAttributes', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: 'order.created' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by messageAttributes array', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.created', 'order.refunded'] } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when messageAttribute value is a Buffer', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { data: 'some-value' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      const bufferValue = Buffer.from('some-value');
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { data: bufferValue });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches a String.Array attribute as the raw JSON text SNS sends', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { warehouses: '["london","manchester"]' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { warehouses: '["london","manchester"]' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when messageAttributes does not match', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: ['order.shipped'] } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match when messageAttribute key is missing', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { messageAttributes: { eventType: 'order.created' } },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { otherKey: 'some-value' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches when all messageAttribute filter keys match', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            messageAttributes: {
+              eventType: 'order.created',
+              source: 'checkout-service',
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(
+        record,
+        {},
+        {
+          eventType: 'order.created',
+          source: 'checkout-service',
+        },
+      );
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when one of multiple messageAttribute filter keys does not match', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            messageAttributes: {
+              eventType: 'order.created',
+              source: 'checkout-service',
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(
+        record,
+        {},
+        {
+          eventType: 'order.created',
+          source: 'inventory-service',
+        },
+      );
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route when both topicArn and subject match', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn,
+            subject: 'Order Notification',
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when topicArn matches but subject does not', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn,
+            subject: ['Shipping Update'],
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match when subject matches but topicArn does not', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
+            subject: 'Order Notification',
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({
+        Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic', Subject: 'Order Notification' },
+      });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route when topicArn, subject, and messageAttributes all match', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn,
+            subject: 'Order Notification',
+            messageAttributes: { eventType: 'order.created' },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when topicArn and subject match but messageAttributes does not', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn,
+            subject: 'Order Notification',
+            messageAttributes: { eventType: ['order.shipped'] },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Subject: 'Order Notification' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, { eventType: 'order.created' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom is not evaluated when topicArn does not match', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn: ['arn:aws:sns:us-east-1:123456789012:other-topic'],
+            custom,
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+      expect(custom).not.toHaveBeenCalled();
+    });
+
+    test('custom is evaluated when other filters match', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: {
+            topicArn,
+            custom,
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+      expect(custom).toHaveBeenCalledOnce();
+    });
+
+    test('custom receives body, messageAttributes, and record', async ({ snsRecord }) => {
+      const custom = vi.fn(() => true);
+      matcher.route(
+        defineRoute({
+          filters: { custom },
+        }).handle(async () => {}),
+      );
+
+      const messageAttributes = { eventType: 'order.created' };
+      const record = snsRecord();
+      const body = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      await matcher.matchRoute(record, body, messageAttributes);
+
+      expect(custom).toHaveBeenCalledWith({
+        body,
+        messageAttributes,
+        record,
+      });
+    });
+
+    test('matches route by custom', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: ({ body }: SNSFilterInput): boolean => {
+              // @ts-expect-error - body is unknown, testing filter with known shape
+              return body.action === 'processOrder';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      const body = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, body, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by async custom', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {
+            custom: async ({ body }: SNSFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              // @ts-expect-error - body is unknown, testing filter with known shape
+              return body.action === 'processOrder';
+            },
+          },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      const body = { action: 'processOrder' };
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, body, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when custom returns false', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: { custom: (): boolean => false },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route with empty filters as a catch-all', async ({ snsRecord }) => {
+      matcher.route(
+        defineRoute({
+          filters: {},
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord();
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+    });
+
+    test('selects the first matching route when multiple routes match', async ({ snsRecord }) => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+        }).handle(firstHandler),
+      );
+      matcher.route(
+        defineRoute({
+          filters: { topicArn: ['arn:aws:sns:us-east-1:123456789012:my-topic'] },
+        }).handle(secondHandler),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: 'arn:aws:sns:us-east-1:123456789012:my-topic' } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result).toBeDefined();
+      expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('orders a narrower route ahead of a broader one registered first', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      matcher.route(defineRoute({ filters: { topicArn: 'arn:aws:sns:us-east-1:123456789012:*' } }).handle(broad));
+      matcher.route(defineRoute({ filters: { topicArn } }).handle(narrow));
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async ({ snsRecord }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      matcher.route(defineRoute({ filters: { topicArn } }).handle(fallback));
+      matcher.route(defineRoute({ filters: { topicArn, custom: () => true } }).handle(guarded));
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      // @ts-expect-error - testing private method directly
+      const result = await matcher.matchRoute(record, {}, record.Sns.MessageAttributes);
+
+      expect(result?.handler).toBe(guarded);
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('calls the matched handler with the parsed request', async ({ snsRecord, snsHandlerEvent }) => {
+      const handler = vi.fn();
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+
+      const definition = defineRoute({
+        filters: { topicArn },
+      }).handle(handler);
+      matcher.route(definition);
+
+      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
+      const body = { action: 'processOrder', orderId: '12345' }; // Move this?
+      const record = snsRecord({
+        Sns: {
+          TopicArn: topicArn,
+          Message: JSON.stringify(body),
+          MessageAttributes: rawAttributes,
+        },
+      });
+      const { event, context } = snsHandlerEvent({ records: [record] });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          body,
+          messageAttributes: { eventType: 'order.created' },
+          record: event.Records[0],
+          context,
+        }),
+      );
+    });
+
+    test('returns undefined when all records succeed', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      const event = snsEvent([record]);
+      const result = await matcher.handleEvent(event, context());
+
+      expect(result).toBeUndefined();
+    });
+
+    test('throws when no route matches', async ({ snsHandlerEvent }) => {
+      const { event, context } = snsHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('No route matched');
+    });
+
+    test('propagates a handler error', async ({ snsHandlerEvent }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async () => {
+          throw new Error('handler exploded');
+        }),
+      );
+
+      const { event, context } = snsHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('handler exploded');
+    });
+
+    test('throws when one record of several fails', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const failingRecord = snsRecord({ Sns: { TopicArn: topicArn } });
+
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async (request) => {
+          if (request.record.Sns.MessageId === failingRecord.Sns.MessageId) {
+            throw new Error('processing failed');
+          }
+        }),
+      );
+
+      const records = [snsRecord({ Sns: { TopicArn: topicArn } }), failingRecord];
+      const event = snsEvent(records);
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('processing failed');
+    });
+
+    test('calls the handler for every matching record', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(handler),
+      );
+
+      const records = [
+        snsRecord({ Sns: { TopicArn: topicArn } }),
+        snsRecord({ Sns: { TopicArn: topicArn } }),
+        snsRecord({ Sns: { TopicArn: topicArn } }),
+      ];
+      const event = snsEvent(records);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledTimes(3);
+    });
+
+    test('handler receives raw string when SNS message is not JSON', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(handler),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: 'plain text notification' } });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'plain text notification' }));
+    });
+
+    test('processes records in parallel', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const callOrder: string[] = [];
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(async (request) => {
+          const messageId = request.record.Sns.MessageId;
+          callOrder.push(`start-${messageId}`);
+          await new Promise((resolve) => setTimeout(resolve, 1));
+          callOrder.push(`end-${messageId}`);
+        }),
+      );
+
+      const recordA = snsRecord({ Sns: { TopicArn: topicArn } });
+      const recordB = snsRecord({ Sns: { TopicArn: topicArn } });
+      const event = snsEvent([recordA, recordB]);
+      await matcher.handleEvent(event, context());
+
+      // Parallel: both start before either finishes
+      expect(callOrder[0]).toBe(`start-${recordA.Sns.MessageId}`);
+      expect(callOrder[1]).toBe(`start-${recordB.Sns.MessageId}`);
+    });
+  });
+
+  suite('handleEvent - schema validation', () => {
+    test('handler receives validated body from bodySchema', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      const bodySchema = createMockSchema();
+
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+          bodySchema,
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = snsRecord({
+        Sns: {
+          TopicArn: topicArn,
+          Message: JSON.stringify(body),
+        },
+      });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(body, bodySchema, expect.any(String));
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('throws when bodySchema validation fails', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+          bodySchema,
+        }).handle(async () => {}),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn } });
+      const event = snsEvent([record]);
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Body validation failed');
+    });
+
+    test('handler receives validated attributes from messageAttributesSchema', async ({
+      snsRecord,
+      snsEvent,
+      context,
+    }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      const messageAttributesSchema = createMockSchema();
+
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+          messageAttributesSchema,
+        }).handle(handler),
+      );
+
+      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
+      const record = snsRecord({
+        Sns: {
+          TopicArn: topicArn,
+          MessageAttributes: rawAttributes,
+        },
+      });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(validateSchemaSpy).toHaveBeenCalledWith(
+        { eventType: 'order.created' },
+        messageAttributesSchema,
+        expect.any(String),
+      );
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({ messageAttributes: { eventType: 'order.created' } }),
+      );
+    });
+
+    test('throws when messageAttributesSchema validation fails', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const messageAttributesSchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+          messageAttributesSchema,
+        }).handle(async () => {}),
+      );
+
+      const rawAttributes = { eventType: { Type: 'String', Value: 'order.created' } };
+      const record = snsRecord({
+        Sns: {
+          TopicArn: topicArn,
+          MessageAttributes: rawAttributes,
+        },
+      });
+      const event = snsEvent([record]);
+
+      await expect(matcher.handleEvent(event, context())).rejects.toThrow('Message attributes validation failed');
+    });
+  });
+
+  suite('handleEvent - jsonParse', () => {
+    test('passes SNS message to safeJsonParse', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(handler),
+      );
+
+      const message = JSON.stringify({ action: 'processOrder', orderId: '12345' });
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: message } });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(safeJsonParseSpy).toHaveBeenCalledWith(message);
+    });
+
+    test('handler receives parsed object when message is valid JSON', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(handler),
+      );
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: JSON.stringify(body) } });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body }));
+    });
+
+    test('handler receives raw string when message is not valid JSON', async ({ snsRecord, snsEvent, context }) => {
+      const topicArn = 'arn:aws:sns:us-east-1:123456789012:my-topic';
+      const handler = vi.fn();
+      matcher.route(
+        defineRoute({
+          filters: { topicArn },
+        }).handle(handler),
+      );
+
+      const record = snsRecord({ Sns: { TopicArn: topicArn, Message: 'not-json' } });
+      const event = snsEvent([record]);
+      await matcher.handleEvent(event, context());
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ body: 'not-json' }));
+    });
+  });
+
+  suite('convertMessageAttributes', () => {
+    test('converts String attributes to string values', () => {
+      const raw = {
+        eventType: { Type: 'String', Value: 'order.created' },
+        priority: { Type: 'String', Value: 'high' },
+        source: { Type: 'String', Value: 'checkout-service' },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = matcher.convertMessageAttributes(raw);
+
+      expect(result).toEqual({
+        eventType: 'order.created',
+        priority: 'high',
+        source: 'checkout-service',
+      });
+    });
+
+    test('keeps a Number attribute as a string', () => {
+      // SNS delivers every attribute to Lambda as String or Binary, so a Number type never arrives.
+      const raw = {
+        count: { Type: 'Number', Value: '42' },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = matcher.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ count: '42' });
+    });
+
+    test('converts Binary attributes to Buffer values', () => {
+      const raw = {
+        payload: { Type: 'Binary', Value: Buffer.from('hello').toString('base64') },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = matcher.convertMessageAttributes(raw);
+
+      const { payload } = result;
+      expect(Buffer.isBuffer(payload)).toBe(true);
+      expect(Buffer.isBuffer(payload) && payload.toString()).toBe('hello');
+    });
+
+    test('keeps a String.Array attribute as the raw JSON text', () => {
+      // SNS sends a published String.Array to Lambda as a String holding its JSON text.
+      const raw = {
+        tags: { Type: 'String.Array', Value: '["alpha","beta"]' },
+      };
+
+      // @ts-expect-error - testing private method directly
+      const result = matcher.convertMessageAttributes(raw);
+
+      expect(result).toEqual({ tags: '["alpha","beta"]' });
+    });
+
+    test('returns empty object for empty attributes', () => {
+      // @ts-expect-error - testing private method directly
+      const result = matcher.convertMessageAttributes({});
+
+      expect(result).toEqual({});
+    });
+  });
+
+  suite('full event processing', () => {
+    test('routes an SNS event through multiple handlers and returns undefined', async ({
+      snsRecord,
+      snsEvent,
+      context,
+    }) => {
+      const receivedCreateRequests: SNSRequest[] = [];
+      const receivedDeleteRequests: SNSRequest[] = [];
+
+      const orderRoute = defineRoute({
+        filters: {
+          messageAttributes: { eventType: 'order.created' },
+        },
+      }).handle(async (request) => {
+        receivedCreateRequests.push(request);
+      });
+      matcher.route(orderRoute);
+
+      const deleteRoute = defineRoute({
+        filters: {
+          messageAttributes: { eventType: ['order.deleted'] },
+        },
+      }).handle(async (request) => {
+        receivedDeleteRequests.push(request);
+      });
+      matcher.route(deleteRoute);
+
+      const body = { action: 'processOrder', orderId: '12345' };
+      const serializedBody = JSON.stringify(body);
+      const records = [
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
+          },
+        }),
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.created' } },
+          },
+        }),
+        snsRecord({
+          Sns: {
+            Message: serializedBody,
+            MessageAttributes: { eventType: { Type: 'String', Value: 'order.deleted' } },
+          },
+        }),
+      ];
+      const event = snsEvent(records);
+      const mockContext = context();
+      const result = await matcher.handleEvent(event, mockContext);
+
+      expect(result).toBeUndefined();
+      expect(receivedCreateRequests).toHaveLength(2);
+      expect(receivedCreateRequests[0]).toEqual(
+        expect.objectContaining({
+          body,
+          messageAttributes: { eventType: 'order.created' },
+          context: mockContext,
+        }),
+      );
+
+      expect(receivedDeleteRequests).toHaveLength(1);
+      expect(receivedDeleteRequests[0]).toEqual(
+        expect.objectContaining({
+          body,
+          messageAttributes: { eventType: 'order.deleted' },
+          context: mockContext,
+        }),
+      );
+    });
+  });
+
+  suite('matcher-level middleware', () => {
+    test('executes middleware before the route handler', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('mw-pre');
+        await next(request);
+        callOrder.push('mw-post');
+      }
+
+      const matcher = createSNSMatcher({ middleware: [middleware] });
+      matcher.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to skip a record by not calling next', async ({ snsHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function skipMiddleware(_request: SNSRequest, _next: SNSNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createSNSMatcher({ middleware: [skipMiddleware] });
+      matcher.route({ filters: {}, handler });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple matcher-level middleware in order', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('mw1');
+        await next(request);
+      }
+
+      async function middlewareTwo(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('mw2');
+        await next(request);
+      }
+
+      const matcher = createSNSMatcher({ middleware: [middlewareOne, middlewareTwo] });
+      matcher.route({
+        filters: {},
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware for a specific route', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+
+    test('allows route-level middleware to short-circuit by not calling next', async ({ snsHandlerEvent }) => {
+      const handler = vi.fn();
+
+      async function blockingRouteMiddleware(_request: SNSRequest, _next: SNSNext): Promise<void> {
+        return;
+      }
+
+      matcher.route({ filters: {}, middleware: [blockingRouteMiddleware], handler });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple route-level middleware in order', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddlewareOne(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('route-mw1');
+        await next(request);
+      }
+
+      async function routeMiddlewareTwo(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('route-mw2');
+        await next(request);
+      }
+
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddlewareOne, routeMiddlewareTwo],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw1', 'route-mw2', 'handler']);
+    });
+
+    test('supports middleware on defineRoute builder pattern', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const route = defineRoute({ filters: {}, middleware: [routeMiddleware] }).handle(async () => {
+        callOrder.push('handler');
+      });
+
+      matcher.route(route);
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined matcher and route middleware', () => {
+    test('executes matcher middleware before route middleware', async ({ snsHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function matcherMiddleware(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('matcher-mw');
+        await next(request);
+      }
+
+      async function routeMiddleware(request: SNSRequest, next: SNSNext): Promise<void> {
+        callOrder.push('route-mw');
+        await next(request);
+      }
+
+      const matcher = createSNSMatcher({ middleware: [matcherMiddleware] });
+      matcher.route({
+        filters: {},
+        middleware: [routeMiddleware],
+        handler: async () => {
+          callOrder.push('handler');
+        },
+      });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['matcher-mw', 'route-mw', 'handler']);
+    });
+
+    test('matcher middleware short-circuit prevents route middleware from running', async ({ snsHandlerEvent }) => {
+      const routeMiddleware = vi.fn();
+      const handler = vi.fn();
+
+      async function blockingMatcherMiddleware(_request: SNSRequest, _next: SNSNext): Promise<void> {
+        return;
+      }
+
+      const matcher = createSNSMatcher({ middleware: [blockingMatcherMiddleware] });
+      matcher.route({ filters: {}, middleware: [routeMiddleware], handler });
+
+      const { event, context } = snsHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(routeMiddleware).not.toHaveBeenCalled();
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('middleware does not run on validation failure', () => {
+    test('does not execute middleware when schema validation fails', async ({ snsHandlerEvent }) => {
+      const middleware = vi.fn();
+      const bodySchema = createMockSchema({ issues: [{ message: 'invalid' }] });
+
+      const matcher = createSNSMatcher({ middleware: [middleware] });
+      matcher.route({ filters: {}, bodySchema, handler: vi.fn() });
+
+      const { event, context } = snsHandlerEvent();
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('validation failed');
+      expect(middleware).not.toHaveBeenCalled();
+    });
+  });
+});
+
+suite('SNSMatcher.canHandleEvent', () => {
+  const ownEvents = ['createSNSEvent'];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createSNSMatcher().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
+  });
+});

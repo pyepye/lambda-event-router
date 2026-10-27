@@ -1,8 +1,8 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConfigMiddleware } from '@lambda-event-router/config';
+import { logger } from '@latcher/base';
+import type { ConfigMiddleware } from '@latcher/config';
 
-// Router middleware: runs once per change-triggered evaluation, before any route middleware. It logs
-// the raw event as Config delivered it, so the log can be compared with the router's types.
+// Matcher middleware: runs once per change-triggered evaluation, before any route middleware. It logs
+// the raw event as Config delivered it, so the log can be compared with the matcher's types.
 export const logEvaluation: ConfigMiddleware = async (request, next) => {
   const resource = request.configurationItem ?? request.configurationItemSummary;
   logger.info({

@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { rabbitMqRouter } from './rabbitMq.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [rabbitMqRouter] });
+import { rabbitMqMatcher } from './rabbitMq.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [rabbitMqMatcher] });
+
+export const handler: Handler = latcher.handler();

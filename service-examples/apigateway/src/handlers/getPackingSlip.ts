@@ -1,5 +1,5 @@
-import { defineRoute, NotFound } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { PACKING_SLIP_PNG } from '../utils/warehouse.js';
 

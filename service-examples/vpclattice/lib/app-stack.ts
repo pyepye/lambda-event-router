@@ -104,7 +104,7 @@ export class AppStack extends Stack {
     });
 
     // A signed caller arrives with `identity.principal` set on the 2.0 payload and an unsigned one
-    // does not, so both reach the worker and the router sees the difference.
+    // does not, so both reach the worker and the matcher sees the difference.
     new CfnAuthPolicy(this, 'InventoryAuthPolicy', {
       resourceIdentifier: service.attrArn,
       policy: {

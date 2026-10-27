@@ -6,33 +6,33 @@ EventBridge and S3 events all go to one Lambda:
 ```
 Cognito user pool
 ├── PostConfirmation (sign-up confirmed)
-│   └── userController / postConfirmation (cognitoRouter)
+│   └── userController / postConfirmation (cognitoMatcher)
 │       └── Gravatar image put to originals/<userName>.<ext>
 ├── CustomMessage (email change)
-│   └── userController / customMessageUpdateAttribute (cognitoRouter)
+│   └── userController / customMessageUpdateAttribute (cognitoMatcher)
 │       └── Gravatar image for the new email put to originals/<userName>.<ext>
 ├── CustomMessage (every other source)
-│   └── userController / keepDefaultMessage (cognitoRouter)
+│   └── userController / keepDefaultMessage (cognitoMatcher)
 └── AdminDeleteUser or DeleteUser
     └── CloudTrail
         └── EventBridge rule
-            └── userController / userDeleted (eventBridgeRouter)
+            └── userController / userDeleted (eventBridgeMatcher)
                 └── originals/<userName>.* deleted
 
 S3 avatars bucket
 ├── ObjectCreated on originals/*.jpg, *.jpeg or *.png
-│   └── userController / convertToBlackAndWhite (s3Router)
+│   └── userController / convertToBlackAndWhite (s3Matcher)
 │       └── black and white copy put to processed/<userName>.<ext>
 └── ObjectRemoved on originals/*
-    └── userController / cleanupProcessed (s3Router)
+    └── userController / cleanupProcessed (s3Matcher)
         └── processed/<userName>.<ext> deleted
 ```
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-There are 6 routes on one Lambda function. `src/index.ts` has one `LambdaRouter` that combines all
-three routers. Users with no Gravatar get a 1 pixel placeholder image.
+There are 6 routes on one Lambda function. `src/index.ts` has one `Latcher` that combines all
+three matchers. Users with no Gravatar get a 1 pixel placeholder image.
 
 ## Email change
 
@@ -79,9 +79,9 @@ locked down, resources are not.
 ## Deploy
 
 ```bash
-pnpm -F @lambda-event-router/full-example-cognito-eventbridge-s3-avatars... install
-pnpm -F @lambda-event-router/full-example-cognito-eventbridge-s3-avatars... build
-pnpm -F @lambda-event-router/full-example-cognito-eventbridge-s3-avatars run deploy
+pnpm -F @latcher/full-example-cognito-eventbridge-s3-avatars... install
+pnpm -F @latcher/full-example-cognito-eventbridge-s3-avatars... build
+pnpm -F @latcher/full-example-cognito-eventbridge-s3-avatars run deploy
 ```
 
 `deploy` bundles `src/index.ts` into `dist/` with esbuild, then runs `sam deploy`.
@@ -151,7 +151,7 @@ the old image.
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/full-example-cognito-eventbridge-s3-avatars destroy
+pnpm -F @latcher/full-example-cognito-eventbridge-s3-avatars destroy
 ```
 
 `destroy` stops the trail and empties both buckets, then runs `sam delete`. CloudFormation cannot

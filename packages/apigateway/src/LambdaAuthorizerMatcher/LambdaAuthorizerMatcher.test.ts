@@ -1,0 +1,1098 @@
+import {
+  allEventBuilders,
+  createApiGatewayLambdaAuthorizerRequestHttpApiV1Event,
+  createApiGatewayLambdaAuthorizerRequestV1Event,
+  createApiGatewayLambdaAuthorizerRequestV2Event,
+  createApiGatewayLambdaAuthorizerTokenEvent,
+  test,
+} from '@latcher/testing';
+
+import {
+  createLambdaAuthorizerMatcher,
+  defineLambdaAuthorizerRoute,
+  generatePolicy,
+  LambdaAuthorizerMatcher,
+} from './LambdaAuthorizerMatcher.js';
+import type { LambdaAuthorizerFilterInput, LambdaAuthorizerRequest, LambdaAuthorizerResult } from './types.js';
+
+type AuthorizerNext = (request: LambdaAuthorizerRequest) => Promise<LambdaAuthorizerResult | boolean>;
+
+suite('LambdaAuthorizerMatcher', () => {
+  let matcher: LambdaAuthorizerMatcher;
+
+  beforeEach(() => {
+    matcher = new LambdaAuthorizerMatcher();
+  });
+
+  suite('createLambdaAuthorizerMatcher', () => {
+    test('creates a LambdaAuthorizerMatcher instance', () => {
+      const matcher = createLambdaAuthorizerMatcher();
+      expect(matcher).toBeInstanceOf(LambdaAuthorizerMatcher);
+    });
+  });
+
+  suite('canHandleEvent', () => {
+    test('returns true for a valid TOKEN event', () => {
+      const event = createApiGatewayLambdaAuthorizerTokenEvent();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true for a valid REQUEST V1 event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true for a valid REQUEST V2 event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test('returns true for an HTTP API payload 1.0 REQUEST event', () => {
+      const event = createApiGatewayLambdaAuthorizerRequestHttpApiV1Event();
+      expect(matcher.canHandleEvent(event)).toBe(true);
+    });
+
+    test.each([null, 'not an event', 42, [1, 2, 3]])('returns false for non-object value: %j', (value) => {
+      expect(matcher.canHandleEvent(value)).toBe(false);
+    });
+
+    test('returns false when type is missing', () => {
+      expect(matcher.canHandleEvent({ authorizationToken: 'Bearer x', methodArn: 'arn:...' })).toBe(false);
+    });
+
+    test('returns false when type is not TOKEN or REQUEST', () => {
+      expect(matcher.canHandleEvent({ type: 'CUSTOM', authorizationToken: 'Bearer x', methodArn: 'arn:...' })).toBe(
+        false,
+      );
+    });
+
+    test('returns false for TOKEN when authorizationToken is missing', () => {
+      expect(matcher.canHandleEvent({ type: 'TOKEN', methodArn: 'arn:...' })).toBe(false);
+    });
+
+    test('returns false for TOKEN when methodArn is missing', () => {
+      expect(matcher.canHandleEvent({ type: 'TOKEN', authorizationToken: 'Bearer x' })).toBe(false);
+    });
+
+    test('returns false for TOKEN when authorizationToken is not a string', () => {
+      expect(matcher.canHandleEvent({ type: 'TOKEN', authorizationToken: 123, methodArn: 'arn:...' })).toBe(false);
+    });
+
+    test('returns false for REQUEST when neither methodArn nor routeArn is present', () => {
+      expect(matcher.canHandleEvent({ type: 'REQUEST' })).toBe(false);
+    });
+
+    test('returns false for REQUEST V1 when httpMethod is missing', () => {
+      expect(matcher.canHandleEvent({ type: 'REQUEST', methodArn: 'arn:...' })).toBe(false);
+    });
+  });
+
+  suite('route (chaining)', () => {
+    test('returns the matcher instance for chaining', () => {
+      const definition = defineLambdaAuthorizerRoute({
+        filters: { type: 'TOKEN' },
+      }).handle(async () => generatePolicy('user', 'Allow', 'arn:...'));
+
+      const result = matcher.route(definition);
+
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('token / request (chaining)', () => {
+    test('token() returns the matcher instance for chaining', () => {
+      const result = matcher.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+      expect(result).toBe(matcher);
+    });
+
+    test('request() returns the matcher instance for chaining', () => {
+      const result = matcher.request({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+      expect(result).toBe(matcher);
+    });
+
+    test('request() with method returns the matcher instance for chaining', () => {
+      const result = matcher.request({
+        method: 'GET',
+        handler: async () => generatePolicy('user', 'Allow', 'arn:...'),
+      });
+      expect(result).toBe(matcher);
+    });
+  });
+
+  suite('defineLambdaAuthorizerRoute', () => {
+    test('returns a route builder with a handle method', () => {
+      const builder = defineLambdaAuthorizerRoute({
+        filters: { type: 'TOKEN' },
+      });
+
+      expect(builder).toHaveProperty('handle');
+      expect(builder.handle).toBeTypeOf('function');
+    });
+
+    test('preserves filters and handler in the definition', () => {
+      const handler = vi.fn();
+
+      const definition = defineLambdaAuthorizerRoute({
+        filters: { type: 'REQUEST', method: 'POST' },
+      }).handle(handler);
+
+      expect(definition.filters).toEqual({ type: 'REQUEST', method: 'POST' });
+      expect(definition.handler).toBe(handler);
+    });
+  });
+
+  suite('generatePolicy', () => {
+    test('generates Allow policy with correct structure', () => {
+      const result = generatePolicy('user-123', 'Allow', 'arn:aws:execute-api:us-east-1:123456789012:abc123/*');
+
+      expect(result).toEqual({
+        principalId: 'user-123',
+        policyDocument: {
+          Version: '2012-10-17',
+          Statement: [
+            {
+              Action: 'execute-api:Invoke',
+              Effect: 'Allow',
+              Resource: 'arn:aws:execute-api:us-east-1:123456789012:abc123/*',
+            },
+          ],
+        },
+      });
+    });
+
+    test('generates Deny policy with correct structure', () => {
+      const result = generatePolicy('user-456', 'Deny', 'arn:aws:execute-api:us-east-1:123456789012:abc123/*');
+
+      expect(result.principalId).toBe('user-456');
+      expect(result.policyDocument.Statement[0]).toEqual(expect.objectContaining({ Effect: 'Deny' }));
+    });
+
+    test('uses provided principalId and resource', () => {
+      const resource = 'arn:aws:execute-api:eu-west-1:999999999999:xyz789/prod/GET/items';
+      const result = generatePolicy('custom-principal', 'Allow', resource);
+
+      expect(result.principalId).toBe('custom-principal');
+      expect(result.policyDocument.Statement[0]).toEqual(expect.objectContaining({ Resource: resource }));
+    });
+  });
+
+  suite('handleEvent', () => {
+    test('calls matched TOKEN handler and returns policy result', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const policy = generatePolicy('user', 'Allow', 'arn:...');
+      const handler = vi.fn().mockResolvedValue(policy);
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(policy);
+    });
+
+    test('passes authorizationToken, type, resourceArn to TOKEN handler', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent({
+        event: {
+          authorizationToken: 'Bearer my-secret-token',
+          methodArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/GET/items',
+        },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          authorizationToken: 'Bearer my-secret-token',
+          type: 'TOKEN',
+          resourceArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/GET/items',
+        }),
+      );
+    });
+
+    test('passes event and context on the TOKEN request object', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(expect.objectContaining({ event, context }));
+    });
+
+    test('calls matched REQUEST handler for V1 event', async ({ apiGatewayLambdaAuthorizerRequestV1HandlerEvent }) => {
+      const policy = generatePolicy('user', 'Allow', 'arn:...');
+      const handler = vi.fn().mockResolvedValue(policy);
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(policy);
+    });
+
+    test('passes method, path, headers (lowercased), query to V1 handler', async ({
+      apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
+        event: {
+          httpMethod: 'POST',
+          path: '/users',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer abc' },
+          queryStringParameters: { page: '1' },
+        },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'POST',
+          path: '/users',
+          headers: { 'content-type': 'application/json', authorization: 'Bearer abc' },
+          query: { page: '1' },
+        }),
+      );
+    });
+
+    test('passes type, resourceArn, event, context for V1', async ({
+      apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
+        event: { methodArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/POST/users' },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REQUEST',
+          resourceArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/POST/users',
+          event,
+          context,
+        }),
+      );
+    });
+
+    test('calls matched REQUEST handler for V2 event', async ({ apiGatewayLambdaAuthorizerRequestV2HandlerEvent }) => {
+      const policy = generatePolicy('user', 'Allow', 'arn:...');
+      const handler = vi.fn().mockResolvedValue(policy);
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledTimes(1);
+      expect(result).toEqual(policy);
+    });
+
+    test('passes method, path (rawPath), headers, query to V2 handler', async ({
+      apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent({
+        event: {
+          rawPath: '/items',
+          headers: { 'content-type': 'application/json' },
+          queryStringParameters: { limit: '10' },
+          requestContext: { http: { method: 'GET' } },
+        },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(handler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'GET',
+          path: '/items',
+          headers: { 'content-type': 'application/json' },
+          query: { limit: '10' },
+        }),
+      );
+    });
+
+    test('converts boolean true return to { isAuthorized: true } for V2', async ({
+      apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(true);
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual({ isAuthorized: true });
+    });
+
+    test('converts boolean false return to { isAuthorized: false } for V2', async ({
+      apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue(false);
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual({ isAuthorized: false });
+    });
+
+    test('returns a simple response with a context untouched for V2', async ({
+      apiGatewayLambdaAuthorizerRequestV2HandlerEvent,
+    }) => {
+      const handler = vi.fn().mockResolvedValue({ isAuthorized: true, context: { tenantId: 'acme' } });
+      matcher.request({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV2HandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual({ isAuthorized: true, context: { tenantId: 'acme' } });
+    });
+
+    test('throws when no route matches', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow(
+        'No route matched for Lambda Authorizer event (type: TOKEN, method: N/A)',
+      );
+    });
+
+    test('throws when boolean returned for non-V2 event', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const handler = vi.fn().mockResolvedValue(true);
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow(
+        'Boolean responses are only supported for HTTP API (v2) request authorizers using simple response mode',
+      );
+    });
+
+    test('catches and returns thrown authorizer response', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const thrownPolicy = generatePolicy('user-1', 'Deny', 'arn:aws:execute-api:*:*:*');
+      const handler = vi.fn().mockRejectedValue(thrownPolicy);
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual(thrownPolicy);
+    });
+
+    test('matches request route with specific method filter', async ({
+      apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+    }) => {
+      const getHandler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+      const postHandler = vi.fn().mockResolvedValue(generatePolicy('user', 'Allow', 'arn:...'));
+
+      matcher.request({ method: 'GET', handler: getHandler });
+      matcher.request({ method: 'POST', handler: postHandler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
+        event: { httpMethod: 'POST' },
+      });
+      await matcher.handleEvent(event, context);
+
+      expect(getHandler).not.toHaveBeenCalled();
+      expect(postHandler).toHaveBeenCalledTimes(1);
+    });
+
+    test('does not match request route when method differs', async ({
+      apiGatewayLambdaAuthorizerRequestV1HandlerEvent,
+    }) => {
+      matcher.request({ method: 'DELETE', handler: vi.fn() });
+
+      const { event, context } = apiGatewayLambdaAuthorizerRequestV1HandlerEvent({
+        event: { httpMethod: 'GET' },
+      });
+
+      await expect(matcher.handleEvent(event, context)).rejects.toThrow('No route matched for Lambda Authorizer event');
+    });
+  });
+
+  suite('filter input', () => {
+    test('hands a TOKEN custom filter the token and the resource', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerTokenEvent({
+        authorizationToken: 'Bearer secret',
+        methodArn: 'arn:aws:execute-api:eu-west-2:1:api/prod/GET/items',
+      });
+
+      await matcher.handleEvent(event, context());
+
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'TOKEN',
+          authorizationToken: 'Bearer secret',
+          resourceArn: 'arn:aws:execute-api:eu-west-2:1:api/prod/GET/items',
+          event,
+        }),
+      );
+    });
+
+    test('hands a REQUEST custom filter the method, path, headers and query', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event({
+        httpMethod: 'GET',
+        path: '/items/42',
+        headers: { 'X-Api-Key': 'valid-key' },
+        queryStringParameters: { dryRun: 'true' },
+      });
+
+      await matcher.handleEvent(event, context());
+
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REQUEST',
+          method: 'GET',
+          path: '/items/42',
+          headers: { 'x-api-key': 'valid-key' },
+          query: { dryRun: 'true' },
+        }),
+      );
+    });
+
+    test('builds a REQUEST request from an HTTP API payload 1.0 event', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+      const event = createApiGatewayLambdaAuthorizerRequestHttpApiV1Event({
+        methodArn: 'arn:aws:execute-api:eu-west-2:123456789012:abc123/$default/PATCH/inventory/brk-9',
+        httpMethod: 'PATCH',
+        path: '/inventory/brk-9',
+        headers: { Authorization: 'service-7710' },
+        queryStringParameters: { depot: 'hull' },
+      });
+
+      await matcher.handleEvent(event, context());
+
+      expect(custom).toHaveBeenCalledWith(
+        expect.objectContaining({
+          type: 'REQUEST',
+          method: 'PATCH',
+          path: '/inventory/brk-9',
+          headers: { authorization: 'service-7710' },
+          query: { depot: 'hull' },
+          resourceArn: 'arn:aws:execute-api:eu-west-2:123456789012:abc123/$default/PATCH/inventory/brk-9',
+        }),
+      );
+    });
+
+    test('treats an HTTP API payload 1.0 event as REQUEST despite its authorizationToken', async ({ context }) => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { custom } }).handle(async () =>
+          generatePolicy('user', 'Allow', 'arn:...'),
+        ),
+      );
+
+      await matcher.handleEvent(createApiGatewayLambdaAuthorizerRequestHttpApiV1Event(), context());
+
+      expect(custom).toHaveBeenCalledWith(expect.objectContaining({ type: 'REQUEST' }));
+      expect(custom.mock.calls[0]?.[0]).not.toHaveProperty('authorizationToken');
+    });
+
+    test('routes on a header a custom filter reads', async ({ context }) => {
+      const staffHandler = vi.fn().mockResolvedValue(generatePolicy('staff', 'Allow', 'arn:...'));
+      const publicHandler = vi.fn().mockResolvedValue(generatePolicy('anonymous', 'Deny', 'arn:...'));
+
+      matcher
+        .route(
+          defineLambdaAuthorizerRoute({
+            filters: {
+              type: 'REQUEST',
+              custom: ({ headers }: LambdaAuthorizerFilterInput): boolean => headers?.['x-api-key'] === 'valid-key',
+            },
+          }).handle(staffHandler),
+        )
+        .request({ handler: publicHandler });
+
+      const allowed = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: { 'x-api-key': 'valid-key' } });
+      const refused = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: {} });
+
+      await matcher.handleEvent(allowed, context());
+      await matcher.handleEvent(refused, context());
+
+      expect(staffHandler).toHaveBeenCalledTimes(1);
+      expect(publicHandler).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  suite('buildRequest (private)', () => {
+    test('builds token request with authorizationToken and methodArn as resourceArn', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerTokenEvent({
+        authorizationToken: 'Bearer secret',
+        methodArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/GET/items',
+      });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          type: 'TOKEN',
+          resourceArn: 'arn:aws:execute-api:us-east-1:123:abc/prod/GET/items',
+          authorizationToken: 'Bearer secret',
+        }),
+      );
+    });
+
+    test('builds V1 request with lowercased headers, path, query, methodArn as resourceArn', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event({
+        path: '/users',
+        httpMethod: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        queryStringParameters: { page: '1' },
+        methodArn: 'arn:method',
+      });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          type: 'REQUEST',
+          resourceArn: 'arn:method',
+          method: 'POST',
+          path: '/users',
+          headers: { 'content-type': 'application/json' },
+          query: { page: '1' },
+        }),
+      );
+    });
+
+    test('builds V2 request with headers, rawPath as path, query, routeArn as resourceArn', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event({
+        rawPath: '/items',
+        headers: { authorization: 'Bearer token' },
+        queryStringParameters: { limit: '5' },
+        routeArn: 'arn:route',
+        requestContext: { http: { method: 'GET' } },
+      });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result).toEqual(
+        expect.objectContaining({
+          type: 'REQUEST',
+          resourceArn: 'arn:route',
+          method: 'GET',
+          path: '/items',
+          headers: { authorization: 'Bearer token' },
+          query: { limit: '5' },
+        }),
+      );
+    });
+
+    test('builds V2 request with lowercased headers', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event({
+        headers: { 'X-Api-Key': 'valid-key', Authorization: 'Bearer token' },
+      });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.headers).toEqual({ 'x-api-key': 'valid-key', authorization: 'Bearer token' });
+    });
+
+    test('includes event and context in all request types', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerTokenEvent();
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.event).toBe(event);
+      expect(result.context).toBe(mockContext);
+    });
+
+    test('returns empty object for null headers in V1', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event({ headers: null });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.headers).toEqual({});
+    });
+
+    test('returns empty object for null query in V1', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV1Event({ queryStringParameters: null });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.query).toEqual({});
+    });
+
+    test('returns empty object for undefined headers in V2', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event({ headers: undefined });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.headers).toEqual({});
+    });
+
+    test('returns empty object for undefined query in V2', ({ context }) => {
+      const event = createApiGatewayLambdaAuthorizerRequestV2Event({ queryStringParameters: undefined });
+      const mockContext = context();
+
+      // @ts-expect-error - testing private method
+      const result = matcher.buildRequest(event, mockContext);
+
+      expect(result.query).toEqual({});
+    });
+
+    test('throws for unrecognized event format', ({ context }) => {
+      const mockContext = context();
+
+      // @ts-expect-error - testing with invalid event that bypasses type guards
+      expect(() => matcher.buildRequest({ type: 'REQUEST' }, mockContext)).toThrow(
+        'Unrecognized Lambda Authorizer event format',
+      );
+    });
+  });
+
+  suite('matchRoute (private)', () => {
+    test('matches route with matching type filter', async () => {
+      matcher.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route with different type filter', async () => {
+      matcher.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('does not match when the method filter is an empty string', async () => {
+      matcher.request({
+        method: '',
+        handler: async () => generatePolicy('user', 'Allow', 'arn:...'),
+      });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('matches route with matching method filter', async () => {
+      matcher.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'POST' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route with different method filter', async () => {
+      matcher.request({ method: 'POST', handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('route without type filter matches any type', async () => {
+      const definition = defineLambdaAuthorizerRoute({ filters: {} }).handle(async () =>
+        generatePolicy('user', 'Allow', 'arn:...'),
+      );
+      matcher.route(definition);
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('route without method filter matches any method', async () => {
+      matcher.request({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'DELETE' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('returns first matching route when multiple match', async () => {
+      const firstHandler = vi.fn();
+      const secondHandler = vi.fn();
+      matcher.request({ handler: firstHandler });
+      matcher.request({ handler: secondHandler });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result?.handler).toBe(firstHandler);
+    });
+
+    test('orders a narrower route ahead of a broader one registered first', async () => {
+      const broad = vi.fn();
+      const narrow = vi.fn();
+      matcher.route({ filters: { type: 'REQUEST' }, handler: broad });
+      matcher.route({ filters: { type: 'REQUEST', method: 'GET' }, handler: narrow });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result?.handler).toBe(narrow);
+    });
+
+    test('orders a guarded route ahead of the fallback it shares filters with', async () => {
+      const fallback = vi.fn();
+      const guarded = vi.fn();
+      matcher.route({ filters: { type: 'REQUEST' }, handler: fallback });
+      matcher.route({ filters: { type: 'REQUEST', custom: () => true }, handler: guarded });
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(result?.handler).toBe(guarded);
+    });
+
+    test('matches route by custom', async () => {
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            custom: ({ type }: LambdaAuthorizerFilterInput): boolean => type === 'TOKEN',
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('matches route by async custom', async () => {
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            custom: async ({ type }: LambdaAuthorizerFilterInput): Promise<boolean> => {
+              await new Promise((r) => setTimeout(r, 1));
+              return type === 'TOKEN';
+            },
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match route when custom returns false', async () => {
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            custom: (): boolean => false,
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'TOKEN' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('passes correct filterInput to custom', async () => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: { custom },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      matcher.matchRoute({ type: 'REQUEST', method: 'POST' });
+
+      expect(custom).toHaveBeenCalledWith({
+        type: 'REQUEST',
+        method: 'POST',
+      });
+    });
+
+    test('matches when standard filters and custom both pass', async () => {
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            type: 'REQUEST',
+            custom: ({ method }: LambdaAuthorizerFilterInput): boolean => method === 'POST',
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'POST' });
+
+      expect(result).toBeDefined();
+    });
+
+    test('does not match when standard filters pass but custom returns false', async () => {
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            type: 'REQUEST',
+            custom: (): boolean => false,
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      const result = await matcher.matchRoute({ type: 'REQUEST', method: 'POST' });
+
+      expect(result).toBeUndefined();
+    });
+
+    test('custom is not called when an earlier filter fails', () => {
+      const custom = vi.fn().mockReturnValue(true);
+      matcher.route(
+        defineLambdaAuthorizerRoute({
+          filters: {
+            type: 'TOKEN',
+            custom,
+          },
+        }).handle(async () => generatePolicy('user', 'Allow', 'arn:...')),
+      );
+
+      // @ts-expect-error - testing private method
+      matcher.matchRoute({ type: 'REQUEST', method: 'GET' });
+
+      expect(custom).not.toHaveBeenCalled();
+    });
+  });
+
+  suite('matcher-level middleware', () => {
+    test('executes middleware before the route handler', async ({ apiGatewayLambdaAuthorizerTokenHandlerEvent }) => {
+      const callOrder: string[] = [];
+
+      async function middleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw-pre');
+        const result = await next(request);
+        callOrder.push('mw-post');
+        return result;
+      }
+
+      const matcher = createLambdaAuthorizerMatcher({ middleware: [middleware] });
+      matcher.token({
+        handler: async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        },
+      });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw-pre', 'handler', 'mw-post']);
+    });
+
+    test('allows middleware to short-circuit with an early return', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const handler = vi.fn();
+      const denied = generatePolicy('user', 'Deny', 'arn:...');
+
+      async function blockingMiddleware(
+        _request: LambdaAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        return denied;
+      }
+
+      const matcher = createLambdaAuthorizerMatcher({ middleware: [blockingMiddleware] });
+      matcher.token({ handler });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual(denied);
+      expect(handler).not.toHaveBeenCalled();
+    });
+
+    test('executes multiple matcher-level middleware in order', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function middlewareOne(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw1');
+        return next(request);
+      }
+
+      async function middlewareTwo(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('mw2');
+        return next(request);
+      }
+
+      const matcher = createLambdaAuthorizerMatcher({ middleware: [middlewareOne, middlewareTwo] });
+      matcher.token({
+        handler: async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        },
+      });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['mw1', 'mw2', 'handler']);
+    });
+
+    test('catches a response thrown from within the middleware chain', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const thrownPolicy = generatePolicy('user', 'Deny', 'arn:...');
+
+      async function throwingMiddleware(
+        _request: LambdaAuthorizerRequest,
+        _next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        throw thrownPolicy;
+      }
+
+      const matcher = createLambdaAuthorizerMatcher({ middleware: [throwingMiddleware] });
+      matcher.token({ handler: async () => generatePolicy('user', 'Allow', 'arn:...') });
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      const result = await matcher.handleEvent(event, context);
+
+      expect(result).toEqual(thrownPolicy);
+    });
+  });
+
+  suite('route-level middleware', () => {
+    test('executes route-level middleware from defineLambdaAuthorizerRoute', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function routeMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { type: 'TOKEN' }, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        }),
+      );
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['route-mw', 'handler']);
+    });
+  });
+
+  suite('combined matcher and route middleware', () => {
+    test('executes matcher middleware before route middleware', async ({
+      apiGatewayLambdaAuthorizerTokenHandlerEvent,
+    }) => {
+      const callOrder: string[] = [];
+
+      async function matcherMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('matcher-mw');
+        return next(request);
+      }
+
+      async function routeMiddleware(
+        request: LambdaAuthorizerRequest,
+        next: AuthorizerNext,
+      ): Promise<LambdaAuthorizerResult | boolean> {
+        callOrder.push('route-mw');
+        return next(request);
+      }
+
+      const matcher = createLambdaAuthorizerMatcher({ middleware: [matcherMiddleware] });
+      matcher.route(
+        defineLambdaAuthorizerRoute({ filters: { type: 'TOKEN' }, middleware: [routeMiddleware] }).handle(async () => {
+          callOrder.push('handler');
+          return generatePolicy('user', 'Allow', 'arn:...');
+        }),
+      );
+
+      const { event, context } = apiGatewayLambdaAuthorizerTokenHandlerEvent();
+      await matcher.handleEvent(event, context);
+
+      expect(callOrder).toEqual(['matcher-mw', 'route-mw', 'handler']);
+    });
+  });
+});
+
+suite('LambdaAuthorizerMatcher.canHandleEvent', () => {
+  const ownEvents = [
+    'createApiGatewayLambdaAuthorizerRequestHttpApiV1Event',
+    'createApiGatewayLambdaAuthorizerRequestV1Event',
+    'createApiGatewayLambdaAuthorizerRequestV2Event',
+    'createApiGatewayLambdaAuthorizerTokenEvent',
+  ];
+
+  test.each(allEventBuilders())('%s', async (name, build) => {
+    const event = build();
+    const isOwnEvent = ownEvents.includes(name);
+
+    const claimed = await createLambdaAuthorizerMatcher().canHandleEvent(event);
+
+    expect(claimed).toBe(isOwnEvent);
+  });
+});

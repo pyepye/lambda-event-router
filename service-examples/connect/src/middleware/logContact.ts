@@ -1,9 +1,9 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConnectMiddleware } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import type { ConnectMiddleware } from '@latcher/connect';
 
 import { STEP_PARAMETER } from '../utils/constants.js';
 
-// Router middleware: runs once per matched contact, before any route middleware.
+// Matcher middleware: runs once per matched contact, before any route middleware.
 export const logContact: ConnectMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling Connect contact',

@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/kinesis';
+import { defineRoute } from '@latcher/kinesis';
 
 import { QUARANTINED_DEVICE_KEY, TELEMETRY_STREAM_ARN } from '../config.js';
 import { ReadingSchema } from '../utils/schemas.js';

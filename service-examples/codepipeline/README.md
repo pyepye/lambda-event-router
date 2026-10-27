@@ -1,7 +1,7 @@
 # Service example: CodePipeline
 
-A deployable CDK app that exercises the `CodePipelineRouter` end to end. It models a release
-pipeline. Two Lambda functions share one router bundle, and the router decides which handler each
+A deployable CDK app that exercises the `CodePipelineMatcher` end to end. It models a release
+pipeline. Two Lambda functions share one matcher bundle, and the matcher decides which handler each
 pipeline job reaches.
 
 The routes are in `src/codepipeline.ts`, and the handlers are in `src/handlers/`.
@@ -20,7 +20,7 @@ ler-example-codepipeline-release
 
 ## What it covers
 
-One `release` starts one execution. Its six Lambda actions hit every filter the router has, every
+One `release` starts one execution. Its six Lambda actions hit every filter the matcher has, every
 response shape and all three of its failures.
 
 | Feature | Where |
@@ -29,13 +29,13 @@ response shape and all three of its failures.
 | `hasInputArtifacts` filter | `verifyReleaseBundle` needs the source artifact, `rollbackRelease` refuses one |
 | `hasContinuationToken` filter | `startCanaryDeployment` takes the first invocation of the canary action only |
 | `custom` filter | `verifyReleaseBundle` reads `step` out of the raw UserParameters |
-| Async `custom` filter | Both canary routes return a promise, which the router awaits |
+| Async `custom` filter | Both canary routes return a promise, which the matcher awaits |
 | `continuation()` helper | `awaitCanaryHealth` is registered with it, which adds `hasContinuationToken: true` |
 | Route order | `rollbackRelease` claims any deployer job with no artifact, so it ranks behind the narrower deployer routes |
 | Standard schemas | `userParametersSchema` on four routes, and none on `publishReleaseNotes` |
 | Unparsed UserParameters | `AnnounceRelease` sets a value that is not JSON, so the handler gets the raw string |
-| Router client | `createCodePipelineRouter({ client })`, so the route check can record job results |
-| Router middleware | `logJob` runs once per job |
+| Matcher client | `createCodePipelineMatcher({ client })`, so the route check can record job results |
+| Matcher middleware | `logJob` runs once per job |
 | Route middleware | `withReleaseContext` on the verify route |
 | Output variables | `verifyReleaseBundle` returns `bundleSha`, which `CanaryDeploy` reads back as UserParameters |
 | Artifact credentials | `verifyReleaseBundle` writes its output artifact with the credentials on the job |
@@ -51,7 +51,7 @@ filters match against those values.
 A missing name throws at cold start. An empty filter string reads as no filter at all, which would
 let one route claim every job.
 
-Handlers do their work by logging, and the router reports every job back to CodePipeline. The
+Handlers do their work by logging, and the matcher reports every job back to CodePipeline. The
 CloudWatch logs are how you confirm routing.
 
 ## Prerequisites
@@ -78,15 +78,15 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-codepipeline... install
-pnpm -F @lambda-event-router/service-example-codepipeline... run build
-pnpm -F @lambda-event-router/service-example-codepipeline run deploy
+pnpm -F @latcher/service-example-codepipeline... install
+pnpm -F @latcher/service-example-codepipeline... run build
+pnpm -F @latcher/service-example-codepipeline run deploy
 ```
 
 CDK outputs include `ReleaseBucketName`, `PipelineName` and `WorkerLogGroupName`.
 
 To check the routing table without deploying, run
-`pnpm -F @lambda-event-router/service-example-codepipeline run check`. It drives the built router with
+`pnpm -F @latcher/service-example-codepipeline run check`. It drives the built matcher with
 a synthetic job for each route and reports where each one landed.
 
 Note: creating a pipeline starts an execution of its own. That one fails at `FetchReleaseBundle`,
@@ -97,7 +97,7 @@ because no bundle has been uploaded yet, and no Lambda runs.
 Pass the bucket name from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-codepipeline run release <ReleaseBucketName>
+pnpm -F @latcher/service-example-codepipeline run release <ReleaseBucketName>
 ```
 
 The script writes a fresh `release.zip` to the bucket and starts an execution. Each run overwrites
@@ -110,7 +110,7 @@ The execution takes about three minutes. Each Lambda action costs roughly 30 sec
 polling whatever the handler does, and the canary action pays that three times.
 
 The execution ends as `Failed`. The last stage is three actions that fail on purpose, one per
-failure the router can produce.
+failure the matcher can produce.
 
 CodePipeline delivers one job per invocation. There is no batch delivery, so there is no ordering or
 partial-failure behaviour to show.
@@ -125,7 +125,7 @@ aws codepipeline list-action-executions --pipeline-name ler-example-codepipeline
 aws logs tail /aws/lambda/ler-example-codepipeline-worker --since 15m --format short > worker.log
 ```
 
-The action list is the router's other half. Every failure the router reports goes out through
+The action list is the matcher's other half. Every failure the matcher reports goes out through
 `PutJobFailureResult`, and its message lands on the action as `externalExecutionSummary`. The three
 `Recover` actions carry `Rollback target unavailable`, `No route matched` and
 `UserParameters validation failed`, one each.
@@ -162,7 +162,7 @@ The five that succeed log what they did:
   the `hasContinuationToken` filter reads.
 - `Canary healthy` carries `continuationToken` `canary-2`. Returning nothing ends the action.
 - `Release notes published` carries `userParameters` `releases`, a plain string. That action's
-  UserParameters is not JSON, so the router hands the value over as it stands. It is also the only
+  UserParameters is not JSON, so the matcher hands the value over as it stands. It is also the only
   job the `functionName` filter sends anywhere but the deployer routes.
 
 Three `ERROR` records carry the failures. Each one has `errorMessage` and a `stackTrace`:
@@ -180,7 +180,7 @@ holds a mangled class name for `SchemaValidationError`. The other two throw a pl
 has no `name` and an `errorType` of `Error`.
 
 Six of the eight invocations have a `Handling CodePipeline job` line. The two that failed routing or
-validation have none. The router matches a route and validates UserParameters before it runs any
+validation have none. The matcher matches a route and validates UserParameters before it runs any
 middleware.
 
 Note: an invocation whose handler threw still reports `status` `success` in its `platform.report`
@@ -208,22 +208,22 @@ A pipeline has to start with a source stage, and every source is a second servic
 lightest, and CodePipeline needs an S3 artifact store whatever source you pick. One bucket does both
 jobs here.
 
-Both functions set `retryAttempts` to 0, which caps Lambda's async retries. The router reports the
+Both functions set `retryAttempts` to 0, which caps Lambda's async retries. The matcher reports the
 job as failed before the handler's error reaches Lambda, so a retry would only repeat a failure
 CodePipeline has recorded.
 
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-codepipeline run diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-codepipeline run watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-codepipeline run synth  # render template
+pnpm -F @latcher/service-example-codepipeline run diff   # review pending changeset
+pnpm -F @latcher/service-example-codepipeline run watch  # hotswap deploys
+pnpm -F @latcher/service-example-codepipeline run synth  # render template
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-codepipeline run destroy
+pnpm -F @latcher/service-example-codepipeline run destroy
 ```
 
 That removes the pipeline, both functions, the shared log group and the bucket. The bucket empties

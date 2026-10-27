@@ -1,44 +1,44 @@
-# @lambda-event-router/base
+# @latcher/base
 
-The core package. `LambdaRouter` is the handler you export, and it passes each event to the router that owns it. `EventRouter` handles events that have no AWS envelope, such as direct invocations.
+The core package. `Latcher` is the handler you export, and it passes each event to the matcher that owns it. `EventMatcher` handles events that have no AWS envelope, such as direct invocations.
 
-**Supported AWS Services:** `AWS Lambda` (every event source via `LambdaRouter`, direct invocation and custom envelopes via `EventRouter`)
+**Supported AWS Services:** `AWS Lambda` (every event source via `Latcher`, direct invocation and custom envelopes via `EventMatcher`)
 
-**Available Routers:** `LambdaRouter` | `EventRouter`
+**Available Matchers:** `Latcher` | `EventMatcher`
 
-**Docs:** [LambdaRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaRouter) | [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter)
+**Docs:** [Latcher](https://pyepye.github.io/latcher/matchers/Latcher) | [EventMatcher](https://pyepye.github.io/latcher/matchers/EventMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base
+npm install @latcher/base
 ```
 
 ## Quick Start
 
-Create a router for each AWS service your Lambda receives events from, then register them all on one `LambdaRouter`. Export its handler.
+Create a matcher for each AWS service your Lambda receives events from, then register them all on one `Latcher`. Export its handler.
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { apiRouter } from './api'
-import { sqsRouter } from './sqs'
+import { Latcher } from '@latcher/base'
+import { apiMatcher } from './api'
+import { sqsMatcher } from './sqs'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [apiRouter, sqsRouter],
+const latcher = new Latcher({
+  matchers: [apiMatcher, sqsMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // api.ts
-import { createAPIGatewayRouter } from '@lambda-event-router/apigateway'
+import { createAPIGatewayMatcher } from '@latcher/apigateway'
 import { getOrder } from './order/get'
 
-export const apiRouter = createAPIGatewayRouter()
+export const apiMatcher = createAPIGatewayMatcher()
 
-apiRouter.route({
+apiMatcher.route({
   filters: { method: 'GET', path: '/order/:id' },
   handler: getOrder,
 })
@@ -46,34 +46,34 @@ apiRouter.route({
 
 ```ts
 // sqs.ts
-import { createSQSRouter } from '@lambda-event-router/sqs'
+import { createSQSMatcher } from '@latcher/sqs'
 import { processOrder } from './order/process'
 import { refundOrder } from './order/refund'
 
-export const sqsRouter = createSQSRouter()
+export const sqsMatcher = createSQSMatcher()
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: { messageAttributes: { Type: 'ProcessOrder' } },
   handler: processOrder,
 })
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: { messageAttributes: { Type: 'RefundOrder' } },
   handler: refundOrder,
 })
 ```
 
-`LambdaRouter` works out which router owns each event, and that router picks the route.
+`Latcher` works out which matcher owns each event, and that matcher picks the route.
 
 Events with no AWS envelope, such as a direct `Invoke` or an EventBridge Scheduler payload, go to
-`EventRouter`. It has no fields to filter on, so a `custom` filter identifies each route:
+`EventMatcher`. It has no fields to filter on, so a `custom` filter identifies each route:
 
 ```ts
 // events.ts
-import { createEventRouter, defineEventRoute, isObject } from '@lambda-event-router/base'
+import { createEventMatcher, defineEventRoute, isObject } from '@latcher/base'
 import { z } from 'zod'
 
-export const eventRouter = createEventRouter()
+export const eventMatcher = createEventMatcher()
 
 const generateReport = defineEventRoute({
   filters: {
@@ -85,17 +85,17 @@ const generateReport = defineEventRoute({
   return { reportId: event.reportId }
 })
 
-eventRouter.route(generateReport)
+eventMatcher.route(generateReport)
 ```
 
 ## Documentation
 
-- [LambdaRouter](https://pyepye.github.io/lambda-event-router/routers/LambdaRouter) covers picking a router, options, middleware and custom routers.
-- [EventRouter](https://pyepye.github.io/lambda-event-router/routers/EventRouter) covers which events reach it, filters, schema validation and
+- [Latcher](https://pyepye.github.io/latcher/matchers/Latcher) covers picking a matcher, options, middleware and custom matchers.
+- [EventMatcher](https://pyepye.github.io/latcher/matchers/EventMatcher) covers which events reach it, filters, schema validation and
   failures.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 
-- [service-examples](../../service-examples) has one deployable app per AWS service. Each one registers its service routers on a `LambdaRouter`.
-- [full-examples](../../full-examples) has apps that chain several AWS services, with one `LambdaRouter` combining several routers in each Lambda.
+- [service-examples](../../service-examples) has one deployable app per AWS service. Each one registers its service matchers on a `Latcher`.
+- [full-examples](../../full-examples) has apps that chain several AWS services, with one `Latcher` combining several matchers in each Lambda.

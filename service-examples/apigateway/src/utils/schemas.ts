@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
 // Query on GET /orders/:orderId. `page` arrives as a string, so it is coerced; a value that will
-// not coerce fails the schema and the router answers 400.
+// not coerce fails the schema and the matcher answers 400.
 export const OrderQuerySchema = z.object({
   include: z.enum(['lines', 'history']).optional(),
   page: z.coerce.number().int().min(1).default(1),
 });
 
-// Body on POST /orders. A missing field fails the schema and the router answers 422.
+// Body on POST /orders. A missing field fails the schema and the matcher answers 422.
 export const NewOrderSchema = z.object({
   reference: z.string().min(1),
   customer: z.string().min(1),

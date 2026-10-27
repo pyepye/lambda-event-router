@@ -1,41 +1,41 @@
-# @lambda-event-router/eventbridge
+# @latcher/eventbridge
 
 Routes EventBridge events to handlers by source, detail type, account, Region or resource. Your handler gets the validated `detail` payload. Through CloudTrail it also covers AWS services that cannot trigger Lambda directly.
 
 **Supported AWS Services:** `Amazon EventBridge`
 
-**Available Routers:** `EventBridgeRouter`
+**Available Matchers:** `EventBridgeMatcher`
 
-**Docs:** [EventBridgeRouter](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter)
+**Docs:** [EventBridgeMatcher](https://pyepye.github.io/latcher/matchers/EventBridgeMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/eventbridge
+npm install @latcher/base @latcher/eventbridge
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { eventBridgeRouter } from './eventbridge'
+import { Latcher } from '@latcher/base'
+import { eventBridgeMatcher } from './eventbridge'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [eventBridgeRouter],
+const latcher = new Latcher({
+  matchers: [eventBridgeMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // eventbridge.ts
-import { createEventBridgeRouter, defineRoute } from '@lambda-event-router/eventbridge'
+import { createEventBridgeMatcher, defineRoute } from '@latcher/eventbridge'
 import { z } from 'zod'
 
-export const eventBridgeRouter = createEventBridgeRouter()
+export const eventBridgeMatcher = createEventBridgeMatcher()
 
 const orderCreated = defineRoute({
   filters: {
@@ -50,17 +50,17 @@ const orderCreated = defineRoute({
   console.log(`Processing order ${detail.orderId} for ${detail.total}`)
 })
 
-eventBridgeRouter.route(orderCreated)
+eventBridgeMatcher.route(orderCreated)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/EventBridgeMatcher#annotated-handlers).
 
 ## Documentation
 
-- [EventBridgeRouter](https://pyepye.github.io/lambda-event-router/routers/EventBridgeRouter) covers every filter, schema validation,
+- [EventBridgeMatcher](https://pyepye.github.io/latcher/matchers/EventBridgeMatcher) covers every filter, schema validation,
   typed detail for AWS events and failures and retries.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

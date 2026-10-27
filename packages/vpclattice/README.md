@@ -1,41 +1,41 @@
-# @lambda-event-router/vpclattice
+# @latcher/vpclattice
 
-Routes VPC Lattice requests to handlers by method and path. Both payload versions give your handler the same request object, and the router builds the response.
+Routes VPC Lattice requests to handlers by method and path. Both payload versions give your handler the same request object, and the matcher builds the response.
 
 **Supported AWS Services:** `Amazon VPC Lattice`
 
-**Available Routers:** `VPCLatticeRouter`
+**Available Matchers:** `VPCLatticeMatcher`
 
-**Docs:** [VPCLatticeRouter](https://pyepye.github.io/lambda-event-router/routers/VPCLatticeRouter)
+**Docs:** [VPCLatticeMatcher](https://pyepye.github.io/latcher/matchers/VPCLatticeMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/vpclattice
+npm install @latcher/base @latcher/vpclattice
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { latticeRouter } from './vpclattice'
+import { Latcher } from '@latcher/base'
+import { latticeMatcher } from './vpclattice'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [latticeRouter],
+const latcher = new Latcher({
+  matchers: [latticeMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // vpclattice.ts
-import { createVPCLatticeRouter, defineRoute } from '@lambda-event-router/vpclattice'
+import { createVPCLatticeMatcher, defineRoute } from '@latcher/vpclattice'
 import { z } from 'zod'
 
-export const latticeRouter = createVPCLatticeRouter()
+export const latticeMatcher = createVPCLatticeMatcher()
 
 const createOrder = defineRoute({
   filters: {
@@ -48,17 +48,17 @@ const createOrder = defineRoute({
   return { orgId: path.orgId, item: body.item }
 })
 
-latticeRouter.route(createOrder)
+latticeMatcher.route(createOrder)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/VPCLatticeRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/VPCLatticeMatcher#annotated-handlers).
 
 ## Documentation
 
-- [VPCLatticeRouter](https://pyepye.github.io/lambda-event-router/routers/VPCLatticeRouter) covers every filter, schema validation, CORS
+- [VPCLatticeMatcher](https://pyepye.github.io/latcher/matchers/VPCLatticeMatcher) covers every filter, schema validation, CORS
   and event versions.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

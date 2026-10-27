@@ -12,9 +12,9 @@ import type {
   VerifyAuthChallengeResponseTriggerEvent,
 } from 'aws-lambda';
 
-import { createMockSchema } from '@lambda-event-router/testing';
+import { createMockSchema } from '@latcher/testing';
 
-import { createCognitoRouter, defineRoute } from './CognitoRouter.js';
+import { createCognitoMatcher, defineRoute } from './CognitoMatcher.js';
 import type {
   CognitoEvent,
   CognitoFilterInput,
@@ -485,9 +485,9 @@ suite('route', () => {
       filters: { triggerSource: 'PreSignUp_SignUp' },
     }).handle(async ({ event }) => event);
 
-    const router = createCognitoRouter().route(definition);
+    const matcher = createCognitoMatcher().route(definition);
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('takes a handler annotated for one trigger', () => {
@@ -495,12 +495,12 @@ suite('route', () => {
       return event;
     }
 
-    const router = createCognitoRouter().route({
+    const matcher = createCognitoMatcher().route({
       filters: { triggerSource: 'PreSignUp_SignUp' },
       handler: onPreSignUp,
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('rejects a handler annotated for one trigger when no filter pins it', () => {
@@ -509,13 +509,13 @@ suite('route', () => {
     }
 
     // @ts-expect-error - nothing tells route() which trigger this handler is for
-    const router = createCognitoRouter().route({ handler: onPreSignUp });
+    const matcher = createCognitoMatcher().route({ handler: onPreSignUp });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('types an inferred route() handler with the raw attributes when it has no attribute schema', () => {
-    const router = createCognitoRouter().route({
+    const matcher = createCognitoMatcher().route({
       filters: { triggerSource: 'PreSignUp_SignUp' },
       // biome-ignore lint/nursery/useExplicitType: the inferred parameter type is what this test asserts
       handler: async ({ event, userAttributes }): Promise<CognitoEvent> => {
@@ -524,7 +524,7 @@ suite('route', () => {
       },
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('accepts an annotated handler for a coerced attribute schema', () => {
@@ -536,13 +536,13 @@ suite('route', () => {
       return event;
     }
 
-    const router = createCognitoRouter().route({
+    const matcher = createCognitoMatcher().route({
       filters: { triggerSource: 'PreSignUp_SignUp' },
       userAttributesSchema: createMockSchema<VerifiedAttributes>(),
       handler: onPreSignUp,
     });
 
-    expect(router).toBeDefined();
+    expect(matcher).toBeDefined();
   });
 
   test('accepts a route middleware typed to a coerced attribute schema', () => {

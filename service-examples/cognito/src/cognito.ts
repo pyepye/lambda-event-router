@@ -1,4 +1,4 @@
-import { createCognitoRouter } from '@lambda-event-router/cognito';
+import { createCognitoMatcher } from '@latcher/cognito';
 
 import { blockWithdrawnApplicant, logSignIn } from './handlers/authentication.js';
 import { provisionUser, recordPasswordReset } from './handlers/confirmation.js';
@@ -21,11 +21,11 @@ import { migrateLegacyApplicant } from './handlers/userMigration.js';
 import { logInvocation } from './middleware/logInvocation.js';
 import { ADMIN_CALLER_CLIENT_ID } from './utils/constants.js';
 
-export const cognitoRouter = createCognitoRouter({ middleware: [logInvocation] });
+export const cognitoMatcher = createCognitoMatcher({ middleware: [logInvocation] });
 
-// The router ranks each group narrowest first, so a route filtered on nothing but its trigger source
+// The matcher ranks each group narrowest first, so a route filtered on nothing but its trigger source
 // takes what the more specific ones in that group turn down.
-cognitoRouter
+cognitoMatcher
   .preSignUpSignUp(rejectTestAccount)
   .route({
     filters: {

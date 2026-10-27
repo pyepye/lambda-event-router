@@ -1,12 +1,10 @@
-export { CodePipelineRouter, createCodePipelineRouter, defineRoute } from './CodePipelineRouter.js';
+export { CodePipelineMatcher, createCodePipelineMatcher, defineRoute } from './CodePipelineMatcher.js';
 export type {
-  CodePipelineFilterInput,
-  CodePipelineFilters,
-  CodePipelineHandler,
-  CodePipelineMiddleware,
-  CodePipelineRequest,
-  CodePipelineResponse,
-  CodePipelineRouteDefinition,
-  CodePipelineRouterOptions,
-  CodePipelineSuccessResult,
+    CodePipelineFilterInput,
+    CodePipelineFilters,
+    CodePipelineHandler, CodePipelineMatcherOptions, CodePipelineMiddleware,
+    CodePipelineRequest,
+    CodePipelineResponse,
+    CodePipelineRouteDefinition, CodePipelineSuccessResult
 } from './types.js';
+

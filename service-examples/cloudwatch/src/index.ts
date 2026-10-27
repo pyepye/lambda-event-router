@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { cloudwatchRouter } from './cloudwatch.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [cloudwatchRouter] });
+import { cloudwatchMatcher } from './cloudwatch.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [cloudwatchMatcher] });
+
+export const handler: Handler = latcher.handler();

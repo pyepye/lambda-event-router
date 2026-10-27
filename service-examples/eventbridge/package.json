@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-eventbridge",
+  "name": "@latcher/service-example-eventbridge",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-eventbridge": "^3.1034.0",
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/eventbridge": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/eventbridge": "workspace:*",
     "zod": "^4.3.5"
   },
   "devDependencies": {

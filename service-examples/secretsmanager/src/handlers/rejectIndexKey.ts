@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/secretsmanager';
+import { defineRoute } from '@latcher/secretsmanager';
 
 // The testSecret step for the search index key always throws, which is the only route here that
 // fails inside a handler rather than before one runs. The distinction shows in the log: this event

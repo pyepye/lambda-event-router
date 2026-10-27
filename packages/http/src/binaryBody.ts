@@ -53,12 +53,12 @@ function describeBody(value: unknown): string {
 
 /**
  * A `bodySchema` for a route that takes bytes. It types `request.body` as a `Buffer` and answers
- * 422 when the caller sends a content type the router read as text.
+ * 422 when the caller sends a content type the matcher read as text.
  */
 export const BinaryBody: StandardSchemaV1<unknown, Buffer> = {
   '~standard': {
     version: 1,
-    vendor: 'lambda-event-router',
+    vendor: 'latcher',
     validate: (value: unknown) =>
       Buffer.isBuffer(value)
         ? { value }

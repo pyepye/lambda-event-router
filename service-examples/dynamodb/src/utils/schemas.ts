@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Both tables use the same key names, because the router's `keys` option names one pair for every
+// Both tables use the same key names, because the matcher's `keys` option names one pair for every
 // route. Images are validated after unmarshalling, so an `N` attribute is already a number here and an
 // `SS` attribute is already a Set.
 

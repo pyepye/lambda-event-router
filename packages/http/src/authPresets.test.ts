@@ -1,8 +1,8 @@
-import { getLogger } from '@lambda-event-router/base';
-import { createMockContext, createMockSchema } from '@lambda-event-router/testing';
+import { getLogger } from '@latcher/base';
+import { createMockContext, createMockSchema } from '@latcher/testing';
 
 import { type AuthPreset, noAuth } from './auth.js';
-import { HTTPRouter } from './HTTPRouter.js';
+import { HTTPMatcher } from './HTTPMatcher.js';
 import type {
   ApiRequest,
   FinalizedHTTPResponse,
@@ -17,7 +17,7 @@ type TeamAuth = { type: 'team'; team: string };
 type OrgAuth = { type: 'org'; org: string };
 type RawAuth = TeamAuth | OrgAuth | undefined;
 type Query = Record<string, string | undefined>;
-type RouterRequest = ApiRequest<Record<string, string>, Query, RawAuth>;
+type MatcherRequest = ApiRequest<Record<string, string>, Query, RawAuth>;
 type ItemsRequest = ApiRequest<PathParams<'/items'>, Query, TeamAuth, undefined>;
 
 interface TeamEvent {
@@ -73,9 +73,9 @@ suite('auth presets', () => {
 
   test('a route preset hands the handler the auth its check returns', async () => {
     const handler = vi.fn().mockResolvedValue({ ok: true });
-    const router = new HTTPRouter(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler });
+    const matcher = new HTTPMatcher(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler });
 
-    const result = await router.handleEvent(request(TEAM), context);
+    const result = await matcher.handleEvent(request(TEAM), context);
 
     expect(result.statusCode).toBe(200);
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ auth: TEAM }));
@@ -84,9 +84,9 @@ suite('auth presets', () => {
   test('a request with the wrong auth type answers 500 and logs why, without running the handler', async () => {
     const errorSpy = vi.spyOn(getLogger(), 'error').mockImplementation(() => undefined);
     const handler = vi.fn();
-    const router = new HTTPRouter(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler });
+    const matcher = new HTTPMatcher(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler });
 
-    const result = await router.handleEvent(request(ORG), context);
+    const result = await matcher.handleEvent(request(ORG), context);
 
     expect(result.statusCode).toBe(500);
     expect(handler).not.toHaveBeenCalled();
@@ -99,9 +99,9 @@ suite('auth presets', () => {
 
   test('a request with no auth answers 401 and logs a warning', async () => {
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
-    const router = new HTTPRouter(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler: vi.fn() });
+    const matcher = new HTTPMatcher(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler: vi.fn() });
 
-    const result = await router.handleEvent(request(undefined), context);
+    const result = await matcher.handleEvent(request(undefined), context);
 
     expect(result.statusCode).toBe(401);
     expect(result.body).toBe(JSON.stringify({ error: 'Unauthorized' }));
@@ -114,9 +114,9 @@ suite('auth presets', () => {
 
   test('a request whose auth fails its check answers 403 and logs a warning', async () => {
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
-    const router = new HTTPRouter(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler: vi.fn() });
+    const matcher = new HTTPMatcher(teamAdapter).get({ filters: { path: '/items' }, auth: teamOnly, handler: vi.fn() });
 
-    const result = await router.handleEvent(request({ type: 'team', team: '' }), context);
+    const result = await matcher.handleEvent(request({ type: 'team', team: '' }), context);
 
     expect(result.statusCode).toBe(403);
     expect(result.body).toBe(JSON.stringify({ error: 'Forbidden' }));
@@ -127,16 +127,16 @@ suite('auth presets', () => {
     warnSpy.mockRestore();
   });
 
-  test('a router default applies to a route with no preset', async () => {
+  test('a matcher default applies to a route with no preset', async () => {
     const errorSpy = vi.spyOn(getLogger(), 'error').mockImplementation(() => undefined);
     const handler = vi.fn().mockResolvedValue({ ok: true });
-    const router = new HTTPRouter({ adapter: teamAdapter, auth: teamOnly }).get({
+    const matcher = new HTTPMatcher({ adapter: teamAdapter, auth: teamOnly }).get({
       filters: { path: '/items' },
       handler,
     });
 
-    const allowed = await router.handleEvent(request(TEAM), context);
-    const refused = await router.handleEvent(request(ORG), context);
+    const allowed = await matcher.handleEvent(request(TEAM), context);
+    const refused = await matcher.handleEvent(request(ORG), context);
 
     expect(allowed.statusCode).toBe(200);
     expect(refused.statusCode).toBe(500);
@@ -144,15 +144,15 @@ suite('auth presets', () => {
     errorSpy.mockRestore();
   });
 
-  test('a route preset overrides the router default', async () => {
+  test('a route preset overrides the matcher default', async () => {
     const handler = vi.fn().mockResolvedValue({ ok: true });
-    const router = new HTTPRouter({ adapter: teamAdapter, auth: teamOnly }).get({
+    const matcher = new HTTPMatcher({ adapter: teamAdapter, auth: teamOnly }).get({
       filters: { path: '/items' },
       auth: orgOnly,
       handler,
     });
 
-    const result = await router.handleEvent(request(ORG), context);
+    const result = await matcher.handleEvent(request(ORG), context);
 
     expect(result.statusCode).toBe(200);
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ auth: ORG }));
@@ -161,13 +161,13 @@ suite('auth presets', () => {
   test('noAuth hands the handler undefined and logs a warning when auth arrives', async () => {
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
     const handler = vi.fn().mockResolvedValue({ ok: true });
-    const router = new HTTPRouter({ adapter: teamAdapter, auth: teamOnly }).get({
+    const matcher = new HTTPMatcher({ adapter: teamAdapter, auth: teamOnly }).get({
       filters: { path: '/items' },
       auth: noAuth(),
       handler,
     });
 
-    const result = await router.handleEvent(request(TEAM), context);
+    const result = await matcher.handleEvent(request(TEAM), context);
 
     expect(result.statusCode).toBe(200);
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ auth: undefined }));
@@ -179,13 +179,13 @@ suite('auth presets', () => {
 
   test('noAuth logs nothing when no auth arrives', async () => {
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
-    const router = new HTTPRouter(teamAdapter).get({
+    const matcher = new HTTPMatcher(teamAdapter).get({
       filters: { path: '/items' },
       auth: noAuth(),
       handler: vi.fn().mockResolvedValue({ ok: true }),
     });
 
-    await router.handleEvent(request(undefined), context);
+    await matcher.handleEvent(request(undefined), context);
 
     expect(warnSpy).not.toHaveBeenCalled();
     warnSpy.mockRestore();
@@ -194,32 +194,32 @@ suite('auth presets', () => {
   test('the auth check runs before the body is validated', async () => {
     const errorSpy = vi.spyOn(getLogger(), 'error').mockImplementation(() => undefined);
     const bodySchema = createMockSchema<{ name: string }>({ issues: [{ message: 'name is required' }] });
-    const router = new HTTPRouter(teamAdapter).post({
+    const matcher = new HTTPMatcher(teamAdapter).post({
       filters: { path: '/items' },
       auth: teamOnly,
       bodySchema,
       handler: vi.fn(),
     });
 
-    const result = await router.handleEvent(request(ORG, 'POST', '{}'), context);
+    const result = await matcher.handleEvent(request(ORG, 'POST', '{}'), context);
 
     expect(result.statusCode).toBe(500);
     errorSpy.mockRestore();
   });
 
-  test('router and route middleware see the checked auth', async () => {
+  test('matcher and route middleware see the checked auth', async () => {
     const seen: unknown[] = [];
     const checkedAuth: TeamAuth = { type: 'team', team: 'checked' };
     const rewritesTeam: AuthPreset<RawAuth, TeamAuth> = {
       name: 'rewritesTeam',
       check: async () => ({ success: true, auth: checkedAuth }),
     };
-    const router = new HTTPRouter({
+    const matcher = new HTTPMatcher({
       adapter: teamAdapter,
       middleware: [
         async (
-          req: RouterRequest,
-          next: (req: RouterRequest) => Promise<HandlerResponse<ResponseBody>>,
+          req: MatcherRequest,
+          next: (req: MatcherRequest) => Promise<HandlerResponse<ResponseBody>>,
         ): Promise<HandlerResponse<ResponseBody>> => {
           seen.push(req.auth);
           return next(req);
@@ -237,45 +237,45 @@ suite('auth presets', () => {
       handler: vi.fn().mockResolvedValue({ ok: true }),
     });
 
-    await router.handleEvent(request(TEAM), context);
+    await matcher.handleEvent(request(TEAM), context);
 
     expect(seen).toEqual([checkedAuth, checkedAuth]);
   });
 
   test('a custom filter sees the auth as the adapter produced it', async () => {
     const custom = vi.fn().mockReturnValue(true);
-    const router = new HTTPRouter(teamAdapter).get({
+    const matcher = new HTTPMatcher(teamAdapter).get({
       filters: { path: '/items', custom },
       auth: noAuth(),
       handler: vi.fn().mockResolvedValue({ ok: true }),
     });
     const warnSpy = vi.spyOn(getLogger(), 'warn').mockImplementation(() => undefined);
 
-    await router.handleEvent(request(TEAM), context);
+    await matcher.handleEvent(request(TEAM), context);
 
     expect(custom).toHaveBeenCalledWith(expect.objectContaining({ auth: TEAM }));
     warnSpy.mockRestore();
   });
 
-  test('a route with no preset on a router with no default gets the auth the adapter produced', async () => {
+  test('a route with no preset on a matcher with no default gets the auth the adapter produced', async () => {
     const handler = vi.fn().mockResolvedValue({ ok: true });
-    const router = new HTTPRouter(teamAdapter).get({ filters: { path: '/items' }, handler });
+    const matcher = new HTTPMatcher(teamAdapter).get({ filters: { path: '/items' }, handler });
 
-    await router.handleEvent(request(ORG), context);
+    await matcher.handleEvent(request(ORG), context);
 
     expect(handler).toHaveBeenCalledWith(expect.objectContaining({ auth: ORG }));
   });
 
-  test('a route from the router defineRoute uses the router default', async () => {
+  test('a route from the matcher defineRoute uses the matcher default', async () => {
     const errorSpy = vi.spyOn(getLogger(), 'error').mockImplementation(() => undefined);
-    const router = new HTTPRouter({ adapter: teamAdapter, auth: teamOnly });
-    const itemsRoute = router
+    const matcher = new HTTPMatcher({ adapter: teamAdapter, auth: teamOnly });
+    const itemsRoute = matcher
       .defineRoute({ filters: { method: 'GET', path: '/items' } })
       .handle(async ({ auth }) => ({ team: auth.team }));
-    router.route(itemsRoute);
+    matcher.route(itemsRoute);
 
-    const allowed = await router.handleEvent(request(TEAM), context);
-    const refused = await router.handleEvent(request(ORG), context);
+    const allowed = await matcher.handleEvent(request(TEAM), context);
+    const refused = await matcher.handleEvent(request(ORG), context);
 
     expect(allowed.body).toBe(JSON.stringify({ team: 'goods-in' }));
     expect(refused.statusCode).toBe(500);

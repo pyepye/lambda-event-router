@@ -1,9 +1,8 @@
-import { setTimeout as sleep } from 'node:timers/promises';
-
 import { CloudWatchLogsClient, FilterLogEventsCommand } from '@aws-sdk/client-cloudwatch-logs';
 import { FirehoseClient, PutRecordBatchCommand } from '@aws-sdk/client-firehose';
 import { KinesisClient, PutRecordsCommand } from '@aws-sdk/client-kinesis';
 import { GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
+import { setTimeout as sleep } from 'node:timers/promises';
 
 import { BOT_USER_AGENT_MARKER, EVENT_FRESHNESS_MS } from '../src/config.js';
 
@@ -121,7 +120,7 @@ const auditRecords: { partitionKey: string; payload: unknown }[] = [
   { partitionKey: 'beta', payload: auditEvent('beta', 'linus@example.com', 'policyChanged') },
 ];
 
-// Not JSON, so the router hands AuditEventSchema a raw string and the record fails.
+// Not JSON, so the matcher hands AuditEventSchema a raw string and the record fails.
 const malformedAuditRecord = { partitionKey: 'gamma', payload: `audit ${runId} policyChanged tenant=gamma` };
 
 async function putClickstreamBatch(records: Record<string, unknown>[]): Promise<void> {

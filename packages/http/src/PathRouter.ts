@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { Middleware } from '@latcher/base';
 
 import type { AuthPreset } from './auth.js';
 import type {

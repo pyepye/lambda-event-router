@@ -1,4 +1,4 @@
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 import type { CdkCustomResourceEvent, CdkCustomResourceResponse } from 'aws-lambda';
 
 import { CHANGE_STREAM_SOURCES } from '../utils/cluster.js';

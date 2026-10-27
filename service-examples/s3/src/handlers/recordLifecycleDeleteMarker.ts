@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3LifecycleExpirationRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3LifecycleExpirationRequest } from '@latcher/s3';
 
 export async function recordLifecycleDeleteMarker(request: S3LifecycleExpirationRequest): Promise<void> {
   logger.info({

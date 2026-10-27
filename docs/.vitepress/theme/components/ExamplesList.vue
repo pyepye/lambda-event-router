@@ -17,7 +17,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
     return entries.value;
   }
   return entries.value.filter((entry) => {
-    const text = `${entry.name} ${entry.summary} ${entry.routers.join(' ')} ${entry.path}`;
+    const text = `${entry.name} ${entry.summary} ${entry.matchers.join(' ')} ${entry.path}`;
     return text.toLowerCase().includes(search);
   });
 });
@@ -30,7 +30,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
       <input
         v-model="query"
         type="search"
-        placeholder="Filter by service or router..."
+        placeholder="Filter by service or matcher..."
         aria-label="Filter examples"
       />
     </label>
@@ -57,8 +57,8 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
           <span class="sx-title">{{ entry.name }}</span>
           <span class="sx-summary">{{ entry.summary }}</span>
         </span>
-        <span class="sx-routers">
-          <code v-for="router in entry.routers" :key="router">{{ router }}</code>
+        <span class="sx-matchers">
+          <code v-for="matcher in entry.matchers" :key="matcher">{{ matcher }}</code>
         </span>
       </a>
     </div>
@@ -172,7 +172,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
   color: var(--vp-c-text-2);
 }
 
-.sx-routers {
+.sx-matchers {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
@@ -180,7 +180,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
   max-width: 45%;
 }
 
-.sx-routers code {
+.sx-matchers code {
   font-size: 11px;
   line-height: 18px;
   padding: 0 6px;
@@ -194,7 +194,7 @@ const filtered = computed<ExampleEntry[]>(function filterExamples() {
 }
 
 @media (max-width: 640px) {
-  .sx-routers {
+  .sx-matchers {
     display: none;
   }
 }

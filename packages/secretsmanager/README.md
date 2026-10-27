@@ -1,40 +1,40 @@
-# @lambda-event-router/secretsmanager
+# @latcher/secretsmanager
 
 Routes each Secrets Manager rotation step to its own handler. Secrets Manager calls your Lambda once per step, and you register a handler for each of the four steps.
 
 **Supported AWS Services:** `AWS Secrets Manager`
 
-**Available Routers:** `SecretsManagerRouter`
+**Available Matchers:** `SecretsManagerMatcher`
 
-**Docs:** [SecretsManagerRouter](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter)
+**Docs:** [SecretsManagerMatcher](https://pyepye.github.io/latcher/matchers/SecretsManagerMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/secretsmanager
+npm install @latcher/base @latcher/secretsmanager
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { secretsManagerRouter } from './secretsmanager'
+import { Latcher } from '@latcher/base'
+import { secretsManagerMatcher } from './secretsmanager'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [secretsManagerRouter],
+const latcher = new Latcher({
+  matchers: [secretsManagerMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // secretsmanager.ts
-import { createSecretsManagerRouter, defineRoute } from '@lambda-event-router/secretsmanager'
+import { createSecretsManagerMatcher, defineRoute } from '@latcher/secretsmanager'
 
-export const secretsManagerRouter = createSecretsManagerRouter()
+export const secretsManagerMatcher = createSecretsManagerMatcher()
 
 const createDatabaseSecret = defineRoute({
   filters: {
@@ -45,17 +45,17 @@ const createDatabaseSecret = defineRoute({
   console.log(`Creating version ${clientRequestToken} of ${secretId}`)
 })
 
-secretsManagerRouter.route(createDatabaseSecret)
+secretsManagerMatcher.route(createDatabaseSecret)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/SecretsManagerMatcher#annotated-handlers).
 
 ## Documentation
 
-- [SecretsManagerRouter](https://pyepye.github.io/lambda-event-router/routers/SecretsManagerRouter) covers every filter, failures and retries
+- [SecretsManagerMatcher](https://pyepye.github.io/latcher/matchers/SecretsManagerMatcher) covers every filter, failures and retries
   and middleware.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.
 
 ## Examples
 

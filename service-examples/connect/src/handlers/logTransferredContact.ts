@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConnectRequest, ConnectResponse } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import type { ConnectRequest, ConnectResponse } from '@latcher/connect';
 
 export async function logTransferredContact({ contactData }: ConnectRequest): Promise<ConnectResponse> {
   logger.info({

@@ -1,5 +1,5 @@
 {
-  "name": "@lambda-event-router/service-example-sqs",
+  "name": "@latcher/service-example-sqs",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,8 +15,8 @@
     "destroy": "cdk destroy --force"
   },
   "dependencies": {
-    "@lambda-event-router/base": "workspace:*",
-    "@lambda-event-router/sqs": "workspace:*",
+    "@latcher/base": "workspace:*",
+    "@latcher/sqs": "workspace:*",
     "@aws-sdk/client-sqs": "^3.1034.0",
     "zod": "^4.3.5"
   },

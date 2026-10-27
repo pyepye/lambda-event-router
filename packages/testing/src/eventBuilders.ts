@@ -2,7 +2,7 @@ import * as builders from './index.js';
 
 export type EventBuilderEntry = [name: string, build: () => unknown];
 
-// Every builder that makes something Lambda could be handed, for tests asserting which router claims
+// Every builder that makes something Lambda could be handed, for tests asserting which matcher claims
 // what. Handler-event builders are left out: they return an event with a context beside it.
 export function allEventBuilders(): EventBuilderEntry[] {
   return Object.entries(builders)

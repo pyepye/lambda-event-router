@@ -1,40 +1,40 @@
-# @lambda-event-router/ses
+# @latcher/ses
 
 Routes inbound SES email to handlers by receipt status. Your handler gets the sender, subject and recipients already taken out of the event.
 
 **Supported AWS Services:** `Amazon SES`
 
-**Available Routers:** `SESRouter`
+**Available Matchers:** `SESMatcher`
 
-**Docs:** [SESRouter](https://pyepye.github.io/lambda-event-router/routers/SESRouter)
+**Docs:** [SESMatcher](https://pyepye.github.io/latcher/matchers/SESMatcher)
 
 ## Install
 
 ```bash
-npm install @lambda-event-router/base @lambda-event-router/ses
+npm install @latcher/base @latcher/ses
 ```
 
-`@lambda-event-router/base` is a peer dependency, so install it yourself. It exports `LambdaRouter`, which every router plugs into.
+`@latcher/base` is a peer dependency, so install it yourself. It exports `Latcher`, which every matcher plugs into.
 
 ## Quick Start
 
 ```ts
 // main handler
-import { LambdaRouter } from '@lambda-event-router/base'
-import { sesRouter } from './ses'
+import { Latcher } from '@latcher/base'
+import { sesMatcher } from './ses'
 
-const lambdaRouter = new LambdaRouter({
-  routers: [sesRouter],
+const latcher = new Latcher({
+  matchers: [sesMatcher],
 })
 
-export const handler = lambdaRouter.handler()
+export const handler = latcher.handler()
 ```
 
 ```ts
 // ses.ts
-import { createSESRouter, defineRoute } from '@lambda-event-router/ses'
+import { createSESMatcher, defineRoute } from '@latcher/ses'
 
-export const sesRouter = createSESRouter()
+export const sesMatcher = createSESMatcher()
 
 const supportEmail = defineRoute({
   filters: {
@@ -50,14 +50,14 @@ const supportEmail = defineRoute({
   console.log(`Support email from ${source}: ${subject ?? 'no subject'}`)
 })
 
-sesRouter.route(supportEmail)
+sesMatcher.route(supportEmail)
 ```
 
 The handler's types come from the route. To name them yourself instead, see
-[annotated handlers](https://pyepye.github.io/lambda-event-router/routers/SESRouter#annotated-handlers).
+[annotated handlers](https://pyepye.github.io/latcher/matchers/SESMatcher#annotated-handlers).
 
 ## Documentation
 
-- [SESRouter](https://pyepye.github.io/lambda-event-router/routers/SESRouter) covers every filter, verdicts,
+- [SESMatcher](https://pyepye.github.io/latcher/matchers/SESMatcher) covers every filter, verdicts,
   dispositions and failures.
-- [Handlers](https://pyepye.github.io/lambda-event-router/docs/handlers) covers inferred and annotated handlers.
+- [Handlers](https://pyepye.github.io/latcher/docs/handlers) covers inferred and annotated handlers.

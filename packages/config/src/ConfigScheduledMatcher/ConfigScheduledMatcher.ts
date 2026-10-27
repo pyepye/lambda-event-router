@@ -1,0 +1,139 @@
+import type { Context } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeMatcher } from '@latcher/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@latcher/base';
+
+import type { ConfigEvent, ConfigResponse } from '../types.js';
+import type {
+  ConfigScheduledFilterInput,
+  ConfigScheduledMatcherOptions,
+  ConfigScheduledMiddleware,
+  ConfigScheduledRequest,
+  ConfigScheduledRouteBuilder,
+  ConfigScheduledRouteDefinition,
+  ConfigScheduledRouteInput,
+  InternalConfigScheduledRoute,
+} from './types.js';
+
+export function defineConfigScheduledRoute<
+  TParamsSchema extends StandardSchemaV1 | undefined = undefined,
+  TParams = TParamsSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TParamsSchema>
+    : Record<string, string>,
+>(config: ConfigScheduledRouteInput<TParamsSchema, TParams>): ConfigScheduledRouteBuilder<TParams> {
+  return {
+    handle(
+      handler: (request: ConfigScheduledRequest<TParams>) => Promise<void>,
+    ): ConfigScheduledRouteDefinition<TParams> {
+      return {
+        filters: config.filters,
+        ruleParametersSchema: config.ruleParametersSchema as StandardSchemaV1<unknown, TParams> | undefined,
+        middleware: config.middleware,
+        handler,
+      };
+    },
+  };
+}
+
+export class ConfigScheduledMatcher implements EventTypeMatcher<ConfigEvent, ConfigResponse> {
+  private routes: InternalConfigScheduledRoute[] = [];
+  private routesOrdered = false;
+  private middleware: ConfigScheduledMiddleware[] = [];
+
+  constructor(options?: ConfigScheduledMatcherOptions) {
+    this.middleware = options?.middleware ?? [];
+  }
+
+  canHandleEvent(event: unknown): event is ConfigEvent {
+    if (!isObject(event)) return false;
+    if (typeof event.invokingEvent !== 'string') return false;
+    if (typeof event.configRuleName !== 'string') return false;
+    if (typeof event.resultToken !== 'string') return false;
+
+    let invokingEvent: unknown;
+    try {
+      invokingEvent = JSON.parse(event.invokingEvent);
+    } catch {
+      return false;
+    }
+    if (!isObject(invokingEvent)) return false;
+    return invokingEvent.messageType === 'ScheduledNotification';
+  }
+
+  route<TParams = Record<string, string>>(definition: ConfigScheduledRouteDefinition<TParams>): this {
+    this.routes.push(definition as InternalConfigScheduledRoute);
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: ConfigEvent, context: Context): Promise<ConfigResponse> {
+    const ruleParameters = JSON.parse(event.ruleParameters || '{}') as Record<string, string>;
+
+    const route = await this.matchRoute({ configRuleName: event.configRuleName, accountId: event.accountId });
+    if (!route) {
+      throw new Error(`No route matched for scheduled config rule ${event.configRuleName}`);
+    }
+
+    const validatedParams = await validateSchema(
+      ruleParameters,
+      route.ruleParametersSchema,
+      'Schema validation failed for ruleParameters',
+    );
+
+    const request: ConfigScheduledRequest = {
+      resultToken: event.resultToken,
+      configRuleName: event.configRuleName,
+      accountId: event.accountId,
+      ruleParameters: validatedParams,
+      event,
+      context,
+    };
+
+    const allMiddleware = [...this.middleware, ...(route.middleware ?? [])];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(input: ConfigScheduledFilterInput): Promise<InternalConfigScheduledRoute | undefined> {
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.configRuleName !== undefined) {
+        const configRuleNameMatch = filterStringMatcher(input.configRuleName, filters.configRuleName);
+        if (!configRuleNameMatch) continue;
+      }
+
+      if (filters.accountId !== undefined) {
+        const accountIdMatch = filterStringMatcher(input.accountId, filters.accountId);
+        if (!accountIdMatch) continue;
+      }
+
+      if (filters.custom) {
+        const match = await filters.custom(input);
+        if (!match) continue;
+      }
+      return route;
+    }
+    return undefined;
+  }
+}
+
+export function createConfigScheduledMatcher(options?: ConfigScheduledMatcherOptions): ConfigScheduledMatcher {
+  return new ConfigScheduledMatcher(options);
+}

@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { EventBridgeMiddleware } from '@lambda-event-router/eventbridge';
+import { logger } from '@latcher/base';
+import type { EventBridgeMiddleware } from '@latcher/eventbridge';
 
-// Router middleware: runs once per event, before any route middleware, for every route.
+// Matcher middleware: runs once per event, before any route middleware, for every route.
 export const logEvent: EventBridgeMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling EventBridge event',

@@ -1,4 +1,4 @@
-import { createVPCLatticeV1Event } from '@lambda-event-router/testing';
+import { createVPCLatticeV1Event } from '@latcher/testing';
 
 import { vpcLatticeV1Adapter } from './vpcLatticeV1Adapter.js';
 

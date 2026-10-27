@@ -1,8 +1,7 @@
 import type { Context } from 'aws-lambda';
 
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 import type { StandardSchemaV1 } from '@standard-schema/spec';
-
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
 
 export interface KafkaRecordHeader {
   [headerKey: string]: number[];
@@ -91,7 +90,7 @@ export interface KafkaRouteDefinition<TValue = unknown> {
   handler: (request: KafkaRequest<TValue>) => Promise<void>;
 }
 
-export interface KafkaRouterOptions {
+export interface KafkaMatcherOptions {
   batchItemFailures?: boolean;
   middleware?: KafkaMiddleware[];
 }

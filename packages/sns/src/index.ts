@@ -1,14 +1,13 @@
-export { createSNSRouter, defineRoute, SNSRouter } from './SNSRouter.js';
+export { createSNSMatcher, defineRoute, SNSMatcher } from './SNSMatcher.js';
 export type {
-  SNSFilterInput,
-  SNSFilters,
-  SNSMessageAttributes,
-  SNSMessageAttributeValue,
-  SNSMiddleware,
-  SNSRawMessageAttributes,
-  SNSRecordHandler,
-  SNSRequest,
-  SNSResponse,
-  SNSRouteDefinition,
-  SNSRouterOptions,
+    SNSFilterInput,
+    SNSFilters, SNSMatcherOptions, SNSMessageAttributes,
+    SNSMessageAttributeValue,
+    SNSMiddleware,
+    SNSRawMessageAttributes,
+    SNSRecordHandler,
+    SNSRequest,
+    SNSResponse,
+    SNSRouteDefinition
 } from './types.js';
+

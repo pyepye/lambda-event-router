@@ -1,5 +1,5 @@
-import { defineRoute, TemporaryRedirect } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, TemporaryRedirect } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 // Labels are held by the carrier, so the caller is sent there instead. A redirect is thrown like any
 // other non-2xx response.

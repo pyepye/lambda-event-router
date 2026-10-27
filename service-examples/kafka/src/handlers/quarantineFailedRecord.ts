@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kafka';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kafka';
 
 import { FAILED_RECORDS_TOPIC } from '../config.js';
 import { FailedRecordSchema } from '../utils/schemas.js';

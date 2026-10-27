@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { type ApiRequest, type ApiResponse, Conflict, NoContent, NotFound } from '@lambda-event-router/vpclattice';
+import { logger } from '@latcher/base';
+import { type ApiRequest, type ApiResponse, Conflict, NoContent, NotFound } from '@latcher/vpclattice';
 
 import { STOCK } from '../utils/inventory.js';
 

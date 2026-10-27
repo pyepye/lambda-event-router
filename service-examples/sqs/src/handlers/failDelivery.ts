@@ -1,4 +1,4 @@
-import { defineRoute } from '@lambda-event-router/sqs';
+import { defineRoute } from '@latcher/sqs';
 
 import { NOTIFICATIONS_QUEUE_ARN } from '../config.js';
 import { NotificationSchema } from '../utils/schemas.js';

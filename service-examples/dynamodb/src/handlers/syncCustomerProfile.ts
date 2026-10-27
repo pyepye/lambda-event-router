@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/dynamodb';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/dynamodb';
 
 import { ORDERS_STREAM_ARN } from '../config.js';
 import { CustomerSchema } from '../utils/schemas.js';

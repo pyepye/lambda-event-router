@@ -1,7 +1,7 @@
 # Service example: EventBridge
 
-A deployable CDK app that exercises the `EventBridgeRouter` end to end. It models an order
-fulfilment bus. One rule forwards four event sources to a single Lambda, and the router decides
+A deployable CDK app that exercises the `EventBridgeMatcher` end to end. It models an order
+fulfilment bus. One rule forwards four event sources to a single Lambda, and the matcher decides
 which handler each event reaches.
 
 The routes are in `src/eventbridge.ts`, and the handlers are in `src/handlers/`.
@@ -32,7 +32,7 @@ ler.legacy
 
 ## What it covers
 
-One `trigger` puts nine events on the bus. Between them they hit every filter the router has and all
+One `trigger` puts nine events on the bus. Between them they hit every filter the matcher has and all
 three of its failure paths.
 
 | Feature | Where |
@@ -45,9 +45,9 @@ three of its failure paths.
 | `custom` filter | `flagHighValueOrder` reads the order amount before any schema runs |
 | Wildcard matching | `us-*` on a region, `warehouse/leeds-*` on a resource |
 | Detail schemas | Seven routes carry a `detailSchema`, `routeToLeedsWarehouse` carries none |
-| Router middleware | `logEvent` runs once per event |
+| Matcher middleware | `logEvent` runs once per event |
 | Route middleware | `withOrderContext` runs only on `processOrder` |
-| Route order | Two pairs share a source and detail type, and the router tries the narrow route first |
+| Route order | Two pairs share a source and detail type, and the matcher tries the narrow route first |
 | No route matched | A `ler.legacy` event reaches the worker and no route claims it |
 | Handler failure | `settlePaymentLedger` throws after its middleware has run |
 | Schema failure | An order placed with no `amount` |
@@ -85,9 +85,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-eventbridge... install
-pnpm -F @lambda-event-router/service-example-eventbridge... build
-pnpm -F @lambda-event-router/service-example-eventbridge run deploy
+pnpm -F @latcher/service-example-eventbridge... install
+pnpm -F @latcher/service-example-eventbridge... build
+pnpm -F @latcher/service-example-eventbridge run deploy
 ```
 
 The CDK outputs are `EventBusName` and `WorkerLogGroupName`.
@@ -99,7 +99,7 @@ already taken.
 ## Publish sample events
 
 ```bash
-pnpm -F @lambda-event-router/service-example-eventbridge trigger
+pnpm -F @latcher/service-example-eventbridge trigger
 ```
 
 The script takes no arguments.
@@ -131,7 +131,7 @@ different `stackName`.
 One trigger run puts 15 invocations in the log. Six are the events that succeed. The other nine are
 the three failing events, three attempts each.
 
-Nine invocations log `Handling EventBridge event` from the router middleware. That line carries the
+Nine invocations log `Handling EventBridge event` from the matcher middleware. That line carries the
 event id, the source, the detail type, the account and the region.
 
 Six invocations succeed:
@@ -152,9 +152,9 @@ Nine invocations fail. Each leaves an `ERROR` record carrying `errorType`, `erro
 - `Ledger service unavailable for payment PAY-77120` comes from the handler. Those three attempts
   have a `Handling EventBridge event` line, because the middleware ran before the handler threw.
 - `Schema validation failed for event <id>` is order `AB-2043`, which carries no `amount`. Those three
-  attempts have no `Handling EventBridge event` line. The router validates the detail before it runs
+  attempts have no `Handling EventBridge event` line. The matcher validates the detail before it runs
   any middleware.
-- `No route matched for EventBridge event: ler.legacy / Batch Completed` comes from the router. Those
+- `No route matched for EventBridge event: ler.legacy / Batch Completed` comes from the matcher. Those
   three attempts have no `Handling EventBridge event` line either, for the same reason.
 
 Note: the worker bundle is minified, so `errorType` on the schema failure is the minified class
@@ -194,20 +194,20 @@ invocation. There is no dead letter queue, so the third failure drops the event.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-eventbridge check    # drive the routes in process
-pnpm -F @lambda-event-router/service-example-eventbridge diff     # review pending changeset
-pnpm -F @lambda-event-router/service-example-eventbridge watch    # hotswap deploys
-pnpm -F @lambda-event-router/service-example-eventbridge synth    # render template
+pnpm -F @latcher/service-example-eventbridge check    # drive the routes in process
+pnpm -F @latcher/service-example-eventbridge diff     # review pending changeset
+pnpm -F @latcher/service-example-eventbridge watch    # hotswap deploys
+pnpm -F @latcher/service-example-eventbridge synth    # render template
 ```
 
-`check` builds an event for every route, sends it through the router and reads the log the handler
+`check` builds an event for every route, sends it through the matcher and reads the log the handler
 wrote. It adds all three failure paths and the two routes a deployed run cannot reach. It needs no
 AWS credentials.
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-eventbridge destroy
+pnpm -F @latcher/service-example-eventbridge destroy
 ```
 
 That removes the bus, the rule, the worker, its log group and its role.

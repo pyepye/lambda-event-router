@@ -1,12 +1,11 @@
-export { createFirehoseRouter, defineRoute, FirehoseRouter } from './FirehoseRouter.js';
-export type { FirehoseResponseResult } from './response.js';
+export { createFirehoseMatcher, defineRoute, FirehoseMatcher } from './FirehoseMatcher.js';
 export { Dropped, Failed, Ok } from './response.js';
+export type { FirehoseResponseResult } from './response.js';
 export type {
-  FirehoseFilterInput,
-  FirehoseFilters,
-  FirehoseMiddleware,
-  FirehoseRequest,
-  FirehoseResponse,
-  FirehoseRouteDefinition,
-  FirehoseRouterOptions,
+    FirehoseFilterInput,
+    FirehoseFilters, FirehoseMatcherOptions, FirehoseMiddleware,
+    FirehoseRequest,
+    FirehoseResponse,
+    FirehoseRouteDefinition
 } from './types.js';
+

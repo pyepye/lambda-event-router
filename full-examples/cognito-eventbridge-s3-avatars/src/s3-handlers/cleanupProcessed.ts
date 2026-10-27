@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectRemovedRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectRemovedRequest } from '@latcher/s3';
 
 import { deleteAvatar } from '../utils/s3.js';
 

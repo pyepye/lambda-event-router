@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { SecretsManagerMiddleware } from '@lambda-event-router/secretsmanager';
+import { logger } from '@latcher/base';
+import type { SecretsManagerMiddleware } from '@latcher/secretsmanager';
 
-// Router middleware: runs once per rotation event, before any route middleware, for every secret.
+// Matcher middleware: runs once per rotation event, before any route middleware, for every secret.
 export const logRotationStep: SecretsManagerMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling rotation step',

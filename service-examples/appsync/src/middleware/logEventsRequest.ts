@@ -1,7 +1,7 @@
-import type { AppSyncEventsMiddleware } from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+import type { AppSyncEventsMiddleware } from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
-// Router middleware: runs once per publish or subscribe, whatever the namespace.
+// Matcher middleware: runs once per publish or subscribe, whatever the namespace.
 export const logEventsRequest: AppSyncEventsMiddleware = async (request, next) => {
   const handlerContext = isObject(request.identity) ? request.identity.handlerContext : undefined;
 

@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/connect",
+  "name": "@latcher/connect",
   "version": "0.1.0",
-  "description": "Amazon Connect handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/ConnectRouter",
+  "description": "Amazon Connect handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/ConnectMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -36,7 +36,7 @@
   ],
   "license": "UNLICENSED",
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
@@ -44,6 +44,6 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^"
+    "@latcher/base": "workspace:^"
   }
 }

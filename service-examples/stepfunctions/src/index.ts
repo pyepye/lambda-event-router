@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { stepFunctionsRouter } from './stepfunctions.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [stepFunctionsRouter] });
+import { stepFunctionsMatcher } from './stepfunctions.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [stepFunctionsMatcher] });
+
+export const handler: Handler = latcher.handler();

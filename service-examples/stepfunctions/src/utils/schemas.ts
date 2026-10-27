@@ -22,7 +22,7 @@ export const ChargePaymentSchema = z.object({
 
 export type TChargePayment = z.infer<typeof ChargePaymentSchema>;
 
-// A fraud review payload with the TaskToken already removed by the router.
+// A fraud review payload with the TaskToken already removed by the matcher.
 export const FraudReviewSchema = z.object({
   task: z.literal(FRAUD_REVIEW_TASK),
   orderId: z.string().min(1),

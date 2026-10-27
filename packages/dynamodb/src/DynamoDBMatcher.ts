@@ -1,0 +1,469 @@
+import { unmarshall } from '@aws-sdk/util-dynamodb';
+import type { Context, DynamoDBBatchResponse, DynamoDBRecord, DynamoDBStreamEvent } from 'aws-lambda';
+
+import type { StandardSchemaV1 } from '@standard-schema/spec';
+
+import type { EventTypeMatcher, FilterStringMatcher, Middleware } from '@latcher/base';
+import {
+  filterStringMatcher,
+  handleEventWithMiddleware,
+  isObject,
+  logger,
+  orderRoutesBySpecificity,
+  validateSchema,
+} from '@latcher/base';
+
+import type {
+  DynamoDBEventName,
+  DynamoDBFilters,
+  DynamoDBInsertRouteDefinition,
+  DynamoDBMatcherKeys,
+  DynamoDBMatcherOptions,
+  DynamoDBModifyRouteDefinition,
+  DynamoDBRemoveRouteDefinition,
+  DynamoDBRequest,
+  DynamoDBRouteDefinition,
+  DynamoDBViewType,
+} from './types.js';
+
+type UnmarshallInput = Parameters<typeof unmarshall>[0];
+
+type UnmarshallOptions = NonNullable<Parameters<typeof unmarshall>[1]>;
+
+interface InternalRoute {
+  filters: DynamoDBFilters;
+  keysSchema?: StandardSchemaV1;
+  newImageSchema?: StandardSchemaV1;
+  oldImageSchema?: StandardSchemaV1;
+  middleware: Middleware<DynamoDBRequest, void>[];
+  handler: (request: DynamoDBRequest) => Promise<void>;
+}
+
+// Events whose records include newImage / oldImage. Matches the branches of
+// DynamoDBRequest in types.ts
+type EventsWithNewImage = 'INSERT' | 'MODIFY';
+type EventsWithOldImage = 'MODIFY' | 'REMOVE';
+
+// Normalize the eventName filter (single value or array) to its element union
+type EventNameUnion<T> = T extends readonly DynamoDBEventName[] ? T[number] : T extends DynamoDBEventName ? T : never;
+
+// Allow a schema option only when at least one filtered event carries that image.
+// When no eventName filter is set, the option is always allowed.
+type NewImageSchemaOption<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? [Extract<EventNameUnion<TEventNames>, EventsWithNewImage>] extends [never]
+    ? { newImageSchema?: never }
+    : { newImageSchema?: TNewImageSchema }
+  : { newImageSchema?: TNewImageSchema };
+
+type OldImageSchemaOption<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? [Extract<EventNameUnion<TEventNames>, EventsWithOldImage>] extends [never]
+    ? { oldImageSchema?: never }
+    : { oldImageSchema?: TOldImageSchema }
+  : { oldImageSchema?: TOldImageSchema };
+
+type DynamoDBRouteInputFilters<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined,
+> = Omit<DynamoDBFilters, 'eventName' | 'streamViewType'> & {
+  eventName?: TEventNames;
+  streamViewType?: TViewTypes;
+};
+
+type RouteInput<
+  TKeysSchema extends StandardSchemaV1 | undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined,
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined,
+> = {
+  filters: DynamoDBRouteInputFilters<TEventNames, TViewTypes>;
+  keysSchema?: TKeysSchema;
+  middleware?: Middleware<DynamoDBRequest, void>[];
+} & NewImageSchemaOption<TEventNames, TNewImageSchema> &
+  OldImageSchemaOption<TEventNames, TOldImageSchema>;
+
+// Narrow DynamoDBRequest to the branches that match the filtered eventName(s).
+// Relies on DynamoDBRequest being a discriminated union over eventName in types.ts
+type FiltersToRequest<
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+  TKeys,
+  TNewItem,
+  TOldItem,
+> = TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[]
+  ? Extract<DynamoDBRequest<TKeys, TNewItem, TOldItem>, { eventName: EventNameUnion<TEventNames> }>
+  : DynamoDBRequest<TKeys, TNewItem, TOldItem>;
+
+interface RouteBuilder<
+  TKeys,
+  TNewItem,
+  TOldItem,
+  TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined,
+> {
+  handle(
+    handler: (request: FiltersToRequest<TEventNames, TKeys, TNewItem, TOldItem>) => Promise<void>,
+  ): DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>;
+}
+
+export function defineRoute<
+  TKeysSchema extends StandardSchemaV1 | undefined = undefined,
+  TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
+  TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
+  const TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined = undefined,
+  const TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined = undefined,
+  TKeys = TKeysSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TKeysSchema> : Record<string, unknown>,
+  TNewItem = TNewImageSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TNewImageSchema>
+    : Record<string, unknown>,
+  TOldItem = TOldImageSchema extends StandardSchemaV1
+    ? StandardSchemaV1.InferOutput<TOldImageSchema>
+    : Record<string, unknown>,
+>(
+  config: RouteInput<TKeysSchema, TNewImageSchema, TOldImageSchema, TEventNames, TViewTypes>,
+): RouteBuilder<TKeys, TNewItem, TOldItem, TEventNames> {
+  return {
+    // biome-ignore lint/nursery/useExplicitType: handler type is inferred from RouteBuilder return type
+    handle(handler): DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem> {
+      // Casts needed: narrow generic input back to the public route definition shape (contravariance on handler union)
+      const filters = config.filters as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['filters'];
+      const keysSchema = config.keysSchema as StandardSchemaV1<unknown, TKeys> | undefined;
+      const newImageSchema = config.newImageSchema as StandardSchemaV1<unknown, TNewItem> | undefined;
+      const oldImageSchema = config.oldImageSchema as StandardSchemaV1<unknown, TOldItem> | undefined;
+      const middleware = config.middleware as DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>['middleware'];
+      return {
+        filters,
+        keysSchema,
+        newImageSchema,
+        oldImageSchema,
+        middleware,
+        handler: handler as (request: DynamoDBRequest<TKeys, TNewItem, TOldItem>) => Promise<void>,
+      };
+    },
+  };
+}
+
+export class DynamoDBMatcher implements EventTypeMatcher<DynamoDBStreamEvent, undefined | DynamoDBBatchResponse> {
+  private routes: InternalRoute[] = [];
+  private routesOrdered = false;
+  private batchItemFailures: boolean;
+  private middleware: Middleware<DynamoDBRequest, void>[];
+  private keys: DynamoDBMatcherKeys | undefined;
+  private unmarshallOptions: UnmarshallOptions;
+
+  constructor(options?: DynamoDBMatcherOptions) {
+    this.batchItemFailures = options?.batchItemFailures ?? false;
+    this.middleware = options?.middleware ?? [];
+    this.keys = options?.keys;
+    this.unmarshallOptions = { wrapNumbers: (value: string): number | string => this.exactNumberOrText(value) };
+  }
+
+  // DynamoDB holds 38 significant digits and sends every number as text, so a value that survives the
+  // round trip is exact and anything longer stays as the text it sent, with every digit intact.
+  private exactNumberOrText(value: string): number | string {
+    const numberValue = Number(value);
+    if (String(numberValue) !== value) return value;
+
+    return numberValue;
+  }
+
+  canHandleEvent(event: unknown): event is DynamoDBStreamEvent {
+    if (!isObject(event)) return false;
+    if (!Array.isArray(event.Records)) return false;
+
+    const firstRecord = event.Records[0];
+    if (!isObject(firstRecord)) return false;
+
+    return firstRecord.eventSource === 'aws:dynamodb';
+  }
+
+  // An inline definition narrows its handler from the eventName filter, the way defineRoute does
+  route<
+    TKeysSchema extends StandardSchemaV1 | undefined = undefined,
+    TNewImageSchema extends StandardSchemaV1 | undefined = undefined,
+    TOldImageSchema extends StandardSchemaV1 | undefined = undefined,
+    const TEventNames extends DynamoDBEventName | readonly DynamoDBEventName[] | undefined = undefined,
+    const TViewTypes extends DynamoDBViewType | readonly DynamoDBViewType[] | undefined = undefined,
+    TKeys = TKeysSchema extends StandardSchemaV1 ? StandardSchemaV1.InferOutput<TKeysSchema> : Record<string, unknown>,
+    TNewItem = TNewImageSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TNewImageSchema>
+      : Record<string, unknown>,
+    TOldItem = TOldImageSchema extends StandardSchemaV1
+      ? StandardSchemaV1.InferOutput<TOldImageSchema>
+      : Record<string, unknown>,
+  >(
+    definition: RouteInput<TKeysSchema, TNewImageSchema, TOldImageSchema, TEventNames, TViewTypes> & {
+      handler: (request: FiltersToRequest<TEventNames, TKeys, TNewItem, TOldItem>) => Promise<void>;
+    },
+  ): this;
+
+  route<TKeys, TNewItem, TOldItem>(definition: DynamoDBRouteDefinition<TKeys, TNewItem, TOldItem>): this;
+
+  route(definition: {
+    filters: DynamoDBFilters;
+    keysSchema?: StandardSchemaV1;
+    newImageSchema?: StandardSchemaV1;
+    oldImageSchema?: StandardSchemaV1;
+    middleware?: unknown;
+    handler: (...args: never[]) => Promise<void>;
+  }): this {
+    return this.addRoute({
+      filters: definition.filters,
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
+  }
+
+  insert<TKeys, TNewItem>(definition: DynamoDBInsertRouteDefinition<TKeys, TNewItem>): this {
+    return this.addRoute({
+      filters: { ...definition.filters, eventName: 'INSERT' },
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
+  }
+
+  modify<TKeys, TNewItem, TOldItem>(definition: DynamoDBModifyRouteDefinition<TKeys, TNewItem, TOldItem>): this {
+    return this.addRoute({
+      filters: { ...definition.filters, eventName: 'MODIFY' },
+      keysSchema: definition.keysSchema,
+      newImageSchema: definition.newImageSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
+  }
+
+  remove<TKeys, TOldItem>(definition: DynamoDBRemoveRouteDefinition<TKeys, TOldItem>): this {
+    return this.addRoute({
+      filters: { ...definition.filters, eventName: 'REMOVE' },
+      keysSchema: definition.keysSchema,
+      oldImageSchema: definition.oldImageSchema,
+      middleware: definition.middleware as InternalRoute['middleware'],
+      handler: definition.handler as InternalRoute['handler'],
+    });
+  }
+
+  private addRoute(definition: Omit<InternalRoute, 'middleware'> & { middleware?: InternalRoute['middleware'] }): this {
+    this.routes.push({
+      ...definition,
+      middleware: definition.middleware ?? [],
+    });
+    this.routesOrdered = false;
+    return this;
+  }
+
+  async handleEvent(event: DynamoDBStreamEvent, context: Context): Promise<undefined | DynamoDBBatchResponse> {
+    if (!this.batchItemFailures) {
+      await this.processRecordsSequentially(event.Records, context);
+      return;
+    }
+
+    const batchItemFailures = await this.processRecordsWithFailures(event.Records, context);
+    if (batchItemFailures.length > 0) {
+      return { batchItemFailures };
+    }
+  }
+
+  private async processRecordsSequentially(records: DynamoDBRecord[], context: Context): Promise<void> {
+    for (const record of records) {
+      await this.processRecord(record, context);
+    }
+  }
+
+  private async processRecordsWithFailures(
+    records: DynamoDBRecord[],
+    context: Context,
+  ): Promise<DynamoDBBatchResponse['batchItemFailures']> {
+    const failures: DynamoDBBatchResponse['batchItemFailures'] = [];
+
+    for (const [idx, record] of records.entries()) {
+      try {
+        await this.processRecord(record, context);
+      } catch (error) {
+        logger.error(`Error processing DynamoDB record ${record.eventID}`, { error });
+        for (const remaining of records.slice(idx)) {
+          /* v8 ignore next -- @preserve - Guard is for TS. SequenceNumber is always present in AWS events but typed as optional */
+          if (remaining.dynamodb?.SequenceNumber) {
+            failures.push({ itemIdentifier: remaining.dynamodb.SequenceNumber });
+          }
+        }
+        break;
+      }
+    }
+    return failures;
+  }
+
+  private async processRecord(record: DynamoDBRecord, context: Context): Promise<void> {
+    const eventName = record.eventName;
+    /* v8 ignore next -- @preserve - Guard is for TS. eventName is always present in AWS events but typed as optional */
+    if (!eventName) {
+      throw new Error(`Record missing eventName: ${record.eventID}`);
+    }
+
+    const streamViewType = record.dynamodb?.StreamViewType;
+    /* v8 ignore next -- @preserve - Guard is for TS. Keys is always present in AWS events but typed as optional */
+    const keys = record.dynamodb?.Keys
+      ? unmarshall(record.dynamodb.Keys as UnmarshallInput, this.unmarshallOptions)
+      : {};
+    const newImage = record.dynamodb?.NewImage
+      ? unmarshall(record.dynamodb.NewImage as UnmarshallInput, this.unmarshallOptions)
+      : undefined;
+    const oldImage = record.dynamodb?.OldImage
+      ? unmarshall(record.dynamodb.OldImage as UnmarshallInput, this.unmarshallOptions)
+      : undefined;
+
+    const route = await this.matchRoute(record, eventName, streamViewType, keys, newImage, oldImage);
+    if (!route) {
+      throw new Error(`No route matched for record ${record.eventID} from ${record.eventSourceARN}`);
+    }
+
+    const validatedKeys = await validateSchema(
+      keys,
+      route.keysSchema,
+      `Image validation failed for Keys on record ${record.eventID}`,
+    );
+
+    let validatedNewImage = newImage;
+    if (eventName !== 'REMOVE') {
+      validatedNewImage = await validateSchema(
+        newImage,
+        route.newImageSchema,
+        `Image validation failed for NewImage on record ${record.eventID}`,
+      );
+    }
+
+    let validatedOldImage = oldImage;
+    if (eventName !== 'INSERT') {
+      validatedOldImage = await validateSchema(
+        oldImage,
+        route.oldImageSchema,
+        `Image validation failed for OldImage on record ${record.eventID}`,
+      );
+    }
+
+    const request = {
+      keys: validatedKeys,
+      newImage: validatedNewImage,
+      oldImage: validatedOldImage,
+      eventName,
+      record,
+      context,
+    } as DynamoDBRequest;
+
+    const allMiddleware = [...this.middleware, ...route.middleware];
+    await handleEventWithMiddleware(allMiddleware, request, route.handler);
+  }
+
+  private orderRoutes(): void {
+    if (this.routesOrdered) return;
+
+    this.routes = orderRoutesBySpecificity(this.routes);
+    this.routesOrdered = true;
+  }
+
+  private async matchRoute(
+    record: DynamoDBRecord,
+    eventName: DynamoDBEventName,
+    streamViewType: DynamoDBViewType | undefined,
+    keys: Record<string, unknown>,
+    newImage?: Record<string, unknown>, // TODO Make sure tests cover this
+    oldImage?: Record<string, unknown>, // TODO Make sure tests cover this
+  ): Promise<InternalRoute | undefined> {
+    this.orderRoutes();
+
+    for (const route of this.routes) {
+      const { filters } = route;
+
+      if (filters.eventName !== undefined) {
+        const eventNames = Array.isArray(filters.eventName) ? filters.eventName : [filters.eventName];
+        if (!eventNames.includes(eventName)) {
+          continue;
+        }
+      }
+
+      if (filters.eventSourceArn !== undefined && record.eventSourceARN) {
+        const eventSourceARNMatch = filterStringMatcher(record.eventSourceARN, filters.eventSourceArn);
+        if (!eventSourceARNMatch) continue;
+      }
+
+      if (filters.streamViewType !== undefined && streamViewType) {
+        const { streamViewType: filterStreamViewType } = filters;
+        const streamViewTypes = Array.isArray(filterStreamViewType) ? filterStreamViewType : [filterStreamViewType];
+        if (!streamViewTypes.includes(streamViewType)) {
+          continue;
+        }
+      }
+
+      if (filters.partitionKey !== undefined) {
+        const { partitionKeyName } = this.resolveKeyNames(keys);
+        if (!partitionKeyName) continue;
+        const partitionKey = this.getKeyValue(partitionKeyName, keys, newImage, oldImage);
+        if (typeof partitionKey !== 'string' && typeof partitionKey !== 'number') continue;
+        if (!filterStringMatcher(String(partitionKey), this.toKeyMatchers(filters.partitionKey))) continue;
+      }
+
+      if (filters.sortKey !== undefined) {
+        const { sortKeyName } = this.resolveKeyNames(keys);
+        if (!sortKeyName) continue;
+        const sortKey = this.getKeyValue(sortKeyName, keys, newImage, oldImage);
+        if (typeof sortKey !== 'string' && typeof sortKey !== 'number') continue;
+        if (!filterStringMatcher(String(sortKey), this.toKeyMatchers(filters.sortKey))) continue;
+      }
+
+      if (filters.custom) {
+        const match = await filters.custom({ eventName, streamViewType, record, keys, newImage, oldImage });
+        if (!match) continue;
+      }
+
+      return route;
+    }
+
+    return undefined;
+  }
+
+  private resolveKeyNames(keys: Record<string, unknown>): {
+    partitionKeyName: string | undefined;
+    sortKeyName: string | undefined;
+  } {
+    if (this.keys) {
+      return { partitionKeyName: this.keys.partitionKey, sortKeyName: this.keys.sortKey };
+    }
+
+    const keyNames = Object.keys(keys);
+    if (keyNames.length <= 1) {
+      return { partitionKeyName: keyNames[0], sortKeyName: undefined };
+    }
+
+    throw new Error('Cannot infer partitionKey/sortKey. Set the matcher\'s "keys" option.');
+  }
+
+  private getKeyValue(
+    name: string,
+    keys: Record<string, unknown>,
+    newImage: Record<string, unknown> | undefined,
+    oldImage: Record<string, unknown> | undefined,
+  ): unknown {
+    if (Object.hasOwn(keys, name)) return keys[name];
+    if (newImage && Object.hasOwn(newImage, name)) return newImage[name];
+    if (oldImage && Object.hasOwn(oldImage, name)) return oldImage[name];
+    return undefined;
+  }
+
+  private toKeyMatchers(filter: NonNullable<DynamoDBFilters['partitionKey']>): FilterStringMatcher {
+    const values = Array.isArray(filter) ? filter : [filter];
+    return values.map((value) => (typeof value === 'number' ? String(value) : value));
+  }
+}
+
+export function createDynamoDBMatcher(options?: DynamoDBMatcherOptions): DynamoDBMatcher {
+  return new DynamoDBMatcher(options);
+}

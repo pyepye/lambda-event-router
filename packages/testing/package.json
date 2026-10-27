@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/testing",
+  "name": "@latcher/testing",
   "version": "0.1.0",
-  "description": "Testing utilities for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/testing/",
+  "description": "Testing utilities for latcher",
+  "homepage": "https://pyepye.github.io/latcher/testing/",
   "type": "module",
   "exports": {
     ".": {

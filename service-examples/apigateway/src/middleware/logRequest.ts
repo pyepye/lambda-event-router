@@ -1,7 +1,7 @@
-import type { HTTPMiddleware } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { HTTPMiddleware } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
-// Router middleware: runs for every matched route on all three APIs, before any route middleware.
+// Matcher middleware: runs for every matched route on all three APIs, before any route middleware.
 // `payloadVersion` is the field that says which adapter normalised the event.
 export const logRequest: HTTPMiddleware = async (request, next) => {
   const event = request.event as { version?: string; rawPath?: string };

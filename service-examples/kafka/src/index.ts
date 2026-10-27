@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { kafkaRouter } from './kafka.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [kafkaRouter] });
+import { kafkaMatcher } from './kafka.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [kafkaMatcher] });
+
+export const handler: Handler = latcher.handler();

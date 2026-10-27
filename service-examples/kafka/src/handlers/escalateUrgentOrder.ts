@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/kafka';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/kafka';
 
 import { ORDERS_TOPIC, PRIORITY_HEADER, URGENT_PRIORITY } from '../config.js';
 import { OrderSchema } from '../utils/schemas.js';

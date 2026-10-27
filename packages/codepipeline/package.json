@@ -1,8 +1,8 @@
 {
-  "name": "@lambda-event-router/codepipeline",
+  "name": "@latcher/codepipeline",
   "version": "0.1.0",
-  "description": "CodePipeline handler for lambda-event-router",
-  "homepage": "https://pyepye.github.io/lambda-event-router/routers/CodePipelineRouter",
+  "description": "CodePipeline handler for latcher",
+  "homepage": "https://pyepye.github.io/latcher/matchers/CodePipelineMatcher",
   "type": "module",
   "exports": {
     ".": {
@@ -39,11 +39,11 @@
     "@aws-sdk/client-codepipeline": "catalog:"
   },
   "peerDependencies": {
-    "@lambda-event-router/base": "workspace:^",
+    "@latcher/base": "workspace:^",
     "@standard-schema/spec": "catalog:"
   },
   "devDependencies": {
-    "@lambda-event-router/testing": "workspace:*",
+    "@latcher/testing": "workspace:*",
     "@types/aws-lambda": "catalog:",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",

@@ -1,5 +1,5 @@
-import { defineLambdaAuthorizerRoute, generatePolicy } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineLambdaAuthorizerRoute, generatePolicy } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { READ_METHODS, STAFF_ID_HEADER } from '../utils/constants.js';
 

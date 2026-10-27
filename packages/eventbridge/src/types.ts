@@ -1,14 +1,14 @@
 import type {
-  Context,
-  S3ObjectCreatedNotificationEventDetail,
-  S3ObjectDeletedNotificationEventDetail,
-  S3ObjectRestoreCompletedNotificationEventDetail,
-  S3ObjectRestoreInitiatedNotificationEventDetail,
+    Context,
+    S3ObjectCreatedNotificationEventDetail,
+    S3ObjectDeletedNotificationEventDetail,
+    S3ObjectRestoreCompletedNotificationEventDetail,
+    S3ObjectRestoreInitiatedNotificationEventDetail,
 } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 // =============================================================================
 // Known AWS Event Detail Types
@@ -113,6 +113,6 @@ export interface EventBridgeRouteDefinition<TDetail = unknown> {
   handler: EventBridgeHandler<TDetail>;
 }
 
-export interface EventBridgeRouterOptions {
+export interface EventBridgeMatcherOptions {
   middleware?: EventBridgeMiddleware[];
 }

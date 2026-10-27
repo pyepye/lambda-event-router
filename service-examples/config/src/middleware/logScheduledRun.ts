@@ -1,8 +1,8 @@
-import { logger } from '@lambda-event-router/base';
-import type { ConfigScheduledMiddleware } from '@lambda-event-router/config';
+import { logger } from '@latcher/base';
+import type { ConfigScheduledMiddleware } from '@latcher/config';
 
-// Router middleware: runs once per periodic evaluation, before any route middleware. It logs the raw
-// event as Config delivered it, so the log can be compared with the router's types.
+// Matcher middleware: runs once per periodic evaluation, before any route middleware. It logs the raw
+// event as Config delivered it, so the log can be compared with the matcher's types.
 export const logScheduledRun: ConfigScheduledMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling scheduled evaluation',

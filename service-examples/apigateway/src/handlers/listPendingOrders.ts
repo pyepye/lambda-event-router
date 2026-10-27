@@ -1,5 +1,5 @@
-import type { ApiRequest } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import type { ApiRequest } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { pendingOrders, type WarehouseOrder } from '../utils/warehouse.js';
 

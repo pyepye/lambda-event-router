@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { CloudWatchLogsMiddleware } from '@lambda-event-router/cloudwatch';
+import { logger } from '@latcher/base';
+import type { CloudWatchLogsMiddleware } from '@latcher/cloudwatch';
 
-// Router middleware: runs once per delivery, before any route middleware, for every log group.
+// Matcher middleware: runs once per delivery, before any route middleware, for every log group.
 export const logDelivery: CloudWatchLogsMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling log delivery',

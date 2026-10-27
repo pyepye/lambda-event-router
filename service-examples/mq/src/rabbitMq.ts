@@ -1,4 +1,4 @@
-import { createRabbitMQRouter } from '@lambda-event-router/mq';
+import { createRabbitMQMatcher } from '@latcher/mq';
 
 import { capturePayment } from './handlers/capturePayment.js';
 import { holdPaymentForReview } from './handlers/holdPaymentForReview.js';
@@ -10,13 +10,13 @@ import { settleHighValuePayment } from './handlers/settleHighValuePayment.js';
 import { logPaymentMessage } from './middleware/logPaymentMessage.js';
 import { PAYMENT_QUEUES } from './utils/brokers.js';
 
-export const rabbitMqRouter = createRabbitMQRouter({ middleware: [logPaymentMessage] });
+export const rabbitMqMatcher = createRabbitMQMatcher({ middleware: [logPaymentMessage] });
 
 // The first two routes are the ones a payment never reaches: routeToLegacySettlement is skipped on
 // the broker ARN and reconcileSettlement on the virtual host. capturePayment taking the message is
 // what shows both filters rejected. settleHighValuePayment then sits ahead of capturePayment so a
 // high priority payment wins there.
-rabbitMqRouter
+rabbitMqMatcher
   .route(routeToLegacySettlement)
   .route(reconcileSettlement)
   .route(settleHighValuePayment)

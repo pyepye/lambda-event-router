@@ -1,6 +1,6 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import { isObject, logger } from '@lambda-event-router/base';
+import { isObject, logger } from '@latcher/base';
 
 // missing answers 401, invalid 403, and wrongType 500 because only a setup fault can cause it
 export type AuthFailureReason = 'missing' | 'wrongType' | 'invalid';

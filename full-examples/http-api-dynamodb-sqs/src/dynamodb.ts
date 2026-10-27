@@ -1,13 +1,13 @@
-import { createDynamoDBRouter } from '@lambda-event-router/dynamodb';
+import { createDynamoDBMatcher } from '@latcher/dynamodb';
 
 import { orderProcessor } from './dynamodb-handlers/orderProcessor.js';
 import { stockMonitor } from './dynamodb-handlers/stockMonitor.js';
 import { logStreamInvocation } from './middleware/logInvocation.js';
 
-export const dynamoDBRouter = createDynamoDBRouter({
+export const dynamoDBMatcher = createDynamoDBMatcher({
   keys: { partitionKey: 'pk', sortKey: 'sk' },
   batchItemFailures: true,
   middleware: [logStreamInvocation],
 });
 
-dynamoDBRouter.route(orderProcessor).route(stockMonitor);
+dynamoDBMatcher.route(orderProcessor).route(stockMonitor);

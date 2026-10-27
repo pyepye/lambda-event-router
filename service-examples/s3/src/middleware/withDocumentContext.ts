@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3Middleware } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3Middleware } from '@latcher/s3';
 
 // Route middleware for scanDocument: names the file the scanner is about to open.
 export const withDocumentContext: S3Middleware = async (request, next) => {

@@ -1,12 +1,11 @@
-export { CloudWatchLogsRouter, createCloudWatchLogsRouter, defineRoute } from './CloudWatchLogsRouter.js';
+export { CloudWatchLogsMatcher, createCloudWatchLogsMatcher, defineRoute } from './CloudWatchLogsMatcher.js';
 export type {
-  CloudWatchLogsControlMessageRouteDefinition,
-  CloudWatchLogsDataMessageRouteDefinition,
-  CloudWatchLogsEventFilters,
-  CloudWatchLogsFilters,
-  CloudWatchLogsMessageType,
-  CloudWatchLogsMiddleware,
-  CloudWatchLogsRequest,
-  CloudWatchLogsRouteDefinition,
-  CloudWatchLogsRouterOptions,
+    CloudWatchLogsControlMessageRouteDefinition,
+    CloudWatchLogsDataMessageRouteDefinition,
+    CloudWatchLogsEventFilters,
+    CloudWatchLogsFilters, CloudWatchLogsMatcherOptions, CloudWatchLogsMessageType,
+    CloudWatchLogsMiddleware,
+    CloudWatchLogsRequest,
+    CloudWatchLogsRouteDefinition
 } from './types.js';
+

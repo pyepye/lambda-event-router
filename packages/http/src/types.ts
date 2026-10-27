@@ -2,7 +2,7 @@ import type { Context } from 'aws-lambda';
 
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { Middleware } from '@latcher/base';
 
 import type { AuthPreset } from './auth.js';
 import type { HTTPException } from './HTTPException.js';
@@ -163,9 +163,9 @@ export interface ErrorFunctions {
   text?: ErrorFunction<string>;
 }
 
-// Checked on the router options rather than as a constraint on the kind, so an inline errors.html keeps its
+// Checked on the matcher options rather than as a constraint on the kind, so an inline errors.html keeps its
 // parameter types
-export type HtmlRouterErrors<TKind extends ResponseKind> = [TKind] extends ['html']
+export type HtmlMatcherErrors<TKind extends ResponseKind> = [TKind] extends ['html']
   ? { errors: { html: ErrorFunction<Html> } }
   : unknown;
 
@@ -289,7 +289,7 @@ export type ApiHandler<
   request: ApiRequest<TPath, TQuery, TAuth, TBody, TEvent>,
 ) => Promise<HandlerResponse<TResponse>> | NoReturn<TResponse>;
 
-// A route passed straight to route() with no responseType takes the router's kind
+// A route passed straight to route() with no responseType takes the matcher's kind
 export interface RouteConfig<
   TPathString extends string = string,
   TPath = PathParams<TPathString>,
@@ -313,7 +313,7 @@ export interface RouteConfig<
   responseSchema?: StandardSchemaV1<unknown, TResponse>;
 }
 
-// A route value always names its kind, so a router with a different default still sends what its types say
+// A route value always names its kind, so a matcher with a different default still sends what its types say
 export interface RouteDefinition<
   TPathString extends string = string,
   TPath = PathParams<TPathString>,

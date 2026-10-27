@@ -1,10 +1,10 @@
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/stepfunctions';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/stepfunctions';
 
 import { CHARGE_PAYMENT_TASK } from '../config.js';
 import { ChargePaymentSchema } from '../utils/schemas.js';
 
-// Captures the order total. The custom filter is async, which the router awaits before it matches.
+// Captures the order total. The custom filter is async, which the matcher awaits before it matches.
 export const chargePayment = defineRoute({
   filters: {
     custom: async ({ event }) => isObject(event) && event.task === CHARGE_PAYMENT_TASK,

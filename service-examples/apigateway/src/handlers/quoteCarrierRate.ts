@@ -1,10 +1,10 @@
-import { defineRoute } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { CarrierQuoteSchema } from '../utils/schemas.js';
 
 // The carrier answers -1 when it has no lorry for the route, and the response schema requires a
-// positive price. The router rejects the handler's own return value and answers 500.
+// positive price. The matcher rejects the handler's own return value and answers 500.
 const NO_CAPACITY_PRICE = -1;
 
 export const quoteCarrierRate = defineRoute({

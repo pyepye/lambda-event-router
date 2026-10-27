@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/codepipeline';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/codepipeline';
 
 import { NOTIFIER_FUNCTION_NAME } from '../environment.js';
 

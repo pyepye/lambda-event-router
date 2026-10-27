@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { RabbitMQMiddleware } from '@lambda-event-router/mq';
+import { logger } from '@latcher/base';
+import type { RabbitMQMiddleware } from '@latcher/mq';
 
 import type { TPayment } from '../utils/schemas.js';
 

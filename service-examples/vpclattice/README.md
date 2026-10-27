@@ -1,10 +1,10 @@
 # Service example: VPC Lattice
 
-A deployable CDK app that exercises the `VPCLatticeRouter` end to end. It models an inventory
+A deployable CDK app that exercises the `VPCLatticeMatcher` end to end. It models an inventory
 service reached over a service network. One Lambda serves every route, and a second Lambda inside
 the VPC makes the requests.
 
-The routes are in `src/inventoryRouter.ts`, and the handlers are in `src/handlers/`.
+The routes are in `src/inventoryMatcher.ts`, and the handlers are in `src/handlers/`.
 
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
@@ -17,7 +17,7 @@ inventory (one Lattice service, one domain name)
 both listeners reach the same routes
 ├── GET     /stock/available                  listAvailableStock   literal beats the path param
 ├── GET     /stock/:sku                       getStockItem         querySchema, multi-value query
-├── HEAD    /stock/:sku                       headStockItem        the router strips the body
+├── HEAD    /stock/:sku                       headStockItem        the matcher strips the body
 ├── OPTIONS /stock/:sku                       describeStockItem    beats the automatic preflight
 ├── POST    /stock                            createStockItem      bodySchema
 ├── PUT     /stock/:sku                       replaceStockItem     two route middlewares, binary body
@@ -46,7 +46,7 @@ path. No other HTTP event source does that. The adapter takes it off the path be
 
 ## What it covers
 
-One command sends every request on both listeners. Together they hit every filter the router
+One command sends every request on both listeners. Together they hit every filter the matcher
 supports and every failure path it has.
 
 | Feature | Where |
@@ -61,34 +61,34 @@ supports and every failure path it has.
 | `querySchema` | `getStockItem` coerces `page` to a number |
 | `bodySchema` | `createStockItem`, `adjustStockLevel`, `adjustStockOnFloor` and `raiseReorder` |
 | `responseSchema` | `listAvailableStock` passes its own schema, `valueStockHolding` fails its own |
-| Router middleware | `logRequest` runs once per matched request |
+| Matcher middleware | `logRequest` runs once per matched request |
 | Route middleware | `withStockContext` logs, `requireCallerPrincipal` throws, `withStocktakeFreeze` answers without calling `next` |
 | CORS | An origin function, credentials, exposed headers, an automatic preflight, and a registered `options()` route that wins |
 | Multi-value query and headers | A repeated `depot` and a repeated `x-depot` on both listeners |
 | Query on the path | Lattice appends the query string to the path it sends, and the adapter takes it off |
-| HEAD responses | `headStockItem` builds a body and the router strips it |
+| HEAD responses | `headStockItem` builds a body and the matcher strips it |
 | Auth | `listSupplierSkus` reads `auth.principalId`. Only a signed caller has one, on either version |
 | Request context | `getStockItem` reads `serviceArn` off the request context, which only a 2.0 payload carries |
 | WARN records | `requireCallerPrincipal` warns before it refuses an unsigned caller |
 | Binary body | `replaceStockItem` takes a count sheet as bytes, typed by a `bodySchema` of `BinaryBody` |
-| Text response | `exportStockValuation` is a text route, so the router sends the CSV as it is with `text/csv` |
-| Binary response body | `getShelfLabel` is a binary route, so the router base64 encodes the PNG and sets `isBase64Encoded` |
+| Text response | `exportStockValuation` is a text route, so the matcher sends the CSV as it is with `text/csv` |
+| Binary response body | `getShelfLabel` is a binary route, so the matcher base64 encodes the PNG and sets `isBase64Encoded` |
 | Escaped path literal | `/reports/valuation.csv` matches itself, and `/reports/valuationXcsv` answers 404 |
 | No route matched | An unrouted path, a preflight for an unrouted path, and a near miss on an escaped dot |
 | Schema failures | One query and three bodies |
 | Thrown responses | 401, 404, 409, 307 and 308, from handlers and from two middlewares |
-| Handler failure | `raiseReorder` throws an error, which the router answers 500 without its message |
+| Handler failure | `raiseReorder` throws an error, which the matcher answers 500 without its message |
 
 The service auth type is `AWS_IAM` and its auth policy allows any caller. Lattice names a signed
 caller and says nothing about an unsigned one, so the supplier read is sent both ways.
 
 Where it names them depends on the payload version. A 2.0 payload carries
 `requestContext.identity.principal` and a 1.0 payload carries the `x-amzn-lattice-identity`
-header. The router reads both into `auth.principalId`, so a handler sees the same thing either
+header. The matcher reads both into `auth.principalId`, so a handler sees the same thing either
 way.
 
 Handlers do their work by logging, so the CloudWatch logs are how you confirm routing. Everything
-the router answers with is asserted by the trigger.
+the matcher answers with is asserted by the trigger.
 
 ## Prerequisites
 
@@ -114,9 +114,9 @@ parameter ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-vpclattice... install
-pnpm -F @lambda-event-router/service-example-vpclattice... build
-pnpm -F @lambda-event-router/service-example-vpclattice run deploy
+pnpm -F @latcher/service-example-vpclattice... install
+pnpm -F @latcher/service-example-vpclattice... build
+pnpm -F @latcher/service-example-vpclattice run deploy
 ```
 
 CDK outputs include `LatticeDomain`, `OrderingFunctionName`, `InventoryLogGroupName` and
@@ -128,7 +128,7 @@ internet gateway. The ordering function only ever talks to the Lattice service.
 ## Send sample requests
 
 ```bash
-pnpm -F @lambda-event-router/service-example-vpclattice trigger
+pnpm -F @latcher/service-example-vpclattice trigger
 ```
 
 The script reads the stack outputs itself, so it takes no arguments. Pass a stack name as the
@@ -153,7 +153,7 @@ Take the epoch before you trigger, then export both log groups:
 
 ```bash
 START=$(($(date +%s) * 1000))
-pnpm -F @lambda-event-router/service-example-vpclattice trigger
+pnpm -F @latcher/service-example-vpclattice trigger
 
 aws logs filter-log-events --log-group-name /aws/lambda/ler-example-vpclattice-inventory \
   --start-time $START --output json > /tmp/ler-vpclattice-inventory.json
@@ -167,17 +167,17 @@ run never wrote. Read the file rather than exporting again for each question.
 Note: the log groups are `/aws/lambda/<stackName>-inventory` and `/aws/lambda/<stackName>-ordering`,
 so the names change if you deploy with a different `stackName`.
 
-`Handling inventory request` is the router middleware, and there is one for every request that
+`Handling inventory request` is the matcher middleware, and there is one for every request that
 reached a route. A full run has 52, half on each listener. Its `payloadVersion` field says which
 adapter normalised the event.
 
 Eight requests per listener reach the worker with no `Handling inventory request` line:
 
-- Four fail a schema. The router validates the query and the body before it builds the middleware
+- Four fail a schema. The matcher validates the query and the body before it builds the middleware
   chain, and a request that fails either one gets no further.
 - Three match no route, and are answered 404 before any middleware runs. One is
   `/reports/valuationXcsv`, which only matches if the dot in the CSV route is not escaped.
-- One is the automatic preflight for `/reports/valuation`, which the router answers itself.
+- One is the automatic preflight for `/reports/valuation`, which the matcher answers itself.
 
 The rest of the log is one line per handler:
 
@@ -198,39 +198,39 @@ The rest of the log is one line per handler:
   `Supplier read refused, no caller principal` at WARN from the same route middleware, and the run
   has two of those.
 - `Stock count sheet replaced` carries `lines` as 3 and `isBase64Encoded` as true. Lattice base64
-  encodes an octet stream body on both versions, and the router hands the bytes over as a `Buffer`.
-  The sheet is three lines of text, so a body the router had not decoded would count as one.
+  encodes an octet stream body on both versions, and the matcher hands the bytes over as a `Buffer`.
+  The sheet is three lines of text, so a body the matcher had not decoded would count as one.
   `bytes` is the length of the sheet the caller sent.
 - `Stock replacement authorised` is the second route middleware on that request, and it runs
-  after the router middleware.
+  after the matcher middleware.
 - `Stock replacement frozen for the stocktake` is the first one answering on its own. It returns a
   409 rather than calling `next`, so neither the second middleware nor the handler runs.
-- `Stock valuation exported` is the text route. The router sends the string back as it is, with the
+- `Stock valuation exported` is the text route. The matcher sends the string back as it is, with the
   `text/csv` content type the route names.
-- `Shelf label read` is the binary route. The router base64 encodes the buffer and sets
+- `Shelf label read` is the binary route. The matcher base64 encodes the buffer and sets
   `isBase64Encoded`, and the ordering function compares the bytes that came off the wire with the ones
   the handler holds.
 - `Stock adjusted on the warehouse floor` is the custom filter winning. `Stock adjusted` is the
   same method and path without the `x-channel` header.
 - `Stock movement read` proves both path params reach the handler.
 - `Stock item checked` is the HEAD route. It builds the same response as the GET route and the
-  router strips the body.
+  matcher strips the body.
 - `Stock item options described` is the registered `options()` route answering a preflight itself.
 - `Retired SKU redirected` and `SKU under review redirected` are the two redirects.
 - `Stock item created` and `Stock item discarded` are the create and the delete.
 - `Stock holding valued` is followed by an error. The total the handler returned is negative and
   its own `responseSchema` requires a positive one.
 
-Three requests per listener match a route, log the router middleware and then log nothing else.
+Three requests per listener match a route, log the matcher middleware and then log nothing else.
 Each throws its response before the handler reaches its own log line. They are a SKU that is not
 stocked, a SKU that is already stocked, and a SKU that still holds units.
 
-The run has four `ERROR` records, two per listener. Both are the router reporting a handler it had
+The run has four `ERROR` records, two per listener. Both are the matcher reporting a handler it had
 already run:
 
 - `Handler response failed its responseSchema` carries the issues the valuation schema raised.
 - `Unhandled error processing HTTP request` carries `Supplier ordering is unavailable for brk-9`.
-  That is the error `raiseReorder` threw. The router logs its message and leaves it out of the 500 body.
+  That is the error `raiseReorder` threw. The matcher logs its message and leaves it out of the 500 body.
 
 The ordering log holds one line, `Inventory calls finished`, with `requests` 68 and `failures` 0.
 The per-step results come back in the invoke response, which is what the trigger prints.
@@ -246,24 +246,24 @@ The per-step results come back in the invoke response, which is what the trigger
 | `OrderingFn` | The caller, in the isolated subnet, signing every request as `vpc-lattice-svcs` |
 
 Both target groups point at the same Lambda, so one route table serves both payload versions.
-Neither listener has a rule, so every path reaches the worker and the router answers the 404s.
+Neither listener has a rule, so every path reaches the worker and the matcher answers the 404s.
 
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-vpclattice check   # route the request list in process
-pnpm -F @lambda-event-router/service-example-vpclattice diff    # review pending changeset
-pnpm -F @lambda-event-router/service-example-vpclattice watch   # hotswap deploys
-pnpm -F @lambda-event-router/service-example-vpclattice synth   # render template
+pnpm -F @latcher/service-example-vpclattice check   # route the request list in process
+pnpm -F @latcher/service-example-vpclattice diff    # review pending changeset
+pnpm -F @latcher/service-example-vpclattice watch   # hotswap deploys
+pnpm -F @latcher/service-example-vpclattice synth   # render template
 ```
 
-`check` drives the router with a synthetic event for every step. It catches a filter that can
+`check` drives the matcher with a synthetic event for every step. It catches a filter that can
 never match without waiting for a deploy.
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/service-example-vpclattice destroy
+pnpm -F @latcher/service-example-vpclattice destroy
 ```
 
 The stack owns every resource it creates, including the VPC and both log groups. Nothing is left

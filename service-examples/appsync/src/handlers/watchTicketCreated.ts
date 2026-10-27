@@ -1,5 +1,5 @@
-import type { AppSyncResolverRequest } from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+import type { AppSyncResolverRequest } from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
 // AppSync runs a subscription's resolver when a client subscribes, not when an event arrives.
 // Returning null accepts the subscription.

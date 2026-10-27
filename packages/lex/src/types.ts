@@ -1,6 +1,6 @@
 import type { Context, LexV2Event, LexV2Result } from 'aws-lambda';
 
-import type { FilterStringMatcher, Middleware } from '@lambda-event-router/base';
+import type { FilterStringMatcher, Middleware } from '@latcher/base';
 
 export type LexInvocationSource = LexV2Event['invocationSource'];
 
@@ -74,6 +74,6 @@ export interface LexFulfillmentCodeHookRouteDefinition {
   handler: LexFulfillmentCodeHookHandler;
 }
 
-export interface LexRouterOptions {
+export interface LexMatcherOptions {
   middleware?: LexMiddleware[];
 }

@@ -1,4 +1,4 @@
-import { createALBEvent } from '@lambda-event-router/testing';
+import { createALBEvent } from '@latcher/testing';
 
 import { albAdapter } from './albAdapter.js';
 

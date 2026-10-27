@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
-import { Created, defineRoute } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { Created, defineRoute } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { customerAuth } from '../utils/auth.js';
 import { insertOrder } from '../utils/dynamodb.js';

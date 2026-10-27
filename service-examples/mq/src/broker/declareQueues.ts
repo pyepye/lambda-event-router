@@ -1,6 +1,6 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 
-import { logger } from '@lambda-event-router/base';
+import { logger } from '@latcher/base';
 import type { CdkCustomResourceEvent, CdkCustomResourceResponse } from 'aws-lambda';
 
 import { PAYMENT_QUEUES, SECRET_NAMES } from '../utils/brokers.js';

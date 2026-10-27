@@ -1,7 +1,7 @@
 # Service example: Firehose
 
-A deployable CDK app that exercises the `FirehoseRouter` end to end. It models a clickstream and an
-audit trail. One Lambda transforms records for two delivery streams, and the router does the
+A deployable CDK app that exercises the `FirehoseMatcher` end to end. It models a clickstream and an
+audit trail. One Lambda transforms records for two delivery streams, and the matcher does the
 per-record dispatch.
 
 The routes are in `src/firehose.ts`, and the handlers are in `src/handlers/`.
@@ -26,7 +26,7 @@ the worker's log are the two places to check.
 
 ## What it covers
 
-One `trigger` puts 12 records across the two streams. Together they hit every filter the router has,
+One `trigger` puts 12 records across the two streams. Together they hit every filter the matcher has,
 every result it can return and every failure path.
 
 | Feature | Where |
@@ -35,9 +35,9 @@ every result it can return and every failure path.
 | `sourceKinesisStreamArn` filter | `archiveAuditEvent` matches the Kinesis stream the audit trail reads |
 | `custom` filter | The clickstream routes read the event type and the user agent off the decoded record |
 | Zod schemas | `dataSchema` on `redactVisitorEmail`, `recordPageView` and `archiveAuditEvent` |
-| Router middleware | `logRecord` runs once per record, on both streams |
+| Matcher middleware | `logRecord` runs once per record, on both streams |
 | Route middleware | `withVisitorContext` on `redactVisitorEmail`, typed to the route's data |
-| Lambda middleware | `logTransformationResult` logs what the router hands back to Firehose |
+| Lambda middleware | `logTransformationResult` logs what the matcher hands back to Firehose |
 | `Ok()` with no data | `recordPageView` keeps the record as it was put |
 | `Ok(data)` | `redactVisitorEmail` replaces the record with the masked copy |
 | `Ok(data, metadata)` | `archiveAuditEvent` returns the tenant as a Firehose partition key |
@@ -49,7 +49,7 @@ every result it can return and every failure path.
 | Handler failure | `quarantineBotTraffic` throws |
 | Schema failures | A page view with no url, a sign up with a bad email, and an audit event that is not JSON |
 
-Firehose carries raw bytes. The router base64 decodes each record and then parses it as JSON. A
+Firehose carries raw bytes. The matcher base64 decodes each record and then parses it as JSON. A
 payload that is not JSON is not rejected at that point. It reaches the schema as a raw string.
 
 Filters run before the schemas and read the decoded record, so they guard the shape themselves.
@@ -81,9 +81,9 @@ ARNs if your account uses a custom one.
 From this directory:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-firehose... install
-pnpm -F @lambda-event-router/service-example-firehose... build
-pnpm -F @lambda-event-router/service-example-firehose run deploy
+pnpm -F @latcher/service-example-firehose... install
+pnpm -F @latcher/service-example-firehose... build
+pnpm -F @latcher/service-example-firehose run deploy
 ```
 
 CDK outputs include `ClickstreamName`, `AuditStreamArn` and `LandingBucketName`.
@@ -93,7 +93,7 @@ CDK outputs include `ClickstreamName`, `AuditStreamArn` and `LandingBucketName`.
 Pass the three values from the deploy outputs:
 
 ```bash
-pnpm -F @lambda-event-router/service-example-firehose run trigger \
+pnpm -F @latcher/service-example-firehose run trigger \
   <ClickstreamName> <AuditStreamArn> <LandingBucketName>
 ```
 
@@ -155,10 +155,10 @@ Note: the log group is `/aws/lambda/<stackName>-worker`, so the name changes if 
 different `stackName`.
 
 One run produces three invocations and three `Transformation result returned` lines. Each one lists
-every record of that invocation with the result the router chose for it.
+every record of that invocation with the result the matcher chose for it.
 
 There are 8 `Handling Firehose record` lines rather than 12. A record that matches no route, or fails
-its schema, never gets one. The router matches and validates before it runs middleware.
+its schema, never gets one. The matcher matches and validates before it runs middleware.
 
 On the audit records that line carries a `sourceShardId`. Firehose only fills in the record metadata
 when it is reading a Kinesis stream, so the clickstream records have none.
@@ -170,7 +170,7 @@ The clickstream invocation returns two `Ok`, one `Dropped` and five `ProcessingF
   middleware and the second is the handler.
 - `Health check ping dropped`. The result is `Dropped`, which is neither a success nor an error.
 - `Page view too old to store` for the stale page view, with an `ageMs` past the hour. The line
-  carries a record id rather than a visitor id. Its handler throws `Failed()`, and the router
+  carries a record id rather than a visitor id. Its handler throws `Failed()`, and the matcher
   recognises a thrown response, so this record has no error line at all.
 - `Error processing Firehose record <recordId>` four times. Each one carries the failure under `error`.
 - `Bot traffic refused` is the bot. `No route matched for record` is the `ping` event that nothing
@@ -212,16 +212,16 @@ second interval is what flushes it.
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/service-example-firehose diff   # review pending changeset
-pnpm -F @lambda-event-router/service-example-firehose watch  # hotswap deploys
-pnpm -F @lambda-event-router/service-example-firehose synth  # render template
+pnpm -F @latcher/service-example-firehose diff   # review pending changeset
+pnpm -F @latcher/service-example-firehose watch  # hotswap deploys
+pnpm -F @latcher/service-example-firehose synth  # render template
 ```
 
 ## Tear down
 
 ```bash
 aws s3 rm s3://<LandingBucketName> --recursive
-pnpm -F @lambda-event-router/service-example-firehose destroy
+pnpm -F @latcher/service-example-firehose destroy
 ```
 
 CloudFormation will not delete a bucket with anything in it, so empty it first.

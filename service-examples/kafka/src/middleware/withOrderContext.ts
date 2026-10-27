@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { KafkaMiddleware } from '@lambda-event-router/kafka';
+import { logger } from '@latcher/base';
+import type { KafkaMiddleware } from '@latcher/kafka';
 
 import type { TOrder } from '../utils/schemas.js';
 

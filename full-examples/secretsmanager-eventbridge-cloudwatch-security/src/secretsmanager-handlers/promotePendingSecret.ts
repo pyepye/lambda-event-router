@@ -1,6 +1,7 @@
 import { DescribeSecretCommand, UpdateSecretVersionStageCommand } from '@aws-sdk/client-secrets-manager';
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/secretsmanager';
+
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/secretsmanager';
 
 import { SECRET_ARN, secretsManager } from '../config.js';
 

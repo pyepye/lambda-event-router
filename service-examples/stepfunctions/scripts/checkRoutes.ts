@@ -1,10 +1,10 @@
 import type { Context } from 'aws-lambda';
 
 import { sfnClient } from '../src/config.js';
-import { stepFunctionsRouter } from '../src/stepfunctions.js';
+import { stepFunctionsMatcher } from '../src/stepfunctions.js';
 
 // The logger builds itself on the first call. JSON is the format the deployed worker writes, and
-// constructing a LambdaRouter logs, so src/index.js has to load after this line.
+// constructing a Latcher logs, so src/index.js has to load after this line.
 process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
 
 const { handler } = await import('../src/index.js');
@@ -119,7 +119,7 @@ async function runCapturingLogs(event: unknown): Promise<{ logged: string; resul
   Object.assign(console, { log: collect, debug: collect, warn: collect, error: collect });
 
   try {
-    const result = await stepFunctionsRouter.handleEvent(event, context);
+    const result = await stepFunctionsMatcher.handleEvent(event, context);
     return { logged: lines.join('\n'), result };
   } catch (thrown) {
     return { logged: lines.join('\n'), error: thrown };
@@ -195,8 +195,8 @@ for (const task of tasks) {
 const scheduledEvent = { source: 'aws.events', 'detail-type': 'Scheduled Event', detail: { orderId: ORDER_ID } };
 
 // A scheduled event reaches the same worker the state machine invokes, so it goes through
-// LambdaRouter rather than straight to the router.
-async function routerFor(event: unknown): Promise<string> {
+// Latcher rather than straight to the matcher.
+async function matcherFor(event: unknown): Promise<string> {
   try {
     await handler(event, context, () => {});
     return 'the handler returned';
@@ -205,23 +205,26 @@ async function routerFor(event: unknown): Promise<string> {
   }
 }
 
-const routerDeclined = await routerFor(scheduledEvent);
-const reconcileDeclined = await routerFor({ task: 'reconcile-ledger', orderId: ORDER_ID, period: '2026-09' });
+const matcherDeclined = await matcherFor(scheduledEvent);
+const reconcileDeclined = await matcherFor({ task: 'reconcile-ledger', orderId: ORDER_ID, period: '2026-09' });
 
 const claims: [string, boolean][] = [
-  ['the router takes a plain task payload', await stepFunctionsRouter.canHandleEvent({ task: 'reserve-stock' })],
+  ['the matcher takes a plain task payload', await stepFunctionsMatcher.canHandleEvent({ task: 'reserve-stock' })],
   [
-    'the router turns an SQS event away',
-    !(await stepFunctionsRouter.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })),
+    'the matcher turns an SQS event away',
+    !(await stepFunctionsMatcher.canHandleEvent({ Records: [{ eventSource: 'aws:sqs' }] })),
   ],
-  ['the router turns a bare string away', !(await stepFunctionsRouter.canHandleEvent('reserve-stock'))],
-  ['the router turns a scheduled EventBridge event away', !(await stepFunctionsRouter.canHandleEvent(scheduledEvent))],
+  ['the matcher turns a bare string away', !(await stepFunctionsMatcher.canHandleEvent('reserve-stock'))],
   [
-    'the router turns away a task name no route claims',
-    !(await stepFunctionsRouter.canHandleEvent({ task: 'reconcile-ledger' })),
+    'the matcher turns a scheduled EventBridge event away',
+    !(await stepFunctionsMatcher.canHandleEvent(scheduledEvent)),
   ],
-  ['a scheduled EventBridge event finds no router at all', routerDeclined === 'No router found for event'],
-  ['a reconcile-ledger payload finds no router at all', reconcileDeclined === 'No router found for event'],
+  [
+    'the matcher turns away a task name no route claims',
+    !(await stepFunctionsMatcher.canHandleEvent({ task: 'reconcile-ledger' })),
+  ],
+  ['a scheduled EventBridge event finds no matcher at all', matcherDeclined === 'No matcher found for event'],
+  ['a reconcile-ledger payload finds no matcher at all', reconcileDeclined === 'No matcher found for event'],
 ];
 
 for (const [label, held] of claims) {

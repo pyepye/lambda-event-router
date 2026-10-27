@@ -5,19 +5,19 @@ metric, and one alarm watches that metric.
 
 ```
 EventBridge schedule (1h)
-└── securityFn / checkRotationAge (eventBridgeRouter)
+└── securityFn / checkRotationAge (eventBridgeMatcher)
     └── DescribeSecret on the demo secret
 
 Secrets Manager rotation of the demo secret
-├── securityFn / createPendingSecret (secretsManagerRouter, createSecret)
-├── securityFn / sendToDownstream (secretsManagerRouter, setSecret)
-├── securityFn / checkPwnedPasswords (secretsManagerRouter, testSecret)
+├── securityFn / createPendingSecret (secretsManagerMatcher, createSecret)
+├── securityFn / sendToDownstream (secretsManagerMatcher, setSecret)
+├── securityFn / checkPwnedPasswords (secretsManagerMatcher, testSecret)
 │   └── Pwned Passwords range API
-└── securityFn / promotePendingSecret (secretsManagerRouter, finishSecret)
+└── securityFn / promotePendingSecret (secretsManagerMatcher, finishSecret)
 
 Log group /secretsmanager-eventbridge-cloudwatch-security/app
 └── Subscription filter on FAILED_LOGIN
-    └── securityFn / reportFailedLogins (cloudWatchLogsRouter)
+    └── securityFn / reportFailedLogins (cloudWatchLogsMatcher)
 
 Any issue
 └── CloudWatch metric SecurityMonitoring/SecurityIssue
@@ -27,8 +27,8 @@ Any issue
 The steps to run it are in [Prerequisites](#prerequisites), [Permissions](#permissions)
 and [Deploy](#deploy).
 
-There are 6 routes on one Lambda function. `src/index.ts` has one `LambdaRouter` that combines all
-three routers. Each router has a small middleware from `src/middleware/logInvocation.ts`. It logs one
+There are 6 routes on one Lambda function. `src/index.ts` has one `Latcher` that combines all
+three matchers. Each matcher has a small middleware from `src/middleware/logInvocation.ts`. It logs one
 line before every route runs.
 
 ## What each route does
@@ -54,7 +54,7 @@ single configuration recorder. GuardDuty needs a detector for the region.
 A full example must deploy and tear down with nothing left behind in the account. So every signal
 here comes from a resource that Terraform creates and destroys.
 
-The `ConfigRouter` is shown in the [Config service example](../../service-examples/config/).
+The `ConfigMatcher` is shown in the [Config service example](../../service-examples/config/).
 
 ## Prerequisites
 
@@ -75,10 +75,10 @@ are locked down, resources are not.
 ## Deploy
 
 ```bash
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security... install
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security... build
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security run init
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security run deploy
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security... install
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security... build
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security run init
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security run deploy
 ```
 
 `deploy` bundles `src/index.ts` into `dist/` with esbuild, then runs `terraform apply`. Terraform does
@@ -122,7 +122,7 @@ aws cloudwatch describe-alarms --alarm-names "$ALARM" --query 'MetricAlarms[0].S
 ```
 
 Steps 1 and 3 invoke the function directly, because EventBridge does not let you publish an
-`aws.events` event. The router only checks the source, the detail type and that `detail` is an object.
+`aws.events` event. The matcher only checks the source, the detail type and that `detail` is an object.
 
 Step 4 reuses the `manual` log stream. Run `create-log-stream` once only, or change the stream name.
 
@@ -153,14 +153,14 @@ Note: the rotation runs in the background. If step 3 runs before step 2 has fini
 ## Iterating
 
 ```bash
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security plan       # review pending changes
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security run deploy # bundle and apply
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security plan       # review pending changes
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security run deploy # bundle and apply
 ```
 
 ## Tear down
 
 ```bash
-pnpm -F @lambda-event-router/full-example-secretsmanager-eventbridge-cloudwatch-security destroy
+pnpm -F @latcher/full-example-secretsmanager-eventbridge-cloudwatch-security destroy
 ```
 
 This deletes the function, the secret, both log groups, the schedule and the alarm. The secret is

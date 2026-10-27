@@ -6,15 +6,15 @@ const OTHER_ACCOUNT = '210987654321';
 const REGION = 'eu-west-2';
 
 // environment.ts reads these once, at import, and throws when either is missing. The logger builds
-// itself on the first call. Both have to be settled before the router loads.
+// itself on the first call. Both have to be settled before the matcher loads.
 process.env.AWS_LAMBDA_LOG_FORMAT = 'JSON';
 process.env.STACK_NAME = STACK;
 process.env.ACCOUNT_ID = ACCOUNT;
 
 const { fleetFunctionName, RULE_PARAMETERS, ruleName } = await import('../src/config.js');
 const { configServiceClient } = await import('../src/environment.js');
-const { configRouter } = await import('../src/configRouter.js');
-const { configScheduledRouter } = await import('../src/configScheduledRouter.js');
+const { configMatcher } = await import('../src/configMatcher.js');
+const { configScheduledMatcher } = await import('../src/configScheduledMatcher.js');
 const { handler } = await import('../src/index.js');
 
 type TRule = Parameters<typeof ruleName>[1];
@@ -297,7 +297,7 @@ const checks: Check[] = [
     expected: { errorIncludes: 'Schema validation failed for ruleParameters' },
   },
   {
-    name: 'the concurrency route runs the router middleware and then throws',
+    name: 'the concurrency route runs the matcher middleware and then throws',
     event: scheduledEvent('concurrencyHeadroom'),
     expected: {
       logIncludes: ['Handling scheduled evaluation'],
@@ -388,14 +388,14 @@ const scheduled = scheduledEvent('lambdaInventory');
 const sqs = { Records: [{ eventSource: 'aws:sqs' }] };
 
 const claims: [string, boolean][] = [
-  ['the change router takes a change notification', configRouter.canHandleEvent(change)],
-  ['the change router takes an oversized notification', configRouter.canHandleEvent(oversized)],
-  ['the change router turns a scheduled notification away', !configRouter.canHandleEvent(scheduled)],
-  ['the scheduled router takes a scheduled notification', configScheduledRouter.canHandleEvent(scheduled)],
-  ['the scheduled router turns a change notification away', !configScheduledRouter.canHandleEvent(change)],
+  ['the change matcher takes a change notification', configMatcher.canHandleEvent(change)],
+  ['the change matcher takes an oversized notification', configMatcher.canHandleEvent(oversized)],
+  ['the change matcher turns a scheduled notification away', !configMatcher.canHandleEvent(scheduled)],
+  ['the scheduled matcher takes a scheduled notification', configScheduledMatcher.canHandleEvent(scheduled)],
+  ['the scheduled matcher turns a change notification away', !configScheduledMatcher.canHandleEvent(change)],
   [
-    'neither router takes an SQS event',
-    !(configRouter.canHandleEvent(sqs) || configScheduledRouter.canHandleEvent(sqs)),
+    'neither matcher takes an SQS event',
+    !(configMatcher.canHandleEvent(sqs) || configScheduledMatcher.canHandleEvent(sqs)),
   ],
 ];
 

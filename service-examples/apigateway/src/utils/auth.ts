@@ -1,4 +1,4 @@
-import { iamAuth, lambdaAuth } from '@lambda-event-router/apigateway';
+import { iamAuth, lambdaAuth } from '@latcher/apigateway';
 import { z } from 'zod';
 
 // A REST API sends every context value on as a string, so `clearance` arrives as '3' and the schema

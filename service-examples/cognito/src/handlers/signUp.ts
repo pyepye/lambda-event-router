@@ -1,6 +1,6 @@
-import { logger } from '@lambda-event-router/base';
-import type { CognitoEvent, CognitoRequest } from '@lambda-event-router/cognito';
-import { defineRoute } from '@lambda-event-router/cognito';
+import { logger } from '@latcher/base';
+import type { CognitoEvent, CognitoRequest } from '@latcher/cognito';
+import { defineRoute } from '@latcher/cognito';
 
 import { APPLICANTS_POOL_ID, STAFF_POOL_ID } from '../config.js';
 import { withDepartment } from '../middleware/withDepartment.js';

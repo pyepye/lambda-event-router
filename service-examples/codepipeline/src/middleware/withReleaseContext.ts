@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { CodePipelineMiddleware } from '@lambda-event-router/codepipeline';
+import { logger } from '@latcher/base';
+import type { CodePipelineMiddleware } from '@latcher/codepipeline';
 
 import type { TVerifyParameters } from '../utils/schemas.js';
 

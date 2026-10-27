@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { codePipelineRouter } from './codepipeline.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [codePipelineRouter] });
+import { codePipelineMatcher } from './codepipeline.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [codePipelineMatcher] });
+
+export const handler: Handler = latcher.handler();

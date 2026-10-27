@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { eventBridgeRouter } from './eventbridge.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [eventBridgeRouter] });
+import { eventBridgeMatcher } from './eventbridge.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [eventBridgeMatcher] });
+
+export const handler: Handler = latcher.handler();

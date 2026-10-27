@@ -1,13 +1,13 @@
 # Routing
 
-Routing is how an event or a record reaches one of your handlers. By the time it starts, `LambdaRouter`
-has already worked out which router owns the event, so everything on this page happens inside a single
-router. See [routers](/docs/routers) for that first step.
+Routing is how an event or a record reaches one of your handlers. By the time it starts, `Latcher`
+has already worked out which matcher owns the event, so everything on this page happens inside a single
+matcher. See [matchers](/docs/matchers) for that first step.
 
 ## Registering routes
 
-`route()` exists on every router and takes `filters` and a `handler`, plus whatever schema keys and
-`middleware` that router supports. It returns the router, so registrations chain.
+`route()` exists on every matcher and takes `filters` and a `handler`, plus whatever schema keys and
+`middleware` that matcher supports. It returns the matcher, so registrations chain.
 
 ### Inferred and annotated handlers
 
@@ -16,14 +16,14 @@ registered route, and the difference is where the handler's types come from: `de
 from your schemas, while a route object leaves you to name them. See
 [handlers](/docs/handlers#inferred-handlers) for how each plays out across files.
 
-Some packages holding more than one router name it after the router instead, so
+Some packages holding more than one matcher name it after the matcher instead, so
 `defineWebSocketRoute`, `defineActiveMQRoute` and `defineRabbitMQRoute`. `base` calls it
 `defineEventRoute`.
 
 ::: code-group
 
 ```ts [Inferred]
-import { defineRoute } from '@lambda-event-router/sqs'
+import { defineRoute } from '@latcher/sqs'
 
 import { OrderSchema } from '../schemas/order.js'
 
@@ -34,19 +34,19 @@ export const processOrderRoute = defineRoute({
   await orders.save(body) // body is typed from OrderSchema, with nothing to declare
 })
 
-sqsRouter.route(processOrderRoute).route(cancelOrderRoute)
+sqsMatcher.route(processOrderRoute).route(cancelOrderRoute)
 ```
 
 ```ts [Annotated]
-import { createSQSRouter } from '@lambda-event-router/sqs'
+import { createSQSMatcher } from '@latcher/sqs'
 
 import { cancelOrder } from './handlers/cancelOrder.js'
 import { processOrder } from './handlers/processOrder.js'
 import { OrderSchema } from './schemas/order.js'
 
-export const sqsRouter = createSQSRouter({ batchItemFailures: true })
+export const sqsMatcher = createSQSMatcher({ batchItemFailures: true })
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN,
     messageAttributes: { type: 'OrderPlaced' }
@@ -55,7 +55,7 @@ sqsRouter.route({
   handler: processOrder, // Types named in its own file
 })
 
-sqsRouter.route({
+sqsMatcher.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN,
     messageAttributes: { type: 'OrderCancelled' }
@@ -69,21 +69,21 @@ sqsRouter.route({
 
 ### Convenience methods
 
-Some routers add methods on top of `route()` for the filter you would set every time anyway. They take
+Some matchers add methods on top of `route()` for the filter you would set every time anyway. They take
 everything else exactly as `route()` does, so each pair below registers the same route.
 
 ::: code-group
 
 ```ts [DynamoDB Streams]
 // insert() sets eventName, so these two are the same route
-dynamoRouter.insert({
+dynamoMatcher.insert({
   filters: {
     eventSourceArn: ORDER_TABLE_STREAM_ARN
   },
   handler: onOrderInserted
 })
 
-dynamoRouter.route({
+dynamoMatcher.route({
   filters: {
     eventName: 'INSERT',
     eventSourceArn: ORDER_TABLE_STREAM_ARN
@@ -94,14 +94,14 @@ dynamoRouter.route({
 
 ```ts [API Gateway]
 // get() sets method, so these two are the same route
-apiGatewayRouter.get({
+apiGatewayMatcher.get({
   filters: {
     path: '/orders/:orderId'
   },
   handler: getOrder
 })
 
-apiGatewayRouter.route({
+apiGatewayMatcher.route({
   filters: {
     method: 'GET',
     path: '/orders/:orderId'
@@ -120,7 +120,7 @@ something you can ignore.
 
 `filters` says what an event has to look like for the route to take it. The keys come from the event
 source, so SQS gives you `eventSourceArn` and `messageAttributes` while EventBridge gives you `source`
-and `detailType`. Each [router page](/packages) lists its own.
+and `detailType`. Each [matcher page](/packages) lists its own.
 
 - Every key you set has to match. Keys are ANDed, and two different keys cannot be ORed
 - An array at a single key is an OR, so `eventSourceArn: [ORDER_QUEUE_ARN, ORDER_DLQ_ARN]` takes either
@@ -137,7 +137,7 @@ and `detailType`. Each [router page](/packages) lists its own.
 ::: code-group
 
 ```ts [SQS]
-sqsRouter.route({
+sqsMatcher.route({
   filters: {
     eventSourceArn: 'arn:aws:sqs:eu-west-1:*:orders-*', // * is the wildcard, and the rest is literal
     messageAttributes: {
@@ -153,7 +153,7 @@ sqsRouter.route({
 
 ```ts [API Gateway]
 // method and path are required, and path is a pattern rather than a matcher
-apiGatewayRouter.route({
+apiGatewayMatcher.route({
   filters: {
     method: 'GET',
     path: '/customers/:customerId/orders/:orderId',
@@ -166,14 +166,14 @@ apiGatewayRouter.route({
 
 :::
 
-**The HTTP routers are the exception to all of the above.** `method` and `path` are required rather
+**The HTTP matchers are the exception to all of the above.** `method` and `path` are required rather
 than optional, `path` is a path pattern rather than a `FilterStringMatcher`, and a request that
 matches no route gets a 404 instead of throwing.
 
 ### custom
 
 Every filters object takes a `custom` for anything the built in keys cannot express. It is a
-function, sync or async, and it receives that router's `<Source>FilterInput`, so an SQS one is given
+function, sync or async, and it receives that matcher's `<Source>FilterInput`, so an SQS one is given
 `{ body, messageAttributes, record }`.
 
 It runs after the other filters on its own route, so the cheap comparisons have already ruled out
@@ -184,8 +184,8 @@ the route is what carries the schemas, so validation cannot have run yet. Treat 
 and narrow it, because the types will not stop you reading straight into it.
 
 ```ts
-import { isObject } from '@lambda-event-router/base'
-import { defineRoute, type SQSFilterInput } from '@lambda-event-router/sqs'
+import { isObject } from '@latcher/base'
+import { defineRoute, type SQSFilterInput } from '@latcher/sqs'
 
 import { OrderSchema } from '../schemas/order.js'
 
@@ -211,7 +211,7 @@ tried first, regardless of registration order.
 
 ```ts
 // Broader: matches everything the route below matches, and more
-sqsRouter.route({
+sqsMatcher.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN
   },
@@ -219,7 +219,7 @@ sqsRouter.route({
 })
 
 // Narrower: same queue, plus a message attribute
-sqsRouter.route({
+sqsMatcher.route({
   filters: {
     eventSourceArn: ORDER_QUEUE_ARN,
     messageAttributes: { type: 'OrderCancelled' }
@@ -250,25 +250,25 @@ still counts, so `{ tenant: '*', type: 'Order' }` ranks ahead of `{ type: 'Order
 currently match the same events. Prefer mutually exclusive filters, such as distinct message attributes
 or detail types, to avoid relying on ranking.
 
-**Check the router page before relying on order.** First-match behaviour is router-specific. CodeCommit
+**Check the matcher page before relying on order.** First-match behaviour is matcher-specific. CodeCommit
 runs every matching route, so it is not ranked at all.
 
-HTTP routers (API Gateway, ALB, VPC Lattice) rank paths instead. Literal segments beat params at the same
+HTTP matchers (API Gateway, ALB, VPC Lattice) rank paths instead. Literal segments beat params at the same
 position, left to right: `/orders/latest` beats `/orders/:orderId`, and `/a/:x` beats `/:y/b` for `/a/b`.
 A segment that mixes literal text with a param, like `:name.json`, ranks between a literal and a bare param.
 A `custom` also beats the same path without one. Identical paths use registration order.
 
-**The difference is that paths are ordered; filter objects aren't.** HTTP routers can therefore resolve
-overlaps that filter routers leave alone, because a filters object has no leftmost key to appeal to when
+**The difference is that paths are ordered; filter objects aren't.** HTTP matchers can therefore resolve
+overlaps that filter matchers leave alone, because a filters object has no leftmost key to appeal to when
 `source` and `detailType` disagree.
 
 ### Nothing matched
 
-Matching nothing is an error, and the cost depends on the router.
+Matching nothing is an error, and the cost depends on the matcher.
 
-| Router | An event or record matching no route |
+| Matcher | An event or record matching no route |
 | --- | --- |
-| Record based | Throws, which fails the whole batch unless the router reports per record failures |
+| Record based | Throws, which fails the whole batch unless the matcher reports per record failures |
 | HTTP | Returns a 404 |
 
 So with SQS `batchItemFailures` off, one record matching no route takes down every record in the batch
@@ -279,7 +279,7 @@ source gives you somewhere to put it.
 
 ## Schema validation
 
-Routers validate parts of an event against a schema you set on the route. The keys are per router, so
+Matchers validate parts of an event against a schema you set on the route. The keys are per matcher, so
 SQS takes `bodySchema` and `messageAttributesSchema` while DynamoDB Streams takes `keysSchema`,
 `newImageSchema` and `oldImageSchema`.
 
@@ -287,10 +287,10 @@ Any [Standard Schema](https://standardschema.dev) library works, so Zod, Valibot
 with nothing to adapt.
 
 An HTTP route taking bytes rather than JSON sets its `bodySchema` to `BinaryBody`, which the HTTP
-routers export. See [binary bodies](/routers/ALBRouter#binary-bodies).
+matchers export. See [binary bodies](/matchers/ALBMatcher#binary-bodies).
 
 ```ts
-sqsRouter.route({
+sqsMatcher.route({
   filters: { eventSourceArn: ORDER_QUEUE_ARN },
   bodySchema: OrderSchema,
   messageAttributesSchema: z.object({ dryRun: z.coerce.boolean().default(false) }),
@@ -304,7 +304,7 @@ apart by their schemas alone.
 
 ### Validation failures
 
-| Router | A failing schema |
+| Matcher | A failing schema |
 | --- | --- |
 | Record based | Throws, and the record counts as a failure |
 | HTTP `querySchema` | 400, with the validation issues as the error's `context` |

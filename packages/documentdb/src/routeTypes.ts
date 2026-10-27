@@ -1,15 +1,15 @@
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 
-import type { Middleware } from '@lambda-event-router/base';
+import type { Middleware } from '@latcher/base';
 
 import type {
-  DocumentDBFilters,
-  DocumentDBFullDocumentBeforeChangeOption,
-  DocumentDBFullDocumentOption,
-  DocumentDBMiddleware,
-  DocumentDBOperationType,
-  DocumentDBRequest,
-  DocumentDBRouteDefinition,
+    DocumentDBFilters,
+    DocumentDBFullDocumentBeforeChangeOption,
+    DocumentDBFullDocumentOption,
+    DocumentDBMiddleware,
+    DocumentDBOperationType,
+    DocumentDBRequest,
+    DocumentDBRouteDefinition,
 } from './types.js';
 
 // Ops whose change events can carry fullDocument (delete is the only op that never has it)

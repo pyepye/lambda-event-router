@@ -1,8 +1,9 @@
-import { LambdaRouter } from '@lambda-event-router/base';
 import type { Handler } from 'aws-lambda';
 
-import { dynamoDBRouter } from './dynamodb.js';
+import { Latcher } from '@latcher/base';
 
-const lambdaRouter = new LambdaRouter({ routers: [dynamoDBRouter] });
+import { dynamoDBMatcher } from './dynamodb.js';
 
-export const handler: Handler = lambdaRouter.handler();
+const latcher = new Latcher({ matchers: [dynamoDBMatcher] });
+
+export const handler: Handler = latcher.handler();

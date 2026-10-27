@@ -1,6 +1,6 @@
 import { SendTaskSuccessCommand } from '@aws-sdk/client-sfn';
-import { isObject, logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/stepfunctions';
+import { isObject, logger } from '@latcher/base';
+import { defineRoute } from '@latcher/stepfunctions';
 
 import { FRAUD_REVIEW_TASK, sfnClient } from '../config.js';
 import { withApprovalContext } from '../middleware/withApprovalContext.js';

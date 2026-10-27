@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Lambda Event Router full example - Cognito, EventBridge and S3 user avatars
+Description: Latcher full example - Cognito, EventBridge and S3 user avatars
 
 Resources:
   # The bucket name is built with Sub rather than Ref. A Ref from the function would make the bucket

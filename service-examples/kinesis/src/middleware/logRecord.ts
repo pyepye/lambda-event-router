@@ -1,7 +1,7 @@
-import { logger } from '@lambda-event-router/base';
-import type { KinesisMiddleware } from '@lambda-event-router/kinesis';
+import { logger } from '@latcher/base';
+import type { KinesisMiddleware } from '@latcher/kinesis';
 
-// Router middleware: runs once per record, before any route middleware, for both streams.
+// Matcher middleware: runs once per record, before any route middleware, for both streams.
 export const logRecord: KinesisMiddleware = async (request, next) => {
   logger.info({
     message: 'Handling Kinesis record',

@@ -1,7 +1,8 @@
-import type { VPCLatticeEvent, VPCLatticeResult } from '@lambda-event-router/vpclattice';
 import type { Context } from 'aws-lambda';
 
-import { inventoryRouter } from '../src/inventoryRouter.js';
+import type { VPCLatticeEvent, VPCLatticeResult } from '@latcher/vpclattice';
+
+import { inventoryMatcher } from '../src/inventoryMatcher.js';
 import { buildSteps, type Expected, type PayloadVersion, type Step } from '../src/ordering/steps.js';
 
 const ACCOUNT = '123456789012';
@@ -86,7 +87,7 @@ function buildEvent(step: Step, version: PayloadVersion): VPCLatticeEvent {
   };
 }
 
-// The wire lower cases every response header name, so the router's own casing is folded away
+// The wire lower cases every response header name, so the matcher's own casing is folded away
 // before the expectations are compared.
 function receivedHeaders(result: VPCLatticeResult): Record<string, string | undefined> {
   return Object.fromEntries(Object.entries(result.headers ?? {}).map(([name, value]) => [name.toLowerCase(), value]));
@@ -118,7 +119,7 @@ const failures: string[] = [];
 for (const version of ['1.0', '2.0'] as const) {
   for (const step of buildSteps(version)) {
     const label = `${version} ${step.name}`;
-    const result = await inventoryRouter.handleEvent(buildEvent(step, version), context);
+    const result = await inventoryMatcher.handleEvent(buildEvent(step, version), context);
     const problems = problemsWith(result, step.expected);
 
     if (problems.length === 0) {

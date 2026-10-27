@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import type { S3ObjectAclRequest } from '@lambda-event-router/s3';
+import { logger } from '@latcher/base';
+import type { S3ObjectAclRequest } from '@latcher/s3';
 
 // ObjectAcl:Put only fires on a bucket where ACLs are enabled, so the uploads bucket sets its
 // object ownership to ObjectWriter.

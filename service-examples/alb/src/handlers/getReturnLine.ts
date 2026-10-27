@@ -1,10 +1,10 @@
-import { defineRoute, NotFound } from '@lambda-event-router/alb';
-import { logger } from '@lambda-event-router/base';
+import { defineRoute, NotFound } from '@latcher/alb';
+import { logger } from '@latcher/base';
 
 import { RETURN_LINES } from '../utils/returns.js';
 
 // Two path params in one pattern, both typed from the pattern and both handed to the handler.
-// Returns the line on its own, so the router picks the 200 and the JSON content type.
+// Returns the line on its own, so the matcher picks the 200 and the JSON content type.
 export const getReturnLine = defineRoute({
   filters: { method: 'GET', path: '/returns/:returnId/lines/:lineId' },
 }).handle(async (request) => {

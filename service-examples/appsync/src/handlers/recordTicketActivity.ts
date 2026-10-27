@@ -1,9 +1,9 @@
 import type {
-  AppSyncEventsOutgoingEvent,
-  AppSyncEventsPublishResult,
-  AppSyncEventsRequest,
-} from '@lambda-event-router/appsync';
-import { isObject, logger } from '@lambda-event-router/base';
+    AppSyncEventsOutgoingEvent,
+    AppSyncEventsPublishResult,
+    AppSyncEventsRequest,
+} from '@latcher/appsync';
+import { isObject, logger } from '@latcher/base';
 
 // Activity without a body is rejected on its own, and the rest of the batch still broadcasts. That
 // per-event error is how a publish handler reports a partial failure.

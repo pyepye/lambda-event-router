@@ -1,5 +1,5 @@
-import { type ApiRequest, type ApiResponse, Conflict, NoContent, NotFound } from '@lambda-event-router/apigateway';
-import { logger } from '@lambda-event-router/base';
+import { type ApiRequest, type ApiResponse, Conflict, NoContent, NotFound } from '@latcher/apigateway';
+import { logger } from '@latcher/base';
 
 import { STOCK } from '../utils/warehouse.js';
 

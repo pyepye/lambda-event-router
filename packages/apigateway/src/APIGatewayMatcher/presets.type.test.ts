@@ -1,0 +1,112 @@
+import type { AuthOf, AuthPreset, HandlerResponse } from '@latcher/http';
+import { createMockSchema, type MockSchema } from '@latcher/testing';
+
+import { createAPIGatewayMatcher, defineRoute } from './APIGatewayMatcher.js';
+import type { APIGatewayAuth, IamAuth, LambdaAuth } from './auth.js';
+import { cognitoAuth, iamAuth, type jwtAuth, lambdaAuth, noAuth } from './presets.js';
+import type { ApiRequest } from './types.js';
+
+type Query = Record<string, string | undefined>;
+type SeatsContext = { orgId: string; seats: number };
+
+const seatsSchema: MockSchema<SeatsContext> = createMockSchema<SeatsContext>();
+const orgAuth: AuthPreset<APIGatewayAuth, LambdaAuth<SeatsContext>> = lambdaAuth(seatsSchema);
+
+function handlesOrg(
+  request: ApiRequest<Record<string, string>, Query, AuthOf<typeof orgAuth>>,
+): Promise<HandlerResponse> {
+  expectTypeOf(request.auth.context).toEqualTypeOf<SeatsContext>();
+  return Promise.resolve({ seats: request.auth.context.seats });
+}
+
+function handlesIam(request: ApiRequest<Record<string, string>, Query, IamAuth>): Promise<HandlerResponse> {
+  return Promise.resolve({ accountId: request.auth.iam.accountId });
+}
+
+function handlesAnyAuth(
+  _request: ApiRequest<Record<string, string>, Query, APIGatewayAuth, { sku: string }>,
+): Promise<HandlerResponse> {
+  return Promise.resolve(undefined);
+}
+
+function handlesNoAuth(_request: ApiRequest<Record<string, string>, Query, undefined>): Promise<HandlerResponse> {
+  return Promise.resolve(undefined);
+}
+
+suite('API Gateway auth preset types', () => {
+  test('lambdaAuth with a schema types the context as the schema output', () => {
+    expectTypeOf<AuthOf<ReturnType<typeof lambdaAuth<SeatsContext>>>>().toEqualTypeOf<LambdaAuth<SeatsContext>>();
+  });
+
+  test('lambdaAuth with no schema types the context as JSON values', () => {
+    expectTypeOf<AuthOf<ReturnType<typeof lambdaAuth>>>().toEqualTypeOf<LambdaAuth>();
+  });
+
+  test('lambdaAuth refuses a schema whose output is not JSON', () => {
+    // @ts-expect-error - a Date is not a value an authorizer context can hold
+    lambdaAuth(createMockSchema<{ hiredAt: Date }>());
+  });
+
+  test('cognitoAuth and jwtAuth keep the standard claims next to the schema output', () => {
+    const tenantAuth = cognitoAuth({ claims: createMockSchema<{ 'custom:tenantId': string }>() });
+    type TenantClaims = AuthOf<typeof tenantAuth>['claims'];
+
+    expectTypeOf<TenantClaims['custom:tenantId']>().toEqualTypeOf<string>();
+    expectTypeOf<TenantClaims['exp']>().toEqualTypeOf<Date | undefined>();
+    expectTypeOf<AuthOf<ReturnType<typeof jwtAuth>>['scopes']>().toEqualTypeOf<string[] | undefined>();
+  });
+
+  test('iamAuth takes no settings', () => {
+    expectTypeOf<AuthOf<ReturnType<typeof iamAuth>>>().toEqualTypeOf<IamAuth>();
+
+    // @ts-expect-error - IAM has no part for you to describe
+    iamAuth(seatsSchema);
+  });
+
+  test('a matcher default types an annotated handler, and a route can override it', () => {
+    const matcher = createAPIGatewayMatcher({ auth: orgAuth });
+
+    matcher.get({ filters: { path: '/orders' }, handler: handlesOrg });
+    matcher.get({ filters: { path: '/audit' }, auth: iamAuth(), handler: handlesIam });
+    matcher.get({ filters: { path: '/health' }, auth: noAuth(), handler: handlesNoAuth });
+
+    // @ts-expect-error - the default hands on the Lambda auth, not IAM
+    matcher.get({ filters: { path: '/audit' }, handler: handlesIam });
+  });
+
+  test('a matcher with no default refuses a handler that expects checked auth', () => {
+    // @ts-expect-error - nothing checks the auth on this route
+    createAPIGatewayMatcher().get({ filters: { path: '/orders' }, handler: handlesOrg });
+  });
+
+  test('defineRoute takes a preset and types the inferred handler', () => {
+    defineRoute({ filters: { method: 'GET', path: '/orders' }, auth: orgAuth }).handle(async ({ auth }) => {
+      expectTypeOf(auth.context.seats).toEqualTypeOf<number>();
+      return { orgId: auth.context.orgId };
+    });
+  });
+
+  test('the matcher defineRoute types the inferred handler from the matcher default', () => {
+    createAPIGatewayMatcher({ auth: orgAuth })
+      .defineRoute({ filters: { method: 'GET', path: '/orders' } })
+      .handle(async ({ auth }) => {
+        expectTypeOf(auth.context.seats).toEqualTypeOf<number>();
+        return { orgId: auth.context.orgId };
+      });
+  });
+
+  test('APIGatewayAuth covers an unsecured route, so it fills the auth slot on its own', () => {
+    expectTypeOf<undefined>().toExtend<APIGatewayAuth>();
+
+    createAPIGatewayMatcher().post({
+      filters: { path: '/orders' },
+      bodySchema: createMockSchema<{ sku: string }>(),
+      handler: handlesAnyAuth,
+    });
+  });
+
+  test('ApiRequest refuses a type in the auth slot that is not API Gateway auth', () => {
+    // @ts-expect-error - a body type in the auth slot
+    expectTypeOf<ApiRequest<Record<string, string>, Query, { sku: string }>>();
+  });
+});

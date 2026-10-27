@@ -1,5 +1,5 @@
-import { logger } from '@lambda-event-router/base';
-import { defineRoute } from '@lambda-event-router/connect';
+import { logger } from '@latcher/base';
+import { defineRoute } from '@latcher/connect';
 
 import { withEscalationContext } from '../middleware/withEscalationContext.js';
 import { HIGH_PRIORITY, ORDER_REF_PARAMETER, PRIORITY_PARAMETER } from '../utils/constants.js';

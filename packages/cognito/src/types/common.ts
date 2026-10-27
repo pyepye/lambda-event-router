@@ -1,6 +1,6 @@
 import type { PreSignUpTriggerEvent } from 'aws-lambda';
 
-import type { FilterStringMatcher } from '@lambda-event-router/base';
+import type { FilterStringMatcher } from '@latcher/base';
 
 // User attributes type - derived from aws-lambda
 export type UserAttributes = NonNullable<PreSignUpTriggerEvent['request']['userAttributes']>;
@@ -30,5 +30,5 @@ export interface CognitoFilters<TTriggerSource extends string = string> {
   custom?: (input: CognitoFilterInput<TTriggerSource>) => boolean | Promise<boolean>;
 }
 
-// Generic route definition (used internally by the router)
+// Generic route definition (used internally by the matcher)
 // Trigger-specific route definitions are in their respective type files

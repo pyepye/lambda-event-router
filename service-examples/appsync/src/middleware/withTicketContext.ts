@@ -1,5 +1,5 @@
-import type { AppSyncResolverMiddleware } from '@lambda-event-router/appsync';
-import { logger } from '@lambda-event-router/base';
+import type { AppSyncResolverMiddleware } from '@latcher/appsync';
+import { logger } from '@latcher/base';
 
 import type { TTicketId } from '../utils/schemas.js';
 
